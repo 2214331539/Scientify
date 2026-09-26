@@ -9,20 +9,6 @@ dialog.settings-dialog {
 dialog.settings-dialog[open] {
   display: grid;
   grid-template-columns: 184px minmax(0, 1fr);
-  animation: settings-enter var(--sf-motion-overlay) var(--sf-ease-standard);
-}
-@keyframes settings-enter {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.settings-dialog::backdrop {
-  background: rgb(10 14 13 / 48%);
 }
 .settings-dialog .settings-navigation {
   display: flex;

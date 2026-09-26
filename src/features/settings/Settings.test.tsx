@@ -68,10 +68,10 @@ it('keeps one dialog and the input draft when changing category or language', as
 
 it('protects dirty profile input on close and allows retry after a failed save', async () => {
   const { user, store, adapter, close } = await fixture();
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
   await user.type(screen.getByRole('textbox', { name: '显示名称' }), 'Ada');
   await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
-  expect(confirm).toHaveBeenCalledOnce();
+  const confirm = await screen.findByRole('dialog', { name: '确认操作' });
+  await user.click(within(confirm).getByRole('button', { name: '取消' }));
   expect(close).not.toHaveBeenCalled();
   vi.mocked(adapter.save).mockRejectedValueOnce(new Error('磁盘只读'));
   await user.click(screen.getByRole('button', { name: '保存偏好' }));

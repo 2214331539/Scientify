@@ -1,3 +1,5 @@
+import { Menu } from '../../components/primitives/Menu';
+import { confirmAction } from '../../components/prompts';
 import {
   lazy,
   Suspense,
@@ -248,19 +250,6 @@ export function LocalLiterature({
       void listener.then((stop) => stop());
     };
   }, [project.id]);
-  useEffect(() => {
-    if (!menu) return;
-    requestAnimationFrame(() =>
-      host.current?.querySelector<HTMLElement>('[role="menu"] button')?.focus(),
-    );
-    const close = () => setMenu(null);
-    window.addEventListener('pointerdown', close);
-    window.addEventListener('blur', close);
-    return () => {
-      window.removeEventListener('pointerdown', close);
-      window.removeEventListener('blur', close);
-    };
-  }, [menu]);
   async function run(action: () => Promise<void>) {
     if (actionPending.current) return;
     actionPending.current = true;
@@ -909,165 +898,161 @@ export function LocalLiterature({
           )}
         </div>
       </div>
-      {menu && (
-        <div
-          className="library-context-menu"
-          role="menu"
-          data-native-overlay="true"
-          style={{ left: menu.x, top: menu.y }}
-          onPointerDown={(e) => e.stopPropagation()}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setMenu(null);
-              host.current?.querySelector<HTMLElement>('[role="treeitem"][tabindex="0"]')?.focus();
-            }
-            const items = [
-              ...e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
-            ];
-            const index = items.indexOf(document.activeElement as HTMLButtonElement);
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-              e.preventDefault();
-              items[
-                (index + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length
-              ]?.focus();
-            }
+      <Menu
+        anchor={
+          menu
+            ? {
+                x: menu.x,
+                y: menu.y,
+                trigger: host.current?.querySelector<HTMLElement>(
+                  '[role="treeitem"][tabindex="0"]',
+                ),
+              }
+            : null
+        }
+        label={t('文献操作')}
+        onClose={() => setMenu(null)}
+      >
+        <Button role="menuitem" onClick={() => command('mkdir')}>
+          {t('新建文件夹')}
+        </Button>
+        {target && (
+          <>
+            <Button role="menuitem" onClick={() => command('rename')}>
+              {t('重命名')}
+            </Button>
+            <Button
+              role="menuitem"
+              onClick={async () => {
+                setClipboard({ path: target, copy: false });
+                setMenu(null);
+              }}
+            >
+              {t('剪切')}
+            </Button>
+            <Button
+              role="menuitem"
+              onClick={async () => {
+                setClipboard({ path: target, copy: true });
+                setMenu(null);
+              }}
+            >
+              {t('复制')}
+            </Button>
+            <Button role="menuitem" onClick={() => command('move')}>
+              {t('移动到')}
+            </Button>
+          </>
+        )}
+        <Button
+          role="menuitem"
+          disabled={!clipboard || !scan.root}
+          onClick={async () => {
+            if (clipboard)
+              void mutate({
+                op: 'transfer',
+                path: clipboard.path,
+                destination: pasteDestination(clipboard.path, targetFolder, clipboard.copy),
+                copy: clipboard.copy,
+              });
+            setMenu(null);
           }}
         >
-          <Button role="menuitem" onClick={() => command('mkdir')}>
-            {t('新建文件夹')}
-          </Button>
-          {target && (
-            <>
-              <Button role="menuitem" onClick={() => command('rename')}>
-                {t('重命名')}
-              </Button>
-              <Button
-                role="menuitem"
-                onClick={() => {
-                  setClipboard({ path: target, copy: false });
-                  setMenu(null);
-                }}
-              >
-                {t('剪切')}
-              </Button>
-              <Button
-                role="menuitem"
-                onClick={() => {
-                  setClipboard({ path: target, copy: true });
-                  setMenu(null);
-                }}
-              >
-                {t('复制')}
-              </Button>
-              <Button role="menuitem" onClick={() => command('move')}>
-                {t('移动到')}
-              </Button>
-            </>
-          )}
+          {t('粘贴')}
+        </Button>
+        {(binding || targetEntry?.pdf) && (
           <Button
             role="menuitem"
-            disabled={!clipboard || !scan.root}
-            onClick={() => {
-              if (clipboard)
-                void mutate({
-                  op: 'transfer',
-                  path: clipboard.path,
-                  destination: pasteDestination(clipboard.path, targetFolder, clipboard.copy),
-                  copy: clipboard.copy,
-                });
+            onClick={async () => {
               setMenu(null);
+              void run(async () => {
+                const p = binding ?? (await library.open(project.id, target));
+                setSession((s) => ({
+                  ...s,
+                  notes: s.notes.includes(p.id) ? s.notes : [...s.notes, p.id],
+                  activeNote: p.id,
+                  showNotes: true,
+                }));
+                await refresh();
+              });
             }}
           >
-            {t('粘贴')}
+            <NotebookPen />
+            {t('打开论文笔记')}
           </Button>
-          {(binding || targetEntry?.pdf) && (
-            <Button
-              role="menuitem"
-              onClick={() => {
-                setMenu(null);
-                void run(async () => {
-                  const p = binding ?? (await library.open(project.id, target));
-                  setSession((s) => ({
-                    ...s,
-                    notes: s.notes.includes(p.id) ? s.notes : [...s.notes, p.id],
-                    activeNote: p.id,
-                    showNotes: true,
-                  }));
-                  await refresh();
-                });
-              }}
-            >
-              <NotebookPen />
-              {t('打开论文笔记')}
-            </Button>
-          )}
+        )}
+        <Button
+          role="menuitem"
+          disabled={!scan.root}
+          onClick={async () => {
+            void library.external(project.id, target, false).catch((e) => setError(asError(e)));
+            setMenu(null);
+          }}
+        >
+          {t('在文件管理器中显示')}
+        </Button>
+        {target && (
           <Button
             role="menuitem"
-            disabled={!scan.root}
-            onClick={() => {
-              void library.external(project.id, target, false).catch((e) => setError(asError(e)));
+            onClick={async () => {
               setMenu(null);
+              if (
+                await confirmAction(t('将所选项目及关联笔记移入系统回收站？文件夹包括全部子内容。'))
+              )
+                void mutate({ op: 'delete', path: target });
             }}
           >
-            {t('在文件管理器中显示')}
+            {t('移入回收站')}
           </Button>
-          {target && (
-            <Button
-              role="menuitem"
-              onClick={() => {
-                setMenu(null);
-                if (confirm(t('将所选项目及关联笔记移入系统回收站？文件夹包括全部子内容。')))
-                  void mutate({ op: 'delete', path: target });
-              }}
-            >
-              {t('移入回收站')}
-            </Button>
-          )}
-          <Button
-            role="menuitemcheckbox"
-            aria-checked={showNotes}
-            onClick={() => {
-              setShowNotes(!showNotes);
-              setMenu(null);
-            }}
-          >
-            {t('显示笔记文件')}
-          </Button>
-          <Button
-            role="menuitem"
-            disabled={!scan.root || !data?.papers.length}
-            onClick={() => {
-              setMenu(null);
-              if (confirm(t('复制当前项目旧附件和笔记，保留原记录；重复迁移会产生副本。继续？')))
-                void run(async () => {
-                  protect();
-                  const s = await library.import(project.id, true);
-                  if (s) setScan(s);
-                });
-            }}
-          >
-            {t('迁移旧文献')}
-          </Button>
-          <Button
-            role="menuitem"
-            disabled={!scan.root}
-            onClick={() => {
-              setMenu(null);
-              if (confirm(t('解除目录关联不会删除文件，是否继续？')))
-                void run(async () => {
-                  protect();
-                  setScan(await library.command(project.id, { op: 'detach' }));
-                  invalidateProjectFileSessions(noteFiles(library), project.id);
-                  for (const tab of currentSession.current.tabs)
-                    if (tab.kind === 'web') await browserCommand({ op: 'close', id: tab.id });
-                  setSession(emptyLocalSession());
-                });
-            }}
-          >
-            {t('解除目录关联')}
-          </Button>
-        </div>
-      )}
+        )}
+        <Button
+          role="menuitemcheckbox"
+          aria-checked={showNotes}
+          onClick={async () => {
+            setShowNotes(!showNotes);
+            setMenu(null);
+          }}
+        >
+          {t('显示笔记文件')}
+        </Button>
+        <Button
+          role="menuitem"
+          disabled={!scan.root || !data?.papers.length}
+          onClick={async () => {
+            setMenu(null);
+            if (
+              await confirmAction(
+                t('复制当前项目旧附件和笔记，保留原记录；重复迁移会产生副本。继续？'),
+              )
+            )
+              void run(async () => {
+                protect();
+                const s = await library.import(project.id, true);
+                if (s) setScan(s);
+              });
+          }}
+        >
+          {t('迁移旧文献')}
+        </Button>
+        <Button
+          role="menuitem"
+          disabled={!scan.root}
+          onClick={async () => {
+            setMenu(null);
+            if (await confirmAction(t('解除目录关联不会删除文件，是否继续？')))
+              void run(async () => {
+                protect();
+                setScan(await library.command(project.id, { op: 'detach' }));
+                invalidateProjectFileSessions(noteFiles(library), project.id);
+                for (const tab of currentSession.current.tabs)
+                  if (tab.kind === 'web') await browserCommand({ op: 'close', id: tab.id });
+                setSession(emptyLocalSession());
+              });
+          }}
+        >
+          {t('解除目录关联')}
+        </Button>
+      </Menu>
       {dialog && (
         <Modal
           title={t(

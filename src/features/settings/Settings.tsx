@@ -3,6 +3,7 @@ import { Button, Input } from '../../components/primitives';
 import { PreferenceFields } from './Appearance';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
+import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { CircleHelp, Database, Palette, Settings } from 'lucide-react';
@@ -11,8 +12,11 @@ import './settings.css';
 function DataPreferences({ store }: { store: WorkspaceStore }) {
   const state = useStore(store);
   const blocked = state.busy || state.dirty;
-  const confirmReplace = (kind: 'restore' | 'migrateLegacy' | 'importWorkspace', text: string) => {
-    if (window.confirm(text)) void state.replace(kind);
+  const confirmReplace = async (
+    kind: 'restore' | 'migrateLegacy' | 'importWorkspace',
+    text: string,
+  ) => {
+    if (await confirmAction(text)) void state.replace(kind);
   };
   return (
     <div className="settings-data">

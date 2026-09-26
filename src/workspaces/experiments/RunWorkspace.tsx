@@ -9,6 +9,7 @@ import { ResourceList, ResourceRow } from '../../components/workspace/ResourceLi
 import type { Entity, Project } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
 import type { WorkspaceStore } from '../../stores/workspace';
+import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import './runs.css';
 
@@ -420,8 +421,8 @@ function RunForm({
           <Button
             type="button"
             disabled={saving}
-            onClick={() => {
-              if (!dirty || window.confirm(t('放弃尚未保存的修改？'))) onClose();
+            onClick={async () => {
+              if (!dirty || (await confirmAction(t('放弃尚未保存的修改？')))) onClose();
             }}
           >
             {t('取消')}

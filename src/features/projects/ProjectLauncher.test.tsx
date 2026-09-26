@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
@@ -55,6 +55,9 @@ it('switches project views, filters records and provides a static profile with o
   const { user } = fixture(data);
   await screen.findByRole('button', { name: 'Alpha' });
   expect(screen.getByLabelText('登录入口占位').tagName).toBe('DIV');
+  for (const name of ['全部项目', '已收藏', '已归档', '数据与备份', '关于 MVP'])
+    expect(screen.queryByRole('button', { name })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: '项目排序' })).toBeNull();
   expect(screen.queryByRole('button', { name: '登录' })).toBeNull();
   const sidebar = within(screen.getByRole('complementary', { name: '项目空间' }));
   await user.click(sidebar.getByRole('button', { name: '切换为深色' }));
@@ -77,8 +80,8 @@ it('creates and edits a team, assigns projects and moves them safely when deleti
   await user.type(screen.getByLabelText('团队名称'), 'Vision lab');
   await user.click(screen.getByRole('button', { name: '保存团队' }));
   await waitFor(() => expect(store.getState().data?.teams).toHaveLength(1));
-  const library = within(screen.getByRole('region', { name: '项目管理' }));
-  await user.click(library.getByRole('button', { name: /Vision lab.*0 个项目/ }));
+  expect(screen.queryByRole('searchbox', { name: '搜索团队' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: /Vision lab.*0 个项目/ }));
   await user.click(screen.getByRole('button', { name: '新建项目' }));
   expect((screen.getByLabelText('所属空间') as HTMLSelectElement).value).toBe(
     store.getState().data?.teams[0].id,
@@ -86,7 +89,8 @@ it('creates and edits a team, assigns projects and moves them safely when deleti
   await user.type(screen.getByLabelText('项目名称'), 'Team research');
   await user.click(screen.getByRole('button', { name: '保存项目' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  await user.click(screen.getByRole('button', { name: '编辑团队' }));
+  fireEvent.contextMenu(screen.getByRole('button', { name: /Vision lab.*1 个项目/ }));
+  await user.click(await screen.findByRole('menuitem', { name: '重命名 / 编辑' }));
   await user.clear(screen.getByLabelText('团队名称'));
   await user.type(screen.getByLabelText('团队名称'), 'Research lab');
   await user.click(screen.getByRole('button', { name: '保存团队' }));
@@ -96,7 +100,8 @@ it('creates and edits a team, assigns projects and moves them safely when deleti
       name: '团队协作空间',
     }),
   );
-  await user.click(screen.getByRole('button', { name: '删除团队 Research lab' }));
+  fireEvent.contextMenu(screen.getByRole('button', { name: /Research lab.*1 个项目/ }));
+  await user.click(await screen.findByRole('menuitem', { name: '删除团队空间' }));
   await user.click(screen.getByRole('button', { name: '确认删除' }));
   await waitFor(() => expect(store.getState().data?.teams).toHaveLength(0));
   expect(store.getState().data?.projects[0].space).toBe('personal');
@@ -145,4 +150,29 @@ it('removes only owned project records and preserves shared literature, other pr
   deleteTeam(data, 'team');
   expect(data.projects[0].space).toBe('personal');
   expect(data.projects[0].id).toBe('b');
+});
+
+it('renames personal projects from the context menu, keeps archived items reachable and restores keyboard focus', async () => {
+  const data = emptyWorkspace();
+  data.projects.push({ ...project('Alpha'), archived: true });
+  const { user, store } = fixture(data);
+  const cover = await screen.findByRole('button', { name: 'Alpha' });
+  fireEvent.contextMenu(cover);
+  await user.click(await screen.findByRole('menuitem', { name: '重命名 / 编辑' }));
+  await user.clear(screen.getByLabelText('项目名称'));
+  await user.type(screen.getByLabelText('项目名称'), 'Renamed');
+  await user.click(screen.getByRole('button', { name: '保存项目' }));
+  await waitFor(() => expect(store.getState().data?.projects[0].name).toBe('Renamed'));
+  const renamed = screen.getByRole('button', { name: 'Renamed' });
+  renamed.focus();
+  await user.keyboard('{Shift>}{F10}{/Shift}');
+  await screen.findByRole('menu');
+  await user.keyboard('{End}');
+  expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: '删除项目' }));
+  await user.keyboard('{Escape}');
+  expect(screen.queryByRole('menu')).toBeNull();
+  expect(document.activeElement).toBe(renamed);
+  fireEvent.contextMenu(renamed);
+  await user.click(await screen.findByRole('menuitem', { name: '恢复' }));
+  await waitFor(() => expect(store.getState().data?.projects[0].archived).toBe(false));
 });

@@ -172,7 +172,7 @@ it('provides six workspace destinations and starts with AI closed even when the 
   expect(screen.queryByRole('complementary', { name: '工作区导航' })).toBeNull();
   const spaces = within(screen.getByRole('complementary', { name: '项目空间' }));
   expect(spaces.getByRole('button', { name: '设置' })).toBeTruthy();
-  expect(spaces.getByRole('button', { name: '数据与备份' })).toBeTruthy();
+  expect(spaces.queryByRole('button', { name: '数据与备份' })).toBeNull();
   await selectProject(user, 'ToolHCL');
   expect(rail().getByRole('button', { name: t('Literature') })).toBeTruthy();
 });

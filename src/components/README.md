@@ -19,7 +19,8 @@ components/
   primitives/
     Button.tsx        primary / secondary / ghost，含 IconButton
     Input.tsx         Input / Textarea
-    Dropdown.tsx      保留原生键盘行为的 select
+    Dropdown.tsx      保留原生键盘行为的 select；CSS picker 渐进增强
+    Menu.tsx          右键/按钮菜单：定位、方向键、退出保留与焦点恢复
     Tooltip.tsx       不增加布局包装的提示浮层
     Badge.tsx         仅表示资源或任务状态
   workspace/
@@ -38,7 +39,7 @@ components/
 
 - 页面控制业务状态，布局和 primitive 不读写 store、磁盘或模型服务。
 - 桌面只保留主 Topbar；空白区域通过 Tauri 拖动属性操作窗口，关闭按钮发起 close 请求，由 App 的未保存保护决定是否退出。浏览器不显示窗口控制。
-- 项目管理只显示空间侧栏，其底部保留设置与数据入口；进入项目后显示 48px 六入口纯图标 Rail。名称放入 Tooltip 和 aria-label，不显示固定文字。
+- 项目管理只显示空间侧栏，其底部工具只保留设置与亮暗按钮；进入项目后显示 48px 六入口纯图标 Rail。名称放入 Tooltip 和 aria-label，不显示固定文字。
 - Panel 是无外阴影、无圆角外框的连续工作区域；Section 分组内容；List 表达对象集合；Tree 表达层级关系。表格保留其列语义。
 - Button 接收原生属性与 ref。主要提交用 `primary`，普通操作用 `secondary`，工具栏与导航用 `ghost`。表单内明确指定 `type="submit"` 或 `type="button"`。
 - 图标按钮使用 `iconOnly` 并提供 `aria-label`；`tooltip` 可补充快捷键或不可用原因。提示同时支持悬停、键盘焦点和 Escape，不使用额外布局包装。
@@ -54,7 +55,7 @@ components/
 
 `styles/tokens.css` 是颜色、字体家族、控件尺寸、圆角及阴影的来源。基础控件和 Panel 放入 CSS `components` 层；工作区与页面样式负责内容排列，避免依赖 CSS 导入顺序。
 
-外观使用白色与两级浅灰、细边界、4 px 控件圆角、6 px 对话框圆角，26 / 30 px 控件高度。阴影只用于浮层；背景与文字间距承担页面层级。
+外观使用白色与两级浅灰、细边界、4 px 控件圆角、8 px 浮层/对话框圆角，26 / 30 px 控件高度。阴影只用于浮层；背景与文字间距承担页面层级。
 
 页面 CSS 只补充布局、宽度、密度、编辑内容和真实业务状态，不重定义整套 button/input/select 视觉规则。新增共享表现先扩展 primitive 或 workspace 组件，再迁移使用处。
 
@@ -64,3 +65,5 @@ components/
 2. 检查图标提示、键盘焦点、禁用原因、空态与错误状态。
 3. 在中央编辑器与右侧面板同时打开时检查宽度、滚动与工具栏。
 4. 运行类型检查、相关行为测试及生产构建；交互变化才新增行为测试。
+
+共享动效使用 `styles/motion.css` 与 token。项目和文献菜单统一用 Menu；业务确认/文本输入调用 `prompts.tsx`，脏表单交由 Modal 确认。新页面不使用 window.confirm / prompt。

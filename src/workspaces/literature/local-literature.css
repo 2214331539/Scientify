@@ -177,26 +177,6 @@
   border-top: 1px solid var(--sf-border-subtle);
   font-size: 11px;
 }
-.library-context-menu {
-  position: fixed;
-  z-index: 120;
-  width: 210px;
-  max-height: calc(100vh - 20px);
-  overflow: auto;
-  padding: 4px;
-  background: var(--sf-surface-raised);
-  border: 1px solid var(--sf-border-control);
-  box-shadow: var(--sf-shadow-popover);
-  border-radius: 4px;
-}
-.library-context-menu > button {
-  display: flex;
-  width: 100%;
-  justify-content: flex-start;
-  border: 0;
-  min-height: 28px;
-  font-size: 12px;
-}
 .missing-paper {
   width: 100%;
   white-space: normal;

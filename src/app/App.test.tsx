@@ -97,7 +97,7 @@ it('creates a project, retains failed form edits, and retries into the real stor
   await waitFor(() => expect(store.getState().data?.projects[0].favorite).toBe(true));
   await user.click(screen.getByRole('button', { name: '项目操作 迁移验证项目' }));
   await user.click(screen.getByRole('menuitem', { name: '归档' }));
-  await user.click(screen.getByRole('button', { name: '已归档' }));
+  await waitFor(() => expect(store.getState().data?.projects[0].archived).toBe(true));
   await user.click(await screen.findByRole('button', { name: '项目操作 迁移验证项目' }));
   await screen.findByRole('menuitem', { name: '恢复' });
 });
@@ -165,7 +165,6 @@ it.each([
         rightWidth: 340,
       }),
     );
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const store = createWorkspaceStore(adapter);
     const user = userEvent.setup();
     render(<App store={store} />);
@@ -183,6 +182,11 @@ it.each([
     // Keep the note editor mounted behind the real data dialog while replacing its record.
     await user.click(screen.getByRole('button', { name: '数据与备份' }));
     await user.click(screen.getByRole('button', { name: action }));
+    await user.click(
+      within(await screen.findByRole('dialog', { name: '确认操作' })).getByRole('button', {
+        name: '确认',
+      }),
+    );
     await waitFor(() => expect(replace).toHaveBeenCalledOnce());
     await waitFor(() => expect(store.getState().busy).toBe(false));
     expect(store.getState().data?.records[0].body).toBe('恢复后的权威正文');

@@ -147,13 +147,8 @@ describe('workspace transaction boundary', () => {
         archived: true,
       },
     ];
-    expect(selectProjects(data, 'personal', '', 'all', 'updated').map((p) => p.id)).toEqual(['a']);
-    expect(selectProjects(data, 'personal', '', 'archived', 'updated').map((p) => p.id)).toEqual([
-      'c',
-    ]);
-    expect(selectProjects(data, 'team', '泛化', 'favorite', 'name').map((p) => p.id)).toEqual([
-      'b',
-    ]);
-    expect(selectProjects(data, 'personal', '不存在', 'all', 'updated')).toEqual([]);
+    expect(selectProjects(data, 'personal', '').map((p) => p.id)).toEqual(['c', 'a']);
+    expect(selectProjects(data, 'team', '泛化').map((p) => p.id)).toEqual(['b']);
+    expect(selectProjects(data, 'personal', '不存在')).toEqual([]);
   });
 });

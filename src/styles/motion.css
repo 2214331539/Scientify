@@ -1,0 +1,119 @@
+/* One motion vocabulary for both windows. Research surfaces never move or remount. */
+@keyframes sf-overlay-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes sf-overlay-exit {
+  to {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+@keyframes sf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sf-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+dialog[open] {
+  animation: sf-overlay-enter var(--sf-motion-overlay) var(--sf-ease-enter);
+}
+dialog[open]::backdrop {
+  animation: sf-fade-in var(--sf-motion-overlay) var(--sf-ease-standard);
+}
+.sf-popover[data-state='open'] {
+  animation: sf-overlay-enter var(--sf-motion-overlay) var(--sf-ease-enter);
+}
+.sf-popover[data-state='closed'] {
+  pointer-events: none;
+  animation: sf-overlay-exit var(--sf-motion-exit) var(--sf-ease-exit) forwards;
+}
+.sf-tooltip {
+  animation: sf-fade-in var(--sf-motion-feedback) var(--sf-ease-enter);
+}
+.auxiliary-surface:not([hidden]) > .sf-global-dock {
+  animation: sf-panel-enter var(--sf-motion-panel) var(--sf-ease-enter);
+}
+.sf-tree-disclosure svg {
+  transition: transform var(--sf-motion-content) var(--sf-ease-enter);
+}
+.sf-tree-row[aria-expanded='true'] .sf-tree-disclosure svg {
+  transform: rotate(90deg);
+}
+.launcher-canvas > .project-shelf,
+.launcher-canvas > .launcher-project-list {
+  animation: sf-fade-in var(--sf-motion-content) var(--sf-ease-enter);
+}
+
+/* Customizable native select retains form, keyboard and accessibility semantics.
+   Older WebView2 versions keep the platform picker as a progressive fallback. */
+@supports (appearance: base-select) {
+  .sf-dropdown,
+  .sf-dropdown::picker(select) {
+    appearance: base-select;
+  }
+  .sf-dropdown {
+    align-items: center;
+    cursor: pointer;
+  }
+  .sf-dropdown::picker-icon {
+    color: var(--sf-text-muted);
+    transition: rotate var(--sf-motion-content) var(--sf-ease-enter);
+  }
+  .sf-dropdown:open::picker-icon {
+    rotate: 180deg;
+  }
+  .sf-dropdown::picker(select) {
+    padding: 4px;
+    margin-block: 5px;
+    border: 1px solid var(--sf-border-subtle);
+    border-radius: var(--sf-radius-overlay);
+    background: var(--sf-surface-raised);
+    color: var(--sf-text-primary);
+    box-shadow: var(--sf-shadow-popover);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity var(--sf-motion-overlay) var(--sf-ease-enter),
+      transform var(--sf-motion-overlay) var(--sf-ease-enter),
+      display var(--sf-motion-overlay) allow-discrete,
+      overlay var(--sf-motion-overlay) allow-discrete;
+  }
+  .sf-dropdown:open::picker(select) {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @starting-style {
+    .sf-dropdown:open::picker(select) {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+  .sf-dropdown option {
+    padding: 6px 9px;
+    border-radius: var(--sf-radius);
+    min-height: 30px;
+    transition: background-color var(--sf-motion-feedback) var(--sf-ease-standard);
+  }
+  .sf-dropdown option:where(:hover, :focus, :checked) {
+    background: var(--sf-surface-hover);
+  }
+}

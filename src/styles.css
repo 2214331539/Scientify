@@ -2,6 +2,7 @@
 @import './styles/tokens.css';
 @import './components/primitives/primitives.css';
 @import './styles/shell.css';
+@import './styles/motion.css';
 * {
   box-sizing: border-box;
 }
@@ -215,7 +216,7 @@ dialog {
   box-shadow: var(--sf-shadow);
 }
 dialog::backdrop {
-  background: rgb(18 24 22 / 22%);
+  background: rgb(10 14 13 / 38%);
 }
 .dialog-heading {
   display: flex;
@@ -301,7 +302,10 @@ dialog::backdrop {
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
-  *::after {
+  *::after,
+  dialog::backdrop,
+  .sf-dropdown::picker(select),
+  .sf-dropdown::picker-icon {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;

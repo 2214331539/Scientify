@@ -3134,5 +3134,21 @@
   "团队不存在，请重新载入。": [
     "团队不存在，请重新载入。",
     "The team no longer exists. Reload the workspace."
+  ],
+  "确认操作": [
+    "确认操作",
+    "Confirm action"
+  ],
+  "重命名 / 编辑": [
+    "重命名 / 编辑",
+    "Rename / edit"
+  ],
+  "团队操作 {name}": [
+    "团队操作 {name}",
+    "Team actions: {name}"
+  ],
+  "文献操作": [
+    "文献操作",
+    "Literature actions"
   ]
 }

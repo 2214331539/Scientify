@@ -130,13 +130,16 @@ it('closes PDF and note tabs only after a paired deletion succeeds', async () =>
     entries: scan.entries.filter((e) => e.path !== 'a.pdf'),
     papers: scan.papers.filter((p) => p.id !== 'a'),
   });
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'a.pdf' }));
   await user.click(await screen.findByRole('menuitem', { name: '移入回收站' }));
+  await user.click(
+    within(await screen.findByRole('dialog', { name: '确认操作' })).getByRole('button', {
+      name: '确认',
+    }),
+  );
   await waitFor(() => expect(screen.queryByRole('textbox', { name: '论文笔记正文' })).toBeNull());
   expect(screen.queryByRole('tab', { name: 'a.pdf' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'b.pdf' })).toBeTruthy();
-  confirm.mockRestore();
 });
 it('opens a requested source only after its local binding is available', async () => {
   const { Host } = await fixture('b');

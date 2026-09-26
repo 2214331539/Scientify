@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronRight, FileText, Folder } from 'lucide-react';
+import { ChevronRight, FileText, Folder } from 'lucide-react';
 import { Button } from '../primitives';
 import './tree-view.css';
 
@@ -103,7 +103,7 @@ export function TreeView({
             }}
           >
             <span className="sf-tree-disclosure" aria-hidden="true">
-              {folder ? expanded ? <ChevronDown /> : <ChevronRight /> : null}
+              {folder ? <ChevronRight /> : null}
             </span>
             <span className="sf-tree-icon" aria-hidden="true">
               {item.icon ?? (folder ? <Folder /> : <FileText />)}

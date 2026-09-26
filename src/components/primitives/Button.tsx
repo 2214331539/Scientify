@@ -48,6 +48,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         aria-label={ariaLabel || (isIcon ? label : undefined)}
         aria-describedby={description}
         data-tooltip={label}
+        data-autofocus={props.autoFocus || undefined}
       />
       {label ? (
         <Tooltip targetRef={targetRef} id={tooltipId} onOpenChange={setTooltipOpen}>

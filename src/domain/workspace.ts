@@ -1,4 +1,3 @@
-import { locale } from '../i18n';
 export type Entity = { id: string; [key: string]: unknown };
 export type Team = Entity & { name: string; color: string; description?: string };
 export type Project = Entity & {
@@ -82,26 +81,14 @@ export function emptyWorkspace(): Workspace {
   };
 }
 
-export type ProjectFilter = 'all' | 'favorite' | 'archived';
-export function selectProjects(
-  data: Workspace,
-  space: string,
-  query: string,
-  filter: ProjectFilter,
-  sort: string,
-) {
+/** The launcher exposes a single collection, including recoverable archived projects. */
+export function selectProjects(data: Workspace, space: string, query: string) {
   const term = query.trim().toLocaleLowerCase();
   return data.projects
     .filter(
       (p) =>
         p.space === space &&
-        (filter === 'archived' ? p.archived : !p.archived) &&
-        (filter !== 'favorite' || p.favorite) &&
         [p.name, p.question, p.field ?? ''].join(' ').toLocaleLowerCase().includes(term),
     )
-    .sort((a, b) =>
-      sort === 'name'
-        ? a.name.localeCompare(b.name, locale())
-        : (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt),
-    );
+    .sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt));
 }

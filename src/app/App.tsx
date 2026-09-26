@@ -17,6 +17,7 @@ import { workspaceItems, secondaryViews as secondary } from '../components/navig
 import { WorkspaceFrame } from '../components/workspace/WorkspaceFrame';
 import type { ResumeTarget } from '../workspaces/overview/home-model';
 import { ProjectForm, TeamForm } from '../features/projects/ProjectForm';
+import { confirmAction } from '../components/prompts';
 import { ProjectLibrary } from '../features/projects/ProjectLibrary';
 import { ProjectSidebar } from '../features/projects/ProjectSidebar';
 import { WindowControls } from '../components/layout/WindowControls';
@@ -164,26 +165,33 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
     }
     window.addEventListener('beforeunload', beforeUnload);
     let disposed = false;
+    let closing = false;
     let cleanup: (() => void) | undefined;
     if (isTauri())
       void getCurrentWindow()
         .onCloseRequested(async (event) => {
           event.preventDefault();
+          if (closing) return;
           const { busy } = store.getState();
           if (busy || hasPendingFileOperations(backend)) return;
-          if (!(await flushPaperNotes())) {
-            store.setState({ error: t('论文笔记尚未保存，请重试或处理冲突后退出。') });
-            return;
-          }
-          if (
-            !store.getState().dirty ||
-            window.confirm(
-              returning
-                ? t('仍有未保存的内容。确认放弃这些修改并返回项目管理？')
-                : t('仍有未保存的内容。确认放弃这些修改并退出？'),
+          closing = true;
+          try {
+            if (!(await flushPaperNotes())) {
+              store.setState({ error: t('论文笔记尚未保存，请重试或处理冲突后退出。') });
+              return;
+            }
+            if (
+              !store.getState().dirty ||
+              (await confirmAction(
+                returning
+                  ? t('仍有未保存的内容。确认放弃这些修改并返回项目管理？')
+                  : t('仍有未保存的内容。确认放弃这些修改并退出？'),
+              ))
             )
-          )
-            await getCurrentWindow().destroy();
+              await getCurrentWindow().destroy();
+          } finally {
+            closing = false;
+          }
         })
         .then((unlisten) => {
           if (disposed) unlisten();
@@ -299,11 +307,15 @@ export function App({
       const invalidProject = s.projectId && !data.projects.some((p) => p.id === s.projectId);
       const invalidSpace =
         !['personal', '__teams__'].includes(s.space) && !data.teams.some((t) => t.id === s.space);
-      return invalidProject || invalidSpace
+      return invalidProject || invalidSpace || (s.space === '__teams__' && data.teams.length > 0)
         ? {
             ...s,
             projectId: invalidProject ? null : s.projectId,
-            space: invalidSpace ? 'personal' : s.space,
+            space: invalidSpace
+              ? 'personal'
+              : s.space === '__teams__' && data.teams.length
+                ? data.teams[0].id
+                : s.space,
           }
         : s;
     });
@@ -645,7 +657,6 @@ export function App({
       onOpen={openProject}
       onNew={() => openDialog({ kind: 'project' })}
       onEdit={(p) => openDialog({ kind: 'project', project: p })}
-      onSpace={(space) => setUI((s) => ({ ...s, space }))}
       onNewTeam={() => openDialog({ kind: 'team' })}
       onEditTeam={(team) => openDialog({ kind: 'team', team })}
     />
@@ -864,13 +875,12 @@ export function App({
       {!project && (
         <ProjectSidebar
           space={ui.space}
-          teams={data?.teams ?? []}
+          store={store}
           ready={!!ready}
           onSpace={(space) => setUI((s) => ({ ...s, space }))}
           onNewTeam={() => openDialog({ kind: 'team' })}
           onSettings={() => openDialog({ kind: 'profile' })}
-          onData={() => openDialog({ kind: 'data' })}
-          onAbout={() => openDialog({ kind: 'about' })}
+          onEditTeam={(team) => openDialog({ kind: 'team', team })}
         />
       )}
       <main className="central-area" hidden={notesWorkspace}>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { BookOpen, Link2, Save } from 'lucide-react';
 import { Button, Textarea } from '../../components/primitives';
+import { confirmAction, requestText } from '../../components/prompts';
 import { Markdown } from '../../features/notes/Markdown';
 import { paperNote } from './local-session';
 import type { LibraryBackend, LibraryPaper } from '../../platform/library';
@@ -61,8 +62,8 @@ export function PaperNotes({
           {translateError(state.error || error)}
           <Button onClick={() => void session.save()}>{t('重试保存')}</Button>
           <Button
-            onClick={() => {
-              if (!state.dirty || confirm(t('重新读取会丢弃当前未保存编辑。')))
+            onClick={async () => {
+              if (!state.dirty || (await confirmAction(t('重新读取会丢弃当前未保存编辑。'))))
                 void session.reloadDiscardingEdits();
             }}
           >
@@ -70,7 +71,7 @@ export function PaperNotes({
           </Button>
           <Button
             onClick={async () => {
-              const path = prompt(
+              const path = await requestText(
                 t('副本路径'),
                 paper?.notePath.replace(/\.md$/i, '.copy.md') ?? 'note-copy.md',
               );
