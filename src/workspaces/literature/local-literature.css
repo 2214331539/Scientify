@@ -4,13 +4,27 @@
   display: flex;
   overflow: hidden;
 }
+.local-library > .literature-sidebar {
+  display: grid;
+  grid-template-rows: 36px minmax(0, 1fr);
+  overflow: hidden;
+}
+.library-directory {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
 .library-root-toolbar {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 5px 3px;
+  padding: 4px 3px;
   height: 36px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  min-width: 0;
 }
 .library-root-toolbar > span {
   flex: 1;
@@ -26,34 +40,50 @@
   position: relative;
   flex: 1;
   min-width: 0;
-  height: 28px;
+  height: 26px;
   display: flex;
   align-items: center;
   font-size: 11px;
 }
 .library-root-title > span {
   min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.library-hover-search {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-.library-hover-search.is-open,
-.library-root-toolbar:hover .library-hover-search,
-.library-hover-search:focus-within {
-  opacity: 1;
-  pointer-events: auto;
-}
-.library-hover-search input {
+.library-root-toolbar .library-toolbar-search {
   width: 100%;
+  min-width: 0;
+  height: 26px;
+  min-height: 26px;
   font-size: 12px;
 }
 .local-file-tree {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  position: relative;
+}
+.local-file-tree.is-file-dragging {
+  outline: 1px solid var(--sf-accent);
+  outline-offset: -1px;
+}
+.local-file-tree [data-drop-target='true'] {
+  background: var(--sf-surface-selected);
+  outline: 1px solid var(--sf-accent);
+  outline-offset: -1px;
+}
+.library-drop-hint {
+  position: sticky;
+  bottom: 8px;
+  margin: 8px;
+  padding: 5px 8px;
+  background: var(--sf-surface-raised);
+  border: 1px solid var(--sf-border-control);
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+  pointer-events: none;
 }
 .library-unmounted {
   padding: 20px 10px;
@@ -176,6 +206,7 @@
 .subscription-placeholder {
   padding: 16px 10px;
   display: grid;
+  align-content: start;
   gap: 12px;
   color: var(--sf-text-muted);
   font-size: 12px;

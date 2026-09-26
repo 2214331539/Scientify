@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-import-bytes"
+description = "Enables the library_import_bytes command without any pre-configured scope."
+commands.allow = ["library_import_bytes"]
+
+[[permission]]
+identifier = "deny-library-import-bytes"
+description = "Denies the library_import_bytes command without any pre-configured scope."
+commands.deny = ["library_import_bytes"]

@@ -2954,5 +2954,61 @@
   "该操作不适用于论文笔记。": [
     "该操作不适用于论文笔记。",
     "This operation does not apply to paper notes."
+  ],
+  "文献目录工具": [
+    "文献目录工具",
+    "Literature directory tools"
+  ],
+  "复制到 {folder}": [
+    "复制到 {folder}",
+    "Copy to {folder}"
+  ],
+  "导入文件 {current}/{total}": [
+    "导入文件 {current}/{total}",
+    "Importing {current}/{total}"
+  ],
+  "已导入 {count} 个文件。{error}": [
+    "已导入 {count} 个文件。{error}",
+    "Imported {count} files. {error}"
+  ],
+  "请拖入文件，暂不支持整文件夹导入。": [
+    "请拖入文件，暂不支持整文件夹导入。",
+    "Drop files here. Importing entire folders is not supported yet."
+  ],
+  "文件名无效或文件超过 150 MiB。": [
+    "文件名无效或文件超过 150 MiB。",
+    "Invalid filename or file larger than 150 MiB."
+  ],
+  "缺少拖入文件信息。": [
+    "缺少拖入文件信息。",
+    "Missing dropped-file information."
+  ],
+  "拖入文件信息无效。": [
+    "拖入文件信息无效。",
+    "Invalid dropped-file information."
+  ],
+  "拖入文件内容无效。": [
+    "拖入文件内容无效。",
+    "Invalid dropped-file contents."
+  ],
+  "切换为连续滚动": [
+    "切换为连续滚动",
+    "Switch to continuous scrolling"
+  ],
+  "切换为分页阅览": [
+    "切换为分页阅览",
+    "Switch to paged reading"
+  ],
+  "连续滚动": [
+    "连续滚动",
+    "Continuous"
+  ],
+  "分页阅览": [
+    "分页阅览",
+    "Paged"
+  ],
+  "PDF 阅读区域": [
+    "PDF 阅读区域",
+    "PDF reading area"
   ]
 }

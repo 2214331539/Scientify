@@ -39,6 +39,7 @@ export interface LibraryBackend {
   ): Promise<LibraryNote>;
   external(projectId: string, path: string, open: boolean): Promise<void>;
   import(projectId: string, migrate: boolean): Promise<LibraryScan | null>;
+  importFile(projectId: string, folder: string, file: File): Promise<LibraryScan>;
   changed(callback: (projectId: string, error?: string) => void): Promise<() => void>;
 }
 export function localCommand<T>(name: string, args?: Record<string, unknown>): Promise<T> {
@@ -57,6 +58,17 @@ export const nativeLibrary: LibraryBackend = {
     localCommand('library_note', { projectId, id, content, revision, copy: copy ?? null }),
   external: (projectId, path, open) => localCommand('library_external', { projectId, path, open }),
   import: (projectId, migrate) => localCommand('library_import', { projectId, migrate }),
+  importFile: async (projectId, folder, file) => {
+    if (file.size > 150 * 1024 * 1024) throw new Error('文件名无效或文件超过 150 MiB。');
+    if (!isTauri()) throw new Error('请在桌面应用中使用本地文献目录和内嵌浏览器。');
+    const metadata = JSON.stringify({ projectId, folder, name: file.name }).replace(
+      /[\u007f-\uffff]/g,
+      (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`,
+    );
+    return invoke('library_import_bytes', await file.arrayBuffer(), {
+      headers: { 'x-scientify-file': metadata },
+    });
+  },
   changed: (callback) =>
     isTauri()
       ? listen<{ projectId: string; error?: string }>('library-changed', (event) =>

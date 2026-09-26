@@ -1,6 +1,6 @@
 import { t, translateError } from '../i18n';
 import { Button, Input } from '../components/primitives';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,16 +9,21 @@ import {
   NotebookPen,
   ZoomIn,
   ZoomOut,
+  Rows3,
+  PanelTop,
 } from 'lucide-react';
-import { getDocument, GlobalWorkerOptions, TextLayer, type PDFDocumentProxy } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import type { ResearchBackend } from '../platform/research';
 import type { WorkContext } from '../domain/context';
+import { PdfPageSurface } from './PdfPageSurface';
 import './reader.css';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
-type ReadingPosition = { page: number; zoom: number; top: number; left: number };
+type ReadingMode = 'paged' | 'continuous';
+// top is the offset inside the current page, not the whole continuous document.
+type ReadingPosition = { page: number; zoom: number; top: number; left: number; mode: ReadingMode };
 const readingPositions = new WeakMap<ResearchBackend, Map<string, ReadingPosition>>();
 export default function PdfReader({
   assetId,
@@ -39,46 +44,87 @@ export default function PdfReader({
   onTool: (tool: 'assistant' | 'notes') => void;
   compact?: boolean;
 }) {
-  const scroll = useRef<HTMLDivElement>(null),
-    canvas = useRef<HTMLCanvasElement>(null),
-    textLayer = useRef<HTMLDivElement>(null);
+  const scroll = useRef<HTMLDivElement>(null);
   const onContextRef = useRef(onContext);
   onContextRef.current = onContext;
-  const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const positionKey = JSON.stringify([projectId, assetId]);
-  const [initialPosition] = useState<ReadingPosition>(() => {
+  const [initial] = useState<ReadingPosition>(() => {
     const cached = readingPositions.get(backend)?.get(positionKey);
-    let page = cached?.page ?? 1;
+    let page = cached?.page ?? 1,
+      mode: ReadingMode = cached?.mode ?? 'paged';
     try {
       page = Math.max(
         1,
         Math.trunc(Number(localStorage.getItem(`scientify.reader.${assetId}`)) || page),
       );
+      if (!cached && localStorage.getItem('scientify.reader.mode') === 'continuous')
+        mode = 'continuous';
     } catch {
-      /* Reading location is optional. */
+      /* Optional reading preferences. */
     }
     return {
       page,
       zoom: cached?.zoom ?? 1,
       top: cached?.page === page ? cached.top : 0,
       left: cached?.page === page ? cached.left : 0,
+      mode,
     };
   });
-  const [page, setPage] = useState(initialPosition.page);
+  const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
+  const [page, setPage] = useState(initial.page),
+    [mode, setMode] = useState(initial.mode);
   const [width, setWidth] = useState(600),
-    [zoom, setZoom] = useState(initialPosition.zoom),
-    [error, setError] = useState(''),
+    [zoom, setZoom] = useState(initial.zoom);
+  const [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
     [selection, setSelection] = useState('');
-  const [size, setSize] = useState({ width: 1, height: 1, scale: 1 });
-  const pageText = useRef('');
-  const position = useRef(initialPosition);
-  const restoreScroll = useRef<ReadingPosition | null>(initialPosition);
-  if (position.current.page !== page) {
-    position.current = { ...position.current, page, top: 0, left: 0 };
-    restoreScroll.current = { ...position.current };
+  const [visible, setVisible] = useState<Set<number>>(new Set([initial.page]));
+  const [pageText, setPageText] = useState('');
+  const texts = useRef(new Map<number, string>());
+  const position = useRef(initial),
+    pendingScroll = useRef<ReadingPosition | null>(initial);
+  const current = useRef({ page, mode });
+  current.current = { page, mode };
+  position.current = { ...position.current, page, zoom, mode };
+  const pageOffset = useCallback((number: number) => {
+    if (current.current.mode === 'paged') return 0;
+    return (
+      scroll.current?.querySelector<HTMLElement>(`[data-pdf-page="${number}"]`)?.offsetTop ?? 0
+    );
+  }, []);
+  const restore = useCallback(
+    (complete: boolean) => {
+      const target = pendingScroll.current,
+        host = scroll.current;
+      if (!target || !host) return;
+      host.scrollTop = pageOffset(target.page) + target.top;
+      host.scrollLeft = target.left;
+      if (complete) pendingScroll.current = null;
+    },
+    [pageOffset],
+  );
+  function navigate(number: number) {
+    if (!document || number < 1 || number > document.numPages || !Number.isInteger(number)) return;
+    pendingScroll.current = { ...position.current, page: number, top: 0, left: 0 };
+    position.current = { ...pendingScroll.current };
+    setPage(number);
+    requestAnimationFrame(() => restore(true));
   }
-  position.current.zoom = zoom;
+  function toggleMode() {
+    const next: ReadingMode = mode === 'paged' ? 'continuous' : 'paged';
+    pendingScroll.current = { ...position.current, mode: next };
+    setMode(next);
+    try {
+      localStorage.setItem('scientify.reader.mode', next);
+    } catch {
+      /* Optional preference. */
+    }
+  }
+  function changeZoom(next: number) {
+    if (next === zoom) return;
+    pendingScroll.current = { ...position.current };
+    setZoom(next);
+  }
   useEffect(
     () => () => {
       let cache = readingPositions.get(backend);
@@ -91,25 +137,23 @@ export default function PdfReader({
     [backend, positionKey],
   );
   useEffect(() => {
-    const navigate = (event: Event) => {
+    const handler = (event: Event) => {
       const target = (event as CustomEvent<{ paperId: string; page: number }>).detail;
-      if (
-        target?.paperId === paperId &&
-        document &&
-        target.page >= 1 &&
-        target.page <= document.numPages
-      )
-        setPage(target.page);
+      if (target?.paperId === paperId) navigate(target.page);
     };
-    window.addEventListener('scientify-pdf-page', navigate);
-    return () => window.removeEventListener('scientify-pdf-page', navigate);
+    window.addEventListener('scientify-pdf-page', handler);
+    return () => window.removeEventListener('scientify-pdf-page', handler);
   }, [paperId, document]);
   useEffect(() => {
     const host = scroll.current;
     if (!host) return;
-    const observer = new ResizeObserver((entries) =>
-      setWidth(Math.max(240, entries[0].contentRect.width - 48)),
-    );
+    const observer = new ResizeObserver((entries) => {
+      const next = Math.max(240, entries[0].contentRect.width - 48);
+      setWidth((previous) => {
+        if (previous !== next) pendingScroll.current ??= { ...position.current };
+        return next;
+      });
+    });
     observer.observe(host);
     return () => observer.disconnect();
   }, []);
@@ -119,6 +163,7 @@ export default function PdfReader({
     setLoading(true);
     setError('');
     setDocument(null);
+    texts.current.clear();
     void backend
       .readPdf(assetId)
       .then((bytes) => {
@@ -137,12 +182,15 @@ export default function PdfReader({
       })
       .then((pdf) => {
         if (!pdf || stale) return;
+        const firstPage = Math.min(position.current.page, pdf.numPages);
+        if (pendingScroll.current) pendingScroll.current.page = firstPage;
         setDocument(pdf);
-        setPage((p) => Math.min(p, pdf.numPages));
+        setPage(firstPage);
+        setLoading(false);
       })
-      .catch((e) => {
+      .catch((error) => {
         if (!stale) {
-          setError(e instanceof Error ? e.message : String(e));
+          setError(error instanceof Error ? error.message : String(error));
           setLoading(false);
         }
       });
@@ -152,233 +200,221 @@ export default function PdfReader({
     };
   }, [assetId, backend]);
   useEffect(() => {
-    if (!document) return;
-    let stale = false;
-    let renderTask:
-      ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']> | undefined;
-    let layer: TextLayer | undefined;
-    setLoading(true);
-    setError('');
     setSelection('');
-    pageText.current = '';
-    onContextRef.current({ projectId, workspace: 'literature', title, resourceId: paperId, page });
-    void document
-      .getPage(page)
-      .then(async (pdfPage) => {
-        if (stale || !canvas.current || !textLayer.current) return;
-        const base = pdfPage.getViewport({ scale: 1 });
-        const scale = Math.max(0.25, Math.min(3, width / base.width)) * zoom;
-        const viewport = pdfPage.getViewport({ scale });
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const node = canvas.current;
-        node.width = Math.floor(viewport.width * dpr);
-        node.height = Math.floor(viewport.height * dpr);
-        node.style.width = `${viewport.width}px`;
-        node.style.height = `${viewport.height}px`;
-        setSize({ width: viewport.width, height: viewport.height, scale });
-        textLayer.current.replaceChildren();
-        renderTask = pdfPage.render({
-          canvas: node,
-          viewport,
-          transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
-        });
-        // A workspace switch can cancel rendering while text extraction is pending.
-        // Observe rejection immediately; the awaited Promise.all below still reports real errors.
-        void renderTask.promise.catch(() => undefined);
-        const content = await pdfPage.getTextContent();
-        if (stale) return;
-        pageText.current = content.items
-          .map((item) => ('str' in item ? item.str : ''))
-          .join(' ')
-          .slice(0, 24000);
-        layer = new TextLayer({
-          textContentSource: content,
-          container: textLayer.current!,
-          viewport,
-        });
-        await Promise.all([renderTask.promise, layer.render()]);
-        if (stale) return;
-        const restore = restoreScroll.current;
-        if (restore && scroll.current) {
-          scroll.current.scrollTop = restore.page === page ? restore.top : 0;
-          scroll.current.scrollLeft = restore.page === page ? restore.left : 0;
-          restoreScroll.current = null;
-        }
-        setLoading(false);
-        onContextRef.current({
-          projectId,
-          workspace: 'literature',
-          title,
-          resourceId: paperId,
-          page,
-          text: pageText.current,
-        });
-        try {
-          localStorage.setItem(`scientify.reader.${assetId}`, String(page));
-        } catch {
-          /* Reading position is optional. */
-        }
-      })
-      .catch((e) => {
-        if (!stale && e?.name !== 'RenderingCancelledException') {
-          setError(e instanceof Error ? e.message : String(e));
-          setLoading(false);
-        }
-      });
-    return () => {
-      stale = true;
-      renderTask?.cancel();
-      layer?.cancel();
-    };
-  }, [document, page, width, zoom, title, paperId, projectId, assetId]);
-  function captureSelection() {
-    const selected = window.getSelection();
-    if (!selected || !textLayer.current?.contains(selected.anchorNode)) {
-      setSelection('');
-      return;
-    }
-    const value = selected.toString().trim().slice(0, 16000);
-    setSelection(value);
+    const text = texts.current.get(page) ?? '';
+    setPageText(text);
     onContextRef.current({
       projectId,
       workspace: 'literature',
       title,
       resourceId: paperId,
       page,
-      text: pageText.current,
-      selection: value || undefined,
+      text: text || undefined,
+    });
+    try {
+      localStorage.setItem(`scientify.reader.${assetId}`, String(page));
+    } catch {
+      /* Optional location. */
+    }
+  }, [page, projectId, paperId, title, assetId]);
+  useEffect(() => {
+    if (!document) return;
+    restore(texts.current.has(current.current.page));
+    if (mode !== 'continuous' || !scroll.current) return;
+    // One observer for all placeholders; canvas memory is limited to nearby pages.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setVisible((previous) => {
+          const next = new Set(previous);
+          for (const entry of entries) {
+            const number = Number((entry.target as HTMLElement).dataset.pdfPage);
+            if (entry.isIntersecting) next.add(number);
+            else next.delete(number);
+          }
+          return next;
+        });
+      },
+      { root: scroll.current, rootMargin: '700px 0px' },
+    );
+    scroll.current.querySelectorAll('[data-pdf-page]').forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, [document, mode, restore]);
+  function ready(number: number, text: string) {
+    texts.current.set(number, text);
+    if (number !== current.current.page) return;
+    setPageText(text);
+    restore(true);
+    onContextRef.current({
+      projectId,
+      workspace: 'literature',
+      title,
+      resourceId: paperId,
+      page: number,
+      text,
     });
   }
+  const controls = (
+    <div className="toolbar" aria-label={t('PDF 阅读工具')}>
+      <Button
+        variant="ghost"
+        iconOnly
+        aria-label={t('上一页')}
+        disabled={page <= 1 || !document}
+        onClick={() => navigate(page - 1)}
+      >
+        <ChevronLeft />
+      </Button>
+      <label className="pdf-page-input">
+        <Input
+          aria-label={t('页码')}
+          type="number"
+          min={1}
+          max={document?.numPages ?? 1}
+          value={page}
+          onChange={(e) => navigate(Number(e.target.value))}
+        />
+        <span>/ {document?.numPages ?? '—'}</span>
+      </label>
+      <Button
+        variant="ghost"
+        iconOnly
+        aria-label={t('下一页')}
+        disabled={!document || page >= document.numPages}
+        onClick={() => navigate(page + 1)}
+      >
+        <ChevronRight />
+      </Button>
+      <span className="toolbar-separator" />
+      <Button
+        variant="ghost"
+        className="pdf-mode-toggle"
+        aria-pressed={mode === 'continuous'}
+        aria-label={mode === 'paged' ? t('切换为连续滚动') : t('切换为分页阅览')}
+        onClick={toggleMode}
+      >
+        {mode === 'continuous' ? <Rows3 /> : <PanelTop />}
+        {mode === 'continuous' ? t('连续滚动') : t('分页阅览')}
+      </Button>
+      <span className="toolbar-separator" />
+      <Button
+        variant="ghost"
+        iconOnly
+        aria-label={t('缩小 PDF')}
+        onClick={() => {
+          changeZoom(Math.max(0.5, zoom - 0.15));
+        }}
+      >
+        <ZoomOut />
+      </Button>
+      <span className="muted">{Math.round(zoom * 100)}%</span>
+      <Button
+        variant="ghost"
+        iconOnly
+        aria-label={t('放大 PDF')}
+        onClick={() => {
+          changeZoom(Math.min(2, zoom + 0.15));
+        }}
+      >
+        <ZoomIn />
+      </Button>
+      <Button
+        variant="ghost"
+        iconOnly
+        aria-label={t('适应宽度')}
+        onClick={() => {
+          changeZoom(1);
+        }}
+      >
+        <Maximize />
+      </Button>
+      {!compact && (
+        <>
+          <span className="spacer" />
+          <Button variant="ghost" onClick={() => onTool('assistant')}>
+            <MessageSquare />
+            {t('提问')}
+          </Button>
+          <Button variant="ghost" onClick={() => onTool('notes')}>
+            <NotebookPen />
+            {t('记笔记')}
+          </Button>
+        </>
+      )}
+    </div>
+  );
   return (
     <div className={`panel-stack pdf-reader${compact ? ' pdf-reader-compact' : ''}`}>
-      <div className="toolbar" aria-label={t('PDF 阅读工具')}>
-        <Button
-          variant="ghost"
-          iconOnly
-          title={t('上一页')}
-          aria-label={t('上一页')}
-          disabled={page <= 1 || !document}
-          onClick={() => setPage((p) => p - 1)}
-        >
-          <ChevronLeft />
-        </Button>
-        <label className="pdf-page-input">
-          <Input
-            aria-label={t('页码')}
-            type="number"
-            min={1}
-            max={document?.numPages ?? 1}
-            value={page}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (document && Number.isInteger(n) && n >= 1 && n <= document.numPages) setPage(n);
-            }}
-          />
-          <span>/ {document?.numPages ?? '—'}</span>
-        </label>
-        <Button
-          variant="ghost"
-          iconOnly
-          title={t('下一页')}
-          aria-label={t('下一页')}
-          disabled={!document || page >= document.numPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          <ChevronRight />
-        </Button>
-        <span className="toolbar-separator" />
-        <Button
-          variant="ghost"
-          iconOnly
-          title={t('缩小')}
-          aria-label={t('缩小 PDF')}
-          onClick={() => setZoom((z) => Math.max(0.5, z - 0.15))}
-        >
-          <ZoomOut />
-        </Button>
-        <span className="muted">{Math.round(zoom * 100)}%</span>
-        <Button
-          variant="ghost"
-          iconOnly
-          title={t('放大')}
-          aria-label={t('放大 PDF')}
-          onClick={() => setZoom((z) => Math.min(2, z + 0.15))}
-        >
-          <ZoomIn />
-        </Button>
-        <Button
-          variant="ghost"
-          iconOnly
-          title={t('适应宽度')}
-          aria-label={t('适应宽度')}
-          onClick={() => setZoom(1)}
-        >
-          <Maximize />
-        </Button>
-        {!compact && (
-          <>
-            <span className="spacer" />
-            <Button
-              variant="ghost"
-              title={selection ? t('询问选中内容') : t('询问当前页')}
-              onClick={() => onTool('assistant')}
-            >
-              <MessageSquare />
-              {t('提问')}
-            </Button>
-            <Button variant="ghost" onClick={() => onTool('notes')}>
-              <NotebookPen />
-              {t('记笔记')}
-            </Button>
-          </>
-        )}
-      </div>
-      {error ? (
+      {error && (
         <div role="alert" className="inline-error">
           {translateError(error)}
         </div>
-      ) : null}
+      )}
       <div
-        className="pdf-scroll"
+        className={`pdf-scroll${mode === 'continuous' ? ' pdf-continuous' : ''}`}
         ref={scroll}
+        aria-label={t('PDF 阅读区域')}
         onScroll={(event) => {
-          if (!restoreScroll.current) {
-            position.current.top = event.currentTarget.scrollTop;
-            position.current.left = event.currentTarget.scrollLeft;
+          if (pendingScroll.current) return;
+          const host = event.currentTarget;
+          let number = current.current.page;
+          if (current.current.mode === 'continuous') {
+            const line = host.scrollTop + Math.min(host.clientHeight * 0.3, 180);
+            for (const node of host.querySelectorAll<HTMLElement>('[data-pdf-page]')) {
+              if (node.offsetTop > line) break;
+              number = Number(node.dataset.pdfPage);
+            }
+            setPage(number);
           }
+          position.current = {
+            ...position.current,
+            page: number,
+            top: Math.max(0, host.scrollTop - pageOffset(number)),
+            left: host.scrollLeft,
+          };
         }}
       >
-        {loading ? (
+        {loading && (
           <div className="pdf-loading" role="status">
             {t('正在读取 PDF…')}
           </div>
-        ) : null}
-        <div
-          className="pdf-page"
-          style={
-            {
-              width: size.width,
-              height: size.height,
-              '--scale-factor': size.scale,
-              '--total-scale-factor': size.scale,
-            } as CSSProperties
-          }
-        >
-          <canvas ref={canvas} aria-label={t('{title} 第 {page} 页', { title, page })} />
-          <div
-            className="textLayer"
-            ref={textLayer}
-            onMouseUp={captureSelection}
-            onKeyUp={captureSelection}
-          />
-        </div>
+        )}
+        {document &&
+          (mode === 'paged'
+            ? [page]
+            : Array.from({ length: document.numPages }, (_, i) => i + 1)
+          ).map((number) => (
+            <PdfPageSurface
+              key={number}
+              document={document}
+              page={number}
+              width={width}
+              zoom={zoom}
+              title={title}
+              visible={mode === 'paged' || visible.has(number) || number === page}
+              onReady={ready}
+              onError={setError}
+              onSelection={(page, text, value) => {
+                setSelection(value);
+                onContextRef.current({
+                  projectId,
+                  workspace: 'literature',
+                  title,
+                  resourceId: paperId,
+                  page,
+                  text,
+                  selection: value || undefined,
+                });
+              }}
+            />
+          ))}
       </div>
+      {controls}
       <div className="pdf-status">
         {selection
           ? t('已选择 {count} 字，可提问或关联到笔记', { count: selection.length })
           : loading
             ? ''
-            : pageText.current
+            : pageText
               ? t('选择原文可提问或记笔记')
               : t('本页没有可提取文本，可能为扫描页。')}
       </div>

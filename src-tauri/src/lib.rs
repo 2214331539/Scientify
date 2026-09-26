@@ -222,6 +222,7 @@ pub fn run() {
             library::library_note,
             library::library_external,
             library::library_import,
+            library::library_import_bytes,
             browser::browser_command,
             windows::open_project_window,
             windows::workspace_window_ready,

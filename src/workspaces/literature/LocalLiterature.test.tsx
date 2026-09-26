@@ -88,6 +88,7 @@ async function fixture(requestedPaper?: string) {
     saveNote: vi.fn(async (_p, _id, content) => ({ content, revision: 'v2' })),
     external: vi.fn(async () => {}),
     import: async () => scan,
+    importFile: vi.fn(async () => scan),
     changed: async () => () => {},
   };
   const backend: ResearchBackend = {
@@ -144,6 +145,76 @@ it('opens a requested source only after its local binding is available', async (
   expect(
     within(screen.getByRole('tablist', { name: '文献标签页' })).getByRole('tab', { name: 'b.pdf' }),
   ).toBeTruthy();
+});
+
+it('copies external files into the folder under the pointer', async () => {
+  const { Host, library, scan, user } = await fixture();
+  scan.entries.unshift({
+    path: 'Reading',
+    name: 'Reading',
+    directory: true,
+    pdf: false,
+    note: false,
+    size: 0,
+    paperId: null,
+  });
+  render(<Host />);
+  const folder = await screen.findByRole('treeitem', { name: 'Reading' });
+  const file = new File(['%PDF-1.4 test'], '中文论文.pdf', { type: 'application/pdf' });
+  const transfer = {
+    types: ['Files'],
+    files: [file],
+    items: [{ webkitGetAsEntry: () => ({ isDirectory: false }) }],
+    dropEffect: '',
+  };
+  fireEvent.dragOver(folder, { dataTransfer: transfer });
+  expect(screen.getByText('复制到 Reading')).toBeTruthy();
+  fireEvent.drop(folder, { dataTransfer: transfer });
+  await waitFor(() =>
+    expect(library.importFile).toHaveBeenCalledWith(expect.any(String), 'Reading', file),
+  );
+  await user.click(screen.getByRole('button', { name: '搜索文献' }));
+  const search = screen.getByRole('textbox', { name: '搜索文献' });
+  expect(search.closest('.library-root-toolbar')).not.toBeNull();
+  expect(
+    within(search.closest('.library-root-toolbar') as HTMLElement).queryAllByRole('button'),
+  ).toHaveLength(0);
+});
+
+it('replaces the entire directory toolbar during search and restores it on Enter, blur or Escape', async () => {
+  const { Host, user } = await fixture();
+  render(<Host />);
+  await screen.findByRole('treeitem', { name: 'a.pdf' });
+  await user.click(screen.getByRole('button', { name: '搜索文献' }));
+  await user.type(screen.getByRole('textbox', { name: '搜索文献' }), 'a.pdf{Enter}');
+  expect(screen.queryByRole('textbox', { name: '搜索文献' })).toBeNull();
+  expect(screen.getByRole('button', { name: '新建文件夹' })).toBeTruthy();
+  expect(screen.queryByRole('treeitem', { name: 'b.pdf' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: '搜索文献' }));
+  expect((screen.getByRole('textbox', { name: '搜索文献' }) as HTMLInputElement).value).toBe(
+    'a.pdf',
+  );
+  await user.click(screen.getByRole('button', { name: '文献库' }));
+  expect(screen.queryByRole('textbox', { name: '搜索文献' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: '搜索文献' }));
+  await user.keyboard('{Escape}');
+  expect(screen.getByRole('treeitem', { name: 'b.pdf' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: '搜索文献' })).toBeTruthy();
+});
+
+it('rejects directory drops without starting a partial import', async () => {
+  const { Host, library } = await fixture();
+  render(<Host />);
+  const entry = await screen.findByRole('treeitem', { name: 'a.pdf' });
+  fireEvent.drop(entry, {
+    dataTransfer: {
+      types: ['Files'],
+      files: [],
+      items: [{ webkitGetAsEntry: () => ({ isDirectory: true }) }],
+    },
+  });
+  await screen.findByRole('alert');
+  expect(library.importFile).not.toHaveBeenCalled();
 });
 it('opens matching note tabs and does not reopen a note the user closed until the PDF is reopened', async () => {
   const { Host, user } = await fixture();

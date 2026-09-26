@@ -16,13 +16,22 @@ interface Props {
   items: TreeItem[];
   label: string;
   selectedId?: string | null;
+  dropTargetId?: string | null;
   collapsed: ReadonlySet<string>;
   onToggle: (id: string) => void;
   onOpen: (id: string) => void;
 }
 
 /** Selection opens a resource; focus and disclosure only navigate the hierarchy. */
-export function TreeView({ items, label, selectedId, collapsed, onToggle, onOpen }: Props) {
+export function TreeView({
+  items,
+  label,
+  selectedId,
+  dropTargetId,
+  collapsed,
+  onToggle,
+  onOpen,
+}: Props) {
   const [focused, setFocused] = useState<string | null>(null);
   const elements = useRef(new Map<string, HTMLButtonElement>());
   const visible: {
@@ -59,6 +68,7 @@ export function TreeView({ items, label, selectedId, collapsed, onToggle, onOpen
             variant="ghost"
             role="treeitem"
             data-tree-id={item.id}
+            data-drop-target={item.id === dropTargetId ? 'true' : undefined}
             draggable={item.draggable}
             className="sf-tree-row"
             ref={(element) => {

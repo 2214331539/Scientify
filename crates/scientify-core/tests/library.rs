@@ -11,6 +11,45 @@ fn fixture() -> (tempfile::TempDir, LocalLibrary, std::path::PathBuf) {
 }
 
 #[test]
+fn dropped_files_use_the_target_folder_and_never_replace_existing_files_or_notes() {
+    let (_t, lib, root) = fixture();
+    fs::create_dir(root.join("Reading")).unwrap();
+    fs::write(root.join("Reading/论文.notes.md"), "keep note").unwrap();
+    let first = lib
+        .import_bytes("project", "Reading", "论文.pdf", b"%PDF-1.4 dropped")
+        .unwrap();
+    assert_eq!(first.papers[0].path, "Reading/论文 (1).pdf");
+    let second = lib
+        .import_bytes("project", "Reading", "论文.pdf", b"%PDF-1.4 dropped")
+        .unwrap();
+    assert_eq!(second.papers.len(), 2);
+    assert_ne!(second.papers[0].id, second.papers[1].id);
+    assert_eq!(
+        fs::read_to_string(root.join("Reading/论文.notes.md")).unwrap(),
+        "keep note"
+    );
+    lib.import_bytes("project", "Reading", "refs.bib", b"@article{test}")
+        .unwrap();
+    assert_eq!(
+        fs::read(root.join("Reading/refs.bib")).unwrap(),
+        b"@article{test}"
+    );
+    assert!(lib
+        .import_bytes("project", "../outside", "x.pdf", b"%PDF-")
+        .is_err());
+    assert!(lib
+        .import_bytes("project", "", "../x.pdf", b"%PDF-")
+        .is_err());
+    assert!(lib
+        .import_bytes("project", ".scientify", "x.pdf", b"%PDF-")
+        .is_err());
+    assert!(lib
+        .import_bytes("project", "", "bad.pdf", b"not a pdf")
+        .is_err());
+    assert!(!root.join("bad.pdf").exists());
+}
+
+#[test]
 fn unfinished_transaction_blocks_writes_without_losing_recovery_evidence() {
     let (_temp, lib, root) = fixture();
     let paper = lib.open("project", "a.pdf").unwrap();

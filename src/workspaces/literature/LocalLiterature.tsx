@@ -112,6 +112,8 @@ export function LocalLiterature({
     [clipboard, setClipboard] = useState<{ path: string; copy: boolean } | null>(null),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState('');
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
   const [dialog, setDialog] = useState<{
     kind: 'mkdir' | 'rename' | 'move' | 'relink';
@@ -123,9 +125,21 @@ export function LocalLiterature({
     alive = useRef(true),
     generation = useRef(0),
     drag = useRef('');
+  const searchTrigger = useRef<HTMLButtonElement>(null);
   const currentSession = useRef(session);
   currentSession.current = session;
   const actionPending = useRef(false);
+  useEffect(() => {
+    const preventFileNavigation = (event: DragEvent) => {
+      if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+    };
+    window.addEventListener('dragover', preventFileNavigation);
+    window.addEventListener('drop', preventFileNavigation);
+    return () => {
+      window.removeEventListener('dragover', preventFileNavigation);
+      window.removeEventListener('drop', preventFileNavigation);
+    };
+  }, []);
   const changed = useRef(onContext);
   changed.current = onContext;
   const panelId = useId(),
@@ -476,71 +490,86 @@ export function LocalLiterature({
             <p>{t('尚未启用')}</p>
           </div>
         ) : (
-          <>
-            <div className="library-root-toolbar">
-              <Button
-                variant="ghost"
-                iconOnly
-                aria-label={t('打开文献文件夹')}
-                onClick={() => void choose()}
-                disabled={busy}
-              >
-                <FolderOpen />
-              </Button>
-              <div className="library-root-title">
-                <span className="truncate" title={scan.root ?? ''}>
-                  {scan.root ? filename(scan.root) : t('文献库')}
-                </span>
-                <div className={`library-hover-search ${searchOpen || query ? 'is-open' : ''}`}>
-                  <Input
-                    ref={search}
+          <div className="library-directory">
+            <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
+              {searchOpen ? (
+                <Input
+                  ref={search}
+                  className="library-toolbar-search"
+                  autoFocus
+                  aria-label={t('搜索文献')}
+                  placeholder={t('搜索文件名和路径')}
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    if (e.target.value) setCollapsed(new Set());
+                  }}
+                  onBlur={() => setSearchOpen(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      e.preventDefault();
+                      if (e.key === 'Escape') setQuery('');
+                      setSearchOpen(false);
+                      requestAnimationFrame(() => searchTrigger.current?.focus());
+                    }
+                  }}
+                />
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    iconOnly
+                    aria-label={t('打开文献文件夹')}
+                    onClick={() => void choose()}
+                    disabled={busy}
+                  >
+                    <FolderOpen />
+                  </Button>
+                  <div className="library-root-title">
+                    <span className="truncate" title={scan.root ?? ''}>
+                      {scan.root ? filename(scan.root) : t('文献库')}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    iconOnly
                     aria-label={t('搜索文献')}
-                    placeholder={t('搜索文件名和路径')}
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value);
-                      if (e.target.value) setCollapsed(new Set());
+                    ref={searchTrigger}
+                    onClick={() => {
+                      setSearchOpen(true);
+                      requestAnimationFrame(() => search.current?.select());
                     }}
-                  />
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                iconOnly
-                aria-label={t('搜索文献')}
-                onClick={() => {
-                  setSearchOpen(!searchOpen);
-                  requestAnimationFrame(() => search.current?.focus());
-                }}
-              >
-                <Search />
-              </Button>
-              <Button
-                variant="ghost"
-                iconOnly
-                aria-label={t('更多操作')}
-                onClick={(e) =>
-                  void showMenu(
-                    '',
-                    e.currentTarget.getBoundingClientRect().left,
-                    e.currentTarget.getBoundingClientRect().bottom,
-                  )
-                }
-              >
-                <MoreHorizontal />
-              </Button>
-              <Button
-                variant="ghost"
-                iconOnly
-                aria-label={t('新建文件夹')}
-                disabled={!scan.root || busy}
-                onClick={() => command('mkdir', directory)}
-              >
-                <FolderPlus />
-              </Button>
+                  >
+                    <Search />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    iconOnly
+                    aria-label={t('更多操作')}
+                    onClick={(e) =>
+                      void showMenu(
+                        '',
+                        e.currentTarget.getBoundingClientRect().left,
+                        e.currentTarget.getBoundingClientRect().bottom,
+                      )
+                    }
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    iconOnly
+                    aria-label={t('新建文件夹')}
+                    disabled={!scan.root || busy}
+                    onClick={() => command('mkdir', directory)}
+                  >
+                    <FolderPlus />
+                  </Button>
+                </>
+              )}
             </div>
             <div
-              className="local-file-tree"
+              className={`local-file-tree${dropTarget !== null ? ' is-file-dragging' : ''}`}
               onContextMenu={(e) => {
                 e.preventDefault();
                 void showMenu(pathFrom(e.target), e.clientX, e.clientY);
@@ -551,14 +580,27 @@ export function LocalLiterature({
               }}
               onDragEnd={() => {
                 drag.current = '';
+                setDropTarget(null);
               }}
               onDragOver={(e) => {
-                if (drag.current) e.preventDefault();
+                if (drag.current || e.dataTransfer.types.includes('Files')) {
+                  e.preventDefault();
+                  const path = pathFrom(e.target);
+                  const target = scan.entries.find((entry) => entry.path === path);
+                  setDropTarget(target?.directory ? path : parent(path));
+                  e.dataTransfer.dropEffect =
+                    busy || !scan.root ? 'none' : drag.current && !e.ctrlKey ? 'move' : 'copy';
+                }
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(null);
               }}
               onDrop={(e) => {
                 e.preventDefault();
+                setDropTarget(null);
                 const dest = pathFrom(e.target);
                 const entry = scan.entries.find((v) => v.path === dest);
+                const folder = entry?.directory ? dest : parent(dest);
                 if (drag.current) {
                   void mutate({
                     op: 'transfer',
@@ -570,6 +612,42 @@ export function LocalLiterature({
                     copy: e.ctrlKey,
                   });
                   drag.current = '';
+                } else if (e.dataTransfer.types.includes('Files')) {
+                  const files = Array.from(e.dataTransfer.files);
+                  const hasDirectory = Array.from(e.dataTransfer.items).some(
+                    (item) => item.webkitGetAsEntry?.()?.isDirectory,
+                  );
+                  void run(async () => {
+                    protect();
+                    if (!scan.root) throw new Error(t('请先打开文献文件夹。'));
+                    if (hasDirectory || !files.length)
+                      throw new Error(t('请拖入文件，暂不支持整文件夹导入。'));
+                    if (files.some((file) => file.size > 150 * 1024 * 1024))
+                      throw new Error(t('文件名无效或文件超过 150 MiB。'));
+                    let completed = 0;
+                    try {
+                      for (const file of files) {
+                        setImportProgress(
+                          t('导入文件 {current}/{total}', {
+                            current: completed + 1,
+                            total: files.length,
+                          }),
+                        );
+                        const next = await library.importFile(project.id, folder, file);
+                        completed++;
+                        if (alive.current) setScan(next);
+                      }
+                    } catch (error) {
+                      throw new Error(
+                        t('已导入 {count} 个文件。{error}', {
+                          count: completed,
+                          error: translateError(asError(error)),
+                        }),
+                      );
+                    } finally {
+                      if (alive.current) setImportProgress('');
+                    }
+                  });
                 }
               }}
               onKeyDown={(e) => {
@@ -599,6 +677,7 @@ export function LocalLiterature({
                 label={t('项目文献')}
                 items={tree}
                 selectedId={selected}
+                dropTargetId={dropTarget}
                 collapsed={collapsed}
                 onToggle={(id) => {
                   setSelected(id);
@@ -611,6 +690,13 @@ export function LocalLiterature({
                 }}
                 onOpen={(path) => void open(path)}
               />
+              {dropTarget !== null && (
+                <div className="library-drop-hint">
+                  {t('复制到 {folder}', {
+                    folder: dropTarget || filename(scan.root ?? t('文献库')),
+                  })}
+                </div>
+              )}
               {!scan.root && (
                 <div className="library-unmounted">
                   <Button onClick={() => void choose()}>{t('打开文献文件夹')}</Button>
@@ -641,7 +727,9 @@ export function LocalLiterature({
               >
                 <RefreshCw />
               </Button>
-              <span>{scan.entries.filter((e) => e.pdf).length} PDF</span>
+              <span role={importProgress ? 'status' : undefined}>
+                {importProgress || `${scan.entries.filter((e) => e.pdf).length} PDF`}
+              </span>
               <span className="spacer" />
               <Button
                 variant="ghost"
@@ -661,7 +749,7 @@ export function LocalLiterature({
                 {t('旧资料')}
               </Button>
             </div>
-          </>
+          </div>
         )}
       </aside>
       {resize}

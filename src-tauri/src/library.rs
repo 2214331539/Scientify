@@ -207,6 +207,51 @@ pub async fn library_external(
     }
 }
 #[tauri::command]
+pub async fn library_import_bytes(
+    app: tauri::AppHandle,
+    view: tauri::Webview,
+    state: State<'_, AppState>,
+    request: tauri::ipc::Request<'_>,
+) -> Result<Scan, String> {
+    trusted(&view)?;
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Destination {
+        project_id: String,
+        folder: String,
+        name: String,
+    }
+    // ASCII JSON escapes keep Chinese filenames valid in HTTP headers.
+    let destination: Destination = serde_json::from_str(
+        request
+            .headers()
+            .get("x-scientify-file")
+            .and_then(|value| value.to_str().ok())
+            .ok_or("缺少拖入文件信息。")?,
+    )
+    .map_err(|_| "拖入文件信息无效。")?;
+    project(&state, &destination.project_id)?;
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("拖入文件内容无效。".into());
+    };
+    if bytes.len() as u64 > scientify_core::library::PDF_LIMIT {
+        return Err("文件名无效或文件超过 150 MiB。".into());
+    }
+    let bytes = bytes.clone();
+    let service = app.state::<LibraryState>().service.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        service.import_bytes(
+            &destination.project_id,
+            &destination.folder,
+            &destination.name,
+            &bytes,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 pub async fn library_import(
     app: tauri::AppHandle,
     view: tauri::Webview,

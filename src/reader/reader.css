@@ -19,6 +19,18 @@
 .pdf-page canvas {
   display: block;
 }
+.pdf-continuous .pdf-page + .pdf-page {
+  margin-top: 20px;
+}
+.pdf-reader .pdf-mode-toggle {
+  font-size: 11px;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pdf-reader > .toolbar {
+  flex-shrink: 0;
+}
 .pdf-page .textLayer {
   position: absolute;
   inset: 0;

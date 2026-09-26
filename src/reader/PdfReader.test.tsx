@@ -27,6 +27,13 @@ vi.mock('pdfjs-dist', () => ({
 }));
 beforeAll(() => {
   vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.stubGlobal(
     'ResizeObserver',
     class {
       observe() {}
@@ -46,7 +53,7 @@ function setup() {
     readFile: vi.fn(),
     writeFile: vi.fn(),
     importPdf: async () => null,
-    readPdf: async () => new Uint8Array([1]),
+    readPdf: vi.fn(async () => new Uint8Array([1])),
     gitStatus: async () => [],
     askAI: async () => '',
     fetchArxiv: async () => '',
@@ -109,4 +116,36 @@ it('honors a note-source page target instead of a cached tab position', async ()
     expect(context.mock.lastCall?.[0]).toMatchObject({ page: 1, text: 'Research text' }),
   );
   expect((screen.getByRole('spinbutton', { name: '页码' }) as HTMLInputElement).value).toBe('1');
+});
+
+it('scrolls across pages, switches mode at the current page and follows source links without rereading the PDF', async () => {
+  const { reader, context, backend } = setup();
+  const user = userEvent.setup();
+  const host = render(reader);
+  await waitFor(() => expect(context.mock.lastCall?.[0].text).toBe('Research text'));
+  await user.click(screen.getByRole('button', { name: '切换为连续滚动' }));
+  const pages = host.container.querySelectorAll<HTMLElement>('[data-pdf-page]');
+  expect(pages).toHaveLength(2);
+  Object.defineProperty(pages[0], 'offsetTop', { value: 24 });
+  Object.defineProperty(pages[1], 'offsetTop', { value: 844 });
+  const scroll = host.container.querySelector('.pdf-scroll')!;
+  Object.defineProperty(scroll, 'clientHeight', { value: 600 });
+  fireEvent.scroll(scroll, { target: { scrollTop: 900 } });
+  await waitFor(() =>
+    expect(context.mock.lastCall?.[0]).toMatchObject({ page: 2, text: 'Research text' }),
+  );
+  await user.click(screen.getByRole('button', { name: '切换为分页阅览' }));
+  expect(host.container.querySelectorAll('[data-pdf-page]')).toHaveLength(1);
+  expect((screen.getByRole('spinbutton', { name: '页码' }) as HTMLInputElement).value).toBe('2');
+  expect(scroll.scrollTop).toBe(56);
+  await user.click(screen.getByRole('button', { name: '切换为连续滚动' }));
+  fireEvent(
+    window,
+    new CustomEvent('scientify-pdf-page', { detail: { paperId: 'paper', page: 1 } }),
+  );
+  await waitFor(() =>
+    expect((screen.getByRole('spinbutton', { name: '页码' }) as HTMLInputElement).value).toBe('1'),
+  );
+  expect(backend.readPdf).toHaveBeenCalledTimes(1);
+  expect(localStorage.getItem('scientify.reader.mode')).toBe('continuous');
 });

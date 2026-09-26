@@ -34,6 +34,7 @@
     "allow-library-note",
     "allow-library-external",
     "allow-library-import",
+    "allow-library-import-bytes",
     "allow-browser-command"
   ],
   "webviews": [

@@ -10,6 +10,7 @@ fn main() {
             "library_note",
             "library_external",
             "library_import",
+            "library_import_bytes",
             "browser_command",
             "open_project_window",
             "workspace_window_ready",

@@ -947,6 +947,81 @@ impl LocalLibrary {
         result?;
         self.scan_inner(&root)
     }
+    /// Import one browser-provided file without granting access to arbitrary source paths.
+    pub fn import_bytes(
+        &self,
+        project: &str,
+        folder: &str,
+        name: &str,
+        bytes: &[u8],
+    ) -> Result<Scan> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let mut index = self.index(&root)?;
+        if name.contains('/') || bytes.len() as u64 > PDF_LIMIT {
+            return Err("文件名无效或文件超过 150 MiB。".into());
+        }
+        relative(name, false)?;
+        let directory = self.resolve(&root, folder, true)?;
+        if !directory.is_dir() {
+            return Err("目标文件夹不存在。".into());
+        }
+        let pdf = name.to_lowercase().ends_with(".pdf");
+        if pdf
+            && !bytes[..bytes.len().min(1024)]
+                .windows(5)
+                .any(|v| v == b"%PDF-")
+        {
+            return Err("不是有效的 PDF 文件。".into());
+        }
+        let source_name = Path::new(name);
+        let stem = source_name
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or(name);
+        let extension = source_name
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| format!(".{s}"))
+            .unwrap_or_default();
+        let mut number = 0;
+        let (path, full) = loop {
+            let candidate = if number == 0 {
+                name.to_string()
+            } else {
+                format!("{stem} ({number}){extension}")
+            };
+            let path = if folder.is_empty() {
+                candidate
+            } else {
+                format!("{folder}/{candidate}")
+            };
+            let full = self.resolve(&root, &path, false)?;
+            if !full.exists()
+                && !index.papers.iter().any(|p| {
+                    p.path.eq_ignore_ascii_case(&path) || p.note_path.eq_ignore_ascii_case(&path)
+                })
+                && (!pdf || !root.join(sidecar(&path)).exists())
+            {
+                break (path, full);
+            }
+            number += 1;
+        };
+        write_atomic(&full, bytes, false)?;
+        if pdf {
+            index.papers.push(Binding {
+                id: Uuid::new_v4().to_string(),
+                path: path.clone(),
+                note_path: sidecar(&path),
+                fingerprint: digest(bytes),
+            });
+            if let Err(error) = self.write_index(&root, &index) {
+                fs::remove_file(&full).map_err(err)?;
+                return Err(error);
+            }
+        }
+        self.scan_inner(&root)
+    }
     pub fn external_path(&self, project: &str, path: &str) -> Result<PathBuf> {
         let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
         self.resolve(&root, path, true)
