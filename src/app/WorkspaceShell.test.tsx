@@ -119,6 +119,10 @@ function rail() {
 }
 
 async function selectProject(user: ReturnType<typeof userEvent.setup>, name: string) {
+  if (screen.queryByRole('region', { name: '项目管理' })) {
+    await user.click(screen.getByRole('button', { name }));
+    return;
+  }
   await user.click(screen.getByRole('button', { name: '切换项目' }));
   await user.click(
     within(screen.getByRole('dialog', { name: '项目切换' })).getByRole('button', { name }),

@@ -5,6 +5,7 @@ import { useStore } from 'zustand';
 import { Modal } from '../../components/Modal';
 import type { Project, Team } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
+import { projectCoverColors } from './model';
 
 export function ProjectForm({
   project,
@@ -28,7 +29,7 @@ export function ProjectForm({
     space: project?.space ?? space,
     path: project?.path ?? '',
     repo: project?.repo ?? '',
-    color: project?.color ?? '#657b71',
+    color: project?.color ?? projectCoverColors[data.projects.length % projectCoverColors.length],
   }));
   const [dirty, setDirty] = useState(false);
   useEffect(() => {
@@ -238,12 +239,11 @@ export function TeamForm({
           if (!name.trim()) return;
           if (
             await store.getState().update((d) => {
-              if (team)
-                Object.assign(
-                  d.teams.find((t) => t.id === team.id)!,
-                  { name: name.trim(), description },
-                );
-              else
+              if (team) {
+                const target = d.teams.find((t) => t.id === team.id);
+                if (!target) throw new Error(t('团队不存在，请重新载入。'));
+                Object.assign(target, { name: name.trim(), description });
+              } else
                 d.teams.push({
                   id: crypto.randomUUID(),
                   name: name.trim(),

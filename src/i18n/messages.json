@@ -3010,5 +3010,129 @@
   "PDF 阅读区域": [
     "PDF 阅读区域",
     "PDF reading area"
+  ],
+  "团队协作空间": [
+    "团队协作空间",
+    "Team spaces"
+  ],
+  "登录入口占位": [
+    "登录入口占位",
+    "Account placeholder"
+  ],
+  "登录": [
+    "登录",
+    "Sign in"
+  ],
+  "空间导航": [
+    "空间导航",
+    "Space navigation"
+  ],
+  "项目操作 {name}": [
+    "项目操作 {name}",
+    "Actions for {name}"
+  ],
+  "项目操作": [
+    "项目操作",
+    "Project actions"
+  ],
+  "删除项目": [
+    "删除项目",
+    "Delete project"
+  ],
+  "今天": [
+    "今天",
+    "today"
+  ],
+  "昨天": [
+    "昨天",
+    "yesterday"
+  ],
+  "{count} 天前": [
+    "{count} 天前",
+    "{count} days ago"
+  ],
+  "更新于{date}": [
+    "更新于{date}",
+    "Updated {date}"
+  ],
+  "项目显示方式": [
+    "项目显示方式",
+    "Project view"
+  ],
+  "网格视图": [
+    "网格视图",
+    "Grid view"
+  ],
+  "列表视图": [
+    "列表视图",
+    "List view"
+  ],
+  "项目网格": [
+    "项目网格",
+    "Project grid"
+  ],
+  "项目列表": [
+    "项目列表",
+    "Project list"
+  ],
+  "研究项目": [
+    "研究项目",
+    "Research project"
+  ],
+  "搜索团队": [
+    "搜索团队",
+    "Search teams"
+  ],
+  "搜索团队…": [
+    "搜索团队…",
+    "Search teams…"
+  ],
+  "编辑团队": [
+    "编辑团队",
+    "Edit team"
+  ],
+  "暂无团队空间": [
+    "暂无团队空间",
+    "No team spaces"
+  ],
+  "创建团队空间，集中管理团队项目。": [
+    "创建团队空间，集中管理团队项目。",
+    "Create a team space to organize its projects."
+  ],
+  "编辑团队 {name}": [
+    "编辑团队 {name}",
+    "Edit team {name}"
+  ],
+  "删除团队 {name}": [
+    "删除团队 {name}",
+    "Delete team {name}"
+  ],
+  "没有符合条件的团队": [
+    "没有符合条件的团队",
+    "No matching teams"
+  ],
+  "删除团队空间": [
+    "删除团队空间",
+    "Delete team space"
+  ],
+  "删除“{name}”及其项目记录？本地文件和文献附件将保留。": [
+    "删除“{name}”及其项目记录？本地文件和文献附件将保留。",
+    "Delete “{name}” and its project records? Local files and paper attachments will be kept."
+  ],
+  "删除团队“{name}”？其项目将移至个人空间。": [
+    "删除团队“{name}”？其项目将移至个人空间。",
+    "Delete team “{name}”? Its projects will move to your personal space."
+  ],
+  "请先保存当前修改，再删除项目或团队。": [
+    "请先保存当前修改，再删除项目或团队。",
+    "Save your changes before deleting a project or team."
+  ],
+  "确认删除": [
+    "确认删除",
+    "Confirm deletion"
+  ],
+  "团队不存在，请重新载入。": [
+    "团队不存在，请重新载入。",
+    "The team no longer exists. Reload the workspace."
   ]
 }

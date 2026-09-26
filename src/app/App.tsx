@@ -1,7 +1,5 @@
 import { t, translateError } from '../i18n';
 import { Button } from '../components/primitives';
-import { Sidebar } from '../components/layout/Sidebar';
-import { ResourceList, ResourceRow } from '../components/workspace/ResourceList';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { invoke, isTauri } from '@tauri-apps/api/core';
@@ -9,7 +7,7 @@ import { listen } from '@tauri-apps/api/event';
 import { openProjectWindow } from '../platform/windows';
 import { applyAppearance, migrateTheme, usePreferences } from '../i18n/preferences';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { CircleHelp, Database, FolderOpen, Plus, Settings, Users, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { AppShell, WORKSPACE_RAIL_WIDTH } from '../components/layout/AppShell';
 import { StatusBarTools } from '../components/layout/StatusBarTools';
 import { TopBar } from '../components/layout/TopBar';
@@ -20,6 +18,8 @@ import { WorkspaceFrame } from '../components/workspace/WorkspaceFrame';
 import type { ResumeTarget } from '../workspaces/overview/home-model';
 import { ProjectForm, TeamForm } from '../features/projects/ProjectForm';
 import { ProjectLibrary } from '../features/projects/ProjectLibrary';
+import { ProjectSidebar } from '../features/projects/ProjectSidebar';
+import { WindowControls } from '../components/layout/WindowControls';
 import { SettingsDialog } from '../features/settings/Settings';
 import { SearchDialog, type SearchTarget } from '../features/search/SearchDialog';
 import { Overview } from '../workspaces/overview/Overview';
@@ -297,7 +297,8 @@ export function App({
     if (!data) return;
     setUI((s) => {
       const invalidProject = s.projectId && !data.projects.some((p) => p.id === s.projectId);
-      const invalidSpace = s.space !== 'personal' && !data.teams.some((t) => t.id === s.space);
+      const invalidSpace =
+        !['personal', '__teams__'].includes(s.space) && !data.teams.some((t) => t.id === s.space);
       return invalidProject || invalidSpace
         ? {
             ...s,
@@ -644,6 +645,9 @@ export function App({
       onOpen={openProject}
       onNew={() => openDialog({ kind: 'project' })}
       onEdit={(p) => openDialog({ kind: 'project', project: p })}
+      onSpace={(space) => setUI((s) => ({ ...s, space }))}
+      onNewTeam={() => openDialog({ kind: 'team' })}
+      onEditTeam={(team) => openDialog({ kind: 'team', team })}
     />
   ) : workspace === 'overview' ? (
     <Overview
@@ -771,17 +775,20 @@ export function App({
   );
   return (
     <AppShell
+      variant={project ? 'workspace' : 'launcher'}
       rightWidth={rightWidth}
       topbar={
-        <TopBar
-          project={project}
-          projects={data?.projects ?? []}
-          ready={!!ready}
-          onProject={openProject}
-          onProjects={returnToProjects}
-          onNewProject={() => openDialog({ kind: 'project' })}
-          onProjectSettings={() => openDialog({ kind: 'project', project })}
-        />
+        project ? (
+          <TopBar
+            project={project}
+            projects={data?.projects ?? []}
+            ready={!!ready}
+            onProject={openProject}
+            onProjects={returnToProjects}
+            onNewProject={() => openDialog({ kind: 'project' })}
+            onProjectSettings={() => openDialog({ kind: 'project', project })}
+          />
+        ) : null
       }
       rail={
         project && (
@@ -797,27 +804,29 @@ export function App({
         )
       }
       statusbar={
-        <footer className="statusbar">
-          <span>
-            <i className={`save-dot ${dirty ? 'dirty' : ''}`} />
-            {busy
-              ? t('正在保存…')
-              : error
-                ? t('操作未完成')
-                : dirty
-                  ? t('有未保存内容')
-                  : t('已保存')}
-          </span>
-          <span>{preview ? t('浏览器预览 · 独立数据') : t('本地工作区')}</span>
-          <span className="spacer" />
-          <StatusBarTools
-            ready={!!ready}
-            tool={ui.dock}
-            open={ui.dockOpen}
-            notesWorkspace={notesWorkspace}
-            onTool={toggleTool}
-          />
-        </footer>
+        project ? (
+          <footer className="statusbar">
+            <span>
+              <i className={`save-dot ${dirty ? 'dirty' : ''}`} />
+              {busy
+                ? t('正在保存…')
+                : error
+                  ? t('操作未完成')
+                  : dirty
+                    ? t('有未保存内容')
+                    : t('已保存')}
+            </span>
+            <span>{preview ? t('浏览器预览 · 独立数据') : t('本地工作区')}</span>
+            <span className="spacer" />
+            <StatusBarTools
+              ready={!!ready}
+              tool={ui.dock}
+              open={ui.dockOpen}
+              notesWorkspace={notesWorkspace}
+              onTool={toggleTool}
+            />
+          </footer>
+        ) : null
       }
       dialogs={
         <>
@@ -829,7 +838,7 @@ export function App({
           {dialog?.kind === 'project' ? (
             <ProjectForm
               store={store}
-              space={ui.space}
+              space={ui.space === '__teams__' ? 'personal' : ui.space}
               project={dialog.project}
               onClose={() => setDialog(null)}
             />
@@ -853,78 +862,24 @@ export function App({
       }
     >
       {!project && (
-        <Sidebar className="project-spaces" aria-label={t('项目空间')}>
-          <div className="project-space-groups">
-            <div className="resource-heading">{t('Spaces')}</div>
-            <ResourceList label={t('个人项目空间')}>
-              <ResourceRow
-                selected={ui.space === 'personal'}
-                className={`resource-row ${ui.space === 'personal' ? 'active' : ''}`}
-                onClick={() => setUI((s) => ({ ...s, space: 'personal' }))}
-              >
-                <FolderOpen />
-                {t('My projects')}
-              </ResourceRow>
-            </ResourceList>
-            <div className="resource-heading">
-              {t('Teams')}
-              <Button
-                variant="ghost"
-                iconOnly
-                className="icon-button"
-                title={t('创建团队空间')}
-                aria-label={t('创建团队空间')}
-                disabled={!ready}
-                onClick={() => openDialog({ kind: 'team' })}
-              >
-                <Plus />
-              </Button>
-            </div>
-            <ResourceList label={t('团队项目空间')}>
-              {data?.teams.map((team) => (
-                <ResourceRow
-                  key={team.id}
-                  selected={ui.space === team.id}
-                  className={`resource-row ${ui.space === team.id ? 'active' : ''}`}
-                  onClick={() => setUI((s) => ({ ...s, space: team.id }))}
-                >
-                  <Users />
-                  <span className="truncate">{team.name}</span>
-                </ResourceRow>
-              ))}
-            </ResourceList>
-          </div>
-          <footer className="project-space-tools" aria-label={t('全局设置')}>
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t('数据与备份')}
-              onClick={() => openDialog({ kind: 'data' })}
-            >
-              <Database />
-            </Button>
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t('设置')}
-              onClick={() => openDialog({ kind: 'profile' })}
-            >
-              <Settings />
-            </Button>
-            <span className="spacer" />
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t('关于 MVP')}
-              tooltip={t('关于 Scientify')}
-              onClick={() => openDialog({ kind: 'about' })}
-            >
-              <CircleHelp />
-            </Button>
-          </footer>
-        </Sidebar>
+        <ProjectSidebar
+          space={ui.space}
+          teams={data?.teams ?? []}
+          ready={!!ready}
+          onSpace={(space) => setUI((s) => ({ ...s, space }))}
+          onNewTeam={() => openDialog({ kind: 'team' })}
+          onSettings={() => openDialog({ kind: 'profile' })}
+          onData={() => openDialog({ kind: 'data' })}
+          onAbout={() => openDialog({ kind: 'about' })}
+        />
       )}
       <main className="central-area" hidden={notesWorkspace}>
+        {!project && !ready && (
+          <header className="launcher-topbar" data-tauri-drag-region>
+            <span className="spacer" />
+            <WindowControls />
+          </header>
+        )}
         {error && ready && !dialog && (
           <div className="inline-error" role="alert">
             <span>{translateError(error)}</span>
@@ -949,7 +904,7 @@ export function App({
           store={store}
           backend={backend}
           tool={ui.dock}
-          open={ui.dockOpen}
+          open={!!project && ui.dockOpen}
           notesWorkspace={notesWorkspace}
           context={effectiveContext}
           onNoteContext={receiveContext}

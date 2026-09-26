@@ -10,6 +10,7 @@ export function AppShell({
   statusbar,
   dialogs,
   rightWidth,
+  variant = 'workspace',
 }: {
   topbar: ReactNode;
   rail: ReactNode;
@@ -17,10 +18,11 @@ export function AppShell({
   statusbar: ReactNode;
   dialogs: ReactNode;
   rightWidth: number;
+  variant?: 'workspace' | 'launcher';
 }) {
   return (
     <div
-      className="app-shell research-shell"
+      className={`app-shell research-shell${variant === 'launcher' ? ' launcher-shell' : ''}`}
       style={
         {
           '--dock-width': `${rightWidth}px`,
