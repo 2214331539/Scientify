@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-research-read-pdf"
+description = "Enables the research_read_pdf command without any pre-configured scope."
+commands.allow = ["research_read_pdf"]
+
+[[permission]]
+identifier = "deny-research-read-pdf"
+description = "Denies the research_read_pdf command without any pre-configured scope."
+commands.deny = ["research_read_pdf"]

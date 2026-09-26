@@ -1,0 +1,508 @@
+{
+  "brand": "Scientify",
+  "source": "source/original-logo.png",
+  "master": "source/master-transparent.png",
+  "themeMeaning": {
+    "light": "Dark mark for light surfaces",
+    "dark": "White mark for dark surfaces"
+  },
+  "assets": [
+    {
+      "file": "app/light/scientify-16.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "desktop/light/scientify-16.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "app/light/scientify-20.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 20,
+      "height": 20
+    },
+    {
+      "file": "desktop/light/scientify-20.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 20,
+      "height": 20
+    },
+    {
+      "file": "app/light/scientify-24.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "desktop/light/scientify-24.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "app/light/scientify-32.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "desktop/light/scientify-32.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "app/light/scientify-40.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 40,
+      "height": 40
+    },
+    {
+      "file": "desktop/light/scientify-40.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 40,
+      "height": 40
+    },
+    {
+      "file": "app/light/scientify-48.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "file": "desktop/light/scientify-48.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "file": "app/light/scientify-64.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "file": "desktop/light/scientify-64.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "file": "app/light/scientify-96.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 96,
+      "height": 96
+    },
+    {
+      "file": "desktop/light/scientify-96.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 96,
+      "height": 96
+    },
+    {
+      "file": "app/light/scientify-128.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 128,
+      "height": 128
+    },
+    {
+      "file": "desktop/light/scientify-128.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 128,
+      "height": 128
+    },
+    {
+      "file": "app/light/scientify-192.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 192,
+      "height": 192
+    },
+    {
+      "file": "desktop/light/scientify-192.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 192,
+      "height": 192
+    },
+    {
+      "file": "app/light/scientify-256.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 256,
+      "height": 256
+    },
+    {
+      "file": "desktop/light/scientify-256.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 256,
+      "height": 256
+    },
+    {
+      "file": "app/light/scientify-512.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "file": "desktop/light/scientify-512.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "file": "app/light/scientify-1024.png",
+      "kind": "app",
+      "theme": "light",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "desktop/light/scientify-1024.png",
+      "kind": "desktop",
+      "theme": "light",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "taskbar/light/scientify-16.png",
+      "kind": "taskbar",
+      "theme": "light",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "taskbar/light/scientify-20.png",
+      "kind": "taskbar",
+      "theme": "light",
+      "width": 20,
+      "height": 20
+    },
+    {
+      "file": "taskbar/light/scientify-24.png",
+      "kind": "taskbar",
+      "theme": "light",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "taskbar/light/scientify-32.png",
+      "kind": "taskbar",
+      "theme": "light",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "taskbar/light/scientify-40.png",
+      "kind": "taskbar",
+      "theme": "light",
+      "width": 40,
+      "height": 40
+    },
+    {
+      "file": "taskbar/light/scientify-48.png",
+      "kind": "taskbar",
+      "theme": "light",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "file": "taskbar/light/scientify-64.png",
+      "kind": "taskbar",
+      "theme": "light",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "file": "master/scientify-light-1024.png",
+      "kind": "master",
+      "theme": "light",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "app/dark/scientify-16.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "desktop/dark/scientify-16.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "app/dark/scientify-20.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 20,
+      "height": 20
+    },
+    {
+      "file": "desktop/dark/scientify-20.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 20,
+      "height": 20
+    },
+    {
+      "file": "app/dark/scientify-24.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "desktop/dark/scientify-24.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "app/dark/scientify-32.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "desktop/dark/scientify-32.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "app/dark/scientify-40.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 40,
+      "height": 40
+    },
+    {
+      "file": "desktop/dark/scientify-40.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 40,
+      "height": 40
+    },
+    {
+      "file": "app/dark/scientify-48.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "file": "desktop/dark/scientify-48.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "file": "app/dark/scientify-64.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "file": "desktop/dark/scientify-64.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "file": "app/dark/scientify-96.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 96,
+      "height": 96
+    },
+    {
+      "file": "desktop/dark/scientify-96.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 96,
+      "height": 96
+    },
+    {
+      "file": "app/dark/scientify-128.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 128,
+      "height": 128
+    },
+    {
+      "file": "desktop/dark/scientify-128.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 128,
+      "height": 128
+    },
+    {
+      "file": "app/dark/scientify-192.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 192,
+      "height": 192
+    },
+    {
+      "file": "desktop/dark/scientify-192.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 192,
+      "height": 192
+    },
+    {
+      "file": "app/dark/scientify-256.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 256,
+      "height": 256
+    },
+    {
+      "file": "desktop/dark/scientify-256.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 256,
+      "height": 256
+    },
+    {
+      "file": "app/dark/scientify-512.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "file": "desktop/dark/scientify-512.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "file": "app/dark/scientify-1024.png",
+      "kind": "app",
+      "theme": "dark",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "desktop/dark/scientify-1024.png",
+      "kind": "desktop",
+      "theme": "dark",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "taskbar/dark/scientify-16.png",
+      "kind": "taskbar",
+      "theme": "dark",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "taskbar/dark/scientify-20.png",
+      "kind": "taskbar",
+      "theme": "dark",
+      "width": 20,
+      "height": 20
+    },
+    {
+      "file": "taskbar/dark/scientify-24.png",
+      "kind": "taskbar",
+      "theme": "dark",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "taskbar/dark/scientify-32.png",
+      "kind": "taskbar",
+      "theme": "dark",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "taskbar/dark/scientify-40.png",
+      "kind": "taskbar",
+      "theme": "dark",
+      "width": 40,
+      "height": 40
+    },
+    {
+      "file": "taskbar/dark/scientify-48.png",
+      "kind": "taskbar",
+      "theme": "dark",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "file": "taskbar/dark/scientify-64.png",
+      "kind": "taskbar",
+      "theme": "dark",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "file": "master/scientify-dark-1024.png",
+      "kind": "master",
+      "theme": "dark",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "web/icon-180.png",
+      "kind": "web",
+      "theme": "light",
+      "width": 180,
+      "height": 180
+    },
+    {
+      "file": "web/icon-192.png",
+      "kind": "web",
+      "theme": "light",
+      "width": 192,
+      "height": 192
+    },
+    {
+      "file": "web/icon-512.png",
+      "kind": "web",
+      "theme": "light",
+      "width": 512,
+      "height": 512
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+dialog.settings-dialog {
+  width: min(880px, calc(100vw - 48px));
+  height: min(700px, calc(100dvh - 64px));
+  max-height: none;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--sf-surface-canvas);
+}
+dialog.settings-dialog[open] {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  animation: settings-enter var(--sf-motion-overlay) var(--sf-ease-standard);
+}
+@keyframes settings-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.settings-dialog::backdrop {
+  background: rgb(10 14 13 / 48%);
+}
+.settings-dialog .settings-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 10px;
+  background: var(--sf-surface-chrome);
+  border-right: 1px solid var(--sf-border-subtle);
+}
+.settings-title {
+  height: 28px;
+  padding-inline: 8px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-navigation .sf-button {
+  justify-content: flex-start;
+  gap: 9px;
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 12px;
+  overflow: hidden;
+}
+.settings-navigation .sf-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settings-navigation .sf-button[aria-current='page'] {
+  background: var(--sf-surface-canvas);
+  border-color: var(--sf-border-subtle);
+  color: var(--sf-text-primary);
+}
+.settings-brand {
+  margin-top: auto;
+  padding: 20px 9px 0;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.settings-dialog .modal-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.settings-dialog .dialog-heading {
+  height: 46px;
+  padding: 0 18px;
+  flex-shrink: 0;
+}
+.settings-dialog .dialog-heading h2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-scroll {
+  flex: 1;
+  padding: 20px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.settings-scroll [hidden] {
+  display: none !important;
+}
+.settings-preference-row,
+.settings-input-row {
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+}
+.settings-preference-row .preference-fields label,
+.settings-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+.settings-preference-row p,
+.settings-note {
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+.settings-preference-row p {
+  min-height: 3.2em;
+}
+.settings-section-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sf-text-secondary);
+  margin: 28px 0 10px;
+}
+.settings-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.settings-input-row input {
+  width: 100%;
+}
+.settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--sf-text-muted);
+}
+.settings-actions button {
+  min-width: 112px;
+}
+.settings-data {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.settings-data > p,
+.settings-about p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--sf-text-secondary);
+}
+.settings-data .setting-row {
+  align-items: flex-start;
+  gap: 12px;
+}
+.settings-data .setting-row > div:first-child {
+  min-width: 0;
+}
+.settings-data .button-row {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.settings-data .data-path {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.settings-about {
+  display: grid;
+  gap: 18px;
+}
+.settings-about h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  dialog.settings-dialog {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 32px);
+  }
+  dialog.settings-dialog[open] {
+    grid-template-columns: 132px minmax(0, 1fr);
+  }
+  .settings-scroll {
+    padding: 12px;
+  }
+  .settings-preference-row .preference-fields label,
+  .settings-input-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .settings-data .setting-row {
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,98 @@
+.pdf-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--sf-surface-sunken);
+  padding: 24px;
+  overscroll-behavior: contain;
+}
+.pdf-page {
+  position: relative;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow:
+    0 1px 4px rgb(0 0 0 / 10%),
+    0 0 0 1px rgb(0 0 0 / 3%);
+  border-radius: 2px;
+}
+.pdf-page canvas {
+  display: block;
+}
+.pdf-page .textLayer {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+}
+.pdf-loading {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 12px;
+  z-index: 2;
+  background: var(--sf-surface-raised);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.pdf-status {
+  padding: 3px 12px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  border-top: 1px solid var(--sf-border-subtle);
+  min-height: 24px;
+}
+.pdf-page-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pdf-page-input input {
+  width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pdf-reader .toolbar {
+  padding: 3px 8px;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.pdf-reader .toolbar .muted {
+  font-size: 12px;
+}
+.pdf-reader-compact {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+}
+.pdf-reader-compact > .toolbar {
+  flex-wrap: nowrap;
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  min-height: 34px;
+  padding: 3px 6px;
+  gap: 3px;
+  overflow-x: auto;
+  border: 1px solid var(--sf-border-control);
+  border-radius: 4px;
+  background: var(--sf-surface-raised);
+  box-shadow: var(--sf-shadow-popover);
+}
+.pdf-reader-compact .pdf-scroll {
+  padding-bottom: 64px;
+}
+.pdf-reader-compact .pdf-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

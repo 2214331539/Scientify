@@ -1,0 +1,28 @@
+[package]
+name = "scientify"
+version = "0.3.0"
+edition = "2021"
+description = "Scientify local research workspace"
+
+[lib]
+name = "scientify_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+scientify-core = { path = "../crates/scientify-core" }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+tempfile = "3"
+tauri = { version = "2", features = ["test"] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

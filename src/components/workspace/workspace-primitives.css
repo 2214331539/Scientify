@@ -1,0 +1,119 @@
+.sf-section {
+  min-width: 0;
+}
+.sf-section + .sf-section {
+  margin-top: 24px;
+}
+.sf-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  margin-bottom: 4px;
+}
+.sf-section-header h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--sf-text-secondary);
+}
+.sf-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sf-resource-list,
+.sf-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sf-resource-item {
+  min-width: 0;
+  border-bottom: 1px solid var(--sf-border-subtle);
+}
+.sf-resource-item:last-child {
+  border-bottom: 0;
+}
+.sf-resource-row {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 8px;
+  justify-content: flex-start;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  white-space: normal;
+}
+.sf-resource-row.is-selected {
+  background: var(--sf-surface-selected);
+}
+.sf-resource-row:focus-visible,
+.sf-activity-row:focus-visible {
+  outline-offset: -2px;
+}
+.sf-list-empty {
+  padding: 10px 8px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.sf-activity-list li {
+  position: relative;
+  min-width: 0;
+}
+.sf-activity-list li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  left: 66px;
+  top: calc(50% + 4px);
+  bottom: calc(-50% + 4px);
+  width: 1px;
+  background: var(--sf-border-subtle);
+}
+.sf-activity-row {
+  display: grid;
+  grid-template-columns: 48px 14px 126px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+.sf-activity-row time {
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.sf-activity-marker {
+  justify-self: center;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--sf-text-disabled);
+  border-radius: 50%;
+  background: var(--sf-surface-canvas);
+}
+.sf-activity-action {
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.sf-activity-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .sf-activity-row {
+    grid-template-columns: 48px 14px minmax(0, 1fr);
+  }
+  .sf-activity-action {
+    display: none;
+  }
+}

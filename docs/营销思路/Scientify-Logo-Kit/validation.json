@@ -1,0 +1,23 @@
+{
+  "pngFilesChecked": 71,
+  "icoFilesChecked": 4,
+  "icoFrameSizes": [
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    128,
+    256
+  ],
+  "alpha": true,
+  "masterBounds": {
+    "left": 195,
+    "top": 243,
+    "width": 863,
+    "height": 786
+  },
+  "status": "passed"
+}

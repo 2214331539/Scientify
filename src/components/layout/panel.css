@@ -1,0 +1,35 @@
+@layer theme, base, components, utilities;
+
+@layer components {
+  .sf-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .sf-panel-header,
+  .sf-panel-toolbar,
+  .sf-panel-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: var(--sf-toolbar-height);
+    padding: 3px 12px;
+    border-bottom: 1px solid var(--sf-border-subtle);
+  }
+  .sf-panel-header {
+    min-height: var(--sf-header-height);
+    font-weight: 500;
+  }
+  .sf-panel-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--sf-border-subtle);
+    border-bottom: 0;
+    color: var(--sf-text-secondary);
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,39 @@
+.sf-tree {
+  min-width: 0;
+  padding: 2px 4px;
+}
+.sf-tree .sf-tree-row {
+  width: 100%;
+  min-height: 28px;
+  justify-content: flex-start;
+  gap: 5px;
+  padding-block: 3px;
+  border: 0;
+  border-radius: var(--sf-radius);
+  text-align: left;
+  color: var(--sf-text-secondary);
+}
+.sf-tree .sf-tree-row[aria-selected='true'] {
+  color: var(--sf-text-primary);
+  background: var(--sf-surface-selected);
+}
+.sf-tree-disclosure,
+.sf-tree-icon {
+  display: inline-flex;
+  flex: 0 0 14px;
+  align-items: center;
+}
+.sf-tree .sf-tree-disclosure svg {
+  width: 12px;
+  height: 12px;
+}
+.sf-tree .sf-tree-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.sf-tree-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}

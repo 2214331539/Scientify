@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-research-ask-ai"
+description = "Enables the research_ask_ai command without any pre-configured scope."
+commands.allow = ["research_ask_ai"]
+
+[[permission]]
+identifier = "deny-research-ask-ai"
+description = "Denies the research_ask_ai command without any pre-configured scope."
+commands.deny = ["research_ask_ai"]

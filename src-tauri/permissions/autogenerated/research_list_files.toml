@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-research-list-files"
+description = "Enables the research_list_files command without any pre-configured scope."
+commands.allow = ["research_list_files"]
+
+[[permission]]
+identifier = "deny-research-list-files"
+description = "Denies the research_list_files command without any pre-configured scope."
+commands.deny = ["research_list_files"]

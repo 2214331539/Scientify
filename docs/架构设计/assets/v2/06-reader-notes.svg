@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000"><rect width="100%" height="100%" fill="white"/>
+<text x="20" y="37" font-family="Microsoft YaHei,sans-serif" font-size="23" font-weight="700" fill="#282828">文献区 / 阅读与笔记</text>
+<text x="20" y="61" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#777777">文献、订阅与阅读在同一工作区完成；导入、翻译和提问不增加导航层级。</text>
+<rect x="20" y="80" width="1560" height="848" fill="white" stroke="#bdbdbd"/>
+<path d="M20 123 L1580 123" stroke="#d3d3d3" stroke-width="1"/>
+<path d="M20 904 L1580 904" stroke="#d3d3d3" stroke-width="1"/>
+<text x="35" y="107" font-family="Microsoft YaHei,sans-serif" font-size="15" font-weight="700" fill="#282828">Scientify</text>
+<text x="140" y="106" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">&gt;  我的空间  &gt;  示例研究</text>
+<text x="738" y="106" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#777777">搜索项目与资料…</text>
+<rect x="1347" y="87" width="98" height="27" fill="white" stroke="#d3d3d3"/>
+<text x="1357" y="104" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#282828">AI 助手</text>
+<rect x="1455" y="87" width="106" height="27" fill="#eaeaea" stroke="#d3d3d3"/>
+<text x="1465" y="104" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#282828">研究笔记</text>
+<rect x="20" y="124" width="248" height="779" fill="#f7f7f7" stroke="#f7f7f7"/>
+<path d="M268 123 L268 904" stroke="#d3d3d3" stroke-width="1"/>
+<rect x="44" y="134" width="5" height="5" fill="white" stroke="#555555"/>
+<rect x="52" y="134" width="5" height="5" fill="white" stroke="#555555"/>
+<rect x="44" y="142" width="5" height="5" fill="white" stroke="#555555"/>
+<rect x="52" y="142" width="5" height="5" fill="white" stroke="#555555"/>
+<text x="37" y="167" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">概览</text>
+<rect x="106" y="134" width="13" height="15" fill="white" stroke="#555555"/>
+<path d="M109 139 L116 139" stroke="#777777" stroke-width="1"/>
+<path d="M109 143 L116 143" stroke="#777777" stroke-width="1"/>
+<text x="99" y="167" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="700" fill="#282828">文献</text>
+<path d="M89 176 L137 176" stroke="#282828" stroke-width="2"/>
+<path d="M173 134 L168 141" stroke="#555555" stroke-width="1"/>
+<path d="M168 141 L173 148" stroke="#555555" stroke-width="1"/>
+<path d="M177 134 L182 141" stroke="#555555" stroke-width="1"/>
+<path d="M182 141 L177 148" stroke="#555555" stroke-width="1"/>
+<text x="161" y="167" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">实验</text>
+<path d="M230 148 L243 135" stroke="#555555" stroke-width="2"/>
+<path d="M230 148 L236 148" stroke="#555555" stroke-width="1"/>
+<text x="223" y="167" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">论文</text>
+<path d="M20 179 L268 179" stroke="#d3d3d3" stroke-width="1"/>
+<text x="34" y="204" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="700" fill="#282828">本地文献</text>
+<path d="M34 216 L86 216" stroke="#282828" stroke-width="2"/>
+<text x="149" y="204" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#777777">订阅</text>
+<path d="M20 219 L268 219" stroke="#d3d3d3" stroke-width="1"/>
+<text x="38" y="879" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#777777">个人    设置    帮助</text>
+<text x="35" y="922" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="400" fill="#777777">已保存</text>
+<text x="1420" y="922" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="400" fill="#777777">任务 0  ·  本地</text>
+<path d="M1244 123 L1244 904" stroke="#aaaaaa" stroke-width="1"/>
+<text x="1261" y="149" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#777777">AI 助手</text>
+<text x="1354" y="149" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="700" fill="#282828">研究笔记</text>
+<text x="1500" y="151" font-family="Microsoft YaHei,sans-serif" font-size="15" font-weight="400" fill="#777777">…    ×</text>
+<path d="M1244 160 L1580 160" stroke="#d3d3d3" stroke-width="1"/>
+<path d="M1351 159 L1421 159" stroke="#282828" stroke-width="2"/>
+<text x="1261" y="187" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#282828">‹ 笔记列表</text>
+<text x="1486" y="187" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#282828">＋ 新建</text>
+<text x="1261" y="228" font-family="Microsoft YaHei,sans-serif" font-size="16" font-weight="700" fill="#282828">一次观察与待验证的问题</text>
+<text x="1261" y="256" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="400" fill="#777777">示例研究  /  自动保存</text>
+<path d="M1259 277 L1564 277" stroke="#d3d3d3" stroke-width="1"/>
+<text x="1261" y="306" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#777777">B    I    列表    引用</text>
+<text x="1261" y="356" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828">观察</text>
+<text x="1261" y="386" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828"></text>
+<text x="1261" y="416" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828">目前看到的差异可能与输入条件有关。</text>
+<text x="1261" y="446" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828">需要补充一次对照，再判断是否稳定。</text>
+<text x="1261" y="476" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828"></text>
+<text x="1261" y="506" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828">待验证</text>
+<text x="1261" y="536" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828"></text>
+<text x="1261" y="566" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828">□ 检查配置与数据版本</text>
+<text x="1261" y="596" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#282828">□ 补充另一组随机种子</text>
+<path d="M1259 769 L1564 769" stroke="#d3d3d3" stroke-width="1"/>
+<text x="1261" y="797" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="700" fill="#777777">来源（创建时关联）</text>
+<text x="1261" y="823" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#282828">文献 A · 第 3 页</text>
+<text x="1261" y="870" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#777777">定位来源    添加关联</text>
+<text x="36" y="253" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="700" fill="#777777">文献集合</text>
+<rect x="28" y="271" width="232" height="27" fill="#e9e9e9" stroke="#e9e9e9"/>
+<text x="42" y="287" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">当前项目</text>
+<text x="42" y="316" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">全部文献</text>
+<text x="42" y="345" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">待阅读</text>
+<text x="42" y="374" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">已收藏</text>
+<text x="42" y="403" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">方法相关</text>
+<rect x="269" y="124" width="975" height="33" fill="#fafafa" stroke="#fafafa"/>
+<text x="283" y="145" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#777777">文献列表</text>
+<text x="361" y="145" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="700" fill="#282828">文献 A.pdf  ×</text>
+<path d="M354 156 L458 156" stroke="#282828" stroke-width="2"/>
+<path d="M268 157 L1244 157" stroke="#d3d3d3" stroke-width="1"/>
+<text x="284" y="180" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#777777">← 列表    3 / 12    － 100% ＋    查找    高亮    翻译</text>
+<path d="M268 189 L1244 189" stroke="#d3d3d3" stroke-width="1"/>
+<rect x="269" y="190" width="975" height="714" fill="#f4f4f4" stroke="#f4f4f4"/>
+<rect x="472" y="213" width="567" height="667" fill="white" stroke="#d3d3d3"/>
+<text x="507" y="270" font-family="Microsoft YaHei,sans-serif" font-size="18" font-weight="700" fill="#282828">A research document</text>
+<text x="507" y="302" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="400" fill="#777777">Illustrative document · layout study</text>
+<text x="507" y="355" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="700" fill="#282828">1  Introduction</text>
+<path d="M507 391 L1004 391" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 413 L974.18 413" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 435 L994.06 435" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 457 L864.8399999999999 457" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 479 L1004 479" stroke="#bbbbbb" stroke-width="1"/>
+<text x="507" y="507" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="700" fill="#282828">2  Method</text>
+<path d="M507 523 L994.06 523" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 545 L864.8399999999999 545" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 567 L1004 567" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 589 L974.18 589" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 611 L994.06 611" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 633 L864.8399999999999 633" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 655 L1004 655" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 677 L974.18 677" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 699 L994.06 699" stroke="#bbbbbb" stroke-width="1"/>
+<path d="M507 721 L864.8399999999999 721" stroke="#bbbbbb" stroke-width="1"/>
+<text x="755.5" y="852" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="400" fill="#777777">1</text>
+<rect x="507" y="453" width="470" height="25" fill="#e6e6e6" stroke="#e6e6e6"/>
+<text x="511" y="471" font-family="Microsoft YaHei,sans-serif" font-size="12" font-weight="400" fill="#282828">选中段落 → 提问 / 记笔记 / 翻译</text>
+<text x="36" y="571" font-family="Microsoft YaHei,sans-serif" font-size="11" font-weight="700" fill="#777777">当前文献大纲</text>
+<text x="42" y="605" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">1  Introduction</text>
+<text x="42" y="634" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">2  Method</text>
+<text x="42" y="663" font-family="Microsoft YaHei,sans-serif" font-size="13" font-weight="400" fill="#282828">3  Results</text>
+<text x="20" y="964" font-family="Microsoft YaHei,sans-serif" font-size="14" font-weight="400" fill="#777777">只切换右侧辅助栏：原文保持不动，笔记可连续编辑并记录来源。</text>
+</svg>

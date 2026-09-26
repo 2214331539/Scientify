@@ -1,0 +1,33 @@
+fn main() {
+    // Recompile Windows resources when branding changes, even if config is unchanged.
+    println!("cargo:rerun-if-changed=icons");
+    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
+        tauri_build::AppManifest::new().commands(&[
+            "open_project_window",
+            "workspace_window_ready",
+            "workspace_load",
+            "workspace_save",
+            "workspace_restore",
+            "workspace_migrate_legacy",
+            "workspace_import",
+            "workspace_export",
+            "choose_directory",
+            "research_list_files",
+            "research_read_file",
+            "research_write_file",
+            "research_import_pdf",
+            "research_read_pdf",
+            "research_git_status",
+            "research_ask_ai",
+            "research_fetch_arxiv",
+        ]),
+    ))
+    .expect("failed to build Tauri manifest");
+    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        // The IPC test harness links Tauri's existing resources as well as the app.
+        println!(
+            "cargo:rustc-link-search=native={}",
+            std::env::var("OUT_DIR").unwrap()
+        );
+    }
+}

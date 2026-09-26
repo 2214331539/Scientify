@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-workspace-migrate-legacy"
+description = "Enables the workspace_migrate_legacy command without any pre-configured scope."
+commands.allow = ["workspace_migrate_legacy"]
+
+[[permission]]
+identifier = "deny-workspace-migrate-legacy"
+description = "Denies the workspace_migrate_legacy command without any pre-configured scope."
+commands.deny = ["workspace_migrate_legacy"]

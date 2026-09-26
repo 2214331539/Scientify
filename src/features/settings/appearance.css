@@ -1,0 +1,52 @@
+.research-shell .topbar-tools .theme-toggle {
+  width: 30px;
+  color: var(--sf-text-secondary);
+  background: transparent;
+  border-color: transparent;
+  transition: color var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.research-shell .topbar-tools .theme-toggle:hover,
+.research-shell .topbar-tools .theme-toggle:active {
+  color: var(--sf-text-primary);
+  background: transparent;
+}
+.theme-glyph {
+  position: relative;
+  width: 16px;
+  height: 16px;
+}
+.theme-glyph svg {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity var(--sf-motion-content) var(--sf-ease-standard),
+    transform var(--sf-motion-content) var(--sf-ease-standard);
+}
+.theme-glyph .theme-moon {
+  opacity: 0;
+  transform: rotate(20deg);
+}
+.theme-glyph[data-dark='true'] .theme-sun {
+  opacity: 0;
+  transform: rotate(-20deg);
+}
+.theme-glyph[data-dark='true'] .theme-moon {
+  opacity: 1;
+  transform: rotate(0);
+}
+.theme-glyph .theme-sun {
+  opacity: 1;
+  transform: rotate(0);
+}
+.preference-fields {
+  display: grid;
+  gap: 12px;
+}
+.preference-fields label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+.preference-fields select {
+  width: 100%;
+}

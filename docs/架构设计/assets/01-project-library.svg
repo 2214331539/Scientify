@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="920" viewBox="0 0 1440 920">
+<rect width="100%" height="100%" fill="white"/>
+<text x="24" y="39" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="700" fill="#222222">01  登录后 / 项目管理</text>
+<text x="24" y="62" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#686868">入口场景 · 选择空间 → 查找项目 → 进入项目工作台；当前本地版也可直接到达此页</text>
+<rect x="20" y="80" width="1400" height="780" fill="white" stroke="#a0a0a0"/>
+<rect x="20" y="80" width="238" height="780" fill="#f5f5f5" stroke="#a0a0a0"/>
+<text x="42" y="125" font-family="Microsoft YaHei, sans-serif" font-size="21" font-weight="700" fill="#222222">Scientify</text>
+<text x="42" y="175" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="400" fill="#222222">个人资料 / 账号</text>
+<path d="M20 206 L258 206" fill="none" stroke="#a0a0a0"/>
+<rect x="30" y="221" width="216" height="37" fill="#e3e3e3" stroke="#e3e3e3"/>
+<text x="44" y="240" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">我的工作空间</text>
+<text x="44" y="290" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="400" fill="#222222">团队空间 A</text>
+<text x="44" y="340" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="400" fill="#222222">团队空间 B</text>
+<text x="44" y="390" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="400" fill="#222222">创建 / 加入团队</text>
+<text x="42" y="820" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">设置    帮助</text>
+<rect x="258" y="80" width="1162" height="47" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="280" y="111" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#222222">当前空间 / 项目集合</text>
+<text x="1218" y="110" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">通知    账号</text>
+<text x="280" y="178" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="700" fill="#222222">项目</text>
+<rect x="1232" y="149" width="164" height="40" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="1251" y="174" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="400" fill="#222222">＋ 新建项目</text>
+<rect x="280" y="209" width="1116" height="41" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="296" y="234" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">全部 / 收藏 / 归档</text>
+<text x="912" y="234" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">搜索项目       排序       列表 / 网格</text>
+<rect x="280" y="276" width="360" height="215" fill="white" stroke="#a0a0a0"/>
+<rect x="280" y="276" width="360" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="294" y="300" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">项目名称 / 进入项目</text>
+<text x="298" y="350" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">研究问题或简短描述</text>
+<text x="298" y="421" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">阶段 / 最近活动</text>
+<path d="M280 450 L640 450" fill="none" stroke="#a0a0a0"/>
+<text x="298" y="473" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#686868">更新时间</text>
+<text x="525" y="473" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">收藏 / 更多</text>
+<rect x="280" y="518" width="360" height="215" fill="white" stroke="#a0a0a0"/>
+<rect x="280" y="518" width="360" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="294" y="542" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">项目名称 / 进入项目</text>
+<text x="298" y="592" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">研究问题或简短描述</text>
+<text x="298" y="663" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">阶段 / 最近活动</text>
+<path d="M280 692 L640 692" fill="none" stroke="#a0a0a0"/>
+<text x="298" y="715" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#686868">更新时间</text>
+<text x="525" y="715" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">收藏 / 更多</text>
+<rect x="657" y="276" width="360" height="215" fill="white" stroke="#a0a0a0"/>
+<rect x="657" y="276" width="360" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="671" y="300" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">项目名称 / 进入项目</text>
+<text x="675" y="350" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">研究问题或简短描述</text>
+<text x="675" y="421" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">阶段 / 最近活动</text>
+<path d="M657 450 L1017 450" fill="none" stroke="#a0a0a0"/>
+<text x="675" y="473" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#686868">更新时间</text>
+<text x="902" y="473" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">收藏 / 更多</text>
+<rect x="657" y="518" width="360" height="215" fill="white" stroke="#a0a0a0"/>
+<rect x="657" y="518" width="360" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="671" y="542" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">项目名称 / 进入项目</text>
+<text x="675" y="592" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">研究问题或简短描述</text>
+<text x="675" y="663" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">阶段 / 最近活动</text>
+<path d="M657 692 L1017 692" fill="none" stroke="#a0a0a0"/>
+<text x="675" y="715" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#686868">更新时间</text>
+<text x="902" y="715" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">收藏 / 更多</text>
+<rect x="1034" y="276" width="360" height="215" fill="white" stroke="#a0a0a0"/>
+<rect x="1034" y="276" width="360" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="1048" y="300" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">项目名称 / 进入项目</text>
+<text x="1052" y="350" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">研究问题或简短描述</text>
+<text x="1052" y="421" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">阶段 / 最近活动</text>
+<path d="M1034 450 L1394 450" fill="none" stroke="#a0a0a0"/>
+<text x="1052" y="473" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#686868">更新时间</text>
+<text x="1279" y="473" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">收藏 / 更多</text>
+<rect x="1034" y="518" width="360" height="215" fill="white" stroke="#a0a0a0"/>
+<rect x="1034" y="518" width="360" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="1048" y="542" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">项目名称 / 进入项目</text>
+<text x="1052" y="592" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">研究问题或简短描述</text>
+<text x="1052" y="663" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">阶段 / 最近活动</text>
+<path d="M1034 692 L1394 692" fill="none" stroke="#a0a0a0"/>
+<text x="1052" y="715" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#686868">更新时间</text>
+<text x="1279" y="715" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">收藏 / 更多</text>
+<text x="280" y="802" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">空状态使用同一区域：一句说明 + 新建项目入口</text>
+<text x="24" y="894" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">项目管理层使用空间导航；打开项目后整体切换为下图的项目工作台框架。</text>
+</svg>

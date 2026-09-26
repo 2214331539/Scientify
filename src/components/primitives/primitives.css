@@ -1,0 +1,163 @@
+@layer theme, base, components, utilities;
+
+@layer components {
+  .sf-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 6px;
+    min-height: var(--sf-control-sm);
+    padding: 2px 8px;
+    border: 1px solid var(--sf-border-subtle);
+    border-radius: var(--sf-radius);
+    background: var(--sf-surface-canvas);
+    color: var(--sf-text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.45;
+    transition:
+      background-color 100ms ease,
+      border-color 100ms ease;
+  }
+  .sf-button:hover:not(:disabled) {
+    background: var(--sf-surface-hover);
+  }
+  .sf-button:disabled {
+    cursor: default;
+    color: var(--sf-text-disabled);
+  }
+  .sf-button svg {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+    stroke-width: 1.65;
+  }
+  .sf-button-md {
+    min-height: var(--sf-control-md);
+    padding: 4px 10px;
+  }
+  .sf-button-primary,
+  .sf-button.primary {
+    background: var(--sf-accent);
+    border-color: var(--sf-accent);
+    color: var(--sf-on-accent);
+  }
+  .sf-button-primary:hover:not(:disabled),
+  .sf-button.primary:hover:not(:disabled) {
+    background: var(--sf-accent-hover);
+    border-color: var(--sf-accent-hover);
+  }
+  .sf-button-primary:disabled,
+  .sf-button.primary:disabled {
+    opacity: 0.5;
+    color: var(--sf-on-accent);
+  }
+  .sf-button-ghost,
+  .sf-button.text-button,
+  .sf-button.icon-button {
+    border-color: transparent;
+    background: transparent;
+  }
+  .sf-button-icon {
+    width: var(--sf-control-sm);
+    min-width: var(--sf-control-sm);
+    padding: 4px;
+  }
+  .sf-button-icon.sf-button-md {
+    width: var(--sf-control-md);
+    min-width: var(--sf-control-md);
+  }
+  .sf-button[aria-pressed='true'].toggle,
+  .sf-button.selected {
+    background: var(--sf-surface-selected);
+    color: var(--sf-text-primary);
+  }
+  .sf-input,
+  .sf-textarea,
+  .sf-dropdown {
+    min-width: 0;
+    min-height: var(--sf-control-md);
+    padding: 4px 8px;
+    border: 1px solid var(--sf-border-subtle);
+    border-radius: var(--sf-radius);
+    background: var(--sf-surface-canvas);
+    color: var(--sf-text-primary);
+    transition: border-color 100ms ease;
+  }
+  .sf-input:hover:not(:disabled),
+  .sf-textarea:hover:not(:disabled),
+  .sf-dropdown:hover:not(:disabled) {
+    border-color: var(--sf-border-control);
+  }
+  .sf-input:focus-visible,
+  .sf-textarea:focus-visible,
+  .sf-dropdown:focus-visible {
+    outline: 2px solid var(--sf-focus);
+    outline-offset: 1px;
+  }
+  .sf-input::placeholder,
+  .sf-textarea::placeholder {
+    color: var(--sf-text-muted);
+  }
+  .sf-input:disabled,
+  .sf-textarea:disabled,
+  .sf-dropdown:disabled {
+    color: var(--sf-text-disabled);
+    background: var(--sf-surface-chrome);
+  }
+  .sf-input:where([type='checkbox'], [type='radio']) {
+    accent-color: var(--sf-accent);
+    min-height: 14px;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .sf-textarea {
+    resize: vertical;
+  }
+  .sf-badge {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 20px;
+    padding: 0 5px;
+    border: 1px solid var(--sf-border-subtle);
+    border-radius: var(--sf-radius);
+    font-size: 11px;
+    line-height: 18px;
+    font-weight: 400;
+    color: var(--sf-text-secondary);
+    background: var(--sf-surface-chrome);
+  }
+  .sf-badge-success {
+    color: var(--sf-status-success);
+  }
+  .sf-badge-warning {
+    color: var(--sf-status-warning);
+  }
+  .sf-badge-danger {
+    color: var(--sf-status-danger);
+  }
+  .sf-tooltip {
+    position: fixed;
+    z-index: 10000;
+    max-width: min(280px, calc(100vw - 16px));
+    padding: 4px 7px;
+    border: 1px solid var(--sf-border-control);
+    border-radius: var(--sf-radius);
+    color: var(--sf-text-primary);
+    background: var(--sf-surface-raised);
+    box-shadow: var(--sf-shadow-popover);
+    font:
+      12px/1.4 'Segoe UI Variable Text',
+      'Segoe UI',
+      'Microsoft YaHei UI',
+      sans-serif;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+  }
+}

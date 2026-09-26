@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="920" viewBox="0 0 1440 920">
+<rect width="100%" height="100%" fill="white"/>
+<text x="24" y="39" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="700" fill="#222222">06  文献库 / 实时翻译</text>
+<text x="24" y="62" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#686868">连续工作场景 · 切换二级任务，保留同一篇文献和阅读位置</text>
+<rect x="20" y="80" width="1400" height="780" fill="white" stroke="#a0a0a0"/>
+<rect x="20" y="80" width="1400" height="47" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="36" y="109" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#222222">← 项目集合    /    当前空间    /    当前项目 · 切换</text>
+<text x="1080" y="108" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">全局搜索    布局    通知    设置</text>
+<rect x="20" y="127" width="104" height="705" fill="#f7f7f7" stroke="#a0a0a0"/>
+<rect x="60" y="150" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="42" y="192" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">项目概览</text>
+<rect x="60" y="232" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="274" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">研究工作台</text>
+<rect x="25" y="306" width="94" height="65" fill="#e4e4e4" stroke="#aaaaaa"/>
+<rect x="25" y="306" width="3" height="65" fill="#333333" stroke="#333333"/>
+<rect x="60" y="314" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="42" y="356" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#222222">文献库</text>
+<rect x="60" y="396" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="438" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">论文订阅区</text>
+<rect x="60" y="478" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="520" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">实验与代码</text>
+<rect x="60" y="560" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="602" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">AI 助手</text>
+<text x="45" y="799" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#686868">帮助</text>
+<rect x="124" y="127" width="230" height="705" fill="#fbfbfb" stroke="#a0a0a0"/>
+<text x="140" y="158" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">文献库 / 二级导航</text>
+<text x="148" y="195" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">信息管理</text>
+<text x="148" y="230" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">文献导入</text>
+<text x="148" y="265" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">PDF 阅读</text>
+<rect x="134" y="283" width="210" height="30" fill="#e8e8e8" stroke="#e8e8e8"/>
+<text x="148" y="300" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="700" fill="#222222">实时翻译</text>
+<text x="148" y="335" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">AI 助手提问</text>
+<text x="148" y="370" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">引用管理</text>
+<path d="M124 403 L354 403" fill="none" stroke="#a0a0a0"/>
+<text x="140" y="431" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="700" fill="#222222">当前文献 / 文献集合</text>
+<rect x="140" y="452" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 466 L264.74 466" fill="none" stroke="#c6c6c6"/>
+<path d="M155 477 L219.2 477" fill="none" stroke="#dedede"/>
+<rect x="140" y="497" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 511 L264.74 511" fill="none" stroke="#c6c6c6"/>
+<path d="M155 522 L219.2 522" fill="none" stroke="#dedede"/>
+<rect x="140" y="542" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 556 L264.74 556" fill="none" stroke="#c6c6c6"/>
+<path d="M155 567 L219.2 567" fill="none" stroke="#dedede"/>
+<rect x="140" y="587" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 601 L264.74 601" fill="none" stroke="#c6c6c6"/>
+<path d="M155 612 L219.2 612" fill="none" stroke="#dedede"/>
+<rect x="354" y="127" width="1066" height="705" fill="white" stroke="#a0a0a0"/>
+<rect x="20" y="832" width="1400" height="28" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="36" y="850" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">保存状态 / 后台任务</text>
+<text x="1080" y="850" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">当前对象状态    ·    本地工作区</text>
+<rect x="354" y="127" width="1066" height="39" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="372" y="152" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">当前文献 A  ×     文献 B  ×</text>
+<text x="1120" y="151" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">定位    布局    更多</text>
+<rect x="354" y="166" width="642" height="646" fill="white" stroke="#a0a0a0"/>
+<rect x="354" y="166" width="642" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="368" y="190" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">PDF 原文       页码 / 缩放 / 搜索</text>
+<rect x="408" y="222" width="534" height="557" fill="#fcfcfc" stroke="#a0a0a0"/>
+<text x="453" y="278" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#222222">论文原文 / 当前页</text>
+<path d="M453 304 L814.62 304" fill="none" stroke="#c8c8c8"/>
+<path d="M453 332 L739.6500000000001 332" fill="none" stroke="#c8c8c8"/>
+<path d="M453 360 L849.9000000000001 360" fill="none" stroke="#c8c8c8"/>
+<path d="M453 388 L695.55 388" fill="none" stroke="#c8c8c8"/>
+<path d="M453 416 L761.7 416" fill="none" stroke="#c8c8c8"/>
+<path d="M453 444 L814.62 444" fill="none" stroke="#c8c8c8"/>
+<path d="M453 472 L739.6500000000001 472" fill="none" stroke="#c8c8c8"/>
+<path d="M453 500 L849.9000000000001 500" fill="none" stroke="#c8c8c8"/>
+<path d="M453 528 L695.55 528" fill="none" stroke="#c8c8c8"/>
+<path d="M453 556 L761.7 556" fill="none" stroke="#c8c8c8"/>
+<path d="M453 584 L814.62 584" fill="none" stroke="#c8c8c8"/>
+<path d="M453 612 L739.6500000000001 612" fill="none" stroke="#c8c8c8"/>
+<rect x="452" y="449" width="421" height="36" fill="#e6e6e6" stroke="#d0d0d0"/>
+<text x="465" y="471" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">当前选中段落</text>
+<rect x="1006" y="166" width="414" height="646" fill="white" stroke="#a0a0a0"/>
+<rect x="1006" y="166" width="414" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="1020" y="190" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">对应译文 / 目标语言</text>
+<text x="1048" y="251" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#222222">译文与原文对照</text>
+<path d="M1048 277 L1316.1399999999999 277" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 305 L1260.55 305" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 333 L1342.3 333" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 361 L1227.85 361" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 389 L1276.9 389" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 417 L1316.1399999999999 417" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 445 L1260.55 445" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 473 L1342.3 473" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 501 L1227.85 501" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 529 L1276.9 529" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 557 L1316.1399999999999 557" fill="none" stroke="#c8c8c8"/>
+<path d="M1048 585 L1260.55 585" fill="none" stroke="#c8c8c8"/>
+<text x="24" y="894" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">外层框架保持不变；任务改变配套内容，原文阅读位置和选中段落继续保留。</text>
+</svg>

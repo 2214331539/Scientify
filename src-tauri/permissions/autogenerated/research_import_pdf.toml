@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-research-import-pdf"
+description = "Enables the research_import_pdf command without any pre-configured scope."
+commands.allow = ["research_import_pdf"]
+
+[[permission]]
+identifier = "deny-research-import-pdf"
+description = "Denies the research_import_pdf command without any pre-configured scope."
+commands.deny = ["research_import_pdf"]

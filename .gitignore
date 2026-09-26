@@ -1,0 +1,10 @@
+node_modules/
+*.log
+dist/
+.preview-data/
+.test-artifacts/
+target/
+.tauri-data/
+src-tauri/gen/
+*.tsbuildinfo
+public/pdfjs/

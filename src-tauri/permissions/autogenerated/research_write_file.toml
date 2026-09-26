@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-research-write-file"
+description = "Enables the research_write_file command without any pre-configured scope."
+commands.allow = ["research_write_file"]
+
+[[permission]]
+identifier = "deny-research-write-file"
+description = "Denies the research_write_file command without any pre-configured scope."
+commands.deny = ["research_write_file"]

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="920" viewBox="0 0 1440 920">
+<rect width="100%" height="100%" fill="white"/>
+<text x="24" y="39" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="700" fill="#222222">03  研究工作台 / 编辑与预览</text>
+<text x="24" y="62" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#686868">编辑场景 · 资源树 → 文档标签 → 编辑正文 → 预览结果</text>
+<rect x="20" y="80" width="1400" height="780" fill="white" stroke="#a0a0a0"/>
+<rect x="20" y="80" width="1400" height="47" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="36" y="109" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#222222">← 项目集合    /    当前空间    /    当前项目 · 切换</text>
+<text x="1080" y="108" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">全局搜索    布局    通知    设置</text>
+<rect x="20" y="127" width="104" height="705" fill="#f7f7f7" stroke="#a0a0a0"/>
+<rect x="60" y="150" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="42" y="192" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">项目概览</text>
+<rect x="25" y="224" width="94" height="65" fill="#e4e4e4" stroke="#aaaaaa"/>
+<rect x="25" y="224" width="3" height="65" fill="#333333" stroke="#333333"/>
+<rect x="60" y="232" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="274" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="700" fill="#222222">研究工作台</text>
+<rect x="60" y="314" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="42" y="356" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">文献库</text>
+<rect x="60" y="396" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="438" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">论文订阅区</text>
+<rect x="60" y="478" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="520" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">实验与代码</text>
+<rect x="60" y="560" width="20" height="20" fill="white" stroke="#707070"/>
+<text x="33" y="602" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">AI 助手</text>
+<text x="45" y="799" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#686868">帮助</text>
+<rect x="124" y="127" width="230" height="705" fill="#fbfbfb" stroke="#a0a0a0"/>
+<text x="140" y="158" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">研究工作台 / 二级导航</text>
+<rect x="134" y="178" width="210" height="30" fill="#e8e8e8" stroke="#e8e8e8"/>
+<text x="148" y="195" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="700" fill="#222222">文件与编辑</text>
+<text x="148" y="230" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">研究记录</text>
+<text x="148" y="265" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#222222">历史版本</text>
+<path d="M124 298 L354 298" fill="none" stroke="#a0a0a0"/>
+<text x="140" y="326" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="700" fill="#222222">项目文件树 / 大纲</text>
+<rect x="140" y="347" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 361 L264.74 361" fill="none" stroke="#c6c6c6"/>
+<path d="M155 372 L219.2 372" fill="none" stroke="#dedede"/>
+<rect x="140" y="392" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 406 L264.74 406" fill="none" stroke="#c6c6c6"/>
+<path d="M155 417 L219.2 417" fill="none" stroke="#dedede"/>
+<rect x="140" y="437" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 451 L264.74 451" fill="none" stroke="#c6c6c6"/>
+<path d="M155 462 L219.2 462" fill="none" stroke="#dedede"/>
+<rect x="140" y="482" width="198" height="37" fill="#fafafa" stroke="#d0d0d0"/>
+<path d="M155 496 L264.74 496" fill="none" stroke="#c6c6c6"/>
+<path d="M155 507 L219.2 507" fill="none" stroke="#dedede"/>
+<rect x="354" y="127" width="1066" height="705" fill="white" stroke="#a0a0a0"/>
+<rect x="20" y="832" width="1400" height="28" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="36" y="850" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">保存状态 / 后台任务</text>
+<text x="1080" y="850" font-family="Microsoft YaHei, sans-serif" font-size="12" font-weight="400" fill="#222222">当前对象状态    ·    本地工作区</text>
+<rect x="354" y="127" width="1066" height="39" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="372" y="152" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">文档 A  ×     文档 B  ×     ＋</text>
+<text x="1120" y="151" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#222222">布局    保存    更多</text>
+<rect x="354" y="166" width="620" height="485" fill="white" stroke="#a0a0a0"/>
+<rect x="354" y="166" width="620" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="368" y="190" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">当前文件路径 / 编辑工具</text>
+<text x="376" y="238" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#222222">代码 / Markdown / LaTeX 编辑器</text>
+<text x="370" y="267" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">1</text>
+<path d="M402 264 L850.54 264" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="295" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">2</text>
+<path d="M402 292 L757.55 292" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="323" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">3</text>
+<path d="M402 320 L894.3 320" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="351" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">4</text>
+<path d="M402 348 L702.85 348" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="379" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">5</text>
+<path d="M402 376 L784.9 376" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="407" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">6</text>
+<path d="M402 404 L850.54 404" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="435" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">7</text>
+<path d="M402 432 L757.55 432" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="463" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">8</text>
+<path d="M402 460 L894.3 460" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="491" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">9</text>
+<path d="M402 488 L702.85 488" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="519" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">10</text>
+<path d="M402 516 L784.9 516" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="547" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">11</text>
+<path d="M402 544 L850.54 544" fill="none" stroke="#c8c8c8"/>
+<text x="370" y="575" font-family="Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#999999">12</text>
+<path d="M402 572 L757.55 572" fill="none" stroke="#c8c8c8"/>
+<rect x="984" y="166" width="436" height="485" fill="white" stroke="#a0a0a0"/>
+<rect x="984" y="166" width="436" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="998" y="190" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">配套面板：预览 / AI</text>
+<text x="1026" y="258" font-family="Microsoft YaHei, sans-serif" font-size="16" font-weight="700" fill="#222222">预览结果</text>
+<path d="M1026 284 L1312.18 284" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 312 L1252.85 312" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 340 L1340.1 340" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 368 L1217.95 368" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 396 L1270.3 396" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 424 L1312.18 424" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 452 L1252.85 452" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 480 L1340.1 480" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 508 L1217.95 508" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 536 L1270.3 536" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 564 L1312.18 564" fill="none" stroke="#c8c8c8"/>
+<path d="M1026 592 L1252.85 592" fill="none" stroke="#c8c8c8"/>
+<rect x="354" y="662" width="1066" height="170" fill="white" stroke="#a0a0a0"/>
+<rect x="354" y="662" width="1066" height="38" fill="#f3f3f3" stroke="#a0a0a0"/>
+<text x="368" y="686" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="700" fill="#222222">输出面板：问题 / 编译日志       收起</text>
+<text x="372" y="736" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">日志、错误位置、任务状态（占位）</text>
+<text x="375" y="784" font-family="Microsoft YaHei, sans-serif" font-size="13" font-weight="400" fill="#686868">点击诊断可定位到当前文件与行号</text>
+<text x="24" y="894" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="400" fill="#686868">中央区最多两个主要内容面板；AI 与预览共用配套面板；底部输出按需展开。</text>
+</svg>

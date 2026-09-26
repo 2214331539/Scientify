@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-workspace-import"
+description = "Enables the workspace_import command without any pre-configured scope."
+commands.allow = ["workspace_import"]
+
+[[permission]]
+identifier = "deny-workspace-import"
+description = "Denies the workspace_import command without any pre-configured scope."
+commands.deny = ["workspace_import"]
