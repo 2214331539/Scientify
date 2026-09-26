@@ -3,6 +3,14 @@ fn main() {
     println!("cargo:rerun-if-changed=icons");
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
+            "library_choose",
+            "library_command",
+            "library_open",
+            "library_pdf",
+            "library_note",
+            "library_external",
+            "library_import",
+            "browser_command",
             "open_project_window",
             "workspace_window_ready",
             "workspace_load",

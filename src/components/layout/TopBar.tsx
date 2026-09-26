@@ -7,6 +7,7 @@ import { AppearanceControls } from '../../features/settings/Appearance';
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, FolderOpen, Plus } from 'lucide-react';
 import type { Project } from '../../domain/workspace';
+import { browserLayout } from '../../platform/browser-pane';
 
 export function TopBar({
   project,
@@ -77,7 +78,11 @@ export function TopBar({
           aria-expanded={open}
           disabled={!ready}
           onClick={() => {
-            setOpen(!open);
+            if (!open && isTauri())
+              void browserLayout({ op: 'hideAll' })
+                .catch(() => {})
+                .then(() => setOpen(true));
+            else setOpen(!open);
             setQuery('');
           }}
         >
@@ -85,7 +90,12 @@ export function TopBar({
           <ChevronDown size={13} />
         </Button>
         {open && (
-          <div className="project-switcher-popover" role="dialog" aria-label={t('项目切换')}>
+          <div
+            className="project-switcher-popover"
+            role="dialog"
+            data-native-overlay="true"
+            aria-label={t('项目切换')}
+          >
             <Input
               autoFocus
               aria-label={t('筛选项目')}

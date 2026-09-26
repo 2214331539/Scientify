@@ -1,6 +1,8 @@
 import { t } from '../i18n';
 import { Button } from './primitives';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
+import { browserLayout } from '../platform/browser-pane';
 
 export function Modal({
   title,
@@ -26,8 +28,16 @@ export function Modal({
   useEffect(() => {
     const dialog = ref.current!;
     const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
+    let active = true;
+    if (isTauri())
+      void browserLayout({ op: 'hideAll' })
+        .catch(() => {})
+        .then(() => {
+          if (active) dialog.showModal();
+        });
+    else dialog.showModal();
     return () => {
+      active = false;
       dialog.close();
       if (trigger?.isConnected) trigger.focus({ preventScroll: true });
     };
@@ -56,6 +66,7 @@ export function Modal({
   );
   return (
     <dialog
+      data-native-overlay="true"
       ref={ref}
       className={className}
       aria-label={sidebar ? title : undefined}

@@ -4,8 +4,12 @@ use serde_json::Value;
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
+mod browser;
 #[cfg(test)]
 mod ipc_smoke;
+mod library;
+#[cfg(debug_assertions)]
+mod literature_smoke;
 mod research;
 mod windows;
 
@@ -130,8 +134,24 @@ async fn choose_directory(app: tauri::AppHandle) -> Result<Option<String>, Strin
 }
 
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+    let builder = tauri::Builder::default();
+    #[cfg(debug_assertions)]
+    let isolated_smoke = std::env::var_os("SCIENTIFY_NATIVE_SMOKE").is_some();
+    #[cfg(not(debug_assertions))]
+    let isolated_smoke = false;
+    let context = tauri::generate_context!();
+    #[cfg(debug_assertions)]
+    let context = {
+        let mut context = context;
+        if isolated_smoke {
+            context.config_mut().app.windows[0].create = false;
+        }
+        context
+    };
+    let builder = if isolated_smoke {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app
                 .get_webview_window("workspace")
                 .or_else(|| app.get_webview_window("main"))
@@ -141,13 +161,18 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+    };
+    builder
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
+        .manage(browser::BrowserState::default())
         .on_window_event(|window, event| {
             if window.label() == "workspace" && matches!(event, tauri::WindowEvent::Destroyed) {
+                browser::close_owner(window.app_handle(), "workspace");
                 windows::show_projects(window.app_handle());
             }
         })
-        .setup(|app| {
+        .setup(move |app| {
             #[cfg(debug_assertions)]
             let directory = std::env::var_os("SCIENTIFY_DATA_DIR")
                 .map(PathBuf::from)
@@ -163,6 +188,7 @@ pub fn run() {
                 .path()
                 .data_dir()?
                 .join("scientify-desktop-sample/workspace");
+            app.manage(library::LibraryState::new(directory.clone()));
             app.manage(AppState {
                 files: Arc::new(scientify_core::research::ResearchFiles::new(
                     directory.clone(),
@@ -170,9 +196,33 @@ pub fn run() {
                 storage: Arc::new(Storage::open(directory).map_err(std::io::Error::other)?),
                 legacy,
             });
+            #[cfg(debug_assertions)]
+            if isolated_smoke {
+                let data = app.state::<AppState>().storage.directory().to_path_buf();
+                if !data.to_string_lossy().contains(".test-artifacts") {
+                    return Err("native smoke requires an isolated test directory".into());
+                }
+                if std::env::var_os("SCIENTIFY_NATIVE_UI").is_some() {
+                    literature_smoke::seed_ui(app.handle())?;
+                }
+                tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                    .data_directory(data.parent().unwrap().join("ui-profile"))
+                    .build()?;
+                if std::env::var_os("SCIENTIFY_NATIVE_UI").is_none() {
+                    literature_smoke::start(app.handle().clone());
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            library::library_choose,
+            library::library_command,
+            library::library_open,
+            library::library_pdf,
+            library::library_note,
+            library::library_external,
+            library::library_import,
+            browser::browser_command,
             windows::open_project_window,
             windows::workspace_window_ready,
             workspace_load,
@@ -191,6 +241,6 @@ pub fn run() {
             research::research_ask_ai,
             research::research_fetch_arxiv,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("Scientify failed to start");
 }

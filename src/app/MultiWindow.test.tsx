@@ -74,10 +74,13 @@ it('keeps Projects independent of the previously selected project and reloads af
   const { store, disk, adapter } = fixture();
   render(<App store={store} backend={browserResearch} windowMode="projects" />);
   await userEvent.click(await screen.findByRole('button', { name: 'Research' }));
-  expect(native.invoke).toHaveBeenCalledWith('open_project_window', {
-    projectId: 'p1',
-    target: null,
-  });
+  expect(native.invoke).toHaveBeenCalledWith(
+    'open_project_window',
+    expect.objectContaining({
+      projectId: 'p1',
+      target: null,
+    }),
+  );
   expect(screen.queryByRole('navigation', { name: '一级导航' })).toBeNull();
   expect(store.getState().busy).toBe(true);
   disk.projects[0].name = 'Updated research';

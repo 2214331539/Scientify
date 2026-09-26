@@ -9,6 +9,7 @@ export interface TreeItem {
   children?: TreeItem[];
   icon?: ReactNode;
   tooltip?: string;
+  draggable?: boolean;
 }
 
 interface Props {
@@ -57,6 +58,8 @@ export function TreeView({ items, label, selectedId, collapsed, onToggle, onOpen
             type="button"
             variant="ghost"
             role="treeitem"
+            data-tree-id={item.id}
+            draggable={item.draggable}
             className="sf-tree-row"
             ref={(element) => {
               if (element) elements.current.set(item.id, element);

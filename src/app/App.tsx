@@ -25,6 +25,10 @@ import { SearchDialog, type SearchTarget } from '../features/search/SearchDialog
 import { Overview } from '../workspaces/overview/Overview';
 import { LiteratureWorkspace } from '../workspaces/literature/LiteratureWorkspace';
 import type { LiteratureSession } from '../workspaces/literature/tabs';
+import { LocalLiterature } from '../workspaces/literature/LocalLiterature';
+import { nativeLibrary, noteFiles } from '../platform/library';
+import { flushPaperNotes, notesDirty, notesPending } from '../workspaces/literature/local-session';
+import { browserLayout } from '../platform/browser-pane';
 import { FileResources, FileWorkspace } from '../workspaces/files/FileWorkspace';
 import { RunWorkspace } from '../workspaces/experiments/RunWorkspace';
 import { GlobalDock } from '../shell/GlobalDock';
@@ -48,6 +52,7 @@ type Dialog =
   | { kind: 'data' | 'profile' | 'search' | 'about' }
   | null;
 type Location = {
+  legacyLiterature?: boolean;
   literatureSession?: LiteratureSession;
   workspace: WorkspaceId;
   view: string;
@@ -117,6 +122,16 @@ function readSession(storageKey = 'scientify.ui.v2'): UISession {
 
 function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, returning = false) {
   useEffect(() => {
+    const runtime = getFileRuntime(noteFiles(nativeLibrary));
+    const sync = () =>
+      store.getState().setDirtySource('paper-notes', notesDirty() || notesPending());
+    runtime.listeners.add(sync);
+    sync();
+    return () => {
+      runtime.listeners.delete(sync);
+    };
+  }, [store]);
+  useEffect(() => {
     const runtime = getFileRuntime(backend);
     const update = () =>
       store
@@ -154,10 +169,14 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
       void getCurrentWindow()
         .onCloseRequested(async (event) => {
           event.preventDefault();
-          const { dirty, busy } = store.getState();
+          const { busy } = store.getState();
           if (busy || hasPendingFileOperations(backend)) return;
+          if (!(await flushPaperNotes())) {
+            store.setState({ error: t('论文笔记尚未保存，请重试或处理冲突后退出。') });
+            return;
+          }
           if (
-            !dirty ||
+            !store.getState().dirty ||
             window.confirm(
               returning
                 ? t('仍有未保存的内容。确认放弃这些修改并返回项目管理？')
@@ -430,6 +449,7 @@ export function App({
                     target.workspace === 'literature' ? 'local' : '',
                 },
                 paperId: target.workspace === 'literature' ? (target.resourceId ?? null) : null,
+                legacyLiterature: target.workspace === 'literature' && !!target.resourceId,
               },
             },
           }
@@ -512,6 +532,8 @@ export function App({
             },
             ...(run ? { runId: run.id } : {}),
             paperId: w === 'literature' ? (source.resourceId ?? null) : null,
+            legacyLiterature:
+              w === 'literature' && data.papers.some((p) => p.id === source.resourceId),
             paths: run
               ? (s.locations[source.projectId!]?.paths ?? {})
               : { ...(s.locations[source.projectId!]?.paths ?? {}), [w]: source.path ?? null },
@@ -522,9 +544,12 @@ export function App({
         setPendingNote({ scope: source.projectId, id: source.resourceId });
       if (source.page && source.resourceId) {
         const paper = data.papers.find((p) => p.id === source.resourceId);
-        if (typeof paper?.assetId === 'string')
+        if (typeof paper?.assetId === 'string' || w === 'literature')
           try {
-            localStorage.setItem(`scientify.reader.${paper.assetId}`, String(source.page));
+            localStorage.setItem(
+              `scientify.reader.${paper?.assetId ?? source.resourceId}`,
+              String(source.page),
+            );
             requestAnimationFrame(() =>
               window.dispatchEvent(
                 new CustomEvent('scientify-pdf-page', {
@@ -542,7 +567,11 @@ export function App({
   }, [data, windowMode]);
   function openDialog(next: Dialog) {
     store.getState().clearMessage();
-    setDialog(next);
+    if (isTauri() && windowMode !== 'browser')
+      void browserLayout({ op: 'hideAll' })
+        .catch(() => {})
+        .then(() => setDialog(next));
+    else setDialog(next);
   }
   const ready = phase === 'ready' && data;
   const workspaceLabel = project
@@ -557,7 +586,7 @@ export function App({
     patchLocation({
       workspace: target.workspace,
       view: target.runId ? 'runs' : target.workspace === 'literature' ? 'local' : 'files',
-      ...(target.paperId ? { paperId: target.paperId } : {}),
+      ...(target.paperId ? { paperId: target.paperId, legacyLiterature: true } : {}),
       ...(target.runId ? { runId: target.runId } : {}),
       ...(target.path ? { paths: { ...location.paths, [target.workspace]: target.path } } : {}),
     });
@@ -631,24 +660,15 @@ export function App({
         if (id) setPendingNote({ scope: project.id, id });
       }}
     />
-  ) : workspace === 'literature' ? (
-    <LiteratureWorkspace
+  ) : workspace === 'literature' && windowMode !== 'browser' && !location.legacyLiterature ? (
+    <LocalLiterature
       key={project.id}
       project={project}
       store={store}
       backend={backend}
+      requestedPaper={location.paperId}
       view={view}
       onView={(view) => patchLocation({ view })}
-      selectedPaper={location.paperId}
-      session={location.literatureSession}
-      onSessionChange={(literatureSession) =>
-        patchLocation({
-          literatureSession,
-          paperId:
-            literatureSession.tabs.find((tab) => tab.id === literatureSession.activeId)?.paperId ??
-            null,
-        })
-      }
       width={resourceWidth}
       resize={
         <ResizeHandle
@@ -661,8 +681,47 @@ export function App({
         />
       }
       onContext={receiveContext}
-      onTool={openTool}
+      onLegacy={() => patchLocation({ legacyLiterature: true })}
     />
+  ) : workspace === 'literature' ? (
+    <div className="legacy-literature-view">
+      {windowMode !== 'browser' && (
+        <Button variant="ghost" onClick={() => patchLocation({ legacyLiterature: false })}>
+          {t('返回本地目录')}
+        </Button>
+      )}
+      <LiteratureWorkspace
+        key={project.id}
+        project={project}
+        store={store}
+        backend={backend}
+        view={view}
+        onView={(view) => patchLocation({ view })}
+        selectedPaper={location.paperId}
+        session={location.literatureSession}
+        onSessionChange={(literatureSession) =>
+          patchLocation({
+            literatureSession,
+            paperId:
+              literatureSession.tabs.find((tab) => tab.id === literatureSession.activeId)
+                ?.paperId ?? null,
+          })
+        }
+        width={resourceWidth}
+        resize={
+          <ResizeHandle
+            value={resourceWidth}
+            min={180}
+            max={maxResourceWidth}
+            side="left"
+            label={t('调整资源宽度')}
+            onChange={(leftWidth) => setUI((s) => ({ ...s, leftWidth }))}
+          />
+        }
+        onContext={receiveContext}
+        onTool={openTool}
+      />
+    </div>
   ) : workspace === 'notes' ? null : (
     <WorkspaceFrame
       label={t(workspaceLabel)}

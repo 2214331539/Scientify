@@ -11,13 +11,17 @@ export function DocumentTabs({
   onSelect,
   onClose,
   onNew,
+  label,
+  newLabel,
 }: {
   tabs: { id: string; title: string }[];
   activeId: string | null;
   panelId: string;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
-  onNew: () => void;
+  onNew?: () => void;
+  label?: string;
+  newLabel?: string;
 }) {
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const focusPending = useRef(false);
@@ -32,7 +36,7 @@ export function DocumentTabs({
   }, [activeId, tabs.length]);
   return (
     <div className="document-tabs">
-      <div className="document-tab-list" role="tablist" aria-label={t('文献标签页')}>
+      <div className="document-tab-list" role="tablist" aria-label={label ?? t('文献标签页')}>
         {tabs.map((tab, index) => (
           <div className={`document-tab ${tab.id === activeId ? 'is-active' : ''}`} key={tab.id}>
             <Button
@@ -85,19 +89,21 @@ export function DocumentTabs({
           </div>
         ))}
       </div>
-      <Button
-        variant="ghost"
-        iconOnly
-        className="document-tab-add"
-        ref={add}
-        aria-label={t('新建文献标签页')}
-        onClick={() => {
-          focusPending.current = true;
-          onNew();
-        }}
-      >
-        <Plus size={15} />
-      </Button>
+      {onNew && (
+        <Button
+          variant="ghost"
+          iconOnly
+          className="document-tab-add"
+          ref={add}
+          aria-label={newLabel ?? t('新建文献标签页')}
+          onClick={() => {
+            focusPending.current = true;
+            onNew();
+          }}
+        >
+          <Plus size={15} />
+        </Button>
+      )}
     </div>
   );
 }

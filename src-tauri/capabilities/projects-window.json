@@ -2,6 +2,10 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "projects-window",
   "description": "Only Projects can create the research window.",
-  "windows": ["main"],
-  "permissions": ["allow-open-project-window"]
+  "permissions": [
+    "allow-open-project-window"
+  ],
+  "webviews": [
+    "main"
+  ]
 }

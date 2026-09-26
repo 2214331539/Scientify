@@ -1,0 +1,225 @@
+.local-library {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.library-root-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 3px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.library-root-toolbar > span {
+  flex: 1;
+  font-size: 11px;
+  min-width: 0;
+}
+.library-root-toolbar .sf-button {
+  width: 25px;
+  min-width: 25px;
+  padding: 3px;
+}
+.library-root-title {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+}
+.library-root-title > span {
+  min-width: 0;
+}
+.library-hover-search {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.library-hover-search.is-open,
+.library-root-toolbar:hover .library-hover-search,
+.library-hover-search:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+.library-hover-search input {
+  width: 100%;
+  font-size: 12px;
+}
+.local-file-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.library-unmounted {
+  padding: 20px 10px;
+  display: grid;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--sf-text-muted);
+}
+.library-bottom {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border-top: 1px solid var(--sf-border-subtle);
+  font-size: 11px;
+}
+.local-library-center,
+.local-reading-group,
+.local-note-group {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.local-library-center {
+  flex: 1;
+  overflow: hidden;
+}
+.local-editor-groups {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.local-reading-group {
+  flex: 1;
+}
+.local-reader,
+.local-note-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.local-note-group {
+  flex-shrink: 0;
+  max-width: 48%;
+  min-width: 220px;
+}
+.paper-note-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.paper-note-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  font-size: 11px;
+}
+.paper-note-toolbar > span {
+  min-width: 0;
+  flex: 1;
+}
+.paper-note-editor .paper-note-textarea {
+  flex: 1;
+  resize: none;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 14px;
+  line-height: 1.8;
+  font-family: var(--sf-font-mono);
+  outline-offset: -2px;
+}
+.paper-note-preview {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+.paper-note-footer {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-top: 1px solid var(--sf-border-subtle);
+  font-size: 11px;
+}
+.library-context-menu {
+  position: fixed;
+  z-index: 120;
+  width: 210px;
+  max-height: calc(100vh - 20px);
+  overflow: auto;
+  padding: 4px;
+  background: var(--sf-surface-raised);
+  border: 1px solid var(--sf-border-control);
+  box-shadow: var(--sf-shadow-popover);
+  border-radius: 4px;
+}
+.library-context-menu > button {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  min-height: 28px;
+  font-size: 12px;
+}
+.missing-paper {
+  width: 100%;
+  white-space: normal;
+  font-size: 11px;
+  justify-content: flex-start;
+}
+.subscription-placeholder {
+  padding: 16px 10px;
+  display: grid;
+  gap: 12px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.subscription-placeholder h3 {
+  font-size: 12px;
+  color: var(--sf-text-primary);
+  margin-top: 10px;
+}
+.browser-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.browser-address {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  flex-shrink: 0;
+}
+.browser-address input {
+  flex: 1;
+  width: 0;
+  min-width: 40px;
+  font-size: 12px;
+}
+.browser-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-content: center;
+  color: var(--sf-text-muted);
+  font-size: 13px;
+}
+.legacy-literature-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.legacy-literature-view > .literature-studio {
+  flex: 1;
+  min-height: 0;
+}

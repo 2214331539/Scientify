@@ -2197,7 +2197,7 @@
   ],
   "工作区窗口不存在": [
     "工作区窗口不存在",
-    "Workspace window not found"
+    "The workspace window does not exist."
   ],
   "文件操作失败：{error}": [
     "文件操作失败：{error}",
@@ -2237,7 +2237,7 @@
   ],
   "项目标识无效。": [
     "项目标识无效。",
-    "Invalid project identifier."
+    "Invalid project ID."
   ],
   "项目目录必须是绝对路径，请在项目设置中重新选择。": [
     "项目目录必须是绝对路径，请在项目设置中重新选择。",
@@ -2514,5 +2514,445 @@
   "从左侧打开文献": [
     "从左侧打开文献",
     "Open a paper from the sidebar"
+  ],
+  "请先保存论文笔记，再操作文件。": [
+    "请先保存论文笔记，再操作文件。",
+    "Save paper notes before changing files."
+  ],
+  "浏览器新页": [
+    "浏览器新页",
+    "New browser tab"
+  ],
+  "新建文件夹": [
+    "新建文件夹",
+    "New folder"
+  ],
+  "本地文献目录": [
+    "本地文献目录",
+    "Local literature directory"
+  ],
+  "打开浏览器": [
+    "打开浏览器",
+    "Open browser"
+  ],
+  "消息推荐": [
+    "消息推荐",
+    "Recommendations"
+  ],
+  "尚未启用": [
+    "尚未启用",
+    "Not enabled yet"
+  ],
+  "个人信息源": [
+    "个人信息源",
+    "Personal sources"
+  ],
+  "打开文献文件夹": [
+    "打开文献文件夹",
+    "Open literature folder"
+  ],
+  "文献库": [
+    "文献库",
+    "Library"
+  ],
+  "更多操作": [
+    "更多操作",
+    "More actions"
+  ],
+  "搜索文件名和路径": [
+    "搜索文件名和路径",
+    "Search file names and paths"
+  ],
+  "选择真实目录，PDF 与笔记保存在原位置。": [
+    "选择真实目录，PDF 与笔记保存在原位置。",
+    "Choose a local folder. PDFs and notes stay in that folder."
+  ],
+  "重新关联": [
+    "重新关联",
+    "Relink"
+  ],
+  "旧资料": [
+    "旧资料",
+    "Legacy library"
+  ],
+  "调整论文笔记宽度": [
+    "调整论文笔记宽度",
+    "Resize paper notes"
+  ],
+  "论文笔记": [
+    "论文笔记",
+    "Paper notes"
+  ],
+  "论文笔记标签": [
+    "论文笔记标签",
+    "Paper note tabs"
+  ],
+  "重命名": [
+    "重命名",
+    "Rename"
+  ],
+  "剪切": [
+    "剪切",
+    "Cut"
+  ],
+  "复制": [
+    "复制",
+    "Copy"
+  ],
+  "移动到": [
+    "移动到",
+    "Move to"
+  ],
+  "粘贴": [
+    "粘贴",
+    "Paste"
+  ],
+  "打开论文笔记": [
+    "打开论文笔记",
+    "Open paper note"
+  ],
+  "在文件管理器中显示": [
+    "在文件管理器中显示",
+    "Show in file manager"
+  ],
+  "将所选项目及关联笔记移入系统回收站？文件夹包括全部子内容。": [
+    "将所选项目及关联笔记移入系统回收站？文件夹包括全部子内容。",
+    "Move this item and its paired notes to the system recycle bin? Folders include all descendants."
+  ],
+  "移入回收站": [
+    "移入回收站",
+    "Move to recycle bin"
+  ],
+  "显示笔记文件": [
+    "显示笔记文件",
+    "Show note files"
+  ],
+  "复制当前项目旧附件和笔记，保留原记录；重复迁移会产生副本。继续？": [
+    "复制当前项目旧附件和笔记，保留原记录；重复迁移会产生副本。继续？",
+    "Copy this project’s legacy attachments and notes, preserving original records? Repeated migration creates copies."
+  ],
+  "迁移旧文献": [
+    "迁移旧文献",
+    "Migrate legacy papers"
+  ],
+  "解除目录关联不会删除文件，是否继续？": [
+    "解除目录关联不会删除文件，是否继续？",
+    "Detach this folder? Files will remain on disk."
+  ],
+  "解除目录关联": [
+    "解除目录关联",
+    "Detach folder"
+  ],
+  "相对路径": [
+    "相对路径",
+    "Relative path"
+  ],
+  "原论文已移除": [
+    "原论文已移除",
+    "Original PDF missing"
+  ],
+  "论文笔记正文": [
+    "论文笔记正文",
+    "Paper note content"
+  ],
+  "摘录选文": [
+    "摘录选文",
+    "Quote selection"
+  ],
+  "后退": [
+    "后退",
+    "Back"
+  ],
+  "前进": [
+    "前进",
+    "Forward"
+  ],
+  "停止": [
+    "停止",
+    "Stop"
+  ],
+  "网址或搜索词": [
+    "网址或搜索词",
+    "Address or search terms"
+  ],
+  "输入网址或搜索词": [
+    "输入网址或搜索词",
+    "Enter an address or search terms"
+  ],
+  "打开": [
+    "打开",
+    "Open"
+  ],
+  "在系统浏览器打开": [
+    "在系统浏览器打开",
+    "Open in system browser"
+  ],
+  "论文笔记尚未保存，请重试或处理冲突后退出。": [
+    "论文笔记尚未保存，请重试或处理冲突后退出。",
+    "Paper notes are not saved. Retry or resolve the conflict before closing."
+  ],
+  "返回本地目录": [
+    "返回本地目录",
+    "Back to local directory"
+  ],
+  "请在桌面应用中使用本地文献目录和内嵌浏览器。": [
+    "请在桌面应用中使用本地文献目录和内嵌浏览器。",
+    "Use the desktop app for local literature folders and the embedded browser."
+  ],
+  "请等待当前保存完成。": [
+    "请等待当前保存完成。",
+    "Wait for the current save to finish."
+  ],
+  "文献文件操作失败：{detail}": [
+    "文献文件操作失败：{detail}",
+    "Literature file operation failed: {detail}"
+  ],
+  "文献路径无效。": [
+    "文献路径无效。",
+    "Invalid literature path."
+  ],
+  "文件名包含保留名称或越界片段。": [
+    "文件名包含保留名称或越界片段。",
+    "The filename contains a reserved name or escapes the folder."
+  ],
+  "文件类型或大小超出限制。": [
+    "文件类型或大小超出限制。",
+    "The file type or size exceeds the limit."
+  ],
+  "读取时文件超过大小限制。": [
+    "读取时文件超过大小限制。",
+    "The file exceeded the size limit while reading."
+  ],
+  "不是有效的 PDF 文件。": [
+    "不是有效的 PDF 文件。",
+    "This is not a valid PDF file."
+  ],
+  "PDF 在读取时发生变化，请重试。": [
+    "PDF 在读取时发生变化，请重试。",
+    "The PDF changed while reading. Please retry."
+  ],
+  "文献根目录映射损坏，已停止修改。": [
+    "文献根目录映射损坏，已停止修改。",
+    "The library root mapping is damaged. Changes have been stopped."
+  ],
+  "文献根目录映射无效。": [
+    "文献根目录映射无效。",
+    "Invalid library root mapping."
+  ],
+  "文献根目录必须为绝对路径。": [
+    "文献根目录必须为绝对路径。",
+    "The library root must be an absolute path."
+  ],
+  "文献根目录不是文件夹。": [
+    "文献根目录不是文件夹。",
+    "The library root is not a folder."
+  ],
+  "请选择 Scientify 数据目录之外的独立文献文件夹。": [
+    "请选择 Scientify 数据目录之外的独立文献文件夹。",
+    "Choose a separate literature folder outside the Scientify data directory."
+  ],
+  "文件不在文献目录内。": [
+    "文件不在文献目录内。",
+    "The file is outside the literature folder."
+  ],
+  "上次文件操作未完成，请保留 .scientify/operation.json 并恢复文件后再操作。": [
+    "上次文件操作未完成，请保留 .scientify/operation.json 并恢复文件后再操作。",
+    "The previous file operation did not finish. Keep .scientify/operation.json and recover the files before continuing."
+  ],
+  "文献索引损坏，已停止修改。": [
+    "文献索引损坏，已停止修改。",
+    "The literature index is damaged. Changes have been stopped."
+  ],
+  "文献索引版本或数量无效。": [
+    "文献索引版本或数量无效。",
+    "Invalid literature index version or entry count."
+  ],
+  "文献索引包含无效或重复绑定。": [
+    "文献索引包含无效或重复绑定。",
+    "The literature index contains invalid or duplicate bindings."
+  ],
+  "文献目录超过 32 层。": [
+    "文献目录超过 32 层。",
+    "The literature folder exceeds 32 levels."
+  ],
+  "文献目录超过 10000 项，请缩小范围。": [
+    "文献目录超过 10000 项，请缩小范围。",
+    "The literature folder exceeds 10,000 entries. Choose a smaller folder."
+  ],
+  "PDF 已被外部替换，原选文位置可能变化：{path}": [
+    "PDF 已被外部替换，原选文位置可能变化：{path}",
+    "PDF replaced externally; saved text locations may have changed: {path}"
+  ],
+  "笔记目标已存在，保留原绑定，请重新关联：{path}": [
+    "笔记目标已存在，保留原绑定，请重新关联：{path}",
+    "The destination note exists. The original binding was kept; relink: {path}"
+  ],
+  "存在多个相同 PDF，未自动关联：{path}": [
+    "存在多个相同 PDF，未自动关联：{path}",
+    "Multiple matching PDFs found. Automatic relinking was skipped: {path}"
+  ],
+  "PDF 已移除，笔记仍保留：{path}": [
+    "PDF 已移除，笔记仍保留：{path}",
+    "PDF missing; its note has been kept: {path}"
+  ],
+  "请选择 PDF 文件。": [
+    "请选择 PDF 文件。",
+    "Choose a PDF file."
+  ],
+  "已有其他文献绑定到该笔记路径。": [
+    "已有其他文献绑定到该笔记路径。",
+    "Another paper is already linked to this note path."
+  ],
+  "请先打开文献文件夹。": [
+    "请先打开文献文件夹。",
+    "Open a literature folder first."
+  ],
+  "文献绑定不存在。": [
+    "文献绑定不存在。",
+    "The paper binding no longer exists."
+  ],
+  "笔记应为不超过 2 MiB 的 UTF-8 文本。": [
+    "笔记应为不超过 2 MiB 的 UTF-8 文本。",
+    "Notes must be UTF-8 text up to 2 MiB."
+  ],
+  "副本必须为尚不存在的 Markdown 文件。": [
+    "副本必须为尚不存在的 Markdown 文件。",
+    "The copy must be a new Markdown file."
+  ],
+  "笔记已被外部修改，当前草稿已保留。请重载或另存副本。": [
+    "笔记已被外部修改，当前草稿已保留。请重载或另存副本。",
+    "The note changed on disk. Your draft is kept. Reload or save a copy."
+  ],
+  "同名目标已存在，不会覆盖。": [
+    "同名目标已存在，不会覆盖。",
+    "The destination already exists and will not be overwritten."
+  ],
+  "目标文件夹不存在。": [
+    "目标文件夹不存在。",
+    "The destination folder does not exist."
+  ],
+  "目标路径已存在文献绑定，请先重新关联缺失文献。": [
+    "目标路径已存在文献绑定，请先重新关联缺失文献。",
+    "The destination has a paper binding. Relink the missing paper first."
+  ],
+  "操作失败且回退未完成；请保留恢复清单：{path}": [
+    "操作失败且回退未完成；请保留恢复清单：{path}",
+    "The operation failed and rollback is incomplete. Keep the recovery manifest: {path}"
+  ],
+  "目标 PDF 已绑定其他笔记。": [
+    "目标 PDF 已绑定其他笔记。",
+    "The destination PDF is already linked to another note."
+  ],
+  "原文献绑定不存在。": [
+    "原文献绑定不存在。",
+    "The original paper binding does not exist."
+  ],
+  "不能将普通文件改名为关联笔记。": [
+    "不能将普通文件改名为关联笔记。",
+    "A regular file cannot be renamed to a bound note."
+  ],
+  "不能移动到自身、子目录或仅修改大小写。": [
+    "不能移动到自身、子目录或仅修改大小写。",
+    "Cannot move onto itself, into a child folder, or change only letter case."
+  ],
+  "PDF 文件必须保留 .pdf 扩展名。": [
+    "PDF 文件必须保留 .pdf 扩展名。",
+    "PDF files must keep their .pdf extension."
+  ],
+  "请通过对应 PDF 操作关联笔记。": [
+    "请通过对应 PDF 操作关联笔记。",
+    "Manage a linked note through its PDF."
+  ],
+  "目标笔记已存在，不会覆盖或重新绑定。": [
+    "目标笔记已存在，不会覆盖或重新绑定。",
+    "The destination note exists and will not be overwritten or relinked."
+  ],
+  "不支持的文献操作。": [
+    "不支持的文献操作。",
+    "Unsupported literature operation."
+  ],
+  "回收失败且回退未完成：{detail}；恢复包：{path}": [
+    "回收失败且回退未完成：{detail}；恢复包：{path}",
+    "Recycling failed and rollback is incomplete: {detail}; recovery package: {path}"
+  ],
+  "文件夹包含内部元数据，不支持移动或复制。": [
+    "文件夹包含内部元数据，不支持移动或复制。",
+    "The folder contains internal metadata and cannot be moved or copied."
+  ],
+  "不支持特殊文件。": [
+    "不支持特殊文件。",
+    "Special files are not supported."
+  ],
+  "地址过长。": [
+    "地址过长。",
+    "The address is too long."
+  ],
+  "仅允许 HTTP 或 HTTPS 网页。": [
+    "仅允许 HTTP 或 HTTPS 网页。",
+    "Only HTTP and HTTPS pages are allowed."
+  ],
+  "网页地址无效。": [
+    "网页地址无效。",
+    "Invalid web address."
+  ],
+  "该地址不允许在内嵌浏览器中打开。": [
+    "该地址不允许在内嵌浏览器中打开。",
+    "This address cannot be opened in the embedded browser."
+  ],
+  "网页标签不存在。": [
+    "网页标签不存在。",
+    "The browser tab no longer exists."
+  ],
+  "最多同时打开 16 个网页标签。": [
+    "最多同时打开 16 个网页标签。",
+    "Up to 16 browser tabs can be open at once."
+  ],
+  "数据目录无效": [
+    "数据目录无效",
+    "Invalid data directory."
+  ],
+  "已阻止非网页或应用内部地址。": [
+    "已阻止非网页或应用内部地址。",
+    "Blocked a non-web or internal application address."
+  ],
+  "下载未完成。": [
+    "下载未完成。",
+    "The download did not complete."
+  ],
+  "网页加载失败，可刷新或在系统浏览器打开。": [
+    "网页加载失败，可刷新或在系统浏览器打开。",
+    "The page failed to load. Refresh or open it in your system browser."
+  ],
+  "请输入网址。": [
+    "请输入网址。",
+    "Enter a web address."
+  ],
+  "网页尚未打开。": [
+    "网页尚未打开。",
+    "No page has been opened yet."
+  ],
+  "无效的浏览器操作。": [
+    "无效的浏览器操作。",
+    "Invalid browser operation."
+  ],
+  "当前浏览器导航仅支持 Windows。": [
+    "当前浏览器导航仅支持 Windows。",
+    "Native browser navigation is currently available on Windows."
+  ],
+  "网页不能调用应用接口。": [
+    "网页不能调用应用接口。",
+    "Webpages cannot call application APIs."
+  ],
+  "项目不存在。": [
+    "项目不存在。",
+    "The project does not exist."
+  ],
+  "该文件类型不允许直接执行，请在文件管理器中打开。": [
+    "该文件类型不允许直接执行，请在文件管理器中打开。",
+    "This file type cannot be launched directly. Open it in the file manager."
+  ],
+  "该操作不适用于论文笔记。": [
+    "该操作不适用于论文笔记。",
+    "This operation does not apply to paper notes."
   ]
 }
