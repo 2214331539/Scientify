@@ -18,13 +18,18 @@
     line-height: 1.45;
     transition:
       background-color var(--sf-motion-feedback) var(--sf-ease-standard),
-      border-color var(--sf-motion-feedback) var(--sf-ease-standard);
+      border-color var(--sf-motion-feedback) var(--sf-ease-standard),
+      color var(--sf-motion-feedback) var(--sf-ease-standard),
+      transform var(--sf-motion-feedback) var(--sf-ease-apple),
+      box-shadow var(--sf-motion-feedback) var(--sf-ease-standard);
   }
   .sf-button:hover:not(:disabled) {
     background: var(--sf-surface-hover);
+    transform: translateY(-1px);
   }
   .sf-button:active:not(:disabled) {
     background: var(--sf-surface-selected);
+    transform: scale(0.97);
   }
   .sf-button-primary:active:not(:disabled) {
     background: var(--sf-accent-hover);

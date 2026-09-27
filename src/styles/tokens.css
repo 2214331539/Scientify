@@ -7,9 +7,10 @@
   --sf-topbar-height: 44px;
   --sf-header-height: 40px;
   --sf-toolbar-height: 36px;
-  --sf-radius: 4px;
-  --sf-radius-dialog: 8px;
-  --sf-radius-overlay: 8px;
+  /* Soft grouping for the desktop workspace without card-heavy surfaces. */
+  --sf-radius: 7px;
+  --sf-radius-dialog: 12px;
+  --sf-radius-overlay: 10px;
   --sf-control-sm: 26px;
   --sf-control-md: 30px;
   --sf-motion-feedback: 120ms;
@@ -17,9 +18,11 @@
   --sf-motion-overlay: 200ms;
   --sf-motion-panel: 240ms;
   --sf-motion-exit: 100ms;
+  --sf-motion-layout: 280ms;
   --sf-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --sf-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --sf-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --sf-ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
   --sf-surface-topbar: #fff;
   --sf-surface-canvas: #fff;
   --sf-surface-chrome: #f7f7f7;

@@ -5,6 +5,7 @@
   background: var(--sf-surface-chrome);
   border-bottom: 1px solid var(--sf-border-subtle);
   min-width: 0;
+  transition: background-color var(--sf-motion-layout) var(--sf-ease-apple);
 }
 .document-tab-list {
   display: flex;
@@ -20,6 +21,14 @@
   max-width: 240px;
   border-right: 1px solid var(--sf-border-subtle);
   border-top: 2px solid transparent;
+  border-radius: var(--sf-radius) var(--sf-radius) 0 0;
+  transition:
+    background-color var(--sf-motion-feedback) var(--sf-ease-standard),
+    border-color var(--sf-motion-feedback) var(--sf-ease-standard),
+    transform var(--sf-motion-feedback) var(--sf-ease-apple);
+}
+.document-tab:hover {
+  transform: translateY(-1px);
 }
 .document-tab.is-active {
   background: var(--sf-surface-canvas);
@@ -27,7 +36,7 @@
 }
 .document-tab .sf-button {
   border: 0;
-  border-radius: 0;
+  border-radius: var(--sf-radius) var(--sf-radius) 0 0;
   background: transparent;
 }
 .document-tab [role='tab'] {
