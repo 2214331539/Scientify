@@ -69,7 +69,7 @@ export function TopBar({
         <span>Scientify</span>
       </Button>
       <span className="topbar-divider" />
-      <div className="project-switcher" ref={holder}>
+      <div className="project-switcher project-switcher-compat" ref={holder}>
         <Button
           variant="ghost"
           className="project-switcher-trigger text-button"

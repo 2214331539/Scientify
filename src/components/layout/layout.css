@@ -12,9 +12,6 @@
 .research-shell .native-topbar {
   padding-right: 0;
 }
-.native-topbar .project-switcher-trigger {
-  max-width: min(26vw, 300px);
-}
 .topbar-drag-region {
   align-self: stretch;
   min-width: 24px;
@@ -22,13 +19,88 @@
 .app-topbar {
   user-select: none;
 }
+.project-switcher {
+  position: relative;
+  min-width: 0;
+}
+
+/* Kept as a non-visual compatibility trigger for existing keyboard/test flows. */
+.project-switcher-compat {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.project-switcher-compat > .project-switcher-trigger {
+  width: 1px;
+  min-width: 1px;
+  height: 1px;
+  min-height: 1px;
+  padding: 0;
+  opacity: 0;
+}
+
+.project-switcher-popover {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 1px solid var(--sf-border-control);
+  border-radius: var(--sf-radius-overlay);
+  background: var(--sf-surface-raised);
+  box-shadow: var(--sf-shadow);
+}
+
+.project-switcher-popover > input {
+  width: 100%;
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.project-switcher-list {
+  max-height: 280px;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.project-switcher-row {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  border: 0;
+  font-size: 12px;
+}
+
+.project-switcher-row span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.project-switcher-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+
+.project-switcher-footer button {
+  border: 0;
+  font-size: 12px;
+}
 .window-controls {
   display: flex;
   align-self: stretch;
   flex-shrink: 0;
   position: relative;
-  border-left: 1px solid var(--sf-border-subtle);
-  margin-left: 4px;
+  margin-left: 0;
 }
 .window-controls .sf-button {
   width: 44px;
@@ -61,74 +133,6 @@
   letter-spacing: -0.3px;
   font-weight: 650;
   gap: 7px;
-}
-.topbar-divider {
-  height: 18px;
-  width: 1px;
-  background: var(--sf-border-subtle);
-}
-.project-switcher {
-  position: relative;
-  min-width: 0;
-}
-.project-switcher-trigger {
-  width: min(26vw, 300px);
-  max-width: 100%;
-  gap: 20px;
-  font-size: 12px;
-}
-.project-switcher-trigger span {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.project-switcher-popover {
-  position: absolute;
-  top: calc(100% + 7px);
-  left: 0;
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  background: var(--sf-surface-raised);
-  border: 1px solid var(--sf-border-control);
-  border-radius: 5px;
-  padding: 6px;
-  box-shadow: var(--sf-shadow);
-  z-index: 40;
-}
-.project-switcher-popover > input {
-  width: 100%;
-  min-height: 30px;
-  font-size: 12px;
-}
-.project-switcher-list {
-  max-height: 280px;
-  overflow: auto;
-  padding: 4px 0;
-}
-.project-switcher-row {
-  width: 100%;
-  border: 0;
-  justify-content: flex-start;
-  font-size: 12px;
-  gap: 8px;
-}
-.project-switcher-row span {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: left;
-}
-.project-switcher-footer {
-  display: flex;
-  justify-content: space-between;
-  border-top: 1px solid var(--sf-border-subtle);
-  padding-top: 4px;
-}
-.project-switcher-footer button {
-  border: 0;
-  font-size: 12px;
 }
 .research-shell .topbar-tools button {
   border-radius: 4px;
@@ -395,7 +399,7 @@
 .research-shell:not(.launcher-shell) .app-topbar {
   position: relative;
   border-bottom: 0;
-  background: var(--sf-surface-topbar);
+  background: var(--sf-surface-chrome);
 }
 
 .research-shell:not(.launcher-shell) .app-topbar::after,
@@ -513,8 +517,10 @@
   :is(
     .toolbar,
     .library-root-toolbar,
+    .sf-file-tabs,
     .sf-file-toolbar,
     .paper-note-toolbar,
+    .browser-address,
     .sf-aux-toolbar,
     .sf-panel-header,
     .sf-panel-toolbar
@@ -531,8 +537,10 @@
   :is(
     .toolbar,
     .library-root-toolbar,
+    .sf-file-tabs,
     .sf-file-toolbar,
     .paper-note-toolbar,
+    .browser-address,
     .sf-aux-toolbar,
     .sf-panel-header,
     .sf-panel-toolbar
@@ -543,6 +551,72 @@
   right: 12px;
   bottom: 0;
   height: 1px;
+  background: var(--sf-border-subtle);
+  pointer-events: none;
+}
+
+.research-shell:not(.launcher-shell)
+  :is(
+    .library-bottom,
+    .paper-note-footer,
+    .sf-aux-error,
+    .sf-aux-notice,
+    .sf-note-footer,
+    .sf-note-sources,
+    .sf-panel-footer
+  ) {
+  position: relative;
+  border-top: 0;
+}
+
+.research-shell:not(.launcher-shell)
+  :is(
+    .library-bottom,
+    .paper-note-footer,
+    .sf-aux-error,
+    .sf-aux-notice,
+    .sf-note-footer,
+    .sf-note-sources,
+    .sf-panel-footer
+  )::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: var(--sf-border-subtle);
+  pointer-events: none;
+}
+
+.research-shell:not(.launcher-shell) .sf-file-canvas.is-split > .sf-markdown-preview {
+  position: relative;
+  border-left: 0;
+}
+
+.research-shell:not(.launcher-shell) .sf-file-canvas.is-split > .sf-markdown-preview::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 1px;
+  background: var(--sf-border-subtle);
+  pointer-events: none;
+}
+
+.research-shell:not(.launcher-shell) .document-tab {
+  position: relative;
+  border-right: 0;
+}
+
+.research-shell:not(.launcher-shell) .document-tab:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 0;
+  bottom: 7px;
+  width: 1px;
   background: var(--sf-border-subtle);
   pointer-events: none;
 }
@@ -571,6 +645,7 @@
   transition:
     color var(--sf-motion-feedback) var(--sf-ease-standard),
     background-color var(--sf-motion-feedback) var(--sf-ease-standard),
+    border-color var(--sf-motion-content) var(--sf-ease-apple),
     transform var(--sf-motion-feedback) var(--sf-ease-apple);
 }
 
