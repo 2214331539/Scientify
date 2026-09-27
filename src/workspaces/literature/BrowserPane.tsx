@@ -5,6 +5,7 @@ import {
   browserCommand,
   browserEvents,
   browserLayout,
+  DEFAULT_BROWSER_URL,
   type BrowserTab,
 } from '../../platform/browser-pane';
 import { t, translateError } from '../../i18n';
@@ -19,7 +20,7 @@ export function BrowserPane({
   onChanged: (tab: BrowserTab) => void;
 }) {
   const [tab, setTab] = useState<BrowserTab | null>(null),
-    [address, setAddress] = useState(''),
+    [address, setAddress] = useState(DEFAULT_BROWSER_URL),
     [error, setError] = useState('');
   const canvas = useRef<HTMLDivElement>(null),
     callback = useRef(onChanged);
@@ -39,8 +40,9 @@ export function BrowserPane({
         const t = tabs.find((t) => t.id === id);
         if (t) {
           receive(t);
-          if (!t.url && initialUrl)
-            void browserCommand<BrowserTab>({ op: 'navigate', id, address: initialUrl })
+          const firstAddress = initialUrl?.trim() || DEFAULT_BROWSER_URL;
+          if (!t.url)
+            void browserCommand<BrowserTab>({ op: 'navigate', id, address: firstAddress })
               .then(receive)
               .catch((e) => setError(String(e)));
         }

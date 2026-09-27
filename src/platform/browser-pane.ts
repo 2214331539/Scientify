@@ -11,6 +11,10 @@ export type BrowserTab = {
   canForward: boolean;
   error: string | null;
 };
+
+/** The first page shown by every embedded browser tab. */
+export const DEFAULT_BROWSER_URL = 'https://www.google.com';
+
 export const browserCommand = <T = void>(request: Record<string, unknown>) =>
   localCommand<T>('browser_command', { request });
 export const browserEvents = (event: string, callback: (tab: BrowserTab) => void) =>

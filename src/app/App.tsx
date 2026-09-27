@@ -46,6 +46,7 @@ import type { Project, Team } from '../domain/workspace';
 import type { WorkContext, WorkspaceId } from '../domain/context';
 import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
 import { nativeResearch, type ResearchBackend } from '../platform/research';
+import { runViewTransition } from '../platform/view-transition';
 
 type Dialog =
   | { kind: 'project'; project?: Project }
@@ -349,28 +350,30 @@ export function App({
         };
   const receiveContext = useCallback((next: WorkContext) => setContext(next), []);
   const patchLocation = useCallback((patch: Partial<Location>) => {
-    setUI((s) => {
-      if (!s.projectId) return s;
-      return {
-        ...s,
-        locations: {
-          ...s.locations,
-          [s.projectId]: {
-            ...(s.locations[s.projectId] ?? locationDefault),
-            ...patch,
-            ...(patch.view !== undefined
-              ? {
-                  views: {
-                    ...s.locations[s.projectId]?.views,
-                    [patch.workspace ?? s.locations[s.projectId]?.workspace ?? 'overview']:
-                      patch.view,
-                  },
-                }
-              : {}),
+    runViewTransition(() =>
+      setUI((s) => {
+        if (!s.projectId) return s;
+        return {
+          ...s,
+          locations: {
+            ...s.locations,
+            [s.projectId]: {
+              ...(s.locations[s.projectId] ?? locationDefault),
+              ...patch,
+              ...(patch.view !== undefined
+                ? {
+                    views: {
+                      ...s.locations[s.projectId]?.views,
+                      [patch.workspace ?? s.locations[s.projectId]?.workspace ?? 'overview']:
+                        patch.view,
+                    },
+                  }
+                : {}),
+            },
           },
-        },
-      };
-    });
+        };
+      }),
+    );
   }, []);
   const openTool = useCallback(
     (tool: 'assistant' | 'notes') => setUI((s) => ({ ...s, dock: tool, dockOpen: true })),
@@ -904,9 +907,7 @@ export function App({
             </Button>
           </div>
         )}
-        <div className="workspace-content" key={epoch}>
-          {content}
-        </div>
+        <div className="workspace-content">{content}</div>
       </main>
       {ready && (
         <GlobalDock

@@ -375,7 +375,27 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
             return;
         };
         let environment = native.environment();
-        let _ = core.AddWebResourceRequestedFilter(w!("*"), COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+        // Only observe application-owned origins. A catch-all filter makes WebView2
+        // inspect every third-party request and has caused otherwise valid foreign
+        // pages to fail under some proxy/TLS configurations. Top-level navigation
+        // is still guarded by `allowed`; these targeted filters keep app IPC and
+        // the local dev server out of the remote view without touching Google,
+        // Scholar, arXiv, or their subresources.
+        for pattern in [
+            w!("https://tauri.localhost/*"),
+            w!("http://tauri.localhost/*"),
+            w!("https://ipc.localhost/*"),
+            w!("http://ipc.localhost/*"),
+            w!("https://asset.localhost/*"),
+            w!("http://asset.localhost/*"),
+            w!("http://localhost:1420/*"),
+            w!("https://localhost:1420/*"),
+            w!("http://localhost:1421/*"),
+            w!("https://localhost:1421/*"),
+        ] {
+            let _ =
+                core.AddWebResourceRequestedFilter(pattern, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+        }
         let _ = core.add_WebResourceRequested(
             &WebResourceRequestedEventHandler::create(Box::new(move |_, args| {
                 if let Some(args) = args {
@@ -385,6 +405,7 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
                     let value = raw.to_string().unwrap_or_default();
                     CoTaskMemFree(Some(raw.0.cast()));
                     if let Ok(url) = tauri::Url::parse(&value) {
+                        trace(format!("blocked web resource {}", url));
                         if !allowed(&url) && !matches!(url.scheme(), "data" | "blob") {
                             let response = environment.CreateWebResourceResponse(
                                 None::<&windows::Win32::System::Com::IStream>,
@@ -430,6 +451,12 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
                     args.IsSuccess(&mut ok)?;
                     let mut status = COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN;
                     args.WebErrorStatus(&mut status)?;
+                    trace(format!(
+                        "navigation completed success={} status={} id={}",
+                        ok.as_bool(),
+                        status.0,
+                        label
+                    ));
                     update(&app, &label, |t| {
                         t.loading = false;
                         // Stop, replacement navigations and downloads cancel a navigation normally.
