@@ -28,7 +28,7 @@
     transform var(--sf-motion-feedback) var(--sf-ease-apple);
 }
 .document-tab:hover {
-  transform: translateY(-1px);
+  background: var(--sf-surface-hover);
 }
 .document-tab.is-active {
   background: var(--sf-surface-canvas);

@@ -33,20 +33,10 @@
     transform: translateX(0);
   }
 }
-@keyframes sf-workspace-enter {
-  from {
-    opacity: 0;
-    transform: translateY(4px) scale(0.998);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 @keyframes sf-content-enter {
   from {
     opacity: 0;
-    transform: translateY(3px);
+    transform: translateY(2px);
   }
   to {
     opacity: 1;
@@ -79,10 +69,7 @@ dialog[open]::backdrop {
   transform: rotate(90deg);
 }
 .research-shell:not(.launcher-shell) .workspace-content > * {
-  animation: sf-content-enter var(--sf-motion-content) var(--sf-ease-apple);
-}
-.research-shell:not(.launcher-shell) .workspace-frame {
-  animation: sf-workspace-enter var(--sf-motion-layout) var(--sf-ease-apple);
+  animation: sf-content-enter var(--sf-motion-content) var(--sf-ease-apple) both;
 }
 .launcher-canvas > .project-shelf,
 .launcher-canvas > .launcher-project-list {

@@ -25,7 +25,6 @@
   }
   .sf-button:hover:not(:disabled) {
     background: var(--sf-surface-hover);
-    transform: translateY(-1px);
   }
   .sf-button:active:not(:disabled) {
     background: var(--sf-surface-selected);

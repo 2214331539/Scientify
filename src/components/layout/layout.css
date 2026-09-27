@@ -391,9 +391,9 @@
 
 /* Project workspaces use a soft, inset desktop frame. Launcher geometry stays unchanged. */
 .research-shell:not(.launcher-shell) .shell-body {
-  gap: 8px;
-  padding: 8px 10px 10px;
-  background: var(--sf-surface-sunken);
+  gap: 0;
+  padding: 0;
+  background: var(--sf-surface-canvas);
 }
 
 .research-shell:not(.launcher-shell) .app-topbar {
@@ -431,14 +431,26 @@
   flex-basis: var(--sf-rail-width);
   width: var(--sf-rail-width);
   padding: 8px 6px;
-  border: 1px solid var(--sf-border-subtle);
-  border-radius: 14px;
+  border: 0;
+  border-radius: 0;
   background: var(--sf-surface-chrome);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+  box-shadow: none;
   transition:
     background-color var(--sf-motion-layout) var(--sf-ease-apple),
     border-color var(--sf-motion-layout) var(--sf-ease-apple),
     box-shadow var(--sf-motion-layout) var(--sf-ease-apple);
+  position: relative;
+}
+
+.research-shell:not(.launcher-shell) .workspace-rail::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 0;
+  bottom: 12px;
+  width: 1px;
+  background: var(--sf-border-subtle);
+  pointer-events: none;
 }
 
 .research-shell:not(.launcher-shell) .workspace-rail nav {
@@ -447,7 +459,7 @@
 
 .research-shell:not(.launcher-shell) .workspace-rail nav button,
 .research-shell:not(.launcher-shell) .rail-utilities button {
-  border-radius: 10px;
+  border-radius: 6px;
   transition:
     color var(--sf-motion-feedback) var(--sf-ease-standard),
     background-color var(--sf-motion-feedback) var(--sf-ease-standard),
@@ -458,7 +470,6 @@
 .research-shell:not(.launcher-shell) .workspace-rail nav button:hover:not(:disabled),
 .research-shell:not(.launcher-shell) .rail-utilities button:hover:not(:disabled) {
   background: var(--sf-surface-hover);
-  transform: translateY(-1px);
 }
 
 .research-shell:not(.launcher-shell) .workspace-rail nav button:active:not(:disabled),
@@ -479,17 +490,32 @@
 }
 
 .research-shell:not(.launcher-shell) .workspace-stage {
-  gap: 8px;
-  overflow: visible;
+  gap: 0;
+  overflow: hidden;
+}
+
+.research-shell:not(.launcher-shell) :is(.auxiliary-surface, .notes-workspace-surface) {
+  position: relative;
+}
+
+.research-shell:not(.launcher-shell) :is(.auxiliary-surface, .notes-workspace-surface)::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 1px;
+  background: var(--sf-border-subtle);
+  pointer-events: none;
 }
 
 .research-shell:not(.launcher-shell) .workspace-frame,
 .research-shell:not(.launcher-shell) .central-area,
 .research-shell:not(.launcher-shell) .sf-global-dock {
-  border: 1px solid var(--sf-border-subtle);
-  border-radius: 14px;
+  border: 0;
+  border-radius: 0;
   background: var(--sf-surface-canvas);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+  box-shadow: none;
 }
 
 .research-shell:not(.launcher-shell) .workspace-frame,
@@ -654,7 +680,6 @@
 .research-shell:not(.launcher-shell) .sf-dock-tabs button:hover:not(:disabled) {
   background: var(--sf-surface-hover);
   border-radius: 8px;
-  transform: translateY(-1px);
 }
 
 .research-shell:not(.launcher-shell) .workspace-commandbar > .icon-button:active:not(:disabled),
