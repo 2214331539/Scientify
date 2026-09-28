@@ -23,6 +23,8 @@ describe('agent domain binding', () => {
   it('leaves rootless views unbound so the previous binding is kept', () => {
     expect(domainForWorkspace('overview')).toBeNull();
     expect(domainForWorkspace('notes')).toBeNull();
+    // The project manager is not a research workspace and owns no directory.
+    expect(domainForWorkspace('projects')).toBeNull();
   });
 });
 

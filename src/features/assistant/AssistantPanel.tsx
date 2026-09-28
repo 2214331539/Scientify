@@ -1,8 +1,9 @@
 import { t, translateError } from '../../i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip } from 'lucide-react';
+import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip, Bot } from 'lucide-react';
 import { ContextPanel } from '../../components/ai/ContextPanel';
+import { ApprovalCard } from '../../components/ai/ApprovalCard';
 import { AssistantComposer } from '../../components/ai/AssistantComposer';
 import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import '../../components/ai/ai-panel.css';
@@ -12,8 +13,16 @@ import { Menu, type MenuAnchor } from '../../components/primitives/Menu';
 import { Modal } from '../../components/Modal';
 import { Panel } from '../../components/layout/Panel';
 import type { WorkContext } from '../../domain/context';
+import {
+  domainForWorkspace,
+  engineSupports,
+  nativeAgent,
+  type AgentBackend,
+  type AgentConnection,
+} from '../../platform/agent';
 import type { ResearchBackend } from '../../platform/research';
 import type { WorkspaceStore } from '../../stores/workspace';
+import { AgentSession, hasPendingWork, initialAgentSession } from './agent-session';
 import {
   asConversation,
   freezeContext,
@@ -31,9 +40,18 @@ interface Props {
   scope: string;
   context: WorkContext;
   onDirtyChange?: (dirty: boolean) => void;
+  /** Injected so tests can drive the engine without a desktop backend. */
+  agent?: AgentBackend;
 }
 
-export function AssistantPanel({ store, backend, scope, context, onDirtyChange }: Props) {
+export function AssistantPanel({
+  store,
+  backend,
+  scope,
+  context,
+  onDirtyChange,
+  agent = nativeAgent,
+}: Props) {
   const data = useStore(store, (state) => state.data);
   const model = data?.settings.model;
   const [settings, setSettings] = useState<AISettings>(() => ({
@@ -70,6 +88,18 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
   const [error, setError] = useState('');
   const [retry, setRetry] = useState<Conversation | null>(null);
   const busyRef = useRef(false);
+  // Agent mode is additive: with it off, the panel behaves exactly as before.
+  const [agentMode, setAgentMode] = useState(false);
+  const [agentState, setAgentState] = useState(() => ({ ...initialAgentSession }));
+  const sessionRef = useRef<AgentSession | null>(null);
+  const agentProject = context.projectId;
+  const domain = domainForWorkspace(context.workspace);
+  const agentConnection: AgentConnection = {
+    endpoint: settings.endpoint,
+    model: settings.model,
+    provider: settings.provider,
+    ...(apiKey ? { apiKey } : {}),
+  };
   const history = (data?.sessions ?? []).filter((item) => item.project === scope);
   const key = `assistant:${scope}`;
   const dirty = !!prompt.trim() || unsaved || busy;
@@ -78,6 +108,20 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
     store.getState().setDirtySource(key, dirty);
     onDirtyChange?.(dirty);
   }, [store, key, dirty, onDirtyChange]);
+  // A turn the engine is still running, or an approval it is waiting on, is
+  // unfinished work: quitting now would abandon it.
+  const agentPending = hasPendingWork(agentState);
+  useEffect(() => {
+    store.getState().setDirtySource(`agent:${scope}`, agentPending);
+    return () => store.getState().setDirtySource(`agent:${scope}`, false);
+  }, [store, scope, agentPending]);
+  // The engine answers a request before it emits approvals, so the queue has to
+  // be read while a turn runs; nothing is pushed yet.
+  useEffect(() => {
+    if (agentState.phase !== 'running' && agentState.phase !== 'waiting') return;
+    const timer = setInterval(() => void sessionRef.current?.poll(), 1200);
+    return () => clearInterval(timer);
+  }, [agentState.phase]);
   useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
 
   const safeError = useCallback(
@@ -209,8 +253,58 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
     }
   }
 
+  /** Run the prompt through the built-in engine instead of a single request. */
+  async function sendToAgent() {
+    const text = prompt.trim();
+    if (!agentProject) {
+      setError(t('个人收集箱没有可操作的目录，请先进入一个项目。'));
+      return;
+    }
+    if (!domain) {
+      setError(t('当前页面没有可操作的目录，请进入文献库或项目文件后再让 Agent 执行。'));
+      return;
+    }
+    if (!engineSupports(settings.provider)) {
+      setError(t('内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。'));
+      return;
+    }
+    if (!settings.model.trim() || !settings.endpoint.trim()) {
+      openSettings();
+      return;
+    }
+    busyRef.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      if (!sessionRef.current || sessionRef.current.state.threadId === null) {
+        sessionRef.current = new AgentSession(
+          agent,
+          { projectId: agentProject, domain },
+          agentConnection,
+          setAgentState,
+        );
+        if (!(await sessionRef.current.open())) {
+          setError(sessionRef.current.state.error ?? '');
+          return;
+        }
+      }
+      setPrompt('');
+      if (!(await sessionRef.current.send(text))) {
+        setError(sessionRef.current.state.error ?? '');
+      }
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
+
   async function send() {
-    if (!prompt.trim() || busyRef.current || settingsBusy || unsaved || retry) return;
+    if (!prompt.trim() || busyRef.current || settingsBusy) return;
+    if (agentMode) {
+      await sendToAgent();
+      return;
+    }
+    if (unsaved || retry) return;
     if (
       !settings.model.trim() ||
       !settings.endpoint.trim() ||
@@ -278,6 +372,20 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
           onClick={() => selectConversation('')}
         >
           <Plus size={15} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          aria-label={t('本地执行模式')}
+          aria-pressed={agentMode}
+          tooltip={
+            agentMode ? t('本地执行：内置引擎可以读写文件') : t('对话模式：只回答问题，不改动文件')
+          }
+          disabled={busy}
+          onClick={() => setAgentMode((value) => !value)}
+        >
+          <Bot size={15} />
         </Button>
         <Button
           variant="ghost"
@@ -436,15 +544,23 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
             <ChatMessageView key={message.id} role={message.role} text={message.text} />
           ))
         )}
+        {agentState.approvals.map((approval) => (
+          <ApprovalCard
+            key={String(approval.id)}
+            event={approval}
+            busy={busy}
+            onDecide={(decision) => void sessionRef.current?.decide(approval, decision)}
+          />
+        ))}
         {busy ? (
           <div className="sf-ai-progress" role="status">
-            {t('正在等待模型回答…')}
+            {agentMode ? t('正在执行…') : t('正在等待模型回答…')}
           </div>
         ) : null}
       </div>
-      {error ? (
+      {error || agentState.error ? (
         <div className="sf-aux-error" role="alert">
-          {translateError(error)}
+          {translateError(error || agentState.error)}
           <div>
             {retry ? (
               <Button

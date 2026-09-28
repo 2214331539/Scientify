@@ -64,7 +64,7 @@
 | T14 | 事件需要轮询 | 桩引擎测试 | 响应之后追发的事件在下一次调用才可见，因此必须有 `agent_events` | 已验证 |
 | T15a | 配置写入引擎 | `cargo test -p scientify --lib agent --locked` | `config.toml` 含 model / model_provider / base_url / wire_api；密钥不入文件 | 已验证 |
 | T15b | 协议支持范围 | 同上 | `openai` 与 `ollama` 接受；`anthropic` 与 `gemini` 在启动前被拒并给出原因 | 已验证 |
-| T15c | 面板接线 | 在 AI 面板配置服务商后建立线程 | 面板把当前设置传给 `agent_start_thread` | **未实现** |
+| T15c | 面板接线 | 在 AI 面板配置服务商后建立线程 | 面板把当前设置传给 `agent_start_thread` | 已验证（静态） |
 | T15d | 换配置重启 | 更换服务商后再次建立线程 | 引擎以新配置重启，旧进程被回收 | 待验收 |
 
 关于 T15：模型配置已存在于侧边栏 AI 面板（`features/assistant/ModelSettingsDialog`，仅由 `AssistantPanel` 引用，不在全局设置中）。引擎侧的下传已实现：`src-tauri/src/agent/config.rs` 生成 `config.toml`，密钥通过 `SCIENTIFY_AGENT_KEY` 环境变量传给子进程而不落盘；`agent_start_thread` 现在要求传入连接信息，并在配置变化时重启进程。
@@ -72,7 +72,7 @@
 两点边界必须记住：
 
 1. **引擎只认 OpenAI Responses 协议。** `anthropic` 与 `gemini` 在启动前就被拒绝并说明原因，因为它们的线格式不同。要让它们可用需要一层协议转换，本项目暂不提供。
-2. **面板尚未接线（T15c）。** `platform/agent.ts` 的 `startThread` 已要求 `AgentConnection`，但 `AssistantPanel` 还没有把当前设置传进去，所以从界面操作时仍到不了引擎。
+2. **面板已接线（T15c）。** `AssistantPanel` 打开本地执行模式后，用当前设置构造 `AgentConnection` 并交给 `AgentSession`。该结论来自类型检查与既有测试，尚未在真实服务商下端到端执行。
 
 关于 T11–T14 的说明：
 
@@ -116,7 +116,9 @@
 
 F4 的当前状态：`components/ai/ApprovalCard` 已实现并通过 4 项测试，覆盖命令与文件变更两类（含「字段全缺」与「`cancel` 与 `decline` 不同」）。**权限提升那一类暂不支持**——它需要用权限画像而非决策回答，卡片会明确说明，而不是给出会发错格式的按钮。该卡片刻意做成独立组件，尚未接入 `AssistantPanel`，以免与其中的在途改动冲突。
 
-F4 与 F7 的状态机部分已在 `features/assistant/agent-session` 实现并通过 8 项测试：线程开启、轮次发送、尾随审批的抓取、去重（同一 id 不重复显示）、数字与字符串 id 的匹配、决策回传与清行、失败时不假装线程存在。`hasPendingWork()` 即 F7 所需的判定。**尚未接入 `AssistantPanel`**，所以从界面操作仍走不到这条链路。
+F4 与 F7 已在 `features/assistant/agent-session` 实现并通过 8 项测试：线程开启、轮次发送、尾随审批的抓取、去重（同一 id 不重复显示）、数字与字符串 id 的匹配、决策回传与清行、失败时不假装线程存在。`hasPendingWork()` 即 F7 所需的判定。
+
+两者已接入 `AssistantPanel`：面板头部新增「本地执行模式」开关（默认关闭，关闭时行为与改造前完全一致），开启后发送走引擎、轮询 `agent_events`、把 `agentState.approvals` 渲染为内联 `ApprovalCard` 并回传决策；有轮次进行或审批挂起时以 `agent:<scope>` 计入脏标记，从而进入关闭保护。**面板侧尚未有专门的回归测试**，当前只有类型检查与既有 11 项面板测试保证没有破坏原行为。
 
 ### 2.7 会话与持久化（M3）
 
@@ -167,5 +169,6 @@ F4 与 F7 的状态机部分已在 `features/assistant/agent-session` 实现并�
 | 2026-09-28 | T15 引擎侧配置下传 | `cargo test -p scientify --lib agent --locked` | 通过：14 项，含 5 项配置用例 | `src-tauri/src/agent/config.rs` |
 | 2026-09-28 | T15 前端契约 | `pnpm vitest run src/platform/agent.test.ts` | 通过：7 项；面板待接线 | — |
 | 2026-09-28 | M2 会话状态机 | `pnpm vitest run src/features/assistant/agent-session.test.ts` | 通过：8 项 | `src/features/assistant/agent-session.ts` |
+| 2026-09-28 | M2 面板接线 | `pnpm check`、`pnpm test -- --maxWorkers=2` | 通过：34 文件 / 144 项；未加面板级回归 | `src/features/assistant/AssistantPanel.tsx` |
 
 每次验收后追加一行，并注明未覆盖项；不得用「通过」覆盖未执行的检查。

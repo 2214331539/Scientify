@@ -128,7 +128,7 @@ export interface AgentBackend {
  * Which domain a navigation entry defaults to, or null when the entry has no
  * root of its own and must keep the previous binding.
  */
-export function domainForWorkspace(workspace: WorkspaceId): AgentDomain | null {
+export function domainForWorkspace(workspace: WorkspaceId | 'projects'): AgentDomain | null {
   if (workspace === 'literature') return 'literature';
   if (workspace === 'experiments' || workspace === 'writing' || workspace === 'files')
     return 'code';
