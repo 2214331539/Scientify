@@ -377,6 +377,7 @@ export function AssistantPanel({
           variant="ghost"
           size="sm"
           iconOnly
+          className="toggle"
           aria-label={t('本地执行模式')}
           aria-pressed={agentMode}
           tooltip={
@@ -538,7 +539,9 @@ export function AssistantPanel({
         }}
       >
         {!conversation.messages.length ? (
-          <div className="sf-ai-conversation-empty">{t('从一个问题开始')}</div>
+          <div className="sf-ai-conversation-empty">
+            {agentMode ? t('描述一个要在这个目录里执行的任务') : t('从一个问题开始')}
+          </div>
         ) : (
           conversation.messages.map((message) => (
             <ChatMessageView key={message.id} role={message.role} text={message.text} />

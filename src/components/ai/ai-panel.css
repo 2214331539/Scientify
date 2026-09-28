@@ -245,10 +245,22 @@
   width: min(560px, calc(100vw - 32px));
 }
 .sf-ai-context-dialog .sf-ai-context-surface {
-  padding: 0;
+  /* The dialog body carries no padding of its own, so the surface supplies it.
+     Removing it here is what made the fields and actions look wedged against
+     the dialog edges. */
+  padding: 16px 20px 20px;
   max-height: none;
   border: 0;
   font-size: 13px;
+}
+.sf-ai-context-dialog .sf-ai-context-surface .sf-section-header {
+  min-height: 28px;
+  margin-bottom: 8px;
+}
+.sf-ai-context-dialog .sf-ai-context-surface > .sf-section.sf-ai-action-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--sf-border-subtle);
 }
 .sf-ai-context-dialog .sf-ai-context-fields > div {
   grid-template-columns: 88px minmax(0, 1fr);
