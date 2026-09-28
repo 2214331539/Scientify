@@ -88,6 +88,14 @@
   flex-shrink: 0;
   padding: 4px 8px;
 }
+/* The primitives keep their pressed style inside `@layer components`, and an
+   unlayered rule beats every layer regardless of specificity. The panel owns
+   this toggle, so it states the pressed look itself instead of relying on the
+   layered rule to win. */
+.sf-ai-session-header .sf-button[aria-pressed='true'] {
+  background: var(--sf-surface-selected);
+  color: var(--sf-text-primary);
+}
 .sf-ai-session-header .sf-ai-session-title {
   flex: 1;
   min-width: 0;

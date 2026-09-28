@@ -401,3 +401,31 @@ it('supports custom provider protocols and returns no invented models for an emp
     true,
   );
 });
+
+it('toggles local execution mode and reports the state to assistive tech', async () => {
+  const data = emptyWorkspace();
+  data.projects.push({
+    id: 'p1',
+    name: '项目一',
+    question: '',
+    createdAt: new Date().toISOString(),
+    space: 'personal',
+  });
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+  } as unknown as WorkspaceBackend);
+  await store.getState().load();
+
+  render(
+    <AssistantPanel store={store} backend={{} as ResearchBackend} scope="p1" context={context} />,
+  );
+  const toggle = screen.getByRole('button', { name: '本地执行模式' });
+  // The pressed attribute is what the unlayered panel rule keys off, so a
+  // failure here means the click never reached the handler.
+  expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  await userEvent.setup().click(toggle);
+  expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  // The mode must also be legible without the button styling.
+  expect(screen.getByText('描述一个要在这个目录里执行的任务')).toBeTruthy();
+});
