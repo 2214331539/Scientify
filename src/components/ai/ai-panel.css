@@ -238,11 +238,36 @@
 .sf-ai-composer-actions > .sf-button[aria-pressed='false'] {
   color: var(--sf-text-muted);
 }
+/* Material inspection opens as a dialog, not as the narrow sidebar strip these
+   rules were first written for. Give it room, and let a long path wrap onto a
+   second line instead of collapsing into an ellipsis: reading it is the point. */
+.sf-ai-context-dialog {
+  width: min(560px, calc(100vw - 32px));
+}
 .sf-ai-context-dialog .sf-ai-context-surface {
   padding: 0;
   max-height: none;
   border: 0;
+  font-size: 13px;
 }
-.sf-ai-context-dialog {
-  width: min(440px, calc(100vw - 32px));
+.sf-ai-context-dialog .sf-ai-context-fields > div {
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: start;
+  min-height: 0;
+  padding: 4px 0;
+}
+.sf-ai-context-dialog .sf-ai-context-fields dd {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.sf-ai-context-dialog .sf-ai-context-fields dt {
+  font-size: 12px;
+  padding-top: 1px;
+}
+.sf-ai-context-dialog .sf-ai-context-actions {
+  gap: 6px;
+}
+.sf-ai-context-dialog .sf-ai-context-excerpt pre {
+  max-height: 240px;
 }
