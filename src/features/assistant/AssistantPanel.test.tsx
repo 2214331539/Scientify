@@ -429,3 +429,79 @@ it('toggles local execution mode and reports the state to assistive tech', async
   // The mode must also be legible without the button styling.
   expect(screen.getByText('描述一个要在这个目录里执行的任务')).toBeTruthy();
 });
+
+async function keyHarness(load: () => Promise<string | null>) {
+  const data = emptyWorkspace();
+  data.settings.model = {
+    endpoint: 'https://api.example.com/v1',
+    model: 'test-model',
+    provider: 'openai',
+  };
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+  } as unknown as WorkspaceBackend);
+  await store.getState().load();
+  const askAI = vi.fn(async () => '回答');
+  const listModels = vi.fn(async () => [{ id: 'test-chat', name: 'test-chat' }]);
+  const credentials = {
+    save: vi.fn(async () => undefined),
+    load: vi.fn(load),
+    clear: vi.fn(async () => undefined),
+  };
+  render(
+    <AssistantPanel
+      store={store}
+      backend={
+        { askAI, listModels, testModel: vi.fn(async () => undefined) } as unknown as ResearchBackend
+      }
+      scope="p1"
+      context={context}
+      credentials={credentials}
+    />,
+  );
+  return { store, askAI, listModels, credentials, user: userEvent.setup() };
+}
+
+it('recalls the key filed for this endpoint instead of asking for it again', async () => {
+  const { askAI, credentials, user } = await keyHarness(async () => 'stored-secret');
+  await waitFor(() =>
+    expect(credentials.load).toHaveBeenCalledWith({
+      provider: 'openai',
+      endpoint: 'https://api.example.com/v1',
+    }),
+  );
+  await user.type(screen.getByLabelText('向 AI 提问'), '解释这个结论');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await waitFor(() => expect(askAI).toHaveBeenCalledOnce());
+  expect(askAI.mock.calls[0]).toEqual([
+    expect.objectContaining({ provider: 'openai', model: 'test-model', apiKey: 'stored-secret' }),
+  ]);
+  // The settings dialog must show the recalled key rather than an empty field.
+  await user.click(screen.getByRole('button', { name: '对话选项' }));
+  await user.click(screen.getByRole('menuitem', { name: '模型设置' }));
+  expect((screen.getByLabelText('API 密钥') as HTMLInputElement).value).toBe('stored-secret');
+  expect(screen.getByText('已读取本机保存的密钥。')).toBeTruthy();
+});
+
+it('files a saved key against its own endpoint so another service cannot pick it up', async () => {
+  const { credentials, listModels, user } = await keyHarness(async () => null);
+  await user.click(screen.getByRole('button', { name: '对话选项' }));
+  await user.click(screen.getByRole('menuitem', { name: '模型设置' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '模型提供方' }), 'deepseek');
+  await user.type(screen.getByLabelText('API 密钥'), 'deepseek-key');
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  await waitFor(() => expect(listModels).toHaveBeenCalledOnce());
+  await user.click(screen.getByRole('button', { name: '保存模型配置' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  // The slot is the protocol plus the endpoint, so the DeepSeek key can never be
+  // offered on the OpenAI endpoint the panel started with.
+  expect(credentials.save).toHaveBeenCalledWith(
+    { provider: 'openai', endpoint: 'https://api.deepseek.com/v1' },
+    'deepseek-key',
+  );
+  expect(credentials.save).not.toHaveBeenCalledWith(
+    expect.objectContaining({ endpoint: 'https://api.example.com/v1' }),
+    'deepseek-key',
+  );
+});

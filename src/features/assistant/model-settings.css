@@ -57,6 +57,13 @@ dialog.settings-dialog.sf-model-settings-dialog {
 .sf-model-settings-row + .sf-model-settings-row {
   border-top: 1px solid var(--sf-border-subtle);
 }
+/* The key hint belongs under the field, across both columns of the row. */
+.sf-model-settings-row .sf-model-key-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 11px;
+  color: var(--sf-text-muted);
+}
 .sf-model-settings-row .sf-input,
 .sf-model-settings-row .sf-dropdown {
   width: 100%;

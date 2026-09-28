@@ -7,6 +7,7 @@ use tauri_plugin_dialog::DialogExt;
 mod agent;
 mod ai;
 mod browser;
+mod credentials;
 #[cfg(test)]
 mod ipc_smoke;
 mod library;
@@ -253,6 +254,9 @@ pub fn run() {
             agent::agent_start_turn,
             agent::agent_events,
             agent::agent_respond,
+            credentials::secret_save,
+            credentials::secret_load,
+            credentials::secret_clear,
         ])
         .run(context)
         .expect("Scientify failed to start");

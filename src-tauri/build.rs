@@ -38,6 +38,9 @@ fn main() {
             "agent_start_turn",
             "agent_events",
             "agent_respond",
+            "secret_save",
+            "secret_load",
+            "secret_clear",
         ]),
     ))
     .expect("failed to build Tauri manifest");

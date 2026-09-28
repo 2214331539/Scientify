@@ -20,7 +20,12 @@ import {
   type AgentBackend,
   type AgentConnection,
 } from '../../platform/agent';
-import type { ResearchBackend } from '../../platform/research';
+import type { AIProtocol, ResearchBackend } from '../../platform/research';
+import {
+  credentialSlot,
+  nativeCredentials,
+  type CredentialBackend,
+} from '../../platform/credentials';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { AgentSession, hasPendingWork, initialAgentSession } from './agent-session';
 import {
@@ -42,6 +47,8 @@ interface Props {
   onDirtyChange?: (dirty: boolean) => void;
   /** Injected so tests can drive the engine without a desktop backend. */
   agent?: AgentBackend;
+  /** Injected so tests can drive key storage without a desktop backend. */
+  credentials?: CredentialBackend;
 }
 
 export function AssistantPanel({
@@ -51,6 +58,7 @@ export function AssistantPanel({
   context,
   onDirtyChange,
   agent = nativeAgent,
+  credentials = nativeCredentials,
 }: Props) {
   const data = useStore(store, (state) => state.data);
   const model = data?.settings.model;
@@ -74,6 +82,13 @@ export function AssistantPanel({
   const messagesRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
   const [apiKey, setApiKey] = useState('');
+  // True while `apiKey` is the key read back from this machine rather than one
+  // typed in this session, so the settings dialog can say so.
+  const [keyStored, setKeyStored] = useState(false);
+  // Keys read back once per provider endpoint; a second open of the dialog must
+  // not wait on the disk again.
+  const keyCache = useRef(new Map<string, string>());
+  const keyTicket = useRef(0);
   const [conversation, setConversation] = useState<Conversation>(() => {
     const recent = data?.sessions
       .filter((item) => item.project === scope)
@@ -115,6 +130,48 @@ export function AssistantPanel({
     store.getState().setDirtySource(`agent:${scope}`, agentPending);
     return () => store.getState().setDirtySource(`agent:${scope}`, false);
   }, [store, scope, agentPending]);
+  /**
+   * Read the key filed for one provider endpoint. A failure is not fatal: the
+   * panel then behaves as it did before, with a key for this session only.
+   */
+  const recallKey = useCallback(
+    async (provider: AIProtocol, endpoint: string) => {
+      const slot = credentialSlot(provider, endpoint);
+      const remembered = keyCache.current.get(slot);
+      if (remembered !== undefined) return remembered;
+      let stored: string | null = null;
+      try {
+        stored = await credentials.load({ provider, endpoint: endpoint.trim() });
+      } catch {
+        stored = null;
+      }
+      if (stored) keyCache.current.set(slot, stored);
+      return stored ?? '';
+    },
+    [credentials],
+  );
+  /** Write or forget the key of one endpoint. A failure only costs a retype. */
+  const fileKey = useCallback(
+    async (provider: AIProtocol, endpoint: string, stored: string) => {
+      try {
+        if (stored) await credentials.save({ provider, endpoint }, stored);
+        else await credentials.clear({ provider, endpoint });
+      } catch {
+        // A key that cannot be filed stays usable until the app closes.
+      }
+    },
+    [credentials],
+  );
+  // A saved key has to survive a restart, so fill the field from this machine
+  // instead of asking for it again.
+  useEffect(() => {
+    const ticket = ++keyTicket.current;
+    void recallKey(settings.provider, settings.endpoint).then((stored) => {
+      if (ticket !== keyTicket.current) return;
+      setApiKey(stored);
+      setKeyStored(!!stored);
+    });
+  }, [recallKey, settings.provider, settings.endpoint]);
   // The engine answers a request before it emits approvals, so the queue has to
   // be read while a turn runs; nothing is pushed yet.
   useEffect(() => {
@@ -195,8 +252,16 @@ export function AssistantPanel({
     });
     setSettingsBusy(false);
     if (result) {
+      const stored = keyValue.trim();
+      const slot = credentialSlot(value.provider, value.endpoint);
+      // Remember before the effect above runs, so the panel cannot restore the
+      // previous key for this endpoint.
+      if (stored) keyCache.current.set(slot, stored);
+      else keyCache.current.delete(slot);
+      void fileKey(value.provider, value.endpoint, stored);
       setSettings(value);
       setApiKey(keyValue);
+      setKeyStored(!!stored);
       setShowSettings(false);
       setError('');
     } else if (showSettings) setSettingsError(store.getState().error ?? t('模型配置保存失败'));
@@ -513,8 +578,10 @@ export function AssistantPanel({
       {showSettings && (
         <ModelSettingsDialog
           backend={backend}
+          credentials={credentials}
           value={settingsDraft}
           apiKey={draftKey}
+          keyStored={keyStored}
           error={settingsError}
           saving={settingsBusy}
           requestBusy={busy}

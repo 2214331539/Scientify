@@ -66,8 +66,10 @@
 | T15b | 协议支持范围 | 同上 | `openai` 与 `ollama` 接受；`anthropic` 与 `gemini` 在启动前被拒并给出原因 | 已验证 |
 | T15c | 面板接线 | 在 AI 面板配置服务商后建立线程 | 面板把当前设置传给 `agent_start_thread` | 已验证（静态） |
 | T15d | 换配置重启 | 更换服务商后再次建立线程 | 引擎以新配置重启，旧进程被回收 | 待验收 |
+| T16 | 密钥持久化 | 保存一次密钥后重启应用 | 面板自动回填该端点已存的密钥，无需重输；`<data>/credentials.json` 含该端点的条目 | 待验收（实现见结果记录） |
+| T17 | 密钥按端点隔离 | 同一协议的两个端点各存一次密钥 | 两条记录互不覆盖；切到另一个端点不会沿用上一个密钥 | 待验收（实现见结果记录） |
 
-关于 T15：模型配置已存在于侧边栏 AI 面板（`features/assistant/ModelSettingsDialog`，仅由 `AssistantPanel` 引用，不在全局设置中）。引擎侧的下传已实现：`src-tauri/src/agent/config.rs` 生成 `config.toml`，密钥通过 `SCIENTIFY_AGENT_KEY` 环境变量传给子进程而不落盘；`agent_start_thread` 现在要求传入连接信息，并在配置变化时重启进程。
+关于 T15：模型配置已存在于侧边栏 AI 面板（`features/assistant/ModelSettingsDialog`，仅由 `AssistantPanel` 引用，不在全局设置中）。引擎侧的下传已实现：`src-tauri/src/agent/config.rs` 生成 `config.toml`，其中只写环境变量名 `SCIENTIFY_AGENT_KEY`，密钥通过该变量传给子进程；`agent_start_thread` 现在要求传入连接信息，并在配置变化时重启进程。密钥本身另存于 `<data>/credentials.json`（见设计文档 §4.7），不进入 `config.toml`，也不进入 `workspace.json`。
 
 两点边界必须记住：
 
@@ -95,7 +97,7 @@
 
 | 编号 | 验收目标 | 操作 | 通过标准 | 状态 |
 | --- | --- | --- | --- | --- |
-| C1 | 三处同步 | 对比 `lib.rs` 的 `invoke_handler`、`build.rs` 的 `AppManifest`、`capabilities/main.json` | 三个 agent 命令在三处均存在 | 已验证（人工核对） |
+| C1 | 三处同步 | 对比 `lib.rs` 的 `invoke_handler`、`build.rs` 的 `AppManifest`、`capabilities/main.json` | 七个 agent 命令与三个 `secret_*` 命令在三处均存在 | 已验证（人工核对） |
 | C2 | 越权视图被拒绝 | 从非本地视图调用 agent 命令 | 返回不可用错误 | 待验收 |
 | C3 | 对账测试 | 后续补充的自动化检查 | `invoke_handler` 与 `allow-*` 不一致时失败 | 待办 |
 
@@ -170,5 +172,7 @@ F4 与 F7 已在 `features/assistant/agent-session` 实现并通过 8 项测试�
 | 2026-09-28 | T15 前端契约 | `pnpm vitest run src/platform/agent.test.ts` | 通过：7 项；面板待接线 | — |
 | 2026-09-28 | M2 会话状态机 | `pnpm vitest run src/features/assistant/agent-session.test.ts` | 通过：8 项 | `src/features/assistant/agent-session.ts` |
 | 2026-09-28 | M2 面板接线 | `pnpm check`、`pnpm test -- --maxWorkers=2` | 通过：34 文件 / 144 项；未加面板级回归 | `src/features/assistant/AssistantPanel.tsx` |
+| 2026-09-28 | T16 / T17 密钥持久化 | `cargo test -p scientify --lib credentials --locked`、`pnpm vitest run src/platform/credentials.test.ts src/features/assistant/AssistantPanel.test.tsx` | 通过：Rust 3 项（槽位规则、往返写入、损坏文件不静默覆盖）、前端 3 项（槽位规则、浏览器预览不可用、面板回填与按端点归档）；真实桌面端重启回填仍待人工验收 | `src-tauri/src/credentials.rs`、`src/platform/credentials.ts` |
+| 2026-09-28 | 全量回归 | `pnpm test`、`cargo test --workspace` | 通过：前端 35 文件 / 149 项；Rust 31 + 13 + 7 + 11 项 | — |
 
 每次验收后追加一行，并注明未覆盖项；不得用「通过」覆盖未执行的检查。

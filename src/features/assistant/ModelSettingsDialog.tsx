@@ -4,6 +4,7 @@ import { Modal } from '../../components/Modal';
 import { Button, Dropdown, Input } from '../../components/primitives';
 import { t, translateError } from '../../i18n';
 import type { AIModel, AIProtocol, ResearchBackend } from '../../platform/research';
+import type { CredentialBackend } from '../../platform/credentials';
 import type { AISettings } from './model';
 import { modelServices, serviceFor } from './providers';
 import '../settings/settings.css';
@@ -12,10 +13,13 @@ import './model-settings.css';
 interface Props {
   value: AISettings;
   apiKey: string;
+  /** True when `apiKey` came back from this machine rather than from typing. */
+  keyStored: boolean;
   error: string;
   saving: boolean;
   requestBusy: boolean;
   backend: ResearchBackend;
+  credentials: CredentialBackend;
   onChange(value: AISettings): void;
   onKeyChange(value: string): void;
   onSave(value: AISettings, key: string): Promise<void>;
@@ -25,10 +29,12 @@ interface Props {
 export function ModelSettingsDialog({
   value,
   apiKey,
+  keyStored,
   error,
   saving,
   requestBusy,
   backend,
+  credentials,
   onChange,
   onKeyChange,
   onSave,
@@ -41,6 +47,10 @@ export function ModelSettingsDialog({
   const [filter, setFilter] = useState('');
   const generation = useRef(0);
   const pending = useRef(false);
+  // A key we already hold for the chosen provider must come back into the field
+  // instead of asking the user to type it again.
+  const [recalled, setRecalled] = useState(keyStored);
+  const keyTicket = useRef(0);
   const disabled = saving || requestBusy || phase === 'verifying';
   useEffect(
     () => () => {
@@ -65,6 +75,22 @@ export function ModelSettingsDialog({
       model: '',
       modelCatalog: undefined,
     });
+  }
+  async function recallKey(next: AISettings) {
+    const ticket = ++keyTicket.current;
+    setRecalled(false);
+    onKeyChange('');
+    if (!next.endpoint.trim()) return;
+    let stored: string | null = null;
+    try {
+      stored = await credentials.load({ provider: next.provider, endpoint: next.endpoint.trim() });
+    } catch {
+      stored = null;
+    }
+    // Anything typed while the read was in flight wins.
+    if (ticket !== keyTicket.current || !stored) return;
+    setRecalled(true);
+    onKeyChange(stored);
   }
   function safeError(reason: unknown) {
     const message = reason instanceof Error ? reason.message : String(reason);
@@ -179,13 +205,14 @@ export function ModelSettingsDialog({
                   onChange={(event) => {
                     const item = modelServices.find((entry) => entry.id === event.target.value);
                     if (!item || item.id === service.id) return;
-                    onKeyChange('');
-                    changeConnection({
+                    const next = {
                       provider: item.provider,
                       serviceId: item.id,
                       endpoint: item.endpoints[0]?.url ?? '',
                       model: '',
-                    });
+                    };
+                    changeConnection(next);
+                    void recallKey(next);
                   }}
                 >
                   {modelServices.map((item) => (
@@ -202,8 +229,9 @@ export function ModelSettingsDialog({
                     value={value.provider}
                     disabled={disabled}
                     onChange={(event) => {
-                      onKeyChange('');
-                      changeConnection({ ...value, provider: event.target.value as AIProtocol });
+                      const next = { ...value, provider: event.target.value as AIProtocol };
+                      changeConnection(next);
+                      void recallKey(next);
                     }}
                   >
                     <option value="openai">OpenAI Compatible</option>
@@ -222,8 +250,9 @@ export function ModelSettingsDialog({
                     }
                     disabled={disabled}
                     onChange={(event) => {
-                      onKeyChange('');
-                      changeConnection({ ...value, endpoint: event.target.value });
+                      const next = { ...value, endpoint: event.target.value };
+                      changeConnection(next);
+                      void recallKey(next);
                     }}
                   >
                     {!service.endpoints.some((e) => e.url === value.endpoint) && (
@@ -266,11 +295,17 @@ export function ModelSettingsDialog({
                   disabled={disabled}
                   value={apiKey}
                   onChange={(event) => {
+                    setRecalled(false);
                     invalidate();
                     onKeyChange(event.target.value);
                   }}
-                  placeholder={t('仅在本次应用会话中使用')}
+                  placeholder={t('保存在本机数据目录，下次自动填入')}
                 />
+                {recalled ? (
+                  <span className="sf-model-key-hint" role="status">
+                    {t('已读取本机保存的密钥。')}
+                  </span>
+                ) : null}
               </label>
             </div>
             <div className="sf-model-discovery-actions">
@@ -297,7 +332,9 @@ export function ModelSettingsDialog({
                 ) : null}
               </span>
             </div>
-            <p className="settings-note">{t('只保存地址和模型名称。密钥不写入工作区。')}</p>
+            <p className="settings-note">
+              {t('地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。')}
+            </p>
           </section>
           <section aria-label={t('聊天模型')}>
             <h3 className="settings-section-heading">{t('聊天模型')}</h3>

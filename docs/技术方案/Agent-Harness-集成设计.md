@@ -20,7 +20,7 @@
 
 ### 0.2 本次目标
 
-1. 用户仍在产品内配置模型服务商，密钥仍不落盘到工作区 JSON。
+1. 用户仍在产品内配置模型服务商，密钥只保存在本机数据目录的明文凭据文件，不写入工作区 JSON、不随项目同步（见 §4.7）。
 2. 本地操作（文件读写、代码撰写、目录检索、命令执行）由产品内置的 Agent 引擎完成，不依赖用户预装外部工具。
 3. 文献与代码两个域的 Agent 在记忆、权限、审计上互相隔离。
 4. AI 入口保持全局唯一，不按导航页拆分。
@@ -176,6 +176,7 @@ type AgentBinding = {
 | `CODEX_HOME` | 2 个，按域 | `<data>/agent/literature/`、`<data>/agent/code/` |
 | thread | 按项目分 | 同一 home 内多个线程 |
 | 项目与线程的映射索引 | 1 个 | `<data>/agent/threads.json` |
+| 服务商 API 密钥 | 1 个 | `<data>/credentials.json`（明文），见 §4.7 |
 
 `<data>` 指现有数据目录：debug 为仓库 `.tauri-data/workspace/`，release 为应用数据目录下的 `workspace/`。
 
@@ -196,6 +197,18 @@ type AgentBinding = {
 ### 4.6 模型设置的归属
 
 现有 `src/features/assistant/providers.ts` 与 `ModelSettingsDialog` 继续作为唯一配置入口。Agent 配置是它的下游产物，不引入第二套模型设置界面。
+
+### 4.7 服务商密钥的存放
+
+密钥保存在数据目录下的一个明文 JSON 文件 `<data>/credentials.json`，与 `workspace.json` 同级，不加密、不进版本库、不随项目或导出文件同步。文件按「协议 + 端点」建档，同一服务商的每个端点各存一份，因此切换服务商再切回来不需要重新输入，两个端点的密钥也不会互相覆盖。
+
+这样选择的原因：
+
+1. 与同类工具（如 cc-switch 保存服务商配置）的做法一致，用户能自己打开、替换或删除这个文件，出问题时不必依赖应用。
+2. 密钥不写进 `workspace.json`，`workspace.json` 仍可安全地分享或备份。
+3. 不引入操作系统钥匙串依赖：本阶段目标是纯本地、单机可用，避免在没有凭据管理服务的环境下无法启动。
+
+代价必须写清楚：任何能读取该文件的本地进程都能读到密钥。文件只存在于本机，应用自身不把它发往任何地方；引擎进程通过环境变量 `SCIENTIFY_AGENT_KEY` 拿到密钥，`config.toml` 只写变量名。若后续需要更强保护，可在此文件之上加系统钥匙串后端，而调用方接口（`secret_save` / `secret_load` / `secret_clear`）不变。
 
 ## 5. Rust 侧模块
 
