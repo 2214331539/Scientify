@@ -10,6 +10,128 @@
 .sf-global-dock [hidden] {
   display: none !important;
 }
+/* One header and overlapping, retained tool surfaces. No display:none on a tool
+   switch: the outgoing surface stays painted while the incoming one fades in. */
+.sf-dock-layout,
+.research-shell .sf-dock-layout {
+  --dock-header-height: 39px;
+  display: grid;
+  grid-template-rows: var(--dock-header-height) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  background: var(--sf-surface-canvas);
+}
+.sf-dock-layout[hidden],
+.sf-dock-layout > [hidden] {
+  display: none !important;
+}
+.sf-dock-layout.has-notes-workspace {
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 0px;
+}
+.sf-dock-layout.has-notes-workspace[data-side-open='true'] {
+  grid-template-columns: minmax(0, 1fr) calc(var(--dock-width) + 1px);
+}
+.sf-dock-shared-header {
+  grid-area: 1 / -2;
+}
+.sf-notes-workspace-header {
+  grid-area: 1 / 1;
+}
+.sf-dock-layer {
+  grid-area: 2 / -2;
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--sf-motion-content) var(--sf-ease-standard),
+    visibility 0s linear var(--sf-motion-content);
+}
+.research-shell:not(.launcher-shell) .sf-dock-layout > .sf-dock-layer {
+  transition:
+    opacity var(--sf-motion-content) var(--sf-ease-standard),
+    visibility 0s linear var(--sf-motion-content);
+}
+.sf-dock-layer[data-active='true'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+  z-index: 1;
+}
+.research-shell:not(.launcher-shell) .sf-dock-layout > .sf-dock-layer[data-active='true'] {
+  transition-delay: 0s;
+}
+.has-notes-workspace > .sf-dock-notes {
+  grid-column: 1;
+}
+.sf-dock-resize {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 3;
+  display: flex;
+}
+.has-notes-workspace > .sf-dock-resize {
+  left: auto;
+  right: calc(var(--dock-width) - 3px);
+}
+.sf-dock-layout .sf-dock-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.sf-dock-tab-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 50%;
+  height: 2px;
+  background: var(--sf-text-secondary);
+  transition: transform var(--sf-motion-overlay) var(--sf-ease-apple);
+}
+.sf-dock-layout[data-tool='notes'] .sf-dock-tab-indicator {
+  transform: translateX(100%);
+}
+.research-shell .sf-dock-layout .sf-dock-tabs button {
+  justify-content: center;
+  border-bottom-color: transparent;
+}
+@media (max-width: 900px) {
+  .research-shell .sf-dock-layout.auxiliary-surface:not([hidden]) {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 12;
+  }
+  .sf-dock-layout.has-notes-workspace[data-side-open='true'] {
+    grid-template-columns: minmax(0, 1fr) 0px;
+  }
+  .research-shell
+    .sf-dock-layout.has-notes-workspace
+    > :is(.sf-dock-shared-header, .sf-dock-assistant) {
+    grid-area: auto;
+    position: absolute;
+    right: 0;
+    width: min(360px, calc(100% - 40px));
+    z-index: 12;
+    background: var(--sf-surface-canvas);
+    box-shadow: var(--sf-shadow-popover);
+  }
+  .has-notes-workspace > .sf-dock-shared-header {
+    top: 0;
+    height: var(--dock-header-height);
+  }
+  .has-notes-workspace > .sf-dock-assistant {
+    inset-block: var(--dock-header-height) 0;
+    height: auto;
+  }
+  .has-notes-workspace > .sf-dock-resize {
+    display: none;
+  }
+}
 .sf-dock-header {
   display: flex;
   align-items: center;
@@ -208,35 +330,6 @@
   padding-left: 8px;
   border-left: 2px solid var(--sf-border-subtle);
   white-space: pre-wrap;
-}
-.sf-ai-settings {
-  padding: 16px;
-  max-height: 340px;
-  overflow: auto;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--sf-border-subtle);
-  background: var(--sf-surface-chrome);
-}
-.sf-ai-settings label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--sf-text-secondary);
-  font-size: 12px;
-}
-.sf-ai-settings input,
-.sf-ai-settings select {
-  display: block;
-  margin-top: 4px;
-  width: 100%;
-}
-.sf-ai-settings small {
-  display: block;
-  color: var(--sf-text-muted);
-  line-height: 1.6;
-}
-.sf-ai-settings button {
-  margin-top: 8px;
-  color: var(--sf-accent);
 }
 .sf-markdown {
   overflow-wrap: anywhere;

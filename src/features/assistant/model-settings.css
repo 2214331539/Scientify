@@ -1,0 +1,103 @@
+dialog.settings-dialog.sf-model-settings-dialog {
+  width: min(800px, calc(100vw - 48px));
+  height: min(660px, calc(100dvh - 64px));
+}
+.sf-model-settings-dialog .settings-navigation .sf-button {
+  flex-shrink: 0;
+}
+.sf-model-discovery-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.sf-model-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--sf-text-secondary);
+}
+.sf-model-spinner {
+  animation: sf-model-spin 1s linear infinite;
+}
+@keyframes sf-model-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-model-spinner {
+    animation: none;
+  }
+}
+.sf-model-settings-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.sf-model-settings-form .settings-scroll > section:first-child .settings-section-heading {
+  margin-top: 0;
+}
+.sf-model-settings-fields {
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+}
+.sf-model-settings-row {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 14px 12px;
+  font-size: 12px;
+}
+.sf-model-settings-row + .sf-model-settings-row {
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.sf-model-settings-row .sf-input,
+.sf-model-settings-row .sf-dropdown {
+  width: 100%;
+  min-width: 0;
+}
+.sf-model-settings-actions {
+  flex-shrink: 0;
+  margin: 0 20px;
+  padding: 16px 0;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.sf-model-settings-actions .settings-note {
+  margin: 0;
+}
+.sf-model-settings-actions .button-row {
+  flex-shrink: 0;
+}
+.sf-model-settings-actions button {
+  min-width: 64px;
+}
+.sf-model-settings-error {
+  margin-top: 16px;
+  color: var(--sf-status-danger);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  dialog.settings-dialog.sf-model-settings-dialog {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 32px);
+  }
+  .sf-model-settings-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .sf-model-settings-actions {
+    flex-wrap: wrap;
+    margin-inline: 12px;
+    padding-block: 12px;
+  }
+  .sf-model-settings-actions .button-row {
+    margin-left: auto;
+  }
+}

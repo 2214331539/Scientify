@@ -2,7 +2,13 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom';
 import './primitives.css';
 
-export type MenuAnchor = { x: number; y: number; trigger?: HTMLElement | null };
+export type MenuAnchor = {
+  x: number;
+  /** Top edge by default; bottom edge when placement is top. */
+  y: number;
+  placement?: 'top' | 'bottom';
+  trigger?: HTMLElement | null;
+};
 
 /** Shared pointer/keyboard menu. Exit retention is visual only; actions run immediately. */
 export function Menu({
@@ -43,10 +49,21 @@ export function Menu({
   useLayoutEffect(() => {
     if (!anchor || !present || !ref.current) return;
     const menu = ref.current;
-    // offset sizes are not affected by the entry transform.
-    menu.style.left = `${Math.max(8, Math.min(anchor.x, innerWidth - menu.offsetWidth - 8))}px`;
-    menu.style.top = `${Math.max(8, Math.min(anchor.y, innerHeight - menu.offsetHeight - 8))}px`;
+    const position = () => {
+      // Constrain upward menus before measuring so long lists stay above the trigger.
+      menu.style.maxHeight =
+        anchor.placement === 'top' ? `${Math.max(0, Math.min(360, anchor.y - 8))}px` : '';
+      // offset sizes are not affected by the entry transform.
+      menu.style.left = `${Math.max(8, Math.min(anchor.x, innerWidth - menu.offsetWidth - 8))}px`;
+      const top = anchor.placement === 'top' ? anchor.y - menu.offsetHeight : anchor.y;
+      menu.style.top = `${Math.max(8, Math.min(top, innerHeight - menu.offsetHeight - 8))}px`;
+    };
+    position();
     menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(position);
+    observer.observe(menu);
+    return () => observer.disconnect();
   }, [anchor, present]);
 
   useEffect(() => {
@@ -82,6 +99,7 @@ export function Menu({
       role="menu"
       aria-label={label}
       data-state={anchor ? 'open' : 'closed'}
+      data-placement={lastAnchor.current?.placement ?? 'bottom'}
       aria-hidden={!anchor || undefined}
       inert={!anchor}
       data-native-overlay={anchor ? 'true' : undefined}

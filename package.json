@@ -8,8 +8,9 @@
   },
   "description": "Scientify local desktop research workspace",
   "scripts": {
-    "predev": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs",
-    "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs",
+    "predev": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs",
+    "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs",
+    "prepare:agent": "node scripts/prepare-agent.mjs",
     "start": "tauri dev",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

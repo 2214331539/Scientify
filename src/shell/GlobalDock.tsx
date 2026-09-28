@@ -97,46 +97,9 @@ export function GlobalDock({
     if (before !== dirtySources.current.size > 0)
       dirtyCallback.current?.(dirtySources.current.size > 0);
   }, []);
-  const header = (current: 'assistant' | 'notes', central = false) => (
-    <div className="sf-dock-header">
-      {central ? (
-        <span className="workspace-name">{t('Notes')}</span>
-      ) : (
-        <div className="sf-dock-tabs" role="group" aria-label={t('辅助工具切换')}>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={current === 'assistant'}
-            onClick={() => onToolChange('assistant')}
-          >
-            <Bot size={14} />
-            {t('AI Assistant')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={current === 'notes'}
-            onClick={() => onToolChange('notes')}
-          >
-            <NotebookPen size={14} />
-            {t('Notes')}
-          </Button>
-        </div>
-      )}
-      {!central && (
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          aria-label={t('收起辅助栏')}
-          title={t('收起辅助栏')}
-          onClick={onClose}
-        >
-          <X size={15} />
-        </Button>
-      )}
-    </div>
-  );
+  const sideVisible = open && (!notesWorkspace || tool === 'assistant');
+  const notesVisible = notesWorkspace || (open && tool === 'notes');
+  const assistantVisible = open && tool === 'assistant';
   const sessions = (current: 'assistant' | 'notes') =>
     [...scopes.current.entries()].map(([sessionScope, scopedContext]) => (
       <AuxiliarySession
@@ -152,28 +115,65 @@ export function GlobalDock({
       />
     ));
   return (
-    <>
-      <div
-        className={notesWorkspace ? 'notes-workspace-surface' : 'auxiliary-surface'}
-        hidden={!notesWorkspace && !(open && tool === 'notes')}
-      >
-        {!notesWorkspace && resizeHandle}
-        <aside
-          className="sf-global-dock"
-          role={notesWorkspace ? 'main' : undefined}
-          aria-label={notesWorkspace ? t('Notes workspace') : t('全局辅助工具')}
-        >
-          {header('notes', notesWorkspace)}
-          {sessions('notes')}
-        </aside>
-      </div>
-      <div className="auxiliary-surface" hidden={!(open && tool === 'assistant')}>
+    <div
+      className={`sf-dock-layout${notesWorkspace ? ' has-notes-workspace' : ' auxiliary-surface'}`}
+      data-side-open={sideVisible}
+      data-tool={tool}
+      hidden={!notesWorkspace && !open}
+      role={notesWorkspace ? undefined : 'complementary'}
+      aria-label={notesWorkspace ? undefined : t('全局辅助工具')}
+    >
+      <div className="sf-dock-resize" hidden={!sideVisible}>
         {resizeHandle}
-        <aside className="sf-global-dock" aria-label={t('全局辅助工具')}>
-          {header('assistant')}
-          {sessions('assistant')}
-        </aside>
       </div>
-    </>
+      <div className="sf-dock-header sf-notes-workspace-header" hidden={!notesWorkspace}>
+        <span className="workspace-name">{t('Notes')}</span>
+      </div>
+      <div className="sf-dock-header sf-dock-shared-header" hidden={!sideVisible}>
+        <div className="sf-dock-tabs" role="group" aria-label={t('辅助工具切换')}>
+          <span className="sf-dock-tab-indicator" aria-hidden="true" />
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={tool === 'assistant'}
+            onClick={() => onToolChange('assistant')}
+          >
+            <Bot size={14} />
+            {t('AI Assistant')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={tool === 'notes'}
+            onClick={() => onToolChange('notes')}
+          >
+            <NotebookPen size={14} />
+            {t('Notes')}
+          </Button>
+        </div>
+        <Button variant="ghost" size="sm" iconOnly aria-label={t('收起辅助栏')} onClick={onClose}>
+          <X size={15} />
+        </Button>
+      </div>
+      <div
+        className={`sf-dock-layer sf-dock-notes sf-global-dock${notesWorkspace ? ' notes-workspace-surface' : ''}`}
+        data-active={notesVisible}
+        aria-hidden={!notesVisible}
+        inert={!notesVisible}
+        role={notesWorkspace ? 'main' : undefined}
+        aria-label={notesWorkspace ? t('Notes workspace') : t('Notes')}
+      >
+        {sessions('notes')}
+      </div>
+      <aside
+        className="sf-dock-layer sf-dock-assistant sf-global-dock"
+        data-active={assistantVisible}
+        aria-hidden={!assistantVisible}
+        inert={!assistantVisible}
+        aria-label={t('AI Assistant')}
+      >
+        {sessions('assistant')}
+      </aside>
+    </div>
   );
 }

@@ -22,6 +22,32 @@ fn trace(message: impl std::fmt::Display) {
     let _ = message;
 }
 
+// WebView2 uses the OS proxy configuration by default (including PAC/bypass rules).
+// An explicit override is opt-in; never flatten Windows per-protocol rules.
+fn parse_proxy_url(raw: &str) -> Result<tauri::Url, String> {
+    let url = tauri::Url::parse(raw.trim()).ok().filter(|url| {
+        matches!(url.scheme(), "http" | "socks5")
+            && url.host_str().is_some()
+            && url.port_or_known_default().is_some()
+            && url.username().is_empty()
+            && url.password().is_none()
+            && matches!(url.path(), "" | "/")
+            && url.query().is_none()
+            && url.fragment().is_none()
+    });
+    url.ok_or_else(|| {
+        "SCIENTIFY_BROWSER_PROXY 必须是无凭据的 http://host:port 或 socks5://host:port。".into()
+    })
+}
+fn configure_browser_proxy<R: tauri::Runtime>(
+    builder: WebviewBuilder<R>,
+) -> Result<WebviewBuilder<R>, String> {
+    match std::env::var("SCIENTIFY_BROWSER_PROXY") {
+        Ok(raw) if !raw.trim().is_empty() => Ok(builder.proxy_url(parse_proxy_url(&raw)?)),
+        _ => Ok(builder),
+    }
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowserTab {
@@ -236,11 +262,13 @@ pub(crate) fn navigate(
         .parent()
         .ok_or("数据目录无效")?
         .join("browser-profile");
-    let builder = WebviewBuilder::new(
-        &tab.id,
-        WebviewUrl::External(tauri::Url::parse("about:blank").unwrap()),
-    )
-    .data_directory(profile)
+    let builder = configure_browser_proxy(
+        WebviewBuilder::new(
+            &tab.id,
+            WebviewUrl::External(tauri::Url::parse("about:blank").unwrap()),
+        )
+        .data_directory(profile),
+    )?
     .on_navigation(move |url| {
         if url.as_str() == "about:blank" {
             return true;
@@ -358,13 +386,14 @@ pub(crate) fn navigate(
 
 #[cfg(windows)]
 fn install_native(view: &tauri::Webview) -> Result<(), String> {
+    use std::{cell::Cell, rc::Rc};
     use webview2_com::{
         HistoryChangedEventHandler, Microsoft::Web::WebView2::Win32::*,
         NavigationCompletedEventHandler, NavigationStartingEventHandler,
         PermissionRequestedEventHandler, WebResourceRequestedEventHandler,
     };
     use windows::{
-        core::{w, BOOL, PWSTR},
+        core::{w, Interface, BOOL, PWSTR},
         Win32::System::Com::CoTaskMemFree,
     };
     let a = view.app_handle().clone();
@@ -375,12 +404,7 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
             return;
         };
         let environment = native.environment();
-        // Only observe application-owned origins. A catch-all filter makes WebView2
-        // inspect every third-party request and has caused otherwise valid foreign
-        // pages to fail under some proxy/TLS configurations. Top-level navigation
-        // is still guarded by `allowed`; these targeted filters keep app IPC and
-        // the local dev server out of the remote view without touching Google,
-        // Scholar, arXiv, or their subresources.
+        // Remote pages have no app capabilities. Also deny app-owned resource origins.
         for pattern in [
             w!("https://tauri.localhost/*"),
             w!("http://tauri.localhost/*"),
@@ -432,8 +456,15 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
         );
         let app = a.clone();
         let label = id.clone();
+        let navigation = Rc::new(Cell::new(0u64));
+        let starting = navigation.clone();
         let _ = core.add_NavigationStarting(
-            &NavigationStartingEventHandler::create(Box::new(move |_, _| {
+            &NavigationStartingEventHandler::create(Box::new(move |_, args| {
+                if let Some(args) = args {
+                    let mut id = 0;
+                    args.NavigationId(&mut id)?;
+                    starting.set(id);
+                }
                 update(&app, &label, |t| {
                     t.loading = true;
                     t.error = None;
@@ -447,24 +478,29 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
         let _ = core.add_NavigationCompleted(
             &NavigationCompletedEventHandler::create(Box::new(move |_, args| {
                 if let Some(args) = args {
+                    let mut id = 0;
+                    args.NavigationId(&mut id)?;
+                    if id != navigation.get() {
+                        return Ok(()); // A replaced navigation must not overwrite the new page.
+                    }
                     let mut ok = BOOL(0);
                     args.IsSuccess(&mut ok)?;
                     let mut status = COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN;
                     args.WebErrorStatus(&mut status)?;
+                    let mut http = 0;
+                    if let Ok(details) = args.cast::<ICoreWebView2NavigationCompletedEventArgs2>() {
+                        let _ = details.HttpStatusCode(&mut http);
+                    }
                     trace(format!(
-                        "navigation completed success={} status={} id={}",
+                        "navigation completed success={} status={} http={} id={}",
                         ok.as_bool(),
                         status.0,
+                        http,
                         label
                     ));
                     update(&app, &label, |t| {
                         t.loading = false;
-                        // Stop, replacement navigations and downloads cancel a navigation normally.
-                        if !ok.as_bool()
-                            && status != COREWEBVIEW2_WEB_ERROR_STATUS_OPERATION_CANCELED
-                        {
-                            t.error = Some("网页加载失败，可刷新或在系统浏览器打开。".into());
-                        }
+                        t.error = navigation_error(ok.as_bool(), status, http);
                     });
                 }
                 Ok(())
@@ -497,6 +533,58 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
         );
     })
     .map_err(|e| e.to_string())
+}
+#[cfg(windows)]
+fn navigation_error(
+    success: bool,
+    status: webview2_com::Microsoft::Web::WebView2::Win32::COREWEBVIEW2_WEB_ERROR_STATUS,
+    http: i32,
+) -> Option<String> {
+    use webview2_com::Microsoft::Web::WebView2::Win32::*;
+    if status == COREWEBVIEW2_WEB_ERROR_STATUS_OPERATION_CANCELED {
+        return None;
+    }
+    // HTTP errors still carry a useful page, including Google's verification form.
+    if http == 429 {
+        return Some(
+            "网站限制了当前访问（HTTP 429）。如页面要求验证，请在下方完成，或稍后重试。".into(),
+        );
+    }
+    if http >= 400 {
+        return Some(format!("网站返回 HTTP {http}，详情见下方网页。"));
+    }
+    if success {
+        return None;
+    }
+    let reason = match status {
+        COREWEBVIEW2_WEB_ERROR_STATUS_VALID_PROXY_AUTHENTICATION_REQUIRED => {
+            "代理需要身份验证，请检查系统代理设置。"
+        }
+        COREWEBVIEW2_WEB_ERROR_STATUS_HOST_NAME_NOT_RESOLVED => {
+            "无法解析网站地址，请检查网络、DNS 或系统代理。"
+        }
+        COREWEBVIEW2_WEB_ERROR_STATUS_CANNOT_CONNECT
+        | COREWEBVIEW2_WEB_ERROR_STATUS_CONNECTION_ABORTED
+        | COREWEBVIEW2_WEB_ERROR_STATUS_CONNECTION_RESET
+        | COREWEBVIEW2_WEB_ERROR_STATUS_TIMEOUT
+        | COREWEBVIEW2_WEB_ERROR_STATUS_DISCONNECTED => {
+            "网页连接失败，请检查网络和系统代理是否可用。"
+        }
+        COREWEBVIEW2_WEB_ERROR_STATUS_CERTIFICATE_COMMON_NAME_IS_INCORRECT
+        | COREWEBVIEW2_WEB_ERROR_STATUS_CERTIFICATE_EXPIRED
+        | COREWEBVIEW2_WEB_ERROR_STATUS_CLIENT_CERTIFICATE_CONTAINS_ERRORS
+        | COREWEBVIEW2_WEB_ERROR_STATUS_CERTIFICATE_REVOKED
+        | COREWEBVIEW2_WEB_ERROR_STATUS_CERTIFICATE_IS_INVALID => {
+            "网站证书验证失败，请检查系统时间和代理证书。"
+        }
+        _ => {
+            return Some(format!(
+                "网页加载失败（WebView2 {code}），可刷新或在系统浏览器打开。",
+                code = status.0
+            ))
+        }
+    };
+    Some(reason.into())
 }
 pub fn close_owner(app: &tauri::AppHandle, owner: &str) {
     let ids: Vec<_> = app
@@ -694,5 +782,69 @@ mod tests {
             assert!(resolve_address(bad).is_err(), "{bad}");
         }
         assert!(resolve_address(" ").unwrap().is_none());
+    }
+
+    #[test]
+    fn validates_explicit_proxy_without_overriding_system_by_default() {
+        assert_eq!(
+            parse_proxy_url("http://127.0.0.1:80").unwrap().scheme(),
+            "http"
+        );
+        assert_eq!(
+            parse_proxy_url("socks5://127.0.0.1:1080").unwrap().scheme(),
+            "socks5"
+        );
+        for invalid in [
+            "http=localhost:1234;https=localhost:5678",
+            "localhost:1234",
+            "http://user:pass@localhost:1234",
+            "http://localhost:1234/path",
+            "http://localhost:1234?x",
+            "https://localhost:1234",
+        ] {
+            assert!(parse_proxy_url(invalid).is_err(), "{invalid}");
+        }
+    }
+    #[cfg(windows)]
+    #[test]
+    fn distinguishes_http_verification_from_connection_failure_and_cancellation() {
+        use webview2_com::Microsoft::Web::WebView2::Win32::*;
+        assert!(navigation_error(
+            false,
+            COREWEBVIEW2_WEB_ERROR_STATUS_ERROR_HTTP_INVALID_SERVER_RESPONSE,
+            429
+        )
+        .unwrap()
+        .contains("HTTP 429"));
+        assert!(navigation_error(
+            false,
+            COREWEBVIEW2_WEB_ERROR_STATUS_ERROR_HTTP_INVALID_SERVER_RESPONSE,
+            403
+        )
+        .unwrap()
+        .contains("HTTP 403"));
+        assert!(
+            navigation_error(false, COREWEBVIEW2_WEB_ERROR_STATUS_CANNOT_CONNECT, 0)
+                .unwrap()
+                .contains("连接失败")
+        );
+        assert!(navigation_error(
+            false,
+            COREWEBVIEW2_WEB_ERROR_STATUS_CERTIFICATE_IS_INVALID,
+            0
+        )
+        .unwrap()
+        .contains("证书"));
+        assert!(navigation_error(
+            false,
+            COREWEBVIEW2_WEB_ERROR_STATUS_VALID_PROXY_AUTHENTICATION_REQUIRED,
+            0
+        )
+        .unwrap()
+        .contains("代理需要身份验证"));
+        assert!(
+            navigation_error(false, COREWEBVIEW2_WEB_ERROR_STATUS_OPERATION_CANCELED, 0).is_none()
+        );
+        assert!(navigation_error(true, COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN, 200).is_none());
     }
 }

@@ -84,3 +84,32 @@ it('removes the visual exit layer immediately when reduced motion is requested',
   await user.keyboard('{Escape}');
   expect(screen.queryByRole('menu', { hidden: true })).toBeNull();
 });
+
+it.each([90, 900])('keeps an upward menu above its anchor with content height %i', (height) => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return Math.min(height, parseFloat(this.style.maxHeight) || height);
+  });
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200);
+  const onClose = vi.fn();
+  const { rerender } = render(
+    <Menu label="Models" anchor={{ x: 120, y: 280, placement: 'top' }} onClose={onClose}>
+      <Button role="menuitemradio">Model</Button>
+    </Menu>,
+  );
+  const menu = screen.getByRole('menu');
+  expect(parseFloat(menu.style.top) + menu.offsetHeight).toBe(280);
+  expect(parseFloat(menu.style.top)).toBeGreaterThanOrEqual(8);
+  expect(menu.style.left).toBe('120px');
+  fireEvent.scroll(menu);
+  expect(onClose).not.toHaveBeenCalled();
+  // Switching back to a regular menu must not retain the previous height constraint.
+  rerender(
+    <Menu label="Actions" anchor={{ x: innerWidth - 2, y: 12 }} onClose={onClose}>
+      <Button role="menuitem">Action</Button>
+    </Menu>,
+  );
+  expect(menu.style.maxHeight).toBe('');
+  expect(parseFloat(menu.style.left) + menu.offsetWidth).toBe(innerWidth - 8);
+});

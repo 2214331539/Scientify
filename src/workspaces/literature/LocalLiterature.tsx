@@ -47,6 +47,7 @@ import {
   beginFileOperation,
   getFileRuntime,
   invalidateProjectFileSessions,
+  notifyFileRuntime,
 } from '../../editor/sessions';
 import {
   emptyLocalSession,
@@ -288,6 +289,19 @@ export function LocalLiterature({
       setScan(next);
       if (operation.op === 'delete') {
         const remaining = new Set(next.papers.map((paper) => paper.id));
+        const files = noteFiles(library);
+        const runtime = getFileRuntime(files);
+        for (const [key, note] of runtime.sessions) {
+          if (note.projectId === project.id && !remaining.has(note.path))
+            runtime.sessions.delete(key);
+        }
+        notifyFileRuntime(files);
+        setSelected('');
+        setClipboard((value) =>
+          value && (value.path === operation.path || value.path.startsWith(`${operation.path}/`))
+            ? null
+            : value,
+        );
         setSession((previous) => {
           let current = previous;
           for (const tab of previous.tabs)
@@ -678,6 +692,7 @@ export function LocalLiterature({
                   });
                 }}
                 onOpen={(path) => void open(path)}
+                onContextMenu={(path, event) => void showMenu(path, event.clientX, event.clientY)}
               />
               {dropTarget !== null && (
                 <div className="library-drop-hint">
@@ -771,6 +786,11 @@ export function LocalLiterature({
               activeId={session.active}
               panelId={panelId}
               newLabel={t('浏览器新页')}
+              onContextMenu={(id, position) => {
+                const tab = session.tabs.find((t) => t.id === id);
+                const path = scan.papers.find((p) => p.id === tab?.paperId)?.path;
+                if (path) void showMenu(path, position.x, position.y);
+              }}
               onSelect={(id) =>
                 setSession((s) => {
                   const tab = s.tabs.find((t) => t.id === id);
@@ -846,7 +866,7 @@ export function LocalLiterature({
                 label={t('调整论文笔记宽度')}
                 onChange={(noteWidth) => setSession((s) => ({ ...s, noteWidth }))}
               />
-              <div className="local-note-group" style={{ width: session.noteWidth }}>
+              <div className="local-note-group" inert={busy} style={{ width: session.noteWidth }}>
                 <DocumentTabs
                   tabs={session.notes.map((id) => ({
                     id,
@@ -997,7 +1017,15 @@ export function LocalLiterature({
             onClick={async () => {
               setMenu(null);
               if (
-                await confirmAction(t('将所选项目及关联笔记移入系统回收站？文件夹包括全部子内容。'))
+                await confirmAction(
+                  targetEntry?.directory
+                    ? t('将文件夹“{name}”及其全部内容、关联笔记移入系统回收站？', {
+                        name: filename(target),
+                      })
+                    : targetEntry?.pdf
+                      ? t('将“{name}”及对应笔记移入系统回收站？', { name: filename(target) })
+                      : t('将文件“{name}”移入系统回收站？', { name: filename(target) }),
+                )
               )
                 void mutate({ op: 'delete', path: target });
             }}

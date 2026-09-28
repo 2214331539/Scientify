@@ -1,17 +1,19 @@
 import { t, translateError } from '../../i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { Check, FilePlus2, Plus, Settings2 } from 'lucide-react';
+import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip } from 'lucide-react';
 import { ContextPanel } from '../../components/ai/ContextPanel';
 import { AssistantComposer } from '../../components/ai/AssistantComposer';
+import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import '../../components/ai/ai-panel.css';
-import { Button, Dropdown, Input } from '../../components/primitives';
+import { Button } from '../../components/primitives';
+import { ModelSettingsDialog } from './ModelSettingsDialog';
+import { Menu, type MenuAnchor } from '../../components/primitives/Menu';
+import { Modal } from '../../components/Modal';
 import { Panel } from '../../components/layout/Panel';
 import type { WorkContext } from '../../domain/context';
 import type { ResearchBackend } from '../../platform/research';
 import type { WorkspaceStore } from '../../stores/workspace';
-import { captureSource, createNote, persistNote } from '../notes/model';
-import { Markdown } from '../notes/Markdown';
 import {
   asConversation,
   freezeContext,
@@ -37,9 +39,22 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
   const [settings, setSettings] = useState<AISettings>(() => ({
     endpoint: model?.endpoint ?? 'http://127.0.0.1:11434',
     model: model?.model ?? '',
-    provider: (model as unknown as AISettings)?.provider === 'openai' ? 'openai' : 'ollama',
+    provider: model?.provider ?? 'ollama',
+    serviceId: model?.serviceId,
+    modelCatalog: model?.modelCatalog,
   }));
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsDraft, setSettingsDraft] = useState(settings);
+  const [draftKey, setDraftKey] = useState('');
+  const [settingsError, setSettingsError] = useState('');
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [showContext, setShowContext] = useState(false);
+  const [menu, setMenu] = useState<{
+    kind: 'sessions' | 'tools' | 'models';
+    anchor: MenuAnchor;
+  } | null>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const pinnedToBottom = useRef(true);
   const [apiKey, setApiKey] = useState('');
   const [conversation, setConversation] = useState<Conversation>(() => {
     const recent = data?.sessions
@@ -53,9 +68,7 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
   const [busy, setBusy] = useState(false);
   const [unsaved, setUnsaved] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const [retry, setRetry] = useState<Conversation | null>(null);
-  const [savedNotes, setSavedNotes] = useState<string[]>([]);
   const busyRef = useRef(false);
   const history = (data?.sessions ?? []).filter((item) => item.project === scope);
   const key = `assistant:${scope}`;
@@ -75,15 +88,75 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
     [apiKey],
   );
 
-  async function saveSettings() {
-    const result = await store.getState().update((workspace) => {
-      workspace.settings.model = { ...workspace.settings.model, ...settings };
+  function openSettings() {
+    setMenu(null);
+    setSettingsDraft(settings);
+    setDraftKey(apiKey);
+    setSettingsError('');
+    setShowSettings(true);
+  }
+  function openMenu(kind: 'sessions' | 'tools' | 'models', trigger: HTMLButtonElement) {
+    const r = trigger.getBoundingClientRect();
+    setMenu({
+      kind,
+      anchor: {
+        x: r.left,
+        y: kind === 'models' ? r.top - 6 : r.bottom + 4,
+        placement: kind === 'models' ? 'top' : 'bottom',
+        trigger,
+      },
     });
+  }
+  const recentModels = Array.isArray(model?.recentModels)
+    ? model.recentModels.filter((value): value is string => typeof value === 'string').slice(0, 12)
+    : [];
+  const models = [
+    ...new Set([
+      settings.model,
+      ...(model?.endpoint === settings.endpoint ? (model?.modelCatalog ?? recentModels) : []),
+    ]),
+  ].filter(Boolean);
+  useEffect(() => {
+    const pane = messagesRef.current;
+    if (pane && pinnedToBottom.current) pane.scrollTop = pane.scrollHeight;
+  }, [conversation.messages.length, busy, conversation.id]);
+
+  async function saveSettings(value = settingsDraft, keyValue = draftKey) {
+    if (settingsBusy || busyRef.current) return;
+    value = { ...value, endpoint: value.endpoint.trim(), model: value.model.trim() };
+    if (!value.endpoint || !value.model) {
+      setSettingsError(t('请先填写模型名称与服务地址。'));
+      return;
+    }
+    setSettingsBusy(true);
+    const result = await store.getState().update((workspace) => {
+      const previous = workspace.settings.model;
+      const sameService =
+        previous.endpoint === value.endpoint && (previous.provider ?? 'ollama') === value.provider;
+      const remembered = sameService
+        ? [
+            previous.model,
+            ...(Array.isArray(previous.recentModels)
+              ? previous.recentModels.filter((m) => typeof m === 'string')
+              : []),
+          ]
+        : [];
+      workspace.settings.model = {
+        ...previous,
+        ...value,
+        recentModels: [...new Set([value.model.trim(), ...remembered])]
+          .filter(Boolean)
+          .slice(0, 12),
+      };
+    });
+    setSettingsBusy(false);
     if (result) {
+      setSettings(value);
+      setApiKey(keyValue);
       setShowSettings(false);
       setError('');
-      setNotice(t('模型配置已保存；密钥仅在本次打开的应用中使用。'));
-    } else setError(store.getState().error ?? t('模型配置保存失败'));
+    } else if (showSettings) setSettingsError(store.getState().error ?? t('模型配置保存失败'));
+    else setError(store.getState().error ?? t('模型配置保存失败'));
   }
 
   async function saveConversation(value = conversation) {
@@ -99,7 +172,6 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
     busyRef.current = true;
     setBusy(true);
     setError('');
-    setNotice('');
     setRetry(null);
     try {
       if (!(await saveConversation(value))) {
@@ -108,8 +180,10 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
       }
       setPrompt('');
       const answer = await backend.askAI({
-        ...settings,
-        ...(settings.provider === 'openai' && apiKey ? { apiKey } : {}),
+        endpoint: settings.endpoint,
+        provider: settings.provider,
+        model: settings.model,
+        ...(apiKey ? { apiKey } : {}),
         messages: requestMessages(value),
       });
       if (!answer.trim()) throw new Error(t('模型没有返回文本，请检查模型配置后重试。'));
@@ -136,10 +210,13 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
   }
 
   async function send() {
-    if (!prompt.trim() || busyRef.current || unsaved || retry) return;
-    if (!settings.model.trim() || !settings.endpoint.trim()) {
-      setShowSettings(true);
-      setError(t('请先填写模型名称与服务地址。'));
+    if (!prompt.trim() || busyRef.current || settingsBusy || unsaved || retry) return;
+    if (
+      !settings.model.trim() ||
+      !settings.endpoint.trim() ||
+      (settings.provider !== 'ollama' && !apiKey)
+    ) {
+      openSettings();
       return;
     }
     const snapshot = includeContext ? freezeContext(context) : undefined;
@@ -150,6 +227,7 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
       createdAt: new Date().toISOString(),
       ...(snapshot ? { context: snapshot } : {}),
     };
+    pinnedToBottom.current = true;
     const next: Conversation = {
       ...conversation,
       title: conversation.messages.length ? conversation.title : prompt.trim().slice(0, 36),
@@ -162,29 +240,12 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
     await runRequest(next);
   }
 
-  async function saveAsNote(message: ChatMessage, index: number) {
-    setError('');
-    const original = conversation.messages
-      .slice(0, index)
-      .reverse()
-      .find((item) => item.role === 'user');
-    const note = createNote(scope, original?.text.slice(0, 48) || t('AI 研究笔记'), message.text);
-    if (original?.context) note.sources = [captureSource(original.context, message.id)];
-    note.aiMessageId = message.id;
-    note.aiSessionId = conversation.id;
-    if (await persistNote(store, note)) {
-      setSavedNotes((items) => [...items, message.id]);
-      setNotice(t('回答已保存到当前范围的研究笔记。'));
-    } else setError(store.getState().error || t('笔记保存失败，请重试。'));
-  }
-
   function selectConversation(id: string) {
     if (dirty || retry) return;
+    pinnedToBottom.current = true;
     const existing = history.find((item) => item.id === id);
     setConversation(existing ? asConversation(existing) : newConversation(scope));
     setError('');
-    setNotice('');
-    setSavedNotes([]);
   }
 
   return (
@@ -193,166 +254,186 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
       role="region"
       aria-label={t('AI 助手内容')}
     >
-      <ContextPanel
-        context={context}
-        projectName={data?.projects.find((project) => project.id === scope)?.name}
-        includeContext={includeContext}
-        onIncludeContextChange={setIncludeContext}
-        actionDisabledReason={
-          busy || unsaved || retry
-            ? t('等待当前请求或保存完成')
-            : prompt.length > 0
-              ? t('先发送或清空当前草稿')
-              : undefined
-        }
-        onAction={(value) => {
-          if (prompt.length || busy || unsaved || retry) return;
-          setPrompt(value);
-          composerRef.current?.focus();
-        }}
-      />
-      <div className="sf-aux-toolbar sf-ai-conversation-toolbar">
-        <h3>{t('Conversation')}</h3>
-        <Dropdown
+      <div className="sf-ai-session-header">
+        <Button
+          variant="ghost"
+          className="sf-ai-session-title"
           aria-label={t('当前 AI 对话')}
-          value={history.some((item) => item.id === conversation.id) ? conversation.id : ''}
+          aria-haspopup="menu"
+          aria-expanded={menu?.kind === 'sessions'}
           disabled={dirty || !!retry}
-          onChange={(event) => selectConversation(event.target.value)}
+          title={conversation.title}
+          onClick={(event) => openMenu('sessions', event.currentTarget)}
         >
-          {!history.some((item) => item.id === conversation.id) ? (
-            <option value="">{t('New')}</option>
-          ) : null}
-          {history.map((item) => (
-            <option value={item.id} key={item.id}>
-              {String(item.title || t('历史对话'))}
-            </option>
-          ))}
-        </Dropdown>
+          <span>{conversation.messages.length ? conversation.title : t('新对话')}</span>
+          <ChevronDown size={12} />
+        </Button>
         <Button
           variant="ghost"
           size="sm"
           iconOnly
           aria-label={t('新建 AI 对话')}
-          title={dirty ? t('先发送或清空草稿，并保存对话') : t('新建 AI 对话')}
+          tooltip={dirty ? t('先发送或清空草稿，并保存对话') : t('新建 AI 对话')}
           disabled={dirty || !!retry}
           onClick={() => selectConversation('')}
         >
-          <Plus size={16} />
+          <Plus size={15} />
         </Button>
         <Button
           variant="ghost"
           size="sm"
           iconOnly
-          aria-label={t('模型设置')}
-          title={t('模型设置')}
-          aria-expanded={showSettings}
-          onClick={() => setShowSettings(!showSettings)}
+          aria-label={t('对话选项')}
+          aria-haspopup="menu"
+          aria-expanded={menu?.kind === 'tools'}
+          onClick={(event) => openMenu('tools', event.currentTarget)}
         >
-          <Settings2 size={16} />
+          <MoreHorizontal size={16} />
         </Button>
       </div>
-      {showSettings ? (
-        <form
-          className="sf-ai-settings"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void saveSettings();
-          }}
-        >
-          <label>
-            {t('模型提供方')}
-            <Dropdown
-              disabled={busy}
-              value={settings.provider}
-              onChange={(event) => {
-                setApiKey('');
-                setSettings({
-                  ...settings,
-                  provider: event.target.value as AISettings['provider'],
-                  endpoint:
-                    event.target.value === 'ollama'
-                      ? 'http://127.0.0.1:11434'
-                      : 'https://api.openai.com/v1',
-                });
+      <Menu
+        anchor={menu?.anchor ?? null}
+        label={
+          menu?.kind === 'sessions'
+            ? t('历史对话')
+            : menu?.kind === 'models'
+              ? t('选择模型')
+              : t('对话选项')
+        }
+        onClose={() => setMenu(null)}
+      >
+        {menu?.kind === 'sessions' ? (
+          <>
+            <Button
+              role="menuitem"
+              variant="ghost"
+              onClick={() => {
+                selectConversation('');
+                setMenu(null);
               }}
             >
-              <option value="ollama">{t('Ollama 本地模型')}</option>
-              <option value="openai">{t('OpenAI 兼容服务')}</option>
-            </Dropdown>
-          </label>
-          <label>
-            {t('服务地址')}
-            <Input
-              type="url"
-              required
-              disabled={busy}
-              value={settings.endpoint}
-              placeholder="http://127.0.0.1:11434"
-              onChange={(event) => {
-                setApiKey('');
-                setSettings({ ...settings, endpoint: event.target.value });
-              }}
-            />
-          </label>
-          <label>
-            {t('模型名称')}
-            <Input
-              required
-              disabled={busy}
-              value={settings.model}
-              placeholder={t('填写服务中的模型名称')}
-              onChange={(event) => setSettings({ ...settings, model: event.target.value })}
-            />
-          </label>
-          {settings.provider === 'openai' ? (
-            <label>
-              {t('API 密钥')}
-              <Input
-                type="password"
-                autoComplete="off"
-                disabled={busy}
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder={t('仅在本次应用会话中使用')}
-              />
-            </label>
-          ) : null}
-          <small>{t('只保存地址和模型名称。密钥不写入工作区。')}</small>
-          <Button variant="ghost" size="sm" type="submit" disabled={busy}>
-            {t('保存模型配置')}
-          </Button>
-        </form>
-      ) : null}
-      <div className="sf-chat-messages sf-aux-scroll" aria-live="polite">
-        {!conversation.messages.length ? (
-          <div className="sf-ai-conversation-empty">{t('No conversation yet.')}</div>
-        ) : (
-          conversation.messages.map((message, index) => (
-            <article key={message.id} className={`sf-chat-message sf-chat-${message.role}`}>
-              <div className="sf-message-meta">
-                <strong>{message.role === 'user' ? t('你') : t('AI 助手')}</strong>
-                {message.context ? (
-                  <span
-                    title={`${message.context.capturedAt} · ${message.context.path || message.context.title}`}
-                  >
-                    {message.context.title}
-                  </span>
-                ) : null}
-              </div>
-              <Markdown>{message.text}</Markdown>
-              {message.role === 'assistant' ? (
+              <Plus size={14} />
+              {t('新建 AI 对话')}
+            </Button>
+            {[...history]
+              .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+              .map((item) => (
                 <Button
+                  key={item.id}
+                  role="menuitemradio"
+                  aria-checked={item.id === conversation.id}
                   variant="ghost"
-                  size="sm"
-                  className="sf-note-from-answer"
-                  disabled={savedNotes.includes(message.id)}
-                  onClick={() => void saveAsNote(message, index)}
+                  onClick={() => {
+                    selectConversation(item.id);
+                    setMenu(null);
+                  }}
                 >
-                  {savedNotes.includes(message.id) ? <Check size={13} /> : <FilePlus2 size={13} />}
-                  {savedNotes.includes(message.id) ? t('已存为笔记') : t('保存为笔记')}
+                  {String(item.title || t('历史对话'))}
                 </Button>
-              ) : null}
-            </article>
+              ))}
+          </>
+        ) : menu?.kind === 'models' ? (
+          <>
+            {models.map((name) => (
+              <Button
+                key={name}
+                role="menuitemradio"
+                aria-checked={name === settings.model}
+                variant="ghost"
+                disabled={settingsBusy || busy}
+                onClick={() => {
+                  setMenu(null);
+                  void saveSettings({ ...settings, model: name }, apiKey);
+                }}
+              >
+                <span className="sf-ai-model-option">{name}</span>
+              </Button>
+            ))}
+            <Button role="menuitem" variant="ghost" onClick={openSettings}>
+              <Settings2 size={14} />
+              {t('配置其他模型')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              role="menuitem"
+              variant="ghost"
+              onClick={() => {
+                setMenu(null);
+                setShowContext(true);
+              }}
+            >
+              <Paperclip size={14} />
+              {t('查看当前材料')}
+            </Button>
+            <Button role="menuitem" variant="ghost" onClick={openSettings}>
+              <Settings2 size={14} />
+              {t('模型设置')}
+            </Button>
+          </>
+        )}
+      </Menu>
+      {showContext && (
+        <Modal
+          title={t('当前材料')}
+          className="sf-ai-context-dialog"
+          onClose={() => setShowContext(false)}
+        >
+          <ContextPanel
+            context={context}
+            projectName={data?.projects.find((project) => project.id === scope)?.name}
+            includeContext={includeContext}
+            onIncludeContextChange={setIncludeContext}
+            actionDisabledReason={
+              busy || unsaved || retry
+                ? t('等待当前请求或保存完成')
+                : prompt.length > 0
+                  ? t('先发送或清空当前草稿')
+                  : undefined
+            }
+            onAction={(value) => {
+              if (prompt.length || busy || unsaved || retry) return;
+              setShowContext(false);
+              setPrompt(value);
+              requestAnimationFrame(() => composerRef.current?.focus());
+            }}
+          />
+        </Modal>
+      )}
+      {showSettings && (
+        <ModelSettingsDialog
+          backend={backend}
+          value={settingsDraft}
+          apiKey={draftKey}
+          error={settingsError}
+          saving={settingsBusy}
+          requestBusy={busy}
+          onChange={(value) => {
+            setSettingsDraft(value);
+            setSettingsError('');
+          }}
+          onKeyChange={setDraftKey}
+          onSave={saveSettings}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+      <div
+        ref={messagesRef}
+        className="sf-chat-messages sf-aux-scroll"
+        role="log"
+        aria-label={t('对话消息')}
+        aria-live="polite"
+        onScroll={(event) => {
+          const pane = event.currentTarget;
+          pinnedToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 48;
+        }}
+      >
+        {!conversation.messages.length ? (
+          <div className="sf-ai-conversation-empty">{t('从一个问题开始')}</div>
+        ) : (
+          conversation.messages.map((message) => (
+            <ChatMessageView key={message.id} role={message.role} text={message.text} />
           ))
         )}
         {busy ? (
@@ -361,11 +442,6 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
           </div>
         ) : null}
       </div>
-      {notice ? (
-        <div className="sf-aux-notice" role="status">
-          {translateError(notice)}
-        </div>
-      ) : null}
       {error ? (
         <div className="sf-aux-error" role="alert">
           {translateError(error)}
@@ -409,13 +485,16 @@ export function AssistantPanel({ store, backend, scope, context, onDirtyChange }
       <AssistantComposer
         inputRef={composerRef}
         prompt={prompt}
-        disabled={busy || unsaved || !!retry}
+        disabled={busy || settingsBusy || unsaved || !!retry}
         model={settings.model}
         endpoint={settings.endpoint}
         includeContext={includeContext}
         onPromptChange={setPrompt}
         onSend={() => void send()}
-        onConfigure={() => setShowSettings(true)}
+        contextLabel={context.path || context.title || t('当前材料')}
+        modelMenuOpen={menu?.kind === 'models'}
+        onContext={() => setShowContext(true)}
+        onModelMenu={(event) => openMenu('models', event.currentTarget)}
       />
     </Panel>
   );

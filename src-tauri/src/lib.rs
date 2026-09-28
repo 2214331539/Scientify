@@ -4,6 +4,8 @@ use serde_json::Value;
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
+mod agent;
+mod ai;
 mod browser;
 #[cfg(test)]
 mod ipc_smoke;
@@ -189,6 +191,7 @@ pub fn run() {
                 .data_dir()?
                 .join("scientify-desktop-sample/workspace");
             app.manage(library::LibraryState::new(directory.clone()));
+            app.manage(agent::AgentState::default());
             app.manage(AppState {
                 files: Arc::new(scientify_core::research::ResearchFiles::new(
                     directory.clone(),
@@ -239,8 +242,17 @@ pub fn run() {
             research::research_import_pdf,
             research::research_read_pdf,
             research::research_git_status,
-            research::research_ask_ai,
+            ai::research_ask_ai,
+            ai::research_list_models,
+            ai::research_test_model,
             research::research_fetch_arxiv,
+            agent::agent_status,
+            agent::agent_handshake,
+            agent::agent_domains,
+            agent::agent_start_thread,
+            agent::agent_start_turn,
+            agent::agent_events,
+            agent::agent_respond,
         ])
         .run(context)
         .expect("Scientify failed to start");

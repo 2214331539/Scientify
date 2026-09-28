@@ -55,6 +55,8 @@ function setup() {
     importPdf: async () => null,
     readPdf: vi.fn(async () => new Uint8Array([1])),
     gitStatus: async () => [],
+    listModels: async () => [],
+    testModel: async () => {},
     askAI: async () => '',
     fetchArxiv: async () => '',
   };

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-agent-respond"
+description = "Enables the agent_respond command without any pre-configured scope."
+commands.allow = ["agent_respond"]
+
+[[permission]]
+identifier = "deny-agent-respond"
+description = "Denies the agent_respond command without any pre-configured scope."
+commands.deny = ["agent_respond"]

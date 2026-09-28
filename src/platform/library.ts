@@ -104,6 +104,8 @@ export function noteFiles(library: LibraryBackend): ResearchBackend {
     readPdf: unsupported,
     gitStatus: unsupported,
     askAI: unsupported,
+    listModels: unsupported,
+    testModel: unsupported,
     fetchArxiv: unsupported,
   };
   adapters.set(library, adapter);

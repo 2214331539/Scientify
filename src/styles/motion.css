@@ -59,9 +59,8 @@ dialog[open]::backdrop {
 .sf-tooltip {
   animation: sf-fade-in var(--sf-motion-feedback) var(--sf-ease-enter);
 }
-.auxiliary-surface:not([hidden]) > .sf-global-dock {
-  animation: sf-panel-enter var(--sf-motion-panel) var(--sf-ease-enter);
-}
+/* Dock tabs share a stable header and retained layers; auxiliary.css owns their
+   crossfade. Never replay the full side-panel entry animation on a tab switch. */
 .sf-tree-disclosure svg {
   transition: transform var(--sf-motion-content) var(--sf-ease-enter);
 }

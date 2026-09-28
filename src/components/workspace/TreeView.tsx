@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { ChevronRight, FileText, Folder } from 'lucide-react';
 import { Button } from '../primitives';
 import './tree-view.css';
@@ -20,6 +20,7 @@ interface Props {
   collapsed: ReadonlySet<string>;
   onToggle: (id: string) => void;
   onOpen: (id: string) => void;
+  onContextMenu?: (id: string, event: MouseEvent<HTMLButtonElement>) => void;
 }
 
 /** Selection opens a resource; focus and disclosure only navigate the hierarchy. */
@@ -31,6 +32,7 @@ export function TreeView({
   collapsed,
   onToggle,
   onOpen,
+  onContextMenu,
 }: Props) {
   const [focused, setFocused] = useState<string | null>(null);
   const elements = useRef(new Map<string, HTMLButtonElement>());
@@ -86,6 +88,12 @@ export function TreeView({
             style={{ paddingLeft: 8 + depth * 16 }}
             onFocus={() => setFocused(item.id)}
             onClick={() => (folder ? onToggle(item.id) : onOpen(item.id))}
+            onContextMenu={(event) => {
+              if (!onContextMenu) return;
+              event.preventDefault();
+              event.stopPropagation();
+              onContextMenu?.(item.id, event);
+            }}
             onKeyDown={(event) => {
               const index = visible.findIndex((row) => row.item.id === item.id);
               if (event.key === 'ArrowDown') focus(visible[index + 1]?.item.id);

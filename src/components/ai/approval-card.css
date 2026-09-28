@@ -1,0 +1,40 @@
+.sf-approval {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-raised);
+}
+.sf-approval-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.sf-approval-target {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  overflow-x: auto;
+  font-family: var(--sf-font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--sf-surface-sunken);
+  border-radius: var(--sf-radius);
+}
+.sf-approval-detail {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--sf-text-muted);
+}
+.sf-approval-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--sf-text-muted);
+}
+.sf-approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}

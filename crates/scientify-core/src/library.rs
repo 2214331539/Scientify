@@ -841,7 +841,11 @@ impl LocalLibrary {
         recycle: impl FnOnce(&Path) -> Result<()>,
     ) -> Result<()> {
         let src = self.resolve(root, path, false)?;
-        if index.papers.iter().any(|p| p.note_path == path) {
+        if index
+            .papers
+            .iter()
+            .any(|p| below(&p.note_path, path) && !below(&p.path, path))
+        {
             return Err("请通过对应 PDF 操作关联笔记。".into());
         }
         let mut sources = vec![src];
@@ -855,7 +859,7 @@ impl LocalLibrary {
                 sources.push(note);
             }
         }
-        if sources.len() == 1 && path.to_lowercase().ends_with(".pdf") {
+        if path.to_lowercase().ends_with(".pdf") && !index.papers.iter().any(|p| p.path == path) {
             let note = self.resolve(root, &sidecar(path), false)?;
             if note.exists() {
                 sources.push(note);
@@ -877,8 +881,21 @@ impl LocalLibrary {
             .collect();
         write_atomic(
             &package.join("restore.json"),
-            &serde_json::to_vec_pretty(&serde_json::json!({"root":root,"paths":plans}))
-                .map_err(err)?,
+            &serde_json::to_vec_pretty(
+                &serde_json::json!({"root":root,"paths":plans,"before":index}),
+            )
+            .map_err(err)?,
+            false,
+        )?;
+        let mut next = index.clone();
+        next.papers.retain(|p| !below(&p.path, path));
+        let marker = root.join(".scientify/operation.json");
+        write_atomic(
+            &marker,
+            &serde_json::to_vec_pretty(&serde_json::json!({
+                "operation":"delete","paths":plans,"before":index,"after":next
+            }))
+            .map_err(err)?,
             false,
         )?;
         let mut done = vec![];
@@ -887,18 +904,27 @@ impl LocalLibrary {
                 move_new(src, dst)?;
                 done.push((src, dst));
             }
+            // An explicit deletion retires the binding. Only externally missing PDFs
+            // remain available for relinking; otherwise a duplicate could inherit notes.
+            self.write_index(root, &next)?;
             recycle(&package)
         })();
         if result.is_err() {
+            let mut rollback_failed = false;
             for (src, dst) in done.iter().rev() {
-                if dst.exists() {
-                    move_new(dst, src).map_err(|e| {
-                        format!("回收失败且回退未完成：{e}；恢复包：{}", package.display())
-                    })?;
+                if move_new(dst, src).is_err() {
+                    rollback_failed = true;
                 }
+            }
+            if self.write_index(root, index).is_err() || rollback_failed {
+                return Err(format!(
+                    "回收失败且回退未完成；请保留恢复清单：{}",
+                    marker.display()
+                ));
             }
             remove_owned(&package)?;
         }
+        fs::remove_file(marker).map_err(err)?;
         result
     }
     pub fn import_files(

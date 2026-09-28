@@ -2,6 +2,7 @@ import { t } from '../../i18n';
 import type { WorkContext } from '../../domain/context';
 import type { Entity } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
+import type { AIProtocol } from '../../platform/research';
 
 export type ContextSnapshot = WorkContext & { capturedAt: string };
 export type ChatMessage = {
@@ -18,7 +19,13 @@ export type Conversation = Entity & {
   messages: ChatMessage[];
   context: ContextSnapshot[];
 };
-export type AISettings = { endpoint: string; model: string; provider: 'ollama' | 'openai' };
+export type AISettings = {
+  endpoint: string;
+  model: string;
+  provider: AIProtocol;
+  serviceId?: string;
+  modelCatalog?: string[];
+};
 
 export function newConversation(project: string): Conversation {
   return {

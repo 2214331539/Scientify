@@ -53,6 +53,8 @@ async function fixture() {
     importPdf: vi.fn(async () => null),
     readPdf: vi.fn(),
     gitStatus: async () => [],
+    listModels: async () => [],
+    testModel: async () => {},
     askAI: async () => '',
     fetchArxiv: vi.fn(async () => '<feed/>'),
   };

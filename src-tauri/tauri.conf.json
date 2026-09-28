@@ -23,6 +23,7 @@
   },
   "bundle": {
     "active": true, "targets": ["nsis"], "icon": ["icons/icon.ico"],
+    "externalBin": ["binaries/codex"],
     "windows": { "nsis": { "languages": ["SimpChinese", "English"], "displayLanguageSelector": true } }
   }
 }

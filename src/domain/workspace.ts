@@ -45,7 +45,14 @@ export type Workspace = {
     [key: string]: unknown;
     theme: string;
     name: string;
-    model: { endpoint: string; model: string };
+    model: {
+      endpoint: string;
+      model: string;
+      provider?: 'ollama' | 'openai' | 'anthropic' | 'gemini';
+      serviceId?: string;
+      modelCatalog?: string[];
+      recentModels?: string[];
+    };
   };
   navigation: {
     [key: string]: unknown;

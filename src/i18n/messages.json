@@ -3150,5 +3150,257 @@
   "文献操作": [
     "文献操作",
     "Literature actions"
+  ],
+  "将文件夹“{name}”及其全部内容、关联笔记移入系统回收站？": [
+    "将文件夹“{name}”及其全部内容、关联笔记移入系统回收站？",
+    "Move folder “{name}”, all its contents and linked notes to the system recycle bin?"
+  ],
+  "将“{name}”及对应笔记移入系统回收站？": [
+    "将“{name}”及对应笔记移入系统回收站？",
+    "Move “{name}” and its paired notes to the system recycle bin?"
+  ],
+  "将文件“{name}”移入系统回收站？": [
+    "将文件“{name}”移入系统回收站？",
+    "Move file “{name}” to the system recycle bin?"
+  ],
+  "网站限制了当前访问（HTTP 429）。如页面要求验证，请在下方完成，或稍后重试。": [
+    "网站限制了当前访问（HTTP 429）。如页面要求验证，请在下方完成，或稍后重试。",
+    "The website limited this request (HTTP 429). Complete any verification shown below, or try again later."
+  ],
+  "网站返回 HTTP {http}，详情见下方网页。": [
+    "网站返回 HTTP {http}，详情见下方网页。",
+    "The website returned HTTP {http}. See the page below for details."
+  ],
+  "代理需要身份验证，请检查系统代理设置。": [
+    "代理需要身份验证，请检查系统代理设置。",
+    "The proxy requires authentication. Check your system proxy settings."
+  ],
+  "无法解析网站地址，请检查网络、DNS 或系统代理。": [
+    "无法解析网站地址，请检查网络、DNS 或系统代理。",
+    "The website address could not be resolved. Check your network, DNS or system proxy."
+  ],
+  "网页连接失败，请检查网络和系统代理是否可用。": [
+    "网页连接失败，请检查网络和系统代理是否可用。",
+    "Connection failed. Check your network and system proxy availability."
+  ],
+  "网站证书验证失败，请检查系统时间和代理证书。": [
+    "网站证书验证失败，请检查系统时间和代理证书。",
+    "Website certificate verification failed. Check your system clock and proxy certificate."
+  ],
+  "网页加载失败（WebView2 {code}），可刷新或在系统浏览器打开。": [
+    "网页加载失败（WebView2 {code}），可刷新或在系统浏览器打开。",
+    "Page failed to load (WebView2 {code}). Refresh or open it in your system browser."
+  ],
+  "SCIENTIFY_BROWSER_PROXY 必须是无凭据的 http://host:port 或 socks5://host:port。": [
+    "SCIENTIFY_BROWSER_PROXY 必须是无凭据的 http://host:port 或 socks5://host:port。",
+    "SCIENTIFY_BROWSER_PROXY must be http://host:port or socks5://host:port without credentials."
+  ],
+  "查看当前材料": [
+    "查看当前材料",
+    "View current context"
+  ],
+  "当前材料": [
+    "当前材料",
+    "Current context"
+  ],
+  "对话选项": [
+    "对话选项",
+    "Chat options"
+  ],
+  "选择模型": [
+    "选择模型",
+    "Select model"
+  ],
+  "配置其他模型": [
+    "配置其他模型",
+    "Configure another model"
+  ],
+  "对话消息": [
+    "对话消息",
+    "Chat messages"
+  ],
+  "从一个问题开始": [
+    "从一个问题开始",
+    "Start with a question"
+  ],
+  "发送 · Enter；Shift + Enter 换行": [
+    "发送 · Enter；Shift + Enter 换行",
+    "Send · Enter; Shift + Enter for a new line"
+  ],
+  "OpenAI 兼容": [
+    "OpenAI 兼容",
+    "OpenAI compatible"
+  ],
+  "服务连接": [
+    "服务连接",
+    "Connection"
+  ],
+  "聊天模型": [
+    "聊天模型",
+    "Chat model"
+  ],
+  "保存后返回对话，聊天草稿会保留。": [
+    "保存后返回对话，聊天草稿会保留。",
+    "Save to return to chat. Your draft is kept."
+  ],
+  "默认": [
+    "默认",
+    "Default"
+  ],
+  "通义千问": [
+    "通义千问",
+    "Qwen"
+  ],
+  "中国内地": [
+    "中国内地",
+    "Mainland China"
+  ],
+  "国际": [
+    "国际",
+    "International"
+  ],
+  "硅基流动": [
+    "硅基流动",
+    "SiliconFlow"
+  ],
+  "本地": [
+    "本地",
+    "Local"
+  ],
+  "自定义服务商": [
+    "自定义服务商",
+    "Custom provider"
+  ],
+  "接口协议": [
+    "接口协议",
+    "API protocol"
+  ],
+  "服务区域": [
+    "服务区域",
+    "Service region"
+  ],
+  "自定义地址": [
+    "自定义地址",
+    "Custom endpoint"
+  ],
+  "可选": [
+    "可选",
+    "Optional"
+  ],
+  "测试连接": [
+    "测试连接",
+    "Test connection"
+  ],
+  "正在获取模型…": [
+    "正在获取模型…",
+    "Fetching models…"
+  ],
+  "已获取 {count} 个模型": [
+    "已获取 {count} 个模型",
+    "{count} models fetched"
+  ],
+  "正在验证聊天模型…": [
+    "正在验证聊天模型…",
+    "Verifying chat access…"
+  ],
+  "正在验证…": [
+    "正在验证…",
+    "Verifying…"
+  ],
+  "筛选模型": [
+    "筛选模型",
+    "Filter models"
+  ],
+  "测试连接后选择模型": [
+    "测试连接后选择模型",
+    "Test connection to select a model"
+  ],
+  "保存时发送一条简短测试消息，确认模型可用；不发送研究材料。": [
+    "保存时发送一条简短测试消息，确认模型可用；不发送研究材料。",
+    "Saving verifies chat access with a short test message. Research materials are excluded."
+  ],
+  "请填写服务地址和 API 密钥。": [
+    "请填写服务地址和 API 密钥。",
+    "Enter the service URL and API key."
+  ],
+  "服务未返回可选的聊天模型。": [
+    "服务未返回可选的聊天模型。",
+    "The service returned no available chat models."
+  ],
+  "模型服务地址或密钥过长。": [
+    "模型服务地址或密钥过长。",
+    "The service URL or API key is too long."
+  ],
+  "服务拒绝访问（401/403），请检查 API 密钥、服务区域及模型权限。": [
+    "服务拒绝访问（401/403），请检查 API 密钥、服务区域及模型权限。",
+    "Access denied (401/403). Check the API key, region and model permissions."
+  ],
+  "接口不可用（404/405），请检查服务地址及接口协议；服务需要支持模型列表和聊天接口。": [
+    "接口不可用（404/405），请检查服务地址及接口协议；服务需要支持模型列表和聊天接口。",
+    "Endpoint unavailable (404/405). Check the URL and protocol; the service must support model listing and chat."
+  ],
+  "请求受限（429），请检查服务额度或稍后重试。": [
+    "请求受限（429），请检查服务额度或稍后重试。",
+    "Rate or quota limit reached (429). Check your allowance or try again later."
+  ],
+  "模型服务返回 HTTP {status}，请检查服务状态。": [
+    "模型服务返回 HTTP {status}，请检查服务状态。",
+    "The model service returned HTTP {status}. Check its availability."
+  ],
+  "获取模型列表超时，请重试。": [
+    "获取模型列表超时，请重试。",
+    "Fetching the model list timed out. Try again."
+  ],
+  "服务未返回有效的模型列表，请检查接口协议。": [
+    "服务未返回有效的模型列表，请检查接口协议。",
+    "The service returned an invalid model list. Check the API protocol."
+  ],
+  "模型列表过大，请使用范围更小的服务接口。": [
+    "模型列表过大，请使用范围更小的服务接口。",
+    "The model list is too large. Use a more specific endpoint."
+  ],
+  "服务返回了不完整的模型列表，请重试。": [
+    "服务返回了不完整的模型列表，请重试。",
+    "The service returned an incomplete model list. Try again."
+  ],
+  "服务返回了无效的模型分页信息。": [
+    "服务返回了无效的模型分页信息。",
+    "The service returned invalid model pagination."
+  ],
+  "模型列表分页过多，请使用范围更小的服务接口。": [
+    "模型列表分页过多，请使用范围更小的服务接口。",
+    "The model list has too many pages. Use a more specific endpoint."
+  ],
+  "模型没有返回有效的聊天响应，请选择其他模型。": [
+    "模型没有返回有效的聊天响应，请选择其他模型。",
+    "The model returned no valid chat response. Select another model."
+  ],
+  "模型配置": [
+    "模型配置",
+    "Model configuration"
+  ],
+  "模型设置导航": [
+    "模型设置导航",
+    "Model settings navigation"
+  ],
+  "用户消息": [
+    "用户消息",
+    "Your message"
+  ],
+  "助手消息": [
+    "助手消息",
+    "Assistant message"
+  ],
+  "复制消息": [
+    "复制消息",
+    "Copy message"
+  ],
+  "已复制": [
+    "已复制",
+    "Copied"
+  ],
+  "复制失败，请重试": [
+    "复制失败，请重试",
+    "Copy failed. Try again."
   ]
 }

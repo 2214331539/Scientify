@@ -3,8 +3,7 @@ use scientify_core::{
     research::{FileContent, ImportedPdf, ResearchFile, ResearchFiles},
     storage::Storage,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde::Serialize;
 use std::{path::PathBuf, time::Duration};
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
@@ -324,68 +323,6 @@ fn git_status(root: &std::path::Path) -> Result<Vec<GitChange>, String> {
     parse_git(&bytes)
 }
 
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Role {
-    System,
-    User,
-    Assistant,
-}
-#[derive(Deserialize, Serialize)]
-pub struct Message {
-    role: Role,
-    content: String,
-}
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Provider {
-    Ollama,
-    Openai,
-}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AIRequest {
-    endpoint: String,
-    model: String,
-    api_key: Option<String>,
-    provider: Provider,
-    messages: Vec<Message>,
-}
-
-fn endpoint(request: &AIRequest) -> Result<reqwest::Url, String> {
-    if request.endpoint.len() > 4096 {
-        return Err("模型服务地址过长。".into());
-    }
-    let mut url =
-        reqwest::Url::parse(request.endpoint.trim()).map_err(|_| "模型服务地址格式无效。")?;
-    if !matches!(url.scheme(), "http" | "https")
-        || url.host_str().is_none()
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_some()
-        || url.fragment().is_some()
-    {
-        return Err("模型服务必须使用 HTTP(S)，地址不能包含密码、查询参数或片段。".into());
-    }
-    let local = url
-        .host_str()
-        .is_some_and(|h| matches!(h, "localhost" | "127.0.0.1" | "[::1]" | "::1"));
-    if url.scheme() == "http" && !local && request.api_key.as_ref().is_some_and(|k| !k.is_empty()) {
-        return Err("带 API Key 的远程模型服务必须使用 HTTPS。".into());
-    }
-    let path = url.path().trim_end_matches('/');
-    let next = match request.provider {
-        Provider::Ollama if path.ends_with("/api/chat") => path.to_string(),
-        Provider::Ollama if path.ends_with("/api") => format!("{path}/chat"),
-        Provider::Ollama => format!("{path}/api/chat"),
-        Provider::Openai if path.ends_with("/chat/completions") => path.to_string(),
-        Provider::Openai if path.ends_with("/v1") => format!("{path}/chat/completions"),
-        Provider::Openai => format!("{path}/v1/chat/completions"),
-    };
-    url.set_path(&next);
-    Ok(url)
-}
-
 fn client(timeout: u64) -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(timeout))
@@ -420,69 +357,6 @@ async fn response_bytes(mut response: reqwest::Response, limit: usize) -> Result
 }
 
 #[tauri::command]
-pub async fn research_ask_ai(request: AIRequest) -> Result<String, String> {
-    static BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    if BUSY.swap(true, std::sync::atomic::Ordering::SeqCst) {
-        return Err("已有模型请求正在执行，请等待当前回答完成。".into());
-    }
-    struct Release;
-    impl Drop for Release {
-        fn drop(&mut self) {
-            BUSY.store(false, std::sync::atomic::Ordering::SeqCst);
-        }
-    }
-    let _release = Release;
-    if request.model.trim().is_empty() || request.model.len() > 256 {
-        return Err("请配置有效的模型名称。".into());
-    }
-    if request.messages.is_empty()
-        || request.messages.len() > 50
-        || request
-            .messages
-            .iter()
-            .map(|m| m.content.len())
-            .sum::<usize>()
-            > 256 * 1024
-    {
-        return Err("对话超过 50 条或 256 KiB 上下文限制，请新建对话或减少上下文。".into());
-    }
-    if request.api_key.as_ref().is_some_and(|k| k.len() > 4096) {
-        return Err("API Key 长度无效。".into());
-    }
-    let url = endpoint(&request)?;
-    let body = match request.provider {
-        Provider::Ollama => {
-            json!({"model":request.model,"messages":request.messages,"stream":false,"options":{"num_predict":4096}})
-        }
-        Provider::Openai => {
-            json!({"model":request.model,"messages":request.messages,"stream":false,"max_tokens":4096})
-        }
-    };
-    let mut call = client(90)?.post(url).json(&body);
-    if let Some(key) = request.api_key.as_ref().filter(|s| !s.is_empty()) {
-        call = call.bearer_auth(key);
-    }
-    let response = call.send().await.map_err(|e| {
-        if e.is_timeout() {
-            "模型请求超时，请检查服务或缩小上下文。"
-        } else {
-            "无法连接模型服务，请检查地址、网络与服务状态。"
-        }
-    })?;
-    let bytes = response_bytes(response, 1024 * 1024).await?;
-    let value: Value =
-        serde_json::from_slice(&bytes).map_err(|_| "模型服务返回了无法解析的 JSON。")?;
-    let output = match request.provider {
-        Provider::Ollama => value["message"]["content"].as_str(),
-        Provider::Openai => value["choices"][0]["message"]["content"].as_str(),
-    };
-    output
-        .filter(|s| !s.trim().is_empty())
-        .map(String::from)
-        .ok_or_else(|| "模型没有返回文本回答，请检查模型是否支持对话。".into())
-}
-
-#[tauri::command]
 pub async fn research_fetch_arxiv(query: String) -> Result<String, String> {
     let query = query.trim();
     if query.is_empty() || query.chars().count() > 200 {
@@ -511,40 +385,6 @@ pub async fn research_fetch_arxiv(query: String) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn request(endpoint: &str, provider: Provider) -> AIRequest {
-        AIRequest {
-            endpoint: endpoint.into(),
-            provider,
-            model: "m".into(),
-            api_key: None,
-            messages: vec![],
-        }
-    }
-    #[test]
-    fn constructs_endpoints_and_rejects_credentials() {
-        assert_eq!(
-            endpoint(&request("http://127.0.0.1:11434", Provider::Ollama))
-                .unwrap()
-                .path(),
-            "/api/chat"
-        );
-        assert_eq!(
-            endpoint(&request("https://example.com/v1", Provider::Openai))
-                .unwrap()
-                .path(),
-            "/v1/chat/completions"
-        );
-        for bad in [
-            "file:///tmp/model",
-            "https://secret@example.com",
-            "https://example.com?key=x",
-        ] {
-            assert!(endpoint(&request(bad, Provider::Openai)).is_err());
-        }
-        let mut r = request("http://example.com", Provider::Openai);
-        r.api_key = Some("secret".into());
-        assert!(endpoint(&r).is_err());
-    }
     #[test]
     fn parses_git_spaces_and_rename_records() {
         let changes = parse_git(b" M chapter one.md\0R  new.md\0old.md\0?? draft.py\0").unwrap();
@@ -596,91 +436,5 @@ mod tests {
         assert!(bounded_git(config).unwrap().0.success());
         assert!(git_status(root).is_err());
         assert!(!root.join("invalid-ran.txt").exists());
-    }
-
-    #[test]
-    fn ai_http_adapters_send_real_requests_and_redact_remote_errors() {
-        use std::{
-            io::{Read, Write},
-            net::TcpListener,
-            thread,
-        };
-        fn server(status: &str, body: &str) -> (String, std::thread::JoinHandle<String>) {
-            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-            let address = format!("http://{}", listener.local_addr().unwrap());
-            let response = format!("HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
-            let handle = thread::spawn(move || {
-                let (mut stream, _) = listener.accept().unwrap();
-                stream
-                    .set_read_timeout(Some(Duration::from_secs(5)))
-                    .unwrap();
-                let mut bytes = Vec::new();
-                loop {
-                    let mut chunk = [0; 4096];
-                    let count = stream.read(&mut chunk).unwrap();
-                    if count == 0 {
-                        break;
-                    }
-                    bytes.extend_from_slice(&chunk[..count]);
-                    if let Some(end) = bytes.windows(4).position(|v| v == b"\r\n\r\n") {
-                        let headers = String::from_utf8_lossy(&bytes[..end]).to_lowercase();
-                        let length = headers
-                            .lines()
-                            .find_map(|line| line.strip_prefix("content-length:"))
-                            .unwrap()
-                            .trim()
-                            .parse::<usize>()
-                            .unwrap();
-                        if bytes.len() >= end + 4 + length {
-                            break;
-                        }
-                    }
-                }
-                stream.write_all(response.as_bytes()).unwrap();
-                String::from_utf8(bytes).unwrap()
-            });
-            (address, handle)
-        }
-        for (provider, body, expected_path) in [
-            (
-                Provider::Ollama,
-                r#"{"message":{"content":"local answer"}}"#,
-                "/api/chat",
-            ),
-            (
-                Provider::Openai,
-                r#"{"choices":[{"message":{"content":"local answer"}}]}"#,
-                "/v1/chat/completions",
-            ),
-        ] {
-            let (address, server) = server("200 OK", body);
-            let mut r = request(&address, provider);
-            r.messages.push(Message {
-                role: Role::User,
-                content: "test context".into(),
-            });
-            r.api_key = Some("test-only-token".into());
-            let answer = tauri::async_runtime::block_on(research_ask_ai(r)).unwrap();
-            let sent = server.join().unwrap();
-            assert_eq!(answer, "local answer");
-            assert!(sent.starts_with(&format!("POST {expected_path} HTTP/1.1")));
-            assert!(sent.contains("test context"));
-            assert!(sent
-                .to_lowercase()
-                .contains("authorization: bearer test-only-token"));
-        }
-        let (address, server) = server(
-            "401 Unauthorized",
-            r#"{"error":"never echo test-only-token"}"#,
-        );
-        let mut r = request(&address, Provider::Openai);
-        r.messages.push(Message {
-            role: Role::User,
-            content: "test".into(),
-        });
-        let error = tauri::async_runtime::block_on(research_ask_ai(r)).unwrap_err();
-        server.join().unwrap();
-        assert!(error.contains("401"));
-        assert!(!error.contains("test-only-token"));
     }
 }

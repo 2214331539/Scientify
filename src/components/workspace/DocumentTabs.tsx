@@ -13,6 +13,7 @@ export function DocumentTabs({
   onNew,
   label,
   newLabel,
+  onContextMenu,
 }: {
   tabs: { id: string; title: string }[];
   activeId: string | null;
@@ -22,6 +23,7 @@ export function DocumentTabs({
   onNew?: () => void;
   label?: string;
   newLabel?: string;
+  onContextMenu?: (id: string, position: { x: number; y: number }) => void;
 }) {
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const focusPending = useRef(false);
@@ -51,7 +53,24 @@ export function DocumentTabs({
                 else refs.current.delete(tab.id);
               }}
               onClick={() => onSelect(tab.id)}
+              onContextMenu={
+                onContextMenu
+                  ? (event) => {
+                      event.preventDefault();
+                      onContextMenu(tab.id, { x: event.clientX, y: event.clientY });
+                    }
+                  : undefined
+              }
               onKeyDown={(event) => {
+                if (
+                  onContextMenu &&
+                  (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))
+                ) {
+                  event.preventDefault();
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  onContextMenu(tab.id, { x: bounds.left, y: bounds.bottom });
+                  return;
+                }
                 let target: string | undefined;
                 if (event.key === 'ArrowRight') target = tabs[(index + 1) % tabs.length]?.id;
                 else if (event.key === 'ArrowLeft')

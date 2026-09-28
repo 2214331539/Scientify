@@ -43,6 +43,89 @@ fn invoke(
 }
 
 #[test]
+fn model_discovery_and_verification_pass_generated_acl_only_for_local_app_views() {
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![
+            ai::research_list_models,
+            ai::research_test_model,
+            ai::research_ask_ai,
+        ])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    let untrusted = tauri::WebviewWindowBuilder::new(&app, "browser-untrusted", Default::default())
+        .build()
+        .unwrap();
+    for label in ["main", "workspace"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        let (endpoint, server) = ai::tests::server(vec![
+            ("200 OK", r#"{"data":[{"id":"ipc-chat"}]}"#),
+            ("200 OK", r#"{"choices":[{"message":{"content":"OK"}}]}"#),
+            (
+                "200 OK",
+                r#"{"choices":[{"message":{"content":"chat answer"}}]}"#,
+            ),
+        ]);
+        let request = json!({"endpoint":endpoint,"apiKey":"ipc-test-only-key","provider":"openai","model":"ipc-chat","messages":[{"role":"user","content":"Chat via IPC"}]});
+        for command in [
+            "research_list_models",
+            "research_test_model",
+            "research_ask_ai",
+        ] {
+            for (view, source) in [(&untrusted, origin), (&window, "https://example.com")] {
+                let error = match invoke(view, command, json!({"request":request}), source) {
+                    Err(error) => error.to_string(),
+                    Ok(_) => panic!("external content must not have model API access"),
+                };
+                assert!(error.contains("not allowed"), "{command}: {error}");
+            }
+        }
+        let models: Value = invoke(
+            &window,
+            "research_list_models",
+            json!({"request":request}),
+            origin,
+        )
+        .expect("model discovery must pass the generated application ACL")
+        .deserialize()
+        .unwrap();
+        assert_eq!(models[0]["id"], "ipc-chat");
+        let verified: Value = invoke(
+            &window,
+            "research_test_model",
+            json!({"request":request}),
+            origin,
+        )
+        .expect("chat verification must pass the generated application ACL")
+        .deserialize()
+        .unwrap();
+        assert!(verified.is_null());
+        let answer: String = invoke(
+            &window,
+            "research_ask_ai",
+            json!({"request":request}),
+            origin,
+        )
+        .expect("chat must remain available after configuration")
+        .deserialize()
+        .unwrap();
+        assert_eq!(answer, "chat answer");
+        let sent = server.join().unwrap();
+        assert_eq!(sent.len(), 3);
+        assert!(sent[0].starts_with("GET /v1/models "));
+        assert!(sent[1].contains("Reply OK."));
+        assert!(!sent[1].contains("Chat via IPC"));
+        assert!(sent[2].contains("Chat via IPC"));
+    }
+}
+
+#[test]
 fn ipc_acl_and_local_file_pdf_workflow_are_wired() {
     let temporary = tempfile::tempdir().unwrap();
     let directory = temporary.path().join("workspace");

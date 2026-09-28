@@ -31,8 +31,9 @@ components/
     TreeView.tsx      层级资源、展开状态、键盘导航
     DocumentTabs.tsx 文献标签栏，受控选择/关闭/新增及键盘导航
   ai/
-    ContextPanel.tsx  当前项目、文件、选区及可用意图
-    AssistantComposer.tsx 输入、模型入口与明确发送
+    ContextPanel.tsx  按需在弹窗查看当前项目、文件、选区及可用意图
+    AssistantComposer.tsx 简洁输入、材料入口、模型胶囊与发送
+    ChatMessageView.tsx 统一 Markdown 消息；用户靠右、助手靠左，悬浮复制反馈
 ```
 
 ## 组合规则
@@ -49,7 +50,12 @@ components/
 - 文献区直接组合 Sidebar、TreeView、DocumentTabs 和呈现层，不渲染 WorkspaceFrame 标题栏。文献库/订阅只切换边栏；DocumentTabs 不管理资源数据，关闭标签不删除文献。
 - Badge 只表示 Draft、Running、Completed 等真实状态；数量、研究领域、文件类型使用普通文字。
 - AI Actions 只准备输入；不自动请求、不覆盖已有输入。原有上下文隔离和草稿保护继续由功能层管理。
+- AI 侧栏使用会话标题栏、消息区与底部 Composer。配置、历史和材料查看复用 Menu / Modal，不占用常驻聊天空间；模型胶囊列出同一服务最近获取的模型列表（旧配置兼容最近使用记录）。Enter 发送、Shift+Enter 换行，输入法组词阶段不触发发送。
+- 消息复用 ChatMessageView，使用相同正文样式与左右对齐，不显示角色、材料标签或转笔记按钮。复制按钮在正文下方预留的位置淡入，支持悬停、键盘焦点及触屏；复制原始 Markdown，不包含隐藏上下文。成功短暂显示勾号，失败保留重试提示。
+- 模型 Menu 使用 `anchor.placement='top'`，`y` 表示菜单底边，距胶囊上沿 6px；长列表在最多 360px、且不超过上方可用空间的菜单中滚动。其他菜单保留原定位，选中/关闭后恢复触发按钮焦点。
+- GlobalDock 共用一个固定 AI/笔记顶栏，以同一网格内的保留内容层淡化切换；退出层立即 inert。移动笔记到中央区不改变编辑器实例，项目切换继续隔离各自草稿。
 - 设置使用 `Modal` 的可选 `sidebar` / `heading` / `className` 槽位：固定分类栏与内容区，语言切换不重建 Modal。普通弹窗仍使用原接口；关闭保护共用。
+- 模型配置由 `features/assistant/ModelSettingsDialog` 复用全局设置的 `settings-dialog` / `settings-navigation` / `settings-scroll`。左侧只放「模型配置」功能页入口；右侧以 Dropdown 选择服务商，编辑连接、测试连接并从返回列表选择模型；底部保存会先验证聊天权限。服务商预设独立于协议，列表请求和验证结果在地址/密钥变化时失效，不能回写过期结果；底部操作区固定。聊天草稿和配置保存仍由 AssistantPanel 管理，不再使用旧的内嵌侧栏表单样式。
 
 ## 样式归属
 

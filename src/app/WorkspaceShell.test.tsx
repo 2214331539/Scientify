@@ -94,6 +94,8 @@ function fixture({ failSaves = false } = {}) {
     importPdf: vi.fn(async () => null),
     readPdf: vi.fn(async () => new Uint8Array()),
     gitStatus: vi.fn(async () => []),
+    listModels: async () => [],
+    testModel: async () => {},
     askAI: vi.fn(async () => `Isolated answer ${++answers}`),
     fetchArxiv: vi.fn(async () => ''),
   };
@@ -184,8 +186,10 @@ it('updates assistant context with the active material and isolates project conv
   await screen.findByRole('heading', { name: 'ToolHCL' });
   await user.click(screen.getByRole('button', { name: 'AI 助手' }));
   let assistant = within(screen.getByRole('region', { name: 'AI 助手内容' }));
+  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
   expect(assistant.getByText('ToolHCL')).toBeTruthy();
   expect(assistant.getByText(t('Overview'))).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
 
   await user.click(rail().getByRole('button', { name: t('Literature') }));
   await user.click(
@@ -195,8 +199,10 @@ it('updates assistant context with the active material and isolates project conv
       name: 'Tool retrieval paper',
     }),
   );
+  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
   expect(assistant.getByText(t('Literature'))).toBeTruthy();
   expect(assistant.getByText('Tool retrieval paper')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
   await user.type(assistant.getByRole('textbox', { name: '向 AI 提问' }), 'Question for project A');
   await user.click(assistant.getByRole('button', { name: '发送' }));
   await assistant.findByText('Isolated answer 1');
@@ -204,11 +210,13 @@ it('updates assistant context with the active material and isolates project conv
 
   await selectProject(user, 'Protein Study');
   assistant = within(screen.getByRole('region', { name: 'AI 助手内容' }));
+  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
   expect(assistant.getByText('Protein Study')).toBeTruthy();
   expect(assistant.getByText(t('Overview'))).toBeTruthy();
   expect(assistant.queryByText('Question for project A')).toBeNull();
   expect(assistant.queryByText('Isolated answer 1')).toBeNull();
   expect(assistant.queryByText('Tool retrieval paper')).toBeNull();
+  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
   await user.click(rail().getByRole('button', { name: t('Literature') }));
   await user.click(
     within(
@@ -217,7 +225,9 @@ it('updates assistant context with the active material and isolates project conv
       name: 'Protein representation paper',
     }),
   );
+  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
   expect(assistant.getByText('Protein representation paper')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
   await user.type(assistant.getByRole('textbox', { name: '向 AI 提问' }), 'Question for project B');
   await user.click(assistant.getByRole('button', { name: '发送' }));
   await assistant.findByText('Isolated answer 2');

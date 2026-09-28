@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-agent-domains"
+description = "Enables the agent_domains command without any pre-configured scope."
+commands.allow = ["agent_domains"]
+
+[[permission]]
+identifier = "deny-agent-domains"
+description = "Denies the agent_domains command without any pre-configured scope."
+commands.deny = ["agent_domains"]

@@ -25,6 +25,9 @@ export function BrowserPane({
   const canvas = useRef<HTMLDivElement>(null),
     callback = useRef(onChanged);
   const editing = useRef(false);
+  const currentTab = useRef(tab);
+  currentTab.current = tab;
+  const syncLayout = useRef<(() => void) | null>(null);
   callback.current = onChanged;
   useEffect(() => {
     let active = true;
@@ -37,6 +40,7 @@ export function BrowserPane({
     const sub = browserEvents('browser-changed', receive);
     void browserCommand<BrowserTab[]>({ op: 'snapshot' })
       .then((tabs) => {
+        if (!active) return;
         const t = tabs.find((t) => t.id === id);
         if (t) {
           receive(t);
@@ -73,7 +77,10 @@ export function BrowserPane({
           height: r.height,
           viewportWidth: window.innerWidth,
           viewportHeight: window.innerHeight,
-          visible: !overlay && !document.hidden && !tab?.error && !!tab?.url,
+          // Keep the native page visible when navigation reports an error. WebView2
+          // can still have a useful provider error/CAPTCHA page (for example
+          // Google's `sorry` page) that the user needs to inspect or retry.
+          visible: !overlay && !document.hidden && !!currentTab.current?.url,
         },
       }).catch((e) => {
         if (!disposed) setError(String(e));
@@ -83,6 +90,7 @@ export function BrowserPane({
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(sync);
     };
+    syncLayout.current = schedule;
     const observer = new ResizeObserver(schedule);
     observer.observe(host);
     const mutations = new MutationObserver(schedule);
@@ -97,6 +105,7 @@ export function BrowserPane({
     sync();
     return () => {
       disposed = true;
+      syncLayout.current = null;
       cancelAnimationFrame(frame);
       observer.disconnect();
       mutations.disconnect();
@@ -104,8 +113,12 @@ export function BrowserPane({
       document.removeEventListener('visibilitychange', schedule);
       void browserLayout({ op: 'hideAll' }).catch(() => {});
     };
-  }, [id, tab?.url, tab?.error]);
+  }, [id]);
+  useEffect(() => {
+    syncLayout.current?.();
+  }, [tab?.url, tab?.error, error]);
   async function action(action: string) {
+    setError('');
     try {
       await browserCommand({ op: 'action', id, action });
     } catch (e) {

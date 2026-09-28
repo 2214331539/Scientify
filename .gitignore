@@ -8,3 +8,5 @@ target/
 src-tauri/gen/
 *.tsbuildinfo
 public/pdfjs/
+src-tauri/binaries/
+src/generated/

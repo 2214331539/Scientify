@@ -20,11 +20,18 @@ export interface GitChange {
   path: string;
   status: string;
 }
-export interface AIRequest {
+export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini';
+export interface AIConnection {
   endpoint: string;
-  model: string;
   apiKey?: string;
-  provider: 'ollama' | 'openai';
+  provider: AIProtocol;
+}
+export interface AIModel {
+  id: string;
+  name: string;
+}
+export interface AIRequest extends AIConnection {
+  model: string;
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
 }
 export interface ResearchBackend {
@@ -40,6 +47,8 @@ export interface ResearchBackend {
   readPdf(assetId: string): Promise<Uint8Array>;
   gitStatus(projectId: string): Promise<GitChange[]>;
   askAI(request: AIRequest): Promise<string>;
+  listModels(request: AIConnection): Promise<AIModel[]>;
+  testModel(request: AIConnection & { model: string }): Promise<void>;
   fetchArxiv(query: string): Promise<string>;
 }
 
@@ -53,5 +62,7 @@ export const nativeResearch: ResearchBackend = {
     new Uint8Array(await invoke<ArrayBuffer>('research_read_pdf', { assetId })),
   gitStatus: (projectId) => invoke('research_git_status', { projectId }),
   askAI: (request) => invoke('research_ask_ai', { request }),
+  listModels: (request) => invoke('research_list_models', { request }),
+  testModel: (request) => invoke('research_test_model', { request }),
   fetchArxiv: (query) => invoke('research_fetch_arxiv', { query }),
 };

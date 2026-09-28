@@ -28,7 +28,16 @@ fn main() {
             "research_read_pdf",
             "research_git_status",
             "research_ask_ai",
+            "research_list_models",
+            "research_test_model",
             "research_fetch_arxiv",
+            "agent_status",
+            "agent_handshake",
+            "agent_domains",
+            "agent_start_thread",
+            "agent_start_turn",
+            "agent_events",
+            "agent_respond",
         ]),
     ))
     .expect("failed to build Tauri manifest");

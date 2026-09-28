@@ -1,6 +1,6 @@
 import { t } from '../../i18n';
-import { afterEach, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace, type Workspace } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
@@ -11,6 +11,14 @@ import { AssistantPanel } from './AssistantPanel';
 import { freezeContext, newConversation, requestMessages } from './model';
 
 afterEach(cleanup);
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
+});
 const context: WorkContext = {
   projectId: 'p1',
   workspace: 'literature',
@@ -38,7 +46,7 @@ it('captures a bounded context snapshot and keeps historical materials attached 
   expect(requestMessages(conversation)[1].content).not.toContain('被替换的材料');
 });
 
-it('uses the actual backend, preserves sent context after navigation and saves an answer as a scoped note', async () => {
+it('preserves sent context after navigation and copies either message without hidden context or creating notes', async () => {
   const data = emptyWorkspace();
   data.settings.model = { endpoint: 'http://localhost:11434', model: 'test-model' };
   data.sessions.push({
@@ -69,6 +77,7 @@ it('uses the actual backend, preserves sent context after navigation and saves a
   );
   const backend = { askAI } as unknown as ResearchBackend;
   const user = userEvent.setup();
+  const copy = vi.spyOn(navigator.clipboard, 'writeText');
   const view = render(
     <AssistantPanel store={store} backend={backend} scope="p1" context={context} />,
   );
@@ -87,14 +96,22 @@ it('uses the actual backend, preserves sent context after navigation and saves a
   expect(askAI.mock.calls[0]?.length).toBe(1);
   await act(async () => answer('这是基于原文的分析。'));
   await screen.findByText('这是基于原文的分析。');
-  await user.click(screen.getByRole('button', { name: '保存为笔记' }));
-  await waitFor(() => expect(store.getState().data?.records).toHaveLength(1));
-  const note = store.getState().data!.records[0];
-  expect(note.project).toBe('p1');
-  expect(note.body).toBe('这是基于原文的分析。');
-  expect(note.sources).toEqual([
-    expect.objectContaining({ title: '论文一', selection: '独立的原始结论' }),
-  ]);
+  const messages = within(screen.getByRole('log', { name: '对话消息' }));
+  expect(messages.queryByText('你')).toBeNull();
+  expect(messages.queryByText('AI 助手')).toBeNull();
+  expect(messages.queryByRole('button', { name: '保存为笔记' })).toBeNull();
+  for (const [role, text] of [
+    ['用户消息', '这个结论是什么？'],
+    ['助手消息', '这是基于原文的分析。'],
+  ]) {
+    await user.click(
+      within(messages.getByRole('article', { name: role })).getByRole('button', {
+        name: '复制消息',
+      }),
+    );
+    expect(copy).toHaveBeenLastCalledWith(text);
+  }
+  expect(store.getState().data?.records).toHaveLength(0);
   const stored = store.getState().data!.sessions.find((item) => item.project === 'p1');
   expect(stored?.context).toEqual([expect.objectContaining({ title: '论文一' })]);
 });
@@ -128,9 +145,9 @@ it('reports service failures explicitly and keeps the saved question available f
   expect(screen.queryByText('这是基于原文的分析。')).toBeNull();
 });
 
-async function actionHarness() {
+async function actionHarness(model = 'test-model') {
   const data = emptyWorkspace();
-  data.settings.model.model = 'test-model';
+  data.settings.model.model = model;
   const store = createWorkspaceStore({
     load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
     save: async (value) => value,
@@ -142,29 +159,38 @@ async function actionHarness() {
   });
   await store.getState().load();
   const askAI = vi.fn(async () => '回答');
-  const backend = { askAI } as unknown as ResearchBackend;
+  const listModels = vi.fn(async () =>
+    ['other-model', 'test-chat', 'test-model'].map((id) => ({ id, name: id })),
+  );
+  const testModel = vi.fn(async () => {});
+  const backend = { askAI, listModels, testModel } as unknown as ResearchBackend;
   const view = render(
     <AssistantPanel store={store} backend={backend} scope="p1" context={context} />,
   );
-  return { store, backend, askAI, view, user: userEvent.setup() };
+  return { store, backend, askAI, listModels, testModel, view, user: userEvent.setup() };
 }
 
 it('context actions prepare and focus a question without sending or overwriting a draft', async () => {
   const { store, askAI, user } = await actionHarness();
   const composer = screen.getByLabelText('向 AI 提问') as HTMLTextAreaElement;
+  expect(screen.queryByRole('button', { name: t('Explain') })).toBeNull();
+  await user.click(screen.getByRole('button', { name: '查看当前材料' }));
   await user.click(screen.getByRole('button', { name: t('Explain') }));
   expect(composer.value).toBe('请解释当前材料中的关键概念与结论。');
-  expect(document.activeElement).toBe(composer);
+  await waitFor(() => expect(document.activeElement).toBe(composer));
   expect(askAI).not.toHaveBeenCalled();
   expect(store.getState().data?.sessions).toHaveLength(0);
+  await user.click(screen.getByRole('button', { name: '查看当前材料' }));
   const summarize = screen.getByRole('button', {
     name: t('Summarize'),
   }) as HTMLButtonElement;
   expect(summarize.disabled).toBe(true);
   await user.click(summarize);
   expect(composer.value).toBe('请解释当前材料中的关键概念与结论。');
+  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
   await user.clear(composer);
   await user.type(composer, '请保留我的问题');
+  await user.click(screen.getByRole('button', { name: '查看当前材料' }));
   await user.click(screen.getByRole('button', { name: t('Explain') }));
   expect(composer.value).toBe('请保留我的问题');
   expect(askAI).not.toHaveBeenCalled();
@@ -172,6 +198,7 @@ it('context actions prepare and focus a question without sending or overwriting 
 
 it('context actions require attached material and match the current workspace', async () => {
   const { store, backend, askAI, view, user } = await actionHarness();
+  await user.click(screen.getByRole('button', { name: '查看当前材料' }));
   const disabled = (name: string) =>
     (screen.getByRole('button', { name }) as HTMLButtonElement).disabled;
   expect(disabled(t('Explain'))).toBe(false);
@@ -212,4 +239,165 @@ it('context actions require attached material and match the current workspace', 
   expect(disabled(t('Summarize'))).toBe(true);
   expect(disabled(t('Analyze experiment'))).toBe(true);
   expect(askAI).not.toHaveBeenCalled();
+});
+it('supports chat keyboard shortcuts without submitting Chinese IME composition', async () => {
+  const { askAI, user } = await actionHarness();
+  const input = screen.getByLabelText('向 AI 提问');
+  await user.type(input, '第一行');
+  await user.keyboard('{Shift>}{Enter}{/Shift}');
+  await user.type(input, '第二行');
+  expect((input as HTMLTextAreaElement).value).toBe('第一行\n第二行');
+  fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', isComposing: true });
+  fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 });
+  expect(askAI).not.toHaveBeenCalled();
+  await user.keyboard('{Enter}');
+  await waitFor(() => expect(askAI).toHaveBeenCalledTimes(1));
+  await screen.findByText('回答');
+});
+it('switches configured models from the capsule and cancels unsaved configuration without losing a chat draft', async () => {
+  const { store, user } = await actionHarness();
+  const input = screen.getByLabelText('向 AI 提问') as HTMLTextAreaElement;
+  await user.type(input, '保留草稿');
+  await user.click(screen.getByRole('button', { name: '选择模型' }));
+  await user.click(screen.getByRole('menuitem', { name: '配置其他模型' }));
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '选择模型' }), 'other-model');
+  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
+  expect(screen.getByRole('button', { name: '选择模型' }).textContent).toBe('test-model');
+  await user.click(screen.getByRole('button', { name: '选择模型' }));
+  await user.click(screen.getByRole('menuitem', { name: '配置其他模型' }));
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '选择模型' }), 'other-model');
+  await user.click(screen.getByRole('button', { name: '保存模型配置' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(input.value).toBe('保留草稿');
+  await user.click(screen.getByRole('button', { name: '选择模型' }));
+  await user.click(
+    within(screen.getByRole('menu', { name: '选择模型' })).getByRole('menuitemradio', {
+      name: 'test-model',
+    }),
+  );
+  await waitFor(() => expect(store.getState().data?.settings.model.model).toBe('test-model'));
+  expect(store.getState().data?.settings.model.recentModels).toEqual(['test-model', 'other-model']);
+  expect(input.value).toBe('保留草稿');
+});
+
+it('opens provider settings for an unconfigured chat and preserves the question through cancel and save', async () => {
+  const { store, user, askAI } = await actionHarness('');
+  const composer = screen.getByLabelText('向 AI 提问') as HTMLTextAreaElement;
+  await user.type(composer, '保留这个问题');
+  await user.keyboard('{Enter}');
+  const dialog = await screen.findByRole('dialog', { name: '模型设置' });
+  const settingsNavigation = within(screen.getByRole('navigation', { name: '模型设置导航' }));
+  expect(settingsNavigation.getAllByRole('button')).toHaveLength(1);
+  expect(settingsNavigation.getByRole('button', { name: '模型配置' })).toBeTruthy();
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(screen.queryByRole('textbox', { name: '模型名称' })).toBeNull();
+  await user.selectOptions(screen.getByRole('combobox', { name: '模型提供方' }), 'openai');
+  expect(screen.getByRole('dialog', { name: '模型设置' })).toBe(dialog);
+  expect((screen.getByLabelText('服务地址') as HTMLInputElement).value).toBe(
+    'https://api.openai.com/v1',
+  );
+  await user.type(screen.getByLabelText('API 密钥'), 'test-only-secret');
+  await user.click(screen.getByRole('button', { name: '取消' }));
+  expect(composer.value).toBe('保留这个问题');
+  expect(store.getState().data?.settings.model.model).toBe('');
+  expect(askAI).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '模型提供方' }), 'openai');
+  expect((screen.getByLabelText('API 密钥') as HTMLInputElement).value).toBe('');
+  await user.type(screen.getByLabelText('API 密钥'), 'test-only-secret');
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '选择模型' }), 'test-chat');
+  await user.click(screen.getByRole('button', { name: '保存模型配置' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(composer.value).toBe('保留这个问题');
+  expect(askAI).not.toHaveBeenCalled();
+  expect(store.getState().data?.settings.model.model).toBe('test-chat');
+  expect(JSON.stringify(store.getState().data)).not.toContain('test-only-secret');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await waitFor(() => expect(askAI).toHaveBeenCalledOnce());
+  expect(askAI.mock.calls[0]).toEqual([
+    expect.objectContaining({ provider: 'openai', model: 'test-chat', apiKey: 'test-only-secret' }),
+  ]);
+});
+
+it('requires a successful chat probe before saving a public model catalog, retaining the key and draft on failure', async () => {
+  const { user, store, testModel, listModels, askAI } = await actionHarness('');
+  testModel.mockRejectedValueOnce(new Error('测试密钥 denied-test-secret 无权访问'));
+  await user.type(screen.getByLabelText('向 AI 提问'), '不要发送我的研究材料');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '模型提供方' }), 'openrouter');
+  const save = () => screen.getByRole('button', { name: '保存模型配置' }) as HTMLButtonElement;
+  expect(save().disabled).toBe(true);
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  expect(listModels).not.toHaveBeenCalled();
+  await user.type(screen.getByLabelText('API 密钥'), 'denied-test-secret');
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  await user.click(save());
+  expect((await screen.findByRole('alert')).textContent).toContain('[已隐藏密钥]');
+  expect(screen.getByRole('alert').textContent).not.toContain('denied-test-secret');
+  expect(store.getState().data?.settings.model.model).toBe('');
+  expect((screen.getByLabelText('向 AI 提问') as HTMLTextAreaElement).value).toBe(
+    '不要发送我的研究材料',
+  );
+  expect(askAI).not.toHaveBeenCalled();
+  expect(testModel.mock.calls[0]).toEqual([
+    expect.objectContaining({ model: 'other-model', apiKey: 'denied-test-secret' }),
+  ]);
+  await user.click(save());
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(store.getState().data?.settings.model.modelCatalog).toEqual([
+    'other-model',
+    'test-chat',
+    'test-model',
+  ]);
+});
+
+it('ignores stale model discovery after changing providers and invalidates results when credentials change', async () => {
+  const { user, listModels } = await actionHarness('');
+  let finish!: (value: { id: string; name: string }[]) => void;
+  listModels.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await user.type(screen.getByLabelText('向 AI 提问'), '问题');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '模型提供方' }), 'deepseek');
+  await act(async () => finish([{ id: 'stale-model', name: 'Stale model' }]));
+  expect(screen.queryByRole('option', { name: 'Stale model' })).toBeNull();
+  expect((screen.getByLabelText('服务地址') as HTMLInputElement).value).toBe(
+    'https://api.deepseek.com/v1',
+  );
+  await user.type(screen.getByLabelText('API 密钥'), 'test-key');
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  const save = () => screen.getByRole('button', { name: '保存模型配置' }) as HTMLButtonElement;
+  expect(save().disabled).toBe(false);
+  await user.type(screen.getByLabelText('API 密钥'), 'changed');
+  expect(save().disabled).toBe(true);
+  expect(screen.queryByRole('option', { name: 'other-model' })).toBeNull();
+});
+
+it('supports custom provider protocols and returns no invented models for an empty catalog', async () => {
+  const { user, listModels } = await actionHarness('');
+  listModels.mockResolvedValueOnce([]);
+  await user.type(screen.getByLabelText('向 AI 提问'), '问题');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await user.selectOptions(screen.getByRole('combobox', { name: '模型提供方' }), 'custom');
+  await user.selectOptions(screen.getByRole('combobox', { name: '接口协议' }), 'gemini');
+  await user.type(screen.getByLabelText('服务地址'), 'https://example.com/gateway/v1beta');
+  await user.type(screen.getByLabelText('API 密钥'), 'test-only-key');
+  await user.click(screen.getByRole('button', { name: '测试连接' }));
+  expect((await screen.findByRole('alert')).textContent).toBe('服务未返回可选的聊天模型。');
+  expect(listModels).toHaveBeenCalledWith({
+    endpoint: 'https://example.com/gateway/v1beta',
+    apiKey: 'test-only-key',
+    provider: 'gemini',
+  });
+  expect((screen.getByRole('button', { name: '保存模型配置' }) as HTMLButtonElement).disabled).toBe(
+    true,
+  );
 });

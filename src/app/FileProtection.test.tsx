@@ -97,6 +97,8 @@ function setup() {
     importPdf: async () => null,
     readPdf: async () => new Uint8Array(),
     gitStatus: async () => [],
+    listModels: async () => [],
+    testModel: async () => {},
     askAI: async () => '',
     fetchArxiv: async () => '',
   };

@@ -43,7 +43,7 @@ pub fn start(app: tauri::AppHandle) {
             .values()
             .cloned()
             .collect::<Vec<_>>();
-        let report = serde_json::json!({"passed":result.is_ok(),"error":result.err(),"browser":browser,"checks":["isolated library mount","paired notes persisted","native HTTP navigation/title","native history","remote IPC denied","view hide/show/close"]});
+        let report = serde_json::json!({"passed":result.is_ok(),"probes":result.as_ref().ok(),"error":result.as_ref().err(),"browser":browser,"checks":["isolated library mount","paired notes persisted","native HTTP navigation/title","native history","remote IPC denied","HTTP 429 document retained and recovery","view hide/show/close"]});
         if let Some(path) = std::env::var_os("SCIENTIFY_NATIVE_REPORT") {
             let _ = fs::write(path, serde_json::to_vec_pretty(&report).unwrap());
         }
@@ -60,7 +60,7 @@ fn wait(mut condition: impl FnMut() -> bool) -> Result<(), String> {
     }
     Err("native smoke condition timed out".into())
 }
-fn run(app: &tauri::AppHandle) -> Result<(), String> {
+fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String> {
     let data =
         PathBuf::from(std::env::var_os("SCIENTIFY_DATA_DIR").ok_or("isolated data path required")?);
     if !data.is_absolute() || !data.to_string_lossy().contains(".test-artifacts") {
@@ -90,13 +90,20 @@ fn run(app: &tauri::AppHandle) -> Result<(), String> {
             let req = String::from_utf8_lossy(&request[..n]);
             let title = if req.contains("GET /two ") {
                 "Native two"
+            } else if req.contains("GET /limited ") {
+                "Verification page"
             } else {
                 "Native one"
             };
             let body = format!(
                 "<!doctype html><title>{title}</title><h1>{title}</h1><a href='/two'>Next</a>"
             );
-            let _=write!(stream,"HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n{}",body.len(),body);
+            let status = if title == "Verification page" {
+                "429 Too Many Requests"
+            } else {
+                "200 OK"
+            };
+            let _=write!(stream,"HTTP/1.1 {status}\r\nContent-Length: {}\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n{}",body.len(),body);
         }
     });
     let tab = crate::browser::create_tab(app, "main", "smoke-project")?;
@@ -136,8 +143,38 @@ fn run(app: &tauri::AppHandle) -> Result<(), String> {
     })?;
     view.eval("(async()=>{try{if(typeof window.require!=='undefined'){document.title='ISOLATION FAILED';return;}if(!window.__TAURI_INTERNALS__){document.title='IPC DENIED';return;}await window.__TAURI_INTERNALS__.invoke('workspace_load');document.title='ISOLATION FAILED';}catch{document.title='IPC DENIED';}})()").map_err(|e|e.to_string())?;
     wait(|| crate::browser::get(app, "main", &tab.id).is_ok_and(|t| t.title == "IPC DENIED"))?;
+    crate::browser::navigate(
+        app,
+        &tab,
+        tauri::Url::parse(&format!("http://{address}/limited")).unwrap(),
+    )?;
+    wait(|| {
+        crate::browser::get(app, "main", &tab.id).is_ok_and(|t| {
+            t.title == "Verification page"
+                && !t.loading
+                && t.error.as_ref().is_some_and(|e| e.contains("429"))
+        })
+    })?;
+    let mut probes = vec![crate::browser::get(app, "main", &tab.id)?];
+    crate::browser::navigate(
+        app,
+        &tab,
+        tauri::Url::parse(&format!("http://{address}/")).unwrap(),
+    )?;
+    wait(|| {
+        crate::browser::get(app, "main", &tab.id)
+            .is_ok_and(|t| t.title == "Native one" && !t.loading && t.error.is_none())
+    })?;
+    if let Ok(urls) = std::env::var("SCIENTIFY_BROWSER_PROBE_URLS") {
+        for address in urls.split(',') {
+            let url = crate::browser::resolve_address(address)?.ok_or("probe URL required")?;
+            crate::browser::navigate(app, &tab, url)?;
+            let _ = wait(|| crate::browser::get(app, "main", &tab.id).is_ok_and(|t| !t.loading));
+            probes.push(crate::browser::get(app, "main", &tab.id)?);
+        }
+    }
     view.hide().map_err(|e| e.to_string())?;
     view.show().map_err(|e| e.to_string())?;
     view.close().map_err(|e| e.to_string())?;
-    Ok(())
+    Ok(probes)
 }

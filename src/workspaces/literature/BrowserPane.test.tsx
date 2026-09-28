@@ -102,3 +102,25 @@ it('hides native content when a modal appears and when the view unmounts', async
   result.unmount();
   expect(bridge.layout).toHaveBeenLastCalledWith({ op: 'hideAll' });
 });
+it('keeps verification pages visible without hiding the view on HTTP errors or redirects', async () => {
+  bridge.command.mockResolvedValueOnce([{ ...initial, url: 'https://www.google.com' }]);
+  render(<BrowserPane id="web" onChanged={() => {}} />);
+  await waitFor(() =>
+    expect(bridge.layout).toHaveBeenLastCalledWith(
+      expect.objectContaining({ op: 'layout', bounds: expect.objectContaining({ visible: true }) }),
+    ),
+  );
+  bridge.layout.mockClear();
+  act(() =>
+    bridge.receive?.({ ...initial, url: 'https://www.google.com/sorry/index', error: 'HTTP 429' }),
+  );
+  expect(screen.getByRole('alert').textContent).toBe('HTTP 429');
+  await waitFor(() =>
+    expect(bridge.layout).toHaveBeenLastCalledWith(
+      expect.objectContaining({ op: 'layout', bounds: expect.objectContaining({ visible: true }) }),
+    ),
+  );
+  expect(bridge.layout).not.toHaveBeenCalledWith({ op: 'hideAll' });
+  act(() => bridge.receive?.({ ...initial, url: 'https://www.google.com' }));
+  expect(screen.queryByRole('alert')).toBeNull();
+});

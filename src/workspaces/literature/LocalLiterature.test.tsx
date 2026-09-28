@@ -9,6 +9,8 @@ import type { WorkspaceBackend } from '../../platform/desktop';
 import type { ResearchBackend } from '../../platform/research';
 import type { LibraryBackend, LibraryScan } from '../../platform/library';
 import { emptyLocalSession, openLocalPdf, closeLocalTab, paperNote } from './local-session';
+import { getFileRuntime } from '../../editor/sessions';
+import { noteFiles } from '../../platform/library';
 
 vi.mock('../../reader/PdfReader', () => ({
   default: ({ title }: { title: string }) => <div aria-label="Test PDF">{title}</div>,
@@ -98,6 +100,8 @@ async function fixture(requestedPaper?: string) {
     importPdf: async () => null,
     readPdf: async () => new Uint8Array(),
     gitStatus: async () => [],
+    listModels: async () => [],
+    testModel: async () => {},
     askAI: async () => '',
     fetchArxiv: async () => '',
   };
@@ -121,7 +125,7 @@ async function fixture(requestedPaper?: string) {
   return { Host, library, project, scan, user: userEvent.setup() };
 }
 it('closes PDF and note tabs only after a paired deletion succeeds', async () => {
-  const { Host, library, scan, user } = await fixture();
+  const { Host, library, scan, project, user } = await fixture();
   render(<Host />);
   await user.click(await screen.findByRole('treeitem', { name: 'a.pdf' }));
   await screen.findByRole('textbox', { name: '论文笔记正文' });
@@ -140,6 +144,31 @@ it('closes PDF and note tabs only after a paired deletion succeeds', async () =>
   await waitFor(() => expect(screen.queryByRole('textbox', { name: '论文笔记正文' })).toBeNull());
   expect(screen.queryByRole('tab', { name: 'a.pdf' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'b.pdf' })).toBeTruthy();
+  expect(library.command).toHaveBeenCalledWith(project.id, { op: 'delete', path: 'a.pdf' });
+  expect(getFileRuntime(noteFiles(library)).sessions.size).toBe(0);
+});
+it('offers deletion from PDF tabs in subscriptions and preserves notes on failure', async () => {
+  const { Host, library, user } = await fixture();
+  render(<Host />);
+  const entry = await screen.findByRole('treeitem', { name: 'a.pdf' });
+  await user.click(entry);
+  await screen.findByRole('textbox', { name: '论文笔记正文' });
+  await user.click(screen.getByRole('button', { name: '订阅' }));
+  vi.mocked(library.command).mockRejectedValueOnce(new Error('trash unavailable'));
+  const tab = within(screen.getByRole('tablist', { name: '文献标签页' })).getByRole('tab', {
+    name: 'a.pdf',
+  });
+  fireEvent.contextMenu(tab, { clientX: 100, clientY: 100 });
+  await user.click(await screen.findByRole('menuitem', { name: '移入回收站' }));
+  const dialog = await screen.findByRole('dialog', { name: '确认操作' });
+  expect(within(dialog).getByText('将“a.pdf”及对应笔记移入系统回收站？')).toBeTruthy();
+  await user.click(within(dialog).getByRole('button', { name: '确认' }));
+  await screen.findByText('trash unavailable');
+  expect(tab.isConnected).toBe(true);
+  expect((screen.getByRole('textbox', { name: '论文笔记正文' }) as HTMLTextAreaElement).value).toBe(
+    'existing note',
+  );
+  expect(getFileRuntime(noteFiles(library)).sessions.size).toBe(1);
 });
 it('opens a requested source only after its local binding is available', async () => {
   const { Host } = await fixture('b');

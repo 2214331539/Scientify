@@ -229,6 +229,73 @@ fn recycle_failure_rolls_back_whole_pair() {
         .is_err());
     assert!(root.join("a.pdf").exists());
     assert_eq!(fs::read_to_string(root.join("a.notes.md")).unwrap(), "note");
+    assert_eq!(lib.scan("project").unwrap().papers[0].id, p.id);
+    assert!(!root.join(".scientify/operation.json").exists());
+}
+#[test]
+fn deleting_pdf_retires_binding_and_notes_without_rebinding_a_duplicate() {
+    let (_t, lib, root) = fixture();
+    let p = lib.open("project", "a.pdf").unwrap();
+    lib.save_note("project", &p.id, "note", None, None).unwrap();
+    fs::copy(root.join("a.pdf"), root.join("duplicate.pdf")).unwrap();
+    fs::write(root.join("b.pdf"), b"%PDF-1.4 unrelated").unwrap();
+    let other = lib.open("project", "b.pdf").unwrap();
+    lib.save_note("project", &other.id, "keep", None, None)
+        .unwrap();
+    let destination = root.parent().unwrap().join("fake-trash");
+    lib.delete_with("project", "a.pdf", |package| {
+        fs::rename(package, &destination).map_err(|e| e.to_string())
+    })
+    .unwrap();
+    assert!(!root.join("a.pdf").exists());
+    assert!(!root.join("a.notes.md").exists());
+    assert_eq!(fs::read_to_string(destination.join("1")).unwrap(), "note");
+    let scan = lib.scan("project").unwrap();
+    assert!(scan.papers.iter().all(|paper| paper.id != p.id));
+    assert!(scan.warnings.is_empty());
+    assert_eq!(lib.note("project", &other.id).unwrap().content, "keep");
+    assert!(lib
+        .save_note("project", &p.id, "stale autosave", None, None)
+        .is_err());
+    assert!(!root.join("a.notes.md").exists());
+    assert_ne!(lib.open("project", "duplicate.pdf").unwrap().id, p.id);
+    assert!(!root.join(".scientify/operation.json").exists());
+}
+#[test]
+fn deleting_unopened_pdf_includes_its_existing_sidecar() {
+    let (_t, lib, root) = fixture();
+    fs::write(root.join("a.notes.md"), "unopened note").unwrap();
+    let destination = root.parent().unwrap().join("fake-trash");
+    lib.delete_with("project", "a.pdf", |package| {
+        fs::rename(package, &destination).map_err(|e| e.to_string())
+    })
+    .unwrap();
+    assert!(!root.join("a.pdf").exists());
+    assert!(!root.join("a.notes.md").exists());
+    assert_eq!(
+        fs::read_to_string(destination.join("1")).unwrap(),
+        "unopened note"
+    );
+    assert!(lib.scan("project").unwrap().papers.is_empty());
+}
+#[test]
+fn partial_recycle_failure_retains_recovery_manifest_and_blocks_writes() {
+    let (_t, lib, root) = fixture();
+    let p = lib.open("project", "a.pdf").unwrap();
+    lib.save_note("project", &p.id, "note", None, None).unwrap();
+    let destination = root.parent().unwrap().join("fake-trash");
+    let error = lib
+        .delete_with("project", "a.pdf", |package| {
+            fs::rename(package, &destination).map_err(|e| e.to_string())?;
+            Err("recycle reported failure after moving data".into())
+        })
+        .unwrap_err();
+    assert!(error.contains("回退未完成"));
+    assert!(root.join(".scientify/operation.json").exists());
+    assert!(destination.join("restore.json").exists());
+    assert!(lib
+        .save_note("project", &p.id, "stale", None, None)
+        .is_err());
 }
 #[test]
 fn unique_external_rename_recovers_identity_but_ambiguous_candidates_do_not() {
@@ -286,5 +353,5 @@ fn folder_transfer_updates_descendants_and_recycle_manifest() {
     .unwrap();
     assert!(!root.join("moved").exists());
     assert!(destination.join("0/a.notes.md").exists());
-    assert_eq!(lib.scan("project").unwrap().papers[0].id, p.id);
+    assert!(lib.scan("project").unwrap().papers.is_empty());
 }
