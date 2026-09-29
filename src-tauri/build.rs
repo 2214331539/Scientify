@@ -37,6 +37,7 @@ fn main() {
             "agent_start_thread",
             "agent_windows_sandbox_setup",
             "agent_start_turn",
+            "agent_interrupt",
             "agent_events",
             "agent_respond",
             "secret_save",

@@ -185,8 +185,35 @@ export class AgentSession {
       this.set({ approvals, phase, agentText: appendAgentText(this.snapshot.agentText, events) });
       return { completed };
     } catch (reason) {
-      this.set({ error: reason instanceof Error ? reason.message : String(reason) });
+      this.set({
+        phase: 'idle',
+        error: reason instanceof Error ? reason.message : String(reason),
+      });
       return { completed: false };
+    }
+  }
+
+  /** Stop the active turn without discarding the thread or its history. */
+  async interrupt(): Promise<boolean> {
+    const threadId = this.snapshot.threadId;
+    if (!threadId) return false;
+    if (!this.agent.interrupt) {
+      this.set({ phase: 'idle', approvals: [] });
+      return true;
+    }
+    try {
+      await this.agent.interrupt({
+        projectId: this.binding.projectId,
+        domain: this.binding.domain,
+        threadId,
+      });
+      this.set({ phase: 'idle', approvals: [] });
+      return true;
+    } catch (reason) {
+      this.set({
+        error: reason instanceof Error ? reason.message : String(reason),
+      });
+      return false;
     }
   }
 
@@ -196,7 +223,7 @@ export class AgentSession {
         projectId: this.binding.projectId,
         domain: this.binding.domain,
         id: approval.id,
-        result: approvalResult(decision),
+        result: approvalResult(decision, approval),
       });
       const approvals = resolveApproval(this.snapshot.approvals, approval.id);
       this.set({ approvals, phase: approvals.length ? 'waiting' : 'running' });

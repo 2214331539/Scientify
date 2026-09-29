@@ -473,8 +473,10 @@ export function AssistantPanel({
       // after the user completes that flow so it picks up the new sandbox.
       sessionRef.current = null;
       setAgentState({ ...initialAgentSession });
-      if (result.started) {
-        setError(t('Windows 沙箱配置已启动，请完成系统提示后再次发送任务。'));
+      if (result.status === 'setupCompleted') {
+        setError(t('Windows 沙箱配置已完成，请再次发送任务。'));
+      } else if (result.started) {
+        setError(t('Windows 沙箱配置未完成，请检查系统权限后重试。'));
       } else {
         setError(t('Windows 沙箱配置没有启动，请重试或查看系统权限设置。'));
       }
@@ -483,6 +485,13 @@ export function AssistantPanel({
     } finally {
       setSandboxBusy(false);
     }
+  }
+
+  async function interruptAgent() {
+    const session = sessionRef.current;
+    if (!session) return;
+    setError('');
+    if (!(await session.interrupt())) setError(session.state.error ?? t('中止任务失败，请重试。'));
   }
 
   return (
@@ -682,6 +691,14 @@ export function AssistantPanel({
         ))}
         {agentState.agentText ? (
           <ChatMessageView role="assistant" text={agentState.agentText} />
+        ) : null}
+        {agentPending && !agentState.approvals.length ? (
+          <div className="sf-ai-progress sf-ai-agent-progress" role="status">
+            <span>{t('Agent 正在工作…')}</span>
+            <Button variant="ghost" size="sm" type="button" onClick={() => void interruptAgent()}>
+              {t('中止任务')}
+            </Button>
+          </div>
         ) : null}
         {agentState.sandbox === 'readOnly' ? (
           <div className="sf-agent-sandbox-notice" role="status">

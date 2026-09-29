@@ -4,7 +4,7 @@ import {
   domainForWorkspace,
   engineSupports,
   isApprovalRequest,
-  type AgentEvent,
+  type ApprovalRequest,
 } from './agent';
 
 describe('agent domain binding', () => {
@@ -30,7 +30,7 @@ describe('agent domain binding', () => {
 
 describe('agent approval handling', () => {
   it('recognises the three requests that must be answered', () => {
-    const approval: AgentEvent = {
+    const approval: ApprovalRequest = {
       kind: 'request',
       id: 'a1',
       method: 'item/fileChange/requestApproval',
@@ -59,6 +59,24 @@ describe('agent approval handling', () => {
   it('keeps cancel distinct from decline', () => {
     // Cancelling aborts the turn; declining refuses one action.
     expect(approvalResult('cancel')).not.toEqual(approvalResult('decline'));
+  });
+
+  it('builds a permission profile response instead of a decision response', () => {
+    const approval: ApprovalRequest = {
+      kind: 'request',
+      id: 'p1',
+      method: 'item/permissions/requestApproval',
+      params: { permissions: { fileSystem: { read: ['D:/data'] } } },
+    };
+    expect(isApprovalRequest(approval)).toBe(true);
+    expect(approvalResult('grantPermissions', approval)).toEqual({
+      permissions: { fileSystem: { read: ['D:/data'] } },
+      scope: 'turn',
+    });
+    expect(approvalResult('denyPermissions', approval)).toEqual({
+      permissions: {},
+      scope: 'turn',
+    });
   });
 });
 

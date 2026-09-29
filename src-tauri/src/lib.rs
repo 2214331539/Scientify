@@ -253,6 +253,7 @@ pub fn run() {
             agent::agent_start_thread,
             agent::agent_windows_sandbox_setup,
             agent::agent_start_turn,
+            agent::agent_interrupt,
             agent::agent_events,
             agent::agent_respond,
             credentials::secret_save,

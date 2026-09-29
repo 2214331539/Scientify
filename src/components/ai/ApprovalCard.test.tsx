@@ -47,13 +47,18 @@ describe('ApprovalCard', () => {
     expect(screen.queryByRole('group', { name: '请求修改文件' })).not.toBeNull();
   });
 
-  it('refuses to offer decision buttons for a permission request', () => {
+  it('offers the permission profile response for a permission request', async () => {
+    const onDecide = vi.fn();
     render(
-      <ApprovalCard event={request('item/permissions/requestApproval', {})} onDecide={vi.fn()} />,
+      <ApprovalCard
+        event={request('item/permissions/requestApproval', {
+          reason: '需要读取数据目录',
+          permissions: { fileSystem: { read: ['D:/data'] } },
+        })}
+        onDecide={onDecide}
+      />,
     );
-    // A permission request answers with a permission profile, so a decision
-    // button would send the wrong shape.
-    expect(screen.queryByRole('button', { name: '允许' })).toBeNull();
-    expect(screen.queryByRole('note')).not.toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '允许本次权限' }));
+    expect(onDecide).toHaveBeenCalledWith('grantPermissions');
   });
 });

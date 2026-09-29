@@ -154,6 +154,42 @@ fn sandbox_type(response: &Value) -> String {
         .to_string()
 }
 
+/// Codex intentionally keeps Windows sandbox provisioning outside the normal
+/// thread start path because it may require UAC. A desktop host should still
+/// make the first-use experience automatic: check readiness, start the native
+/// setup once, and wait for its completion event before creating a writable
+/// thread. If the stronger elevated mode is unavailable, try Codex's
+/// unelevated fallback and let the thread report read-only when both fail.
+fn bootstrap_windows_sandbox(session: &mut EngineSession, root: &std::path::Path) {
+    let readiness = match session.call("windowsSandbox/readiness", Value::Null, HANDSHAKE_BUDGET) {
+        Ok(value) => value["status"].as_str().unwrap_or("unknown").to_string(),
+        Err(_) => return,
+    };
+    if readiness == "ready" {
+        return;
+    }
+
+    for mode in ["elevated", "unelevated"] {
+        let started = match session.call(
+            "windowsSandbox/setupStart",
+            json!({ "mode": mode, "cwd": root.to_string_lossy() }),
+            HANDSHAKE_BUDGET,
+        ) {
+            Ok(value) => value["started"].as_bool().unwrap_or(false),
+            Err(_) => false,
+        };
+        if !started {
+            continue;
+        }
+        match session
+            .wait_for_notification("windowsSandbox/setupCompleted", Duration::from_secs(180))
+        {
+            Ok(Some(params)) if params["success"].as_bool() == Some(true) => return,
+            Ok(_) | Err(_) => {}
+        }
+    }
+}
+
 /// Per-domain engine home. Two homes give each domain its own threads,
 /// configuration and credentials.
 fn codex_home(app: &tauri::AppHandle, domain: &str) -> Result<PathBuf, String> {
@@ -305,6 +341,12 @@ pub async fn agent_start_thread(
     }
     let session = &mut sessions.get_mut(&key).ok_or("会话创建失败。")?.session;
 
+    // Match the native Codex desktop's first-use behavior: provisioning is
+    // attempted automatically before the first writable thread. A failed
+    // setup does not make ordinary questions unusable; Codex can still return
+    // a read-only thread and the panel will explain the remaining limitation.
+    bootstrap_windows_sandbox(session, &root);
+
     let response = session.call(
         "thread/start",
         json!({
@@ -396,6 +438,16 @@ pub async fn agent_windows_sandbox_setup(
         HANDSHAKE_BUDGET,
     )?;
     let started = response["started"].as_bool().unwrap_or(false);
+    let completed = if started {
+        session
+            .wait_for_notification("windowsSandbox/setupCompleted", Duration::from_secs(180))
+            .ok()
+            .flatten()
+            .map(|params| params["success"].as_bool().unwrap_or(false))
+            .unwrap_or(false)
+    } else {
+        false
+    };
     if started {
         // The existing thread carries the old read-only policy. Force the next
         // panel request to create a fresh thread after setup completes.
@@ -404,7 +456,11 @@ pub async fn agent_windows_sandbox_setup(
         }
     }
     let status = if started {
-        "setupStarted"
+        if completed {
+            "setupCompleted"
+        } else {
+            "setupFailed"
+        }
     } else {
         "setupNotStarted"
     };
@@ -461,6 +517,33 @@ pub async fn agent_start_turn(
         status: response["turn"]["status"].clone(),
         events: session.take_pending(),
     })
+}
+
+/// Interrupt the active Codex turn and return its final status notification on
+/// the next poll. This is the host-side equivalent of the local Codex stop
+/// button and prevents a long command from trapping the composer in a busy
+/// state.
+#[tauri::command]
+pub async fn agent_interrupt(
+    view: tauri::Webview,
+    agent: State<'_, AgentState>,
+    project_id: String,
+    domain: String,
+    thread_id: String,
+) -> Result<(), String> {
+    super::library::trusted(&view)?;
+    let domain = valid_domain(&domain)?;
+    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
+    let session = sessions
+        .get_mut(&format!("{project_id}:{domain}"))
+        .map(|entry| &mut entry.session)
+        .ok_or("该作用域尚未启动会话。")?;
+    session.call(
+        "turn/interrupt",
+        json!({ "threadId": thread_id }),
+        HANDSHAKE_BUDGET,
+    )?;
+    Ok(())
 }
 
 /// Drain messages the engine raised since the last call.

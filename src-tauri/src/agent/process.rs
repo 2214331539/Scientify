@@ -287,7 +287,69 @@ impl EngineSession {
 
     /// Take the messages queued since the last drain.
     pub fn take_pending(&mut self) -> Vec<serde_json::Value> {
+        // `call` stops as soon as it sees its own response. Notifications and
+        // server requests emitted immediately afterwards can still be sitting
+        // in the reader channel, so draining only `pending` would lose the
+        // first turn events (and leave the UI waiting forever).
+        self.drain_available();
         std::mem::take(&mut self.pending)
+    }
+
+    /// Collect every line currently available without blocking. This is used
+    /// by polling callers and by the asynchronous setup handshake.
+    fn drain_available(&mut self) {
+        while let Ok(line) = self.lines.try_recv() {
+            if let Some(incoming) = super::protocol::classify(&line) {
+                let described = super::protocol::describe(&incoming);
+                if !described.is_null() {
+                    self.pending.push(described);
+                }
+            }
+        }
+    }
+
+    /// Wait for one named notification while preserving every other message.
+    /// Codex's Windows sandbox setup returns before it finishes and reports the
+    /// final result as `windowsSandbox/setupCompleted` on the same stream.
+    pub fn wait_for_notification(
+        &mut self,
+        method: &str,
+        budget: Duration,
+    ) -> Result<Option<serde_json::Value>, String> {
+        let deadline = std::time::Instant::now() + budget;
+        loop {
+            if let Some(index) = self
+                .pending
+                .iter()
+                .position(|event| event["kind"] == "notification" && event["method"] == method)
+            {
+                let event = self.pending.remove(index);
+                return Ok(Some(event["params"].clone()));
+            }
+            let Some(remaining) = deadline.checked_duration_since(std::time::Instant::now()) else {
+                return Ok(None);
+            };
+            let line = match self.lines.recv_timeout(remaining) {
+                Ok(line) => line,
+                Err(mpsc::RecvTimeoutError::Timeout) => return Ok(None),
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err(self.pipe_error(
+                        "Agent 引擎已退出",
+                        std::io::Error::new(std::io::ErrorKind::BrokenPipe, "管道已关闭"),
+                    ))
+                }
+            };
+            if let Some(incoming) = super::protocol::classify(&line) {
+                let described = super::protocol::describe(&incoming);
+                if described.is_null() {
+                    continue;
+                }
+                if described["kind"] == "notification" && described["method"] == method {
+                    return Ok(Some(described["params"].clone()));
+                }
+                self.pending.push(described);
+            }
+        }
     }
 
     /// Answer a server-initiated request, such as an approval prompt.
@@ -376,19 +438,10 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
             .expect("the stub answers immediately");
         assert_eq!(reply["ok"], true);
 
-        // A call returns as soon as its own response arrives, so anything the
-        // engine emitted in the same burst is read by the *next* call. This is
-        // exactly why the host polls `agent_events` while a turn runs.
-        assert!(
-            session.take_pending().is_empty(),
-            "events trailing a response are not visible yet"
-        );
-        session
-            .call("probe", serde_json::json!({}), Duration::from_secs(20))
-            .expect("the stub answers the probe");
-
-        // Now both trailing messages are visible, in the order the engine sent
-        // them, and neither was mistaken for the probe response.
+        // A call returns as soon as its own response arrives. The drain must
+        // still pick up notifications emitted in the same burst; otherwise the
+        // real turn would never surface its approval or completion event.
+        std::thread::sleep(Duration::from_millis(20));
         let events = session.take_pending();
         assert_eq!(events.len(), 2, "expected a notification and an approval");
         assert_eq!(events[0]["kind"], "notification");

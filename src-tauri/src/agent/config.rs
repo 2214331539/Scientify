@@ -87,6 +87,25 @@ pub fn prepare(connection: &Connection<'_>) -> Result<(), String> {
 /// Write `config.toml` for one domain.
 pub fn write(home: &Path, connection: &Connection<'_>) -> Result<(), String> {
     prepare(connection)?;
+    // The Windows sandbox setup writes its own `[windows]` settings into this
+    // file. Keep that section when refreshing the model connection; replacing
+    // the whole file used to erase the setup on the next app launch.
+    let previous = std::fs::read_to_string(home.join("config.toml")).unwrap_or_default();
+    let windows_section = previous
+        .lines()
+        .enumerate()
+        .find(|(_, line)| line.trim() == "[windows]")
+        .map(|(start, _)| {
+            let mut section = Vec::new();
+            for line in previous.lines().skip(start) {
+                if !section.is_empty() && line.trim_start().starts_with('[') {
+                    break;
+                }
+                section.push(line);
+            }
+            section.join("\n")
+        });
+
     let mut text = String::new();
     text.push_str("# 由 Scientify 生成，用于内置 Agent 引擎。请通过应用界面修改。\n");
     text.push_str(&format!("model = {}\n", quoted(connection.model.trim())));
@@ -104,6 +123,11 @@ pub fn write(home: &Path, connection: &Connection<'_>) -> Result<(), String> {
     }
     // A key supplied by the application is not a ChatGPT login.
     text.push_str("requires_openai_auth = false\n");
+    if let Some(section) = windows_section.filter(|section| !section.trim().is_empty()) {
+        text.push('\n');
+        text.push_str(&section);
+        text.push('\n');
+    }
 
     std::fs::create_dir_all(home).map_err(|e| format!("无法创建 Agent 数据目录：{e}"))?;
     let target = home.join("config.toml");
@@ -199,6 +223,28 @@ mod tests {
         write(&home, &without).unwrap();
         let text = std::fs::read_to_string(home.join("config.toml")).unwrap();
         assert!(!text.contains("env_key"));
+        std::fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn refreshing_connection_keeps_windows_sandbox_configuration() {
+        let home =
+            std::env::temp_dir().join(format!("scientify-config-windows-{}", std::process::id()));
+        std::fs::create_dir_all(&home).unwrap();
+        std::fs::write(
+            home.join("config.toml"),
+            "[windows]\nsandbox = \"elevated\"\nsandbox_private_desktop = false\n",
+        )
+        .unwrap();
+        write(
+            &home,
+            &connection("openai", "https://api.openai.com/v1", None),
+        )
+        .unwrap();
+        let text = std::fs::read_to_string(home.join("config.toml")).unwrap();
+        assert!(text.contains("[windows]"));
+        assert!(text.contains("sandbox = \"elevated\""));
+        assert!(text.contains("sandbox_private_desktop = false"));
         std::fs::remove_dir_all(&home).ok();
     }
 }

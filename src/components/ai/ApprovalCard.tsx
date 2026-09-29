@@ -65,9 +65,8 @@ export function ApprovalCard({
 }) {
   const { icon: Icon, title, detail, target } = describe(event);
   // `item/permissions/requestApproval` answers with a permission profile rather
-  // than a decision, so it cannot reuse the decision buttons. Saying so is
-  // better than offering a button that would send the wrong shape.
-  const unsupported = event.method === 'item/permissions/requestApproval';
+  // than a decision, so it uses the dedicated grant/deny response shape below.
+  const permissionRequest = event.method === 'item/permissions/requestApproval';
   return (
     <article className="sf-approval" role="group" aria-label={title} data-method={event.method}>
       <header className="sf-approval-head">
@@ -76,10 +75,36 @@ export function ApprovalCard({
       </header>
       {target ? <pre className="sf-approval-target">{target}</pre> : null}
       {detail ? <p className="sf-approval-detail">{detail}</p> : null}
-      {unsupported ? (
-        <p className="sf-approval-note" role="note">
-          {t('提升权限的回应格式与其他审批不同，当前版本尚未支持，请先中止该任务。')}
-        </p>
+      {permissionRequest ? (
+        <div className="sf-approval-actions">
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            disabled={busy}
+            onClick={() => onDecide('grantPermissions')}
+          >
+            {t('允许本次权限')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            disabled={busy}
+            onClick={() => onDecide('denyPermissions')}
+          >
+            {t('拒绝权限')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            disabled={busy}
+            onClick={() => onDecide('cancel')}
+          >
+            {t('中止任务')}
+          </Button>
+        </div>
       ) : (
         <div className="sf-approval-actions">
           <Button

@@ -188,7 +188,7 @@ type AgentBinding = {
 
 **Git 仓库检查。** 引擎默认要求工作目录是 Git 仓库。文献根通常不是。文献域必须显式关闭该检查，否则首个任务无法启动。
 
-**Windows 沙箱状态。** `workspace-write` 依赖 Codex 的 Windows 沙箱。若 `windowsSandbox/readiness` 返回 `notConfigured`，Codex 会把线程响应降级为 `readOnly`；Scientify 仍允许用户使用该线程进行阅读和分析，同时在消息流内显示沙箱状态和“配置 Windows 沙箱”入口。配置入口调用 Codex 的 `windowsSandbox/setupStart`，完成系统提示后重新建立线程即可获得写入能力。不能默默改用 `danger-full-access`，因为那会破坏按工作区隔离的安全承诺。
+**Windows 沙箱状态。** `workspace-write` 依赖 Codex 的 Windows 沙箱。第一次建立线程前，Scientify 调用 `windowsSandbox/readiness`；若返回 `notConfigured` 或 `updateRequired`，自动尝试 Codex 的 `elevated` setup，并等待 `windowsSandbox/setupCompleted`，失败后再尝试 `unelevated`。两种实现都失败时仍允许阅读和分析，但线程必须明确显示 `readOnly`，并保留内联重试入口。不能默默改用 `danger-full-access`，因为那会破坏按工作区隔离的安全承诺。官方说明见 [Windows sandbox](https://developers.openai.com/codex/windows.md)。
 
 **凭据重复。** 两个 home 需要各写一份服务商配置。由 Scientify 的模型设置作为唯一事实来源，写入时同步两个 home，用户只配置一次。
 
@@ -313,7 +313,7 @@ export interface AgentBackend {
 
 一轮任务的事件是高频流。Tauri 2 的 Channel 为该场景设计，优于现有的 `listen`。既有 `library-changed` 与 `scientify:browser` 属于低频粗粒度事件，继续使用 `@tauri-apps/api/event`。
 
-当前实现先提供 `agent_events(projectId, domain)` 轮询：一次调用在看到自己的响应后就返回，引擎在同一时间片追发的通知与审批要等下一次读取。轮次进行中必须轮询，否则审批会被挂起。Channel 推送是接续实现，用于替换轮询而不是改变语义。
+当前实现先提供 `agent_events(projectId, domain)` 轮询：`call()` 收到自己的响应后会立即返回，但 reader channel 中的通知和审批会由 `take_pending()` 非阻塞排空，稍晚到达的事件由面板定时轮询获取。轮次进行中必须轮询，否则审批会被挂起。Channel 推送是接续实现，用于替换轮询而不是改变语义。
 
 ```ts
 export const nativeAgent: AgentBackend = {

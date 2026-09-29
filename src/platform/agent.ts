@@ -103,9 +103,27 @@ export function isApprovalRequest(event: AgentEvent): event is ApprovalRequest {
  * the older "approved" wording, and `cancel` differs from `decline`: it aborts
  * rather than refusing this one action.
  */
-export type ApprovalDecision = 'accept' | 'acceptForSession' | 'decline' | 'cancel';
+export type ApprovalDecision =
+  | 'accept'
+  | 'acceptForSession'
+  | 'decline'
+  | 'cancel'
+  | 'grantPermissions'
+  | 'denyPermissions';
 
-export const approvalResult = (decision: ApprovalDecision) => ({ decision });
+export function approvalResult(
+  decision: ApprovalDecision,
+  approval?: ApprovalRequest,
+): Record<string, unknown> {
+  if (decision === 'grantPermissions' || decision === 'denyPermissions') {
+    const params = (approval?.params ?? {}) as { permissions?: unknown };
+    return {
+      permissions: decision === 'grantPermissions' ? (params.permissions ?? {}) : {},
+      scope: 'turn',
+    };
+  }
+  return { decision };
+}
 
 export interface AgentBackend {
   status(): Promise<EngineStatus>;
@@ -128,6 +146,7 @@ export interface AgentBackend {
     threadId: string;
     text: string;
   }): Promise<TurnHandle>;
+  interrupt?(request: { projectId: string; domain: AgentDomain; threadId: string }): Promise<void>;
   events(projectId: string, domain: AgentDomain): Promise<AgentEvent[]>;
   respond(request: {
     projectId: string;
@@ -167,6 +186,8 @@ export const nativeAgent: AgentBackend = {
     command('agent_windows_sandbox_setup', { projectId, domain, connection }),
   startTurn: ({ projectId, domain, threadId, text }) =>
     command('agent_start_turn', { projectId, domain, threadId, text }),
+  interrupt: ({ projectId, domain, threadId }) =>
+    command('agent_interrupt', { projectId, domain, threadId }),
   events: (projectId, domain) => command('agent_events', { projectId, domain }),
   respond: ({ projectId, domain, id, result }) =>
     command('agent_respond', { projectId, domain, id, result }),
