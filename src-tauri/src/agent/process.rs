@@ -8,6 +8,17 @@ use std::time::Duration;
 
 const TRIPLE: &str = "x86_64-pc-windows-msvc";
 
+/// The bundled engine communicates over stdio. On Windows it must not create
+/// a visible console window every time a user starts an Agent task.
+fn hide_console_window(command: &mut Command) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+}
+
 /// Optional host callback for low-latency notifications. The JSON-RPC queue
 /// remains the source of truth; the callback only wakes the UI so it can drain
 /// that queue immediately instead of waiting for a timer tick.
@@ -42,9 +53,10 @@ pub fn engine_path() -> Result<PathBuf, String> {
 
 /// Report the engine version without starting a session.
 pub fn version(engine: &Path) -> Result<String, String> {
-    let output = Command::new(engine)
-        .arg("--version")
-        .stdin(Stdio::null())
+    let mut command = Command::new(engine);
+    command.arg("--version").stdin(Stdio::null());
+    hide_console_window(&mut command);
+    let output = command
         .output()
         .map_err(|e| format!("无法启动 Agent 引擎：{e}"))?;
     if !output.status.success() {
@@ -70,14 +82,17 @@ pub fn exchange(
     id: u64,
     budget: Duration,
 ) -> Result<serde_json::Value, String> {
-    let mut child = Command::new(engine)
+    let mut command = Command::new(engine);
+    command
         .args(["app-server", "--listen", "stdio://"])
         // Analytics stay off: this is a local-first product and the engine
         // defaults to off for app-server, so we simply do not enable it.
         .env("CODEX_HOME", codex_home)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::null());
+    hide_console_window(&mut command);
+    let mut child = command
         .spawn()
         .map_err(|e| format!("无法启动 Agent 引擎：{e}"))?;
 
@@ -213,7 +228,8 @@ impl EngineSession {
         extra_env: &[(String, String)],
         event_sink: Option<EventSink>,
     ) -> Result<Self, String> {
-        let mut child = Command::new(program)
+        let mut command = Command::new(program);
+        command
             .args(args)
             // Analytics stay off: the engine defaults app-server analytics to
             // disabled and we simply never opt in.
@@ -224,7 +240,9 @@ impl EngineSession {
             .current_dir(root)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::piped());
+        hide_console_window(&mut command);
+        let mut child = command
             .spawn()
             .map_err(|e| format!("无法启动 Agent 引擎：{e}"))?;
         let stdin = child.stdin.take().ok_or("无法写入 Agent 引擎。")?;

@@ -3,7 +3,16 @@ import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip } from 'lucide-react';
+import {
+  Plus,
+  Settings2,
+  ChevronDown,
+  MoreHorizontal,
+  Paperclip,
+  LoaderCircle,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { ContextPanel } from '../../components/ai/ContextPanel';
 import { ApprovalCard } from '../../components/ai/ApprovalCard';
 import { AssistantComposer } from '../../components/ai/AssistantComposer';
@@ -11,9 +20,10 @@ import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import '../../components/ai/ai-panel.css';
 import { Button } from '../../components/primitives';
 import { ModelSettingsDialog } from './ModelSettingsDialog';
-import { Menu, type MenuAnchor } from '../../components/primitives/Menu';
+import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/Menu';
 import { Modal } from '../../components/Modal';
 import { Panel } from '../../components/layout/Panel';
+import { confirmAction, requestText } from '../../components/prompts';
 import type { WorkContext } from '../../domain/context';
 import {
   domainForWorkspace,
@@ -81,8 +91,13 @@ export function AssistantPanel({
     kind: 'sessions' | 'tools' | 'models';
     anchor: MenuAnchor;
   } | null>(null);
+  const [sessionAction, setSessionAction] = useState<{
+    id: string;
+    anchor: MenuAnchor;
+  } | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
+  const pollFrame = useRef<number | null>(null);
   const [apiKey, setApiKey] = useState('');
   // True while `apiKey` is the key read back from this machine rather than one
   // typed in this session, so the settings dialog can say so.
@@ -106,9 +121,9 @@ export function AssistantPanel({
   const [retry, setRetry] = useState<Conversation | null>(null);
   const busyRef = useRef(false);
   const [agentState, setAgentState] = useState(() => ({ ...initialAgentSession }));
-  const [agentMessages, setAgentMessages] = useState<
-    { role: 'user' | 'assistant'; text: string }[]
-  >([]);
+  const [agentMessages, setAgentMessages] = useState<ChatMessage[]>([]);
+  const persistedAgentSignature = useRef('');
+  const deletedConversationIds = useRef(new Set<string>());
   const [sandboxBusy, setSandboxBusy] = useState(false);
   const sessionRef = useRef<AgentSession | null>(null);
   const agentProject = context.projectId;
@@ -134,6 +149,45 @@ export function AssistantPanel({
   // workspace edit and cannot block project or conversation navigation.
   const agentPending = hasPendingWork(agentState);
   const dirty = !!prompt.trim() || unsaved;
+  const conversationActionsDisabled = dirty || !!retry || agentPending || busy || settingsBusy;
+
+  function agentConversationSnapshot(): Conversation | null {
+    const messages = [...conversation.messages, ...agentMessages];
+    if (agentState.agentText) {
+      messages.push({
+        id: `agent:${conversation.id}:${agentState.agentText.length}`,
+        role: 'assistant',
+        text: agentState.agentText,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    if (!messages.length) return null;
+    const firstUser = messages.find((message) => message.role === 'user');
+    return {
+      ...conversation,
+      title:
+        conversation.messages.length || conversation.title !== t('新对话')
+          ? conversation.title
+          : firstUser?.text.trim().slice(0, 36) || conversation.title,
+      messages,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  // Agent transcripts used to live only in component state, so they could
+  // neither appear in the history menu nor survive creating a new chat.
+  useEffect(() => {
+    if (agentState.phase !== 'idle' || (!agentMessages.length && !agentState.agentText)) return;
+    if (deletedConversationIds.current.has(conversation.id)) return;
+    const snapshot = agentConversationSnapshot();
+    if (!snapshot) return;
+    const signature = `${snapshot.id}:${snapshot.messages.length}:${snapshot.messages.at(-1)?.text ?? ''}`;
+    if (signature === persistedAgentSignature.current) return;
+    persistedAgentSignature.current = signature;
+    void persistConversation(store, snapshot);
+    if (!conversation.messages.length && conversation.title === t('新对话'))
+      setConversation((current) => ({ ...current, title: snapshot.title }));
+  }, [agentState.phase, agentState.agentText, agentMessages, conversation, store]);
 
   useEffect(() => {
     store.getState().setDirtySource(key, dirty);
@@ -201,9 +255,16 @@ export function AssistantPanel({
       return;
     let disposed = false;
     let unlisten: (() => void) | undefined;
+    const schedulePoll = () => {
+      if (pollFrame.current !== null) return;
+      pollFrame.current = requestAnimationFrame(() => {
+        pollFrame.current = null;
+        void sessionRef.current?.poll();
+      });
+    };
     void listen<{ projectId?: string; domain?: string }>('agent-event', (event) => {
       if (event.payload.projectId !== agentProject || event.payload.domain !== domain) return;
-      void sessionRef.current?.poll();
+      schedulePoll();
     })
       .then((stop) => {
         if (disposed) stop();
@@ -215,6 +276,10 @@ export function AssistantPanel({
       });
     return () => {
       disposed = true;
+      if (pollFrame.current !== null) {
+        cancelAnimationFrame(pollFrame.current);
+        pollFrame.current = null;
+      }
       unlisten?.();
     };
   }, [agentProject, domain, agentState.phase]);
@@ -267,7 +332,7 @@ export function AssistantPanel({
   useEffect(() => {
     const pane = messagesRef.current;
     if (pane && pinnedToBottom.current) pane.scrollTop = pane.scrollHeight;
-  }, [conversation.messages.length, busy, conversation.id]);
+  }, [conversation.messages.length, conversation.id, agentState.agentText, agentPending, busy]);
 
   async function saveSettings(value = settingsDraft, keyValue = draftKey) {
     if (settingsBusy || busyRef.current) return;
@@ -365,6 +430,53 @@ export function AssistantPanel({
     }
   }
 
+  async function renameConversation(id: string) {
+    if (conversationActionsDisabled) return;
+    const item = history.find((entry) => entry.id === id);
+    if (!item) return;
+    const value = await requestText(t('重命名对话'), String(item.title || t('历史对话')));
+    const title = value?.trim();
+    if (!title) return;
+    const updatedAt = new Date().toISOString();
+    const saved = await store.getState().update((workspace) => {
+      const target = workspace.sessions.find((entry) => entry.id === id && entry.project === scope);
+      if (target) {
+        target.title = title;
+        target.updatedAt = updatedAt;
+      }
+    });
+    if (!saved) {
+      setError(store.getState().error || t('对话重命名失败，请重试。'));
+      return;
+    }
+    if (conversation.id === id) setConversation((current) => ({ ...current, title, updatedAt }));
+  }
+
+  async function deleteConversation(id: string) {
+    if (conversationActionsDisabled) return;
+    const item = history.find((entry) => entry.id === id);
+    if (!item) return;
+    const name = String(item.title || t('历史对话'));
+    if (!(await confirmAction(t('删除对话“{name}”？', { name })))) return;
+    const saved = await store.getState().update((workspace) => {
+      workspace.sessions = workspace.sessions.filter(
+        (entry) => !(entry.id === id && entry.project === scope),
+      );
+    });
+    if (!saved) {
+      setError(store.getState().error || t('对话删除失败，请重试。'));
+      return;
+    }
+    deletedConversationIds.current.add(id);
+    if (conversation.id !== id) return;
+    setConversation(newConversation(scope));
+    sessionRef.current = null;
+    setAgentState({ ...initialAgentSession });
+    setAgentMessages([]);
+    persistedAgentSignature.current = '';
+    setError('');
+  }
+
   /** Run the prompt through the built-in engine instead of a single request. */
   async function sendToAgent() {
     const text = prompt.trim();
@@ -424,9 +536,22 @@ export function AssistantPanel({
       // task starts, then it is folded into this local transcript.
       setAgentMessages((messages) => [
         ...(agentState.agentText
-          ? [...messages, { role: 'assistant' as const, text: agentState.agentText }]
+          ? [
+              ...messages,
+              {
+                id: `agent:${conversation.id}:${agentState.agentText.length}`,
+                role: 'assistant' as const,
+                text: agentState.agentText,
+                createdAt: new Date().toISOString(),
+              },
+            ]
           : messages),
-        { role: 'user', text },
+        {
+          id: crypto.randomUUID(),
+          role: 'user',
+          text,
+          createdAt: new Date().toISOString(),
+        },
       ]);
       setPrompt('');
       if (!(await sessionRef.current.send(agentText))) {
@@ -481,10 +606,19 @@ export function AssistantPanel({
   }
 
   function selectConversation(id: string) {
-    if (dirty || retry) return;
+    if (dirty || retry || agentPending) return;
+    const snapshot = agentConversationSnapshot();
+    if (snapshot) void persistConversation(store, snapshot);
     pinnedToBottom.current = true;
     const existing = history.find((item) => item.id === id);
     setConversation(existing ? asConversation(existing) : newConversation(scope));
+    // Agent turns are kept in a local transcript while they stream. Clear it
+    // together with the selected conversation; otherwise a new chat appears
+    // to contain the previous Agent answer and the + button looks inert.
+    sessionRef.current = null;
+    setAgentState({ ...initialAgentSession });
+    setAgentMessages([]);
+    persistedAgentSignature.current = '';
     setError('');
   }
 
@@ -532,11 +666,17 @@ export function AssistantPanel({
           aria-label={t('当前 AI 对话')}
           aria-haspopup="menu"
           aria-expanded={menu?.kind === 'sessions'}
-          disabled={dirty || !!retry}
+          disabled={conversationActionsDisabled}
           title={conversation.title}
           onClick={(event) => openMenu('sessions', event.currentTarget)}
         >
-          <span>{conversation.messages.length ? conversation.title : t('新对话')}</span>
+          <span>
+            {conversation.messages.length ||
+            agentMessages.length ||
+            conversation.title !== t('新对话')
+              ? conversation.title
+              : t('新对话')}
+          </span>
           <ChevronDown size={12} />
         </Button>
         <Button
@@ -544,8 +684,14 @@ export function AssistantPanel({
           size="sm"
           iconOnly
           aria-label={t('新建 AI 对话')}
-          tooltip={dirty ? t('先发送或清空草稿，并保存对话') : t('新建 AI 对话')}
-          disabled={dirty || !!retry}
+          tooltip={
+            agentPending
+              ? t('请等待当前 Agent 任务完成')
+              : dirty
+                ? t('先发送或清空草稿，并保存对话')
+                : t('新建 AI 对话')
+          }
+          disabled={conversationActionsDisabled}
           onClick={() => selectConversation('')}
         >
           <Plus size={15} />
@@ -586,22 +732,41 @@ export function AssistantPanel({
               <Plus size={14} />
               {t('新建 AI 对话')}
             </Button>
-            {[...history]
-              .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
-              .map((item) => (
-                <Button
-                  key={item.id}
-                  role="menuitemradio"
-                  aria-checked={item.id === conversation.id}
-                  variant="ghost"
-                  onClick={() => {
-                    selectConversation(item.id);
-                    setMenu(null);
-                  }}
-                >
-                  {String(item.title || t('历史对话'))}
-                </Button>
-              ))}
+            <div className="sf-ai-session-list">
+              {[...history]
+                .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+                .map((item) => (
+                  <Button
+                    key={item.id}
+                    role="menuitemradio"
+                    aria-checked={item.id === conversation.id}
+                    variant="ghost"
+                    onContextMenu={(event) => {
+                      if (conversationActionsDisabled) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setMenu(null);
+                      setSessionAction({ id: item.id, anchor: menuAnchor(event) });
+                    }}
+                    onKeyDown={(event) => {
+                      if (
+                        (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) &&
+                        !conversationActionsDisabled
+                      ) {
+                        event.preventDefault();
+                        setMenu(null);
+                        setSessionAction({ id: item.id, anchor: menuAnchor(event) });
+                      }
+                    }}
+                    onClick={() => {
+                      selectConversation(item.id);
+                      setMenu(null);
+                    }}
+                  >
+                    {String(item.title || t('历史对话'))}
+                  </Button>
+                ))}
+            </div>
           </>
         ) : menu?.kind === 'models' ? (
           <>
@@ -644,6 +809,36 @@ export function AssistantPanel({
             </Button>
           </>
         )}
+      </Menu>
+      <Menu
+        anchor={sessionAction?.anchor ?? null}
+        label={t('对话操作')}
+        onClose={() => setSessionAction(null)}
+      >
+        {sessionAction ? (
+          <>
+            <Button
+              variant="ghost"
+              role="menuitem"
+              disabled={conversationActionsDisabled}
+              onClick={() => void renameConversation(sessionAction.id)}
+            >
+              <Pencil size={14} />
+              {t('重命名对话')}
+            </Button>
+            <div role="separator" className="sf-menu-separator" />
+            <Button
+              variant="ghost"
+              role="menuitem"
+              className="sf-menu-danger"
+              disabled={conversationActionsDisabled}
+              onClick={() => void deleteConversation(sessionAction.id)}
+            >
+              <Trash2 size={14} />
+              {t('删除对话')}
+            </Button>
+          </>
+        ) : null}
       </Menu>
       {showContext && (
         <Modal
@@ -715,15 +910,11 @@ export function AssistantPanel({
           <ChatMessageView key={`agent-message-${index}`} role={message.role} text={message.text} />
         ))}
         {agentState.agentText ? (
-          <ChatMessageView role="assistant" text={agentState.agentText} />
+          <ChatMessageView role="assistant" text={agentState.agentText} streaming={agentPending} />
         ) : null}
         {agentPending && !agentState.approvals.length ? (
           <div className="sf-ai-progress sf-ai-agent-progress" role="status">
-            <span className="sf-ai-progress-indicator" aria-hidden="true">
-              <span className="sf-ai-progress-dot" />
-              <span className="sf-ai-progress-dot" />
-              <span className="sf-ai-progress-dot" />
-            </span>
+            <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
             <span>{t('Agent 正在工作…')}</span>
           </div>
         ) : null}
@@ -754,8 +945,9 @@ export function AssistantPanel({
             onDecide={(decision) => void sessionRef.current?.decide(approval, decision)}
           />
         ))}
-        {busy ? (
+        {busy && !agentPending ? (
           <div className="sf-ai-progress" role="status">
+            <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
             {t('正在处理…')}
           </div>
         ) : null}

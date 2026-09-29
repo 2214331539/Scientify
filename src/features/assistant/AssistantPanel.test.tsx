@@ -282,6 +282,35 @@ it('switches configured models from the capsule and cancels unsaved configuratio
   expect(input.value).toBe('保留草稿');
 });
 
+it('renames and deletes a saved conversation from its context menu', async () => {
+  const { store, user, askAI } = await actionHarness();
+  const composer = screen.getByLabelText('向 AI 提问');
+  await user.type(composer, '需要重命名的问题');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await waitFor(() => expect(askAI).toHaveBeenCalledOnce());
+  await screen.findByText('回答');
+
+  await user.click(screen.getByRole('button', { name: '当前 AI 对话' }));
+  const historyItem = screen.getByRole('menuitemradio', { name: '需要重命名的问题' });
+  fireEvent.contextMenu(historyItem);
+  await user.click(screen.getByRole('menuitem', { name: '重命名对话' }));
+  const renameDialog = await screen.findByRole('dialog', { name: '重命名对话' });
+  const renameInput = within(renameDialog).getByRole('textbox');
+  await user.clear(renameInput);
+  await user.type(renameInput, '已重命名的会话');
+  await user.click(within(renameDialog).getByRole('button', { name: '确认' }));
+  await waitFor(() => expect(store.getState().data?.sessions[0]?.title).toBe('已重命名的会话'));
+
+  await user.click(screen.getByRole('button', { name: '当前 AI 对话' }));
+  const renamedItem = screen.getByRole('menuitemradio', { name: '已重命名的会话' });
+  fireEvent.contextMenu(renamedItem);
+  await user.click(screen.getByRole('menuitem', { name: '删除对话' }));
+  const confirmDialog = await screen.findByRole('dialog', { name: '确认操作' });
+  await user.click(within(confirmDialog).getByRole('button', { name: '确认' }));
+  await waitFor(() => expect(store.getState().data?.sessions).toHaveLength(0));
+  expect(screen.queryByText('需要重命名的问题')).toBeNull();
+});
+
 it('opens provider settings for an unconfigured chat and preserves the question through cancel and save', async () => {
   const { store, user, askAI } = await actionHarness('');
   const composer = screen.getByLabelText('向 AI 提问') as HTMLTextAreaElement;
@@ -449,6 +478,10 @@ it('routes a workspace prompt through the harness without a mode toggle', async 
   const setup = await screen.findByRole('button', { name: '配置 Windows 沙箱' });
   await userEvent.setup().click(setup);
   await waitFor(() => expect(setupSandbox).toHaveBeenCalledOnce());
+  await userEvent.setup().click(screen.getByRole('button', { name: '新建 AI 对话' }));
+  expect(screen.queryByText('读取当前项目')).toBeNull();
+  await userEvent.setup().click(screen.getByRole('button', { name: '当前 AI 对话' }));
+  expect(screen.getByRole('menuitemradio', { name: '读取当前项目' })).toBeTruthy();
 });
 
 async function keyHarness(load: () => Promise<string | null>) {

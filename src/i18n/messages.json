@@ -375,6 +375,30 @@
     "历史对话",
     "Conversation history"
   ],
+  "对话操作": [
+    "对话操作",
+    "Conversation actions"
+  ],
+  "重命名对话": [
+    "重命名对话",
+    "Rename conversation"
+  ],
+  "删除对话": [
+    "删除对话",
+    "Delete conversation"
+  ],
+  "删除对话“{name}”？": [
+    "删除对话“{name}”？",
+    "Delete conversation “{name}”?"
+  ],
+  "对话重命名失败，请重试。": [
+    "对话重命名失败，请重试。",
+    "Could not rename the conversation. Try again."
+  ],
+  "对话删除失败，请重试。": [
+    "对话删除失败，请重试。",
+    "Could not delete the conversation. Try again."
+  ],
   "新建 AI 对话": [
     "新建 AI 对话",
     "New AI conversation"

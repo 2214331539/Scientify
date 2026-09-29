@@ -95,8 +95,6 @@ export function buildResearchHome(
       detail: t('{count} 篇笔记', { count: notes.length }),
       target: { workspace: 'notes', noteId: notes[0].id },
     });
-  addFile('files', t('Files'));
-
   const activity: ActivityItem[] = [];
   const addActivity = (
     entity: Entity,

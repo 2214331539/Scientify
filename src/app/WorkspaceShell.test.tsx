@@ -131,7 +131,7 @@ async function selectProject(user: ReturnType<typeof userEvent.setup>, name: str
   );
 }
 
-it('provides six workspace destinations and starts with AI closed even when the legacy session had it open', async () => {
+it('provides the five primary workspace destinations and starts with AI closed', async () => {
   const { store, backend } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={backend} />);
@@ -141,7 +141,7 @@ it('provides six workspace destinations and starts with AI closed even when the 
     rail()
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label')),
-  ).toEqual([t('Overview'), t('Literature'), t('Notes'), t('Experiments'), t('Paper'), t('Files')]);
+  ).toEqual([t('Overview'), t('Literature'), t('Notes'), t('Experiments'), t('Paper')]);
   for (const button of rail().getAllByRole('button')) expect(button.textContent).toBe('');
   const topbar = within(
     screen.getByRole('button', { name: 'Scientify 项目管理' }).closest('header')!,
@@ -307,25 +307,10 @@ it('keeps one unsaved note editor through side, central, hidden and project tran
   ]);
 });
 
-it('opens the Files destination with all project file types and restores its resource sidebar without reading files', async () => {
+it('does not expose a standalone Files destination in the primary navigation', async () => {
   const { store, backend } = fixture();
-  const user = userEvent.setup();
   render(<App store={store} backend={backend} />);
   await screen.findByRole('heading', { name: 'ToolHCL' });
-  await user.click(rail().getByRole('button', { name: t('Files') }));
-  expect(await screen.findByRole('treeitem', { name: 'results.csv' })).toBeTruthy();
-  expect(screen.getByRole('treeitem', { name: 'draft.md' })).toBeTruthy();
-  expect(screen.getByRole('treeitem', { name: 'train.py' })).toBeTruthy();
-  expect(backend.listFiles).toHaveBeenCalledWith('p1');
-  expect(backend.readFile).not.toHaveBeenCalled();
-  expect(
-    rail()
-      .getByRole('button', { name: t('Files') })
-      .getAttribute('aria-current'),
-  ).toBe('page');
-  await user.click(screen.getByRole('button', { name: '收起资源' }));
-  expect(screen.queryByRole('complementary', { name: 'Files 资源' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: '展开资源' }));
-  expect(screen.getByRole('treeitem', { name: 'results.csv' })).toBeTruthy();
-  expect(backend.readFile).not.toHaveBeenCalled();
+  expect(rail().queryByRole('button', { name: t('Files') })).toBeNull();
+  expect(backend.listFiles).not.toHaveBeenCalled();
 });

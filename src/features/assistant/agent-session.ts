@@ -100,6 +100,7 @@ export function hasPendingWork(snapshot: AgentSessionSnapshot): boolean {
 export class AgentSession {
   private snapshot: AgentSessionSnapshot = { ...initialAgentSession };
   private polling = false;
+  private pollQueued = false;
 
   constructor(
     private readonly agent: AgentBackend,
@@ -174,7 +175,12 @@ export class AgentSession {
 
   /** Read queued messages and fold approvals into the snapshot. */
   async poll(): Promise<{ completed: boolean }> {
-    if (this.polling) return { completed: false };
+    if (this.polling) {
+      // A native event can arrive while the previous invoke is still draining
+      // the queue. Remember the wake-up so a burst cannot strand unread deltas.
+      this.pollQueued = true;
+      return { completed: false };
+    }
     this.polling = true;
     let approvals = this.snapshot.approvals;
     try {
@@ -203,6 +209,10 @@ export class AgentSession {
       return { completed: false };
     } finally {
       this.polling = false;
+      if (this.pollQueued) {
+        this.pollQueued = false;
+        void this.poll();
+      }
     }
   }
 

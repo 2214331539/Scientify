@@ -1,4 +1,4 @@
-import { BookOpen, Files, FlaskConical, House, NotebookPen, PenLine } from 'lucide-react';
+import { BookOpen, FlaskConical, House, NotebookPen, PenLine } from 'lucide-react';
 import type { WorkspaceId } from '../../domain/context';
 
 export const workspaceItems = [
@@ -7,7 +7,6 @@ export const workspaceItems = [
   { id: 'notes', label: 'Notes', icon: NotebookPen },
   { id: 'experiments', label: 'Experiments', icon: FlaskConical },
   { id: 'writing', label: 'Paper', icon: PenLine },
-  { id: 'files', label: 'Files', icon: Files },
 ] as const;
 
 export const secondaryViews: Record<WorkspaceId, { id: string; label: string }[]> = {

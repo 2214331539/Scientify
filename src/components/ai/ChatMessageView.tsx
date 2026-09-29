@@ -5,7 +5,16 @@ import { Markdown } from '../../features/notes/Markdown';
 import { Button } from '../primitives';
 
 /** Presentation only: copying never includes hidden research context or changes the conversation. */
-export function ChatMessageView({ role, text }: { role: 'user' | 'assistant'; text: string }) {
+export function ChatMessageView({
+  role,
+  text,
+  streaming = false,
+}: {
+  role: 'user' | 'assistant';
+  text: string;
+  /** Keep the hot path cheap while the engine is still sending deltas. */
+  streaming?: boolean;
+}) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const copying = useRef(false);
   const mounted = useRef(true);
@@ -42,7 +51,11 @@ export function ChatMessageView({ role, text }: { role: 'user' | 'assistant'; te
       aria-label={role === 'user' ? t('用户消息') : t('助手消息')}
       data-copy-state={copyState}
     >
-      <Markdown>{text}</Markdown>
+      {streaming ? (
+        <div className="sf-chat-streaming-text">{text}</div>
+      ) : (
+        <Markdown>{text}</Markdown>
+      )}
       <div className="sf-message-actions">
         <Button
           variant="ghost"

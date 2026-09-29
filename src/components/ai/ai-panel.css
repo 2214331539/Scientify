@@ -142,6 +142,10 @@
 .sf-chat-message .sf-markdown ul {
   list-style: disc;
 }
+.sf-chat-streaming-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .sf-chat-user {
   margin-inline-start: auto;
 }
@@ -182,6 +186,9 @@
   text-align: start;
 }
 .sf-ai-progress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 12px 0;
   color: var(--sf-text-muted);
   font-size: 12px;
@@ -353,4 +360,13 @@
 }
 .sf-ai-context-dialog .sf-ai-context-excerpt pre {
   max-height: 240px;
+}
+
+/* Keep the first ten recent conversations visible while preserving access to
+   older history through a predictable inner scroll area. */
+.sf-ai-session-list {
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
