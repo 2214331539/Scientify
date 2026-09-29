@@ -420,12 +420,14 @@ it('toggles local execution mode and reports the state to assistive tech', async
   render(
     <AssistantPanel store={store} backend={{} as ResearchBackend} scope="p1" context={context} />,
   );
-  const toggle = screen.getByRole('button', { name: '本地执行模式' });
+  const toggle = screen.getByRole('button', { name: '切换到 Agent 模式' });
   // The pressed attribute is what the unlayered panel rule keys off, so a
   // failure here means the click never reached the handler.
   expect(toggle.getAttribute('aria-pressed')).toBe('false');
   await userEvent.setup().click(toggle);
-  expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  expect(screen.getByRole('button', { name: '切换到对话模式' }).getAttribute('aria-pressed')).toBe(
+    'true',
+  );
   // The mode must also be legible without the button styling.
   expect(screen.getByText('描述一个要在这个目录里执行的任务')).toBeTruthy();
 });

@@ -2,7 +2,7 @@
 
 本文规定 Scientify 从「单轮对话」升级为「本地可执行代理」的集成方案：内置 Codex 作为执行引擎，保留用户自配模型服务商，按工作区隔离记忆与操作边界。
 
-文档状态：设计基线。引擎分发、协议层、域绑定与线程/轮次命令已落地并通过编译与单元测试；审批交互与前端入口仍为设计。第 0 节说明范围与当前事实，后续各节是实施依据。技术栈与长期架构以 [架构设计/技术方案.md](../架构设计/技术方案.md) 第 0 节为准；本文只补充 Agent 相关的边界与契约。逐项验收见 [Agent Harness 验收计划](Agent-Harness-验收计划.md)。
+文档状态：M1/M2 核心链路已落地并通过编译与单元测试。当前 AI 面板已经接入本地 Agent、内联审批、凭据回填和模式切换；真实服务商、域绑定和打包后的桌面端行为仍需人工验收。第 0 节说明范围与当前事实，后续各节是实施依据。技术栈与长期架构以 [架构设计/技术方案.md](../架构设计/技术方案.md) 第 0 节为准；本文只补充 Agent 相关的边界与契约。逐项验收见 [Agent Harness 验收计划](Agent-Harness-验收计划.md)。
 
 ## 0. 目标与边界
 
@@ -104,9 +104,7 @@ src-tauri/binaries/codex-x86_64-pc-windows-msvc.exe
 
 ### 3.2 启动方式
 
-由 Rust 侧启动，不在前端启动。理由是本仓库的分工约定是命令进 Rust、前端只经 `platform/` 调用，且协议解析需要持有 stdout 流。
-
-需要新增依赖 `tauri-plugin-shell`；当前 `src-tauri/Cargo.toml` 未包含它。
+由 Rust 侧启动，不在前端启动。理由是本仓库的分工约定是命令进 Rust、前端只经 `platform/` 调用，且协议解析需要持有 stdout 流。实际命令是 `codex app-server --listen stdio://`，长连接启动后先完成 `initialize` / `initialized` 握手，再发送 `thread/start`。漏掉 `app-server` 子命令会让 Codex 立即退出，前端随后只会看到 Windows 的“管道正在被关闭（os error 232）”。
 
 ### 3.3 许可证义务
 
@@ -189,6 +187,8 @@ type AgentBinding = {
 ### 4.5 必须处理的三个坑
 
 **Git 仓库检查。** 引擎默认要求工作目录是 Git 仓库。文献根通常不是。文献域必须显式关闭该检查，否则首个任务无法启动。
+
+**Windows 沙箱状态。** `workspace-write` 依赖 Codex 的 Windows 沙箱。若 `windowsSandbox/readiness` 返回 `notConfigured`，Codex 会把线程响应降级为 `readOnly`；Scientify 会拒绝把这个线程呈现为可编辑 Agent，并提示先完成沙箱配置。不能默默改用 `danger-full-access`，因为那会破坏按工作区隔离的安全承诺。
 
 **凭据重复。** 两个 home 需要各写一份服务商配置。由 Scientify 的模型设置作为唯一事实来源，写入时同步两个 home，用户只配置一次。
 

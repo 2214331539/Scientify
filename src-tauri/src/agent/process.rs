@@ -3,7 +3,7 @@
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
 const TRIPLE: &str = "x86_64-pc-windows-msvc";
@@ -66,7 +66,7 @@ pub fn exchange(
     budget: Duration,
 ) -> Result<serde_json::Value, String> {
     let mut child = Command::new(engine)
-        .args(["--listen", "stdio://"])
+        .args(["app-server", "--listen", "stdio://"])
         // Analytics stay off: this is a local-first product and the engine
         // defaults to off for app-server, so we simply do not enable it.
         .env("CODEX_HOME", codex_home)
@@ -131,6 +131,7 @@ pub struct EngineSession {
     child: Child,
     stdin: std::process::ChildStdin,
     lines: mpsc::Receiver<String>,
+    stderr: Arc<Mutex<String>>,
     next_id: u64,
     /// Messages that arrived while waiting for a response. Approvals land here;
     /// dropping them would hang the turn, so they wait for the UI.
@@ -144,13 +145,45 @@ impl EngineSession {
         root: &Path,
         extra_env: &[(String, String)],
     ) -> Result<Self, String> {
-        Self::start_with(
+        let mut session = Self::start_with(
             engine,
-            &["--listen", "stdio://"],
+            &["app-server", "--listen", "stdio://"],
             codex_home,
             root,
             extra_env,
-        )
+        )?;
+        session.initialize()?;
+        Ok(session)
+    }
+
+    /// The app-server must complete JSON-RPC initialization before it accepts
+    /// thread/turn requests. Older builds happened to fail later with a closed
+    /// pipe, which hid the real startup mistake from the user.
+    fn initialize(&mut self) -> Result<(), String> {
+        let response = self.call(
+            "initialize",
+            serde_json::json!({
+                "clientInfo": {
+                    "name": "scientify",
+                    "title": "Scientify",
+                    "version": env!("CARGO_PKG_VERSION")
+                },
+                "capabilities": {
+                    "experimentalApi": false,
+                    "requestAttestation": false
+                }
+            }),
+            Duration::from_secs(20),
+        )?;
+        if response.get("userAgent").is_none() {
+            return Err("Agent 引擎初始化响应缺少 userAgent。".into());
+        }
+        self.stdin
+            .write_all(
+                super::protocol::notification("initialized", serde_json::json!({})).as_bytes(),
+            )
+            .and_then(|()| self.stdin.flush())
+            .map_err(|e| format!("无法完成 Agent 引擎初始化：{e}"))
     }
 
     /// Spawn an engine-shaped process. Tests substitute a stub so the framing
@@ -174,11 +207,12 @@ impl EngineSession {
             .current_dir(root)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| format!("无法启动 Agent 引擎：{e}"))?;
         let stdin = child.stdin.take().ok_or("无法写入 Agent 引擎。")?;
         let stdout = child.stdout.take().ok_or("无法读取 Agent 引擎输出。")?;
+        let stderr = child.stderr.take().ok_or("无法读取 Agent 引擎错误输出。")?;
         let (sender, lines) = mpsc::channel();
         std::thread::spawn(move || {
             for line in BufReader::new(stdout).lines() {
@@ -193,10 +227,23 @@ impl EngineSession {
                 }
             }
         });
+        let stderr_text = Arc::new(Mutex::new(String::new()));
+        let stderr_copy = Arc::clone(&stderr_text);
+        std::thread::spawn(move || {
+            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                if let Ok(mut text) = stderr_copy.lock() {
+                    if text.len() < 8192 {
+                        text.push_str(&line);
+                        text.push('\n');
+                    }
+                }
+            }
+        });
         Ok(Self {
             child,
             stdin,
             lines,
+            stderr: stderr_text,
             next_id: 0,
             pending: Vec::new(),
         })
@@ -214,7 +261,7 @@ impl EngineSession {
         self.stdin
             .write_all(super::protocol::request(id, method, params).as_bytes())
             .and_then(|()| self.stdin.flush())
-            .map_err(|e| format!("无法向 Agent 引擎发送请求：{e}"))?;
+            .map_err(|e| self.pipe_error("无法向 Agent 引擎发送请求", e))?;
         let deadline = std::time::Instant::now() + budget;
         while let Some(remaining) = deadline.checked_duration_since(std::time::Instant::now()) {
             let Ok(line) = self.lines.recv_timeout(remaining) else {
@@ -252,7 +299,19 @@ impl EngineSession {
         self.stdin
             .write_all(super::protocol::response(id, result).as_bytes())
             .and_then(|()| self.stdin.flush())
-            .map_err(|e| format!("无法回应 Agent 引擎：{e}"))
+            .map_err(|e| self.pipe_error("无法回应 Agent 引擎", e))
+    }
+
+    fn pipe_error(&self, prefix: &str, error: std::io::Error) -> String {
+        let detail = self
+            .stderr
+            .lock()
+            .ok()
+            .map(|text| text.trim().to_string())
+            .filter(|text| !text.is_empty())
+            .map(|text| format!("\n引擎输出：{text}"))
+            .unwrap_or_default();
+        format!("{prefix}：{error}{detail}")
     }
 }
 

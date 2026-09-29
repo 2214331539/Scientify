@@ -22,6 +22,13 @@ pub fn request(id: u64, method: &str, params: Value) -> String {
     line
 }
 
+/// A JSON-RPC notification has no id and therefore does not produce a reply.
+pub fn notification(method: &str, params: Value) -> String {
+    let mut line = json!({ "jsonrpc": "2.0", "method": method, "params": params }).to_string();
+    line.push('\n');
+    line
+}
+
 /// `initialize` is the first exchange. Experimental methods stay off: the shell
 /// only needs the stable surface, and opting in would widen the contract.
 pub fn initialize(id: u64, name: &str, title: &str, version: &str) -> String {

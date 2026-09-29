@@ -90,6 +90,40 @@ describe('AgentSession', () => {
     expect(hasPendingWork(session.state)).toBe(true);
   });
 
+  it('returns to idle after the engine reports a completed turn', async () => {
+    const completed: AgentEvent = {
+      kind: 'notification',
+      method: 'turn/completed',
+      params: { turn: { status: 'completed' } },
+    };
+    const agent = backend({
+      startTurn: vi.fn(async () => ({ turnId: 'turn1', status: 'inProgress', events: [] })),
+      events: vi.fn(async () => [completed]),
+    });
+    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    await session.open();
+    await session.send('运行实验');
+    expect(session.state.phase).toBe('idle');
+    expect(hasPendingWork(session.state)).toBe(false);
+  });
+
+  it('keeps streamed Agent text for the panel to render', async () => {
+    const agent = backend({
+      events: vi.fn(async (): Promise<AgentEvent[]> => [
+        {
+          kind: 'notification',
+          method: 'item/agentMessage/delta',
+          params: { delta: '已读取文件。' },
+        },
+        { kind: 'notification', method: 'turn/completed', params: {} },
+      ]),
+    });
+    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    await session.open();
+    await session.send('读取文件');
+    expect(session.state.agentText).toBe('已读取文件。');
+  });
+
   it('answers with the decision the user picked and clears the row', async () => {
     const respond = vi.fn(async () => {});
     const agent = backend({ events: vi.fn(async () => [approval('a1')]), respond });

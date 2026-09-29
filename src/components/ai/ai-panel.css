@@ -235,6 +235,32 @@
   background: var(--sf-surface-sunken);
   font-size: 11px;
 }
+.sf-ai-composer .sf-ai-mode-control {
+  flex-shrink: 0;
+  height: 24px;
+  min-height: 24px;
+  gap: 5px;
+  padding-inline: 9px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 999px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background var(--sf-motion-feedback) var(--sf-ease-standard),
+    border-color var(--sf-motion-feedback) var(--sf-ease-standard),
+    color var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-ai-composer .sf-ai-mode-control[aria-pressed='true'] {
+  border-color: var(--sf-border-hover);
+  background: var(--sf-surface-selected);
+  color: var(--sf-text-primary);
+}
+.sf-ai-composer .sf-ai-mode-control:hover:not(:disabled) {
+  border-color: var(--sf-border-hover);
+  color: var(--sf-text-primary);
+}
 .sf-ai-composer-actions > .sf-button-icon {
   width: 24px;
   height: 24px;

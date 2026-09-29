@@ -163,6 +163,26 @@
     "发送",
     "Send"
   ],
+  "对话": [
+    "对话",
+    "Chat"
+  ],
+  "切换到 Agent 模式": [
+    "切换到 Agent 模式",
+    "Switch to Agent mode"
+  ],
+  "切换到对话模式": [
+    "切换到对话模式",
+    "Switch to chat mode"
+  ],
+  "Agent 模式：可读取和修改当前工作区文件": [
+    "Agent 模式：可读取和修改当前工作区文件",
+    "Agent mode: can read and modify files in the current workspace"
+  ],
+  "对话模式：只回答问题，不修改文件": [
+    "对话模式：只回答问题，不修改文件",
+    "Chat mode: answers questions without modifying files"
+  ],
   "发送 · Ctrl + Enter": [
     "发送 · Ctrl + Enter",
     "Send · Ctrl + Enter"

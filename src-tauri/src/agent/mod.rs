@@ -134,6 +134,10 @@ fn valid_key(value: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
 }
 
+fn sandbox_is_read_only(response: &Value) -> bool {
+    response["sandbox"]["type"].as_str() == Some("readOnly")
+}
+
 /// Per-domain engine home. Two homes give each domain its own threads,
 /// configuration and credentials.
 fn codex_home(app: &tauri::AppHandle, domain: &str) -> Result<PathBuf, String> {
@@ -292,6 +296,17 @@ pub async fn agent_start_thread(
         }),
         THREAD_BUDGET,
     )?;
+    // Codex reports `readOnly` when Windows sandbox support is not configured,
+    // even if the request asked for workspace-write. Continuing here would
+    // make the UI claim it can edit files while every write is silently
+    // unavailable. Fail explicitly and let the user fix the host setup.
+    if sandbox_is_read_only(&response) {
+        sessions.remove(&key);
+        return Err(
+            "当前 Windows 沙箱尚未配置，内置 Agent 只能只读，无法安全修改工作区文件。请先配置 Windows 沙箱后重试。"
+                .into(),
+        );
+    }
 
     let thread = response.get("thread").cloned().unwrap_or(Value::Null);
     Ok(ThreadHandle {
@@ -425,5 +440,15 @@ mod tests {
         assert!(!valid_key("../escape"));
         assert!(!valid_key("has space"));
         assert!(!valid_key(&"a".repeat(81)));
+    }
+
+    #[test]
+    fn a_read_only_sandbox_is_detected_instead_of_presented_as_editable() {
+        assert!(sandbox_is_read_only(&serde_json::json!({
+            "sandbox": { "type": "readOnly" }
+        })));
+        assert!(!sandbox_is_read_only(&serde_json::json!({
+            "sandbox": { "type": "workspaceWrite" }
+        })));
     }
 }

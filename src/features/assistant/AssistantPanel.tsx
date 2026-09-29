@@ -1,7 +1,7 @@
 import { t, translateError } from '../../i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip, Bot } from 'lucide-react';
+import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip } from 'lucide-react';
 import { ContextPanel } from '../../components/ai/ContextPanel';
 import { ApprovalCard } from '../../components/ai/ApprovalCard';
 import { AssistantComposer } from '../../components/ai/AssistantComposer';
@@ -106,6 +106,7 @@ export function AssistantPanel({
   // Agent mode is additive: with it off, the panel behaves exactly as before.
   const [agentMode, setAgentMode] = useState(false);
   const [agentState, setAgentState] = useState(() => ({ ...initialAgentSession }));
+  const [agentTasks, setAgentTasks] = useState<string[]>([]);
   const sessionRef = useRef<AgentSession | null>(null);
   const agentProject = context.projectId;
   const domain = domainForWorkspace(context.workspace);
@@ -115,6 +116,14 @@ export function AssistantPanel({
     provider: settings.provider,
     ...(apiKey ? { apiKey } : {}),
   };
+  const agentBindingKey = [
+    agentProject ?? '',
+    domain ?? '',
+    settings.provider,
+    settings.endpoint,
+    settings.model,
+    apiKey,
+  ].join('|');
   const history = (data?.sessions ?? []).filter((item) => item.project === scope);
   const key = `assistant:${scope}`;
   const dirty = !!prompt.trim() || unsaved || busy;
@@ -179,6 +188,14 @@ export function AssistantPanel({
     const timer = setInterval(() => void sessionRef.current?.poll(), 1200);
     return () => clearInterval(timer);
   }, [agentState.phase]);
+  // A session is scoped to one project, domain, and model connection. When any
+  // of those changes, discard the frontend handle so the next send opens the
+  // matching native session instead of accidentally continuing another root.
+  useEffect(() => {
+    sessionRef.current = null;
+    setAgentState({ ...initialAgentSession });
+    setAgentTasks([]);
+  }, [agentBindingKey]);
   useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
 
   const safeError = useCallback(
@@ -341,6 +358,25 @@ export function AssistantPanel({
     setBusy(true);
     setError('');
     try {
+      const snapshot = includeContext ? freezeContext(context) : undefined;
+      const agentText = snapshot
+        ? [
+            text,
+            '',
+            '<current-material>',
+            `对象：${snapshot.title}`,
+            snapshot.path ? `路径：${snapshot.path}` : '',
+            snapshot.page ? `页码：${snapshot.page}` : '',
+            snapshot.selection
+              ? `选区：\n${snapshot.selection}`
+              : snapshot.text
+                ? `正文摘录：\n${snapshot.text}`
+                : t('当前没有可提取的正文。'),
+            '</current-material>',
+          ]
+            .filter(Boolean)
+            .join('\n')
+        : text;
       if (!sessionRef.current || sessionRef.current.state.threadId === null) {
         sessionRef.current = new AgentSession(
           agent,
@@ -353,8 +389,9 @@ export function AssistantPanel({
           return;
         }
       }
+      setAgentTasks((tasks) => [...tasks, text]);
       setPrompt('');
-      if (!(await sessionRef.current.send(text))) {
+      if (!(await sessionRef.current.send(agentText))) {
         setError(sessionRef.current.state.error ?? '');
       }
     } finally {
@@ -437,21 +474,6 @@ export function AssistantPanel({
           onClick={() => selectConversation('')}
         >
           <Plus size={15} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          className="toggle"
-          aria-label={t('本地执行模式')}
-          aria-pressed={agentMode}
-          tooltip={
-            agentMode ? t('本地执行：内置引擎可以读写文件') : t('对话模式：只回答问题，不改动文件')
-          }
-          disabled={busy}
-          onClick={() => setAgentMode((value) => !value)}
-        >
-          <Bot size={15} />
         </Button>
         <Button
           variant="ghost"
@@ -605,7 +627,7 @@ export function AssistantPanel({
           pinnedToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 48;
         }}
       >
-        {!conversation.messages.length ? (
+        {!conversation.messages.length && !(agentMode && agentTasks.length) ? (
           <div className="sf-ai-conversation-empty">
             {agentMode ? t('描述一个要在这个目录里执行的任务') : t('从一个问题开始')}
           </div>
@@ -614,6 +636,13 @@ export function AssistantPanel({
             <ChatMessageView key={message.id} role={message.role} text={message.text} />
           ))
         )}
+        {agentMode &&
+          agentTasks.map((task, index) => (
+            <ChatMessageView key={`agent-task-${index}`} role="user" text={task} />
+          ))}
+        {agentMode && agentState.agentText ? (
+          <ChatMessageView role="assistant" text={agentState.agentText} />
+        ) : null}
         {agentState.approvals.map((approval) => (
           <ApprovalCard
             key={String(approval.id)}
@@ -679,6 +708,8 @@ export function AssistantPanel({
         onSend={() => void send()}
         contextLabel={context.path || context.title || t('当前材料')}
         modelMenuOpen={menu?.kind === 'models'}
+        agentMode={agentMode}
+        onAgentModeToggle={() => setAgentMode((value) => !value)}
         onContext={() => setShowContext(true)}
         onModelMenu={(event) => openMenu('models', event.currentTarget)}
       />
