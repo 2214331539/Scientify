@@ -178,10 +178,20 @@
   font-size: 11px;
 }
 .missing-paper {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   white-space: normal;
   font-size: 11px;
   justify-content: flex-start;
+}
+.missing-paper-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 4px;
+}
+.missing-paper-row > .sf-button[aria-label='移除失联记录'] {
+  flex: 0 0 auto;
 }
 .subscription-placeholder {
   padding: 16px 10px;

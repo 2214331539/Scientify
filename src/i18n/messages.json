@@ -2591,6 +2591,14 @@
     "重新关联",
     "Relink"
   ],
+  "移除失联记录": [
+    "移除失联记录",
+    "Remove missing record"
+  ],
+  "移除“{name}”的失联记录？不会删除仍存在的文件。": [
+    "移除“{name}”的失联记录？不会删除仍存在的文件。",
+    "Remove the missing record for “{name}”? Existing files will not be deleted."
+  ],
   "旧资料": [
     "旧资料",
     "Legacy library"

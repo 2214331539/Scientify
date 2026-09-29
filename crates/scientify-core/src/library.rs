@@ -176,6 +176,9 @@ pub struct Note {
 pub enum Operation {
     Scan,
     Detach,
+    PruneMissing {
+        id: String,
+    },
     Open {
         path: String,
     },
@@ -747,6 +750,20 @@ impl LocalLibrary {
         self.scan_inner(&root)?;
         let mut index = self.index(&root)?;
         match op {
+            Operation::PruneMissing { id } => {
+                let binding = index
+                    .papers
+                    .iter()
+                    .find(|p| p.id == id)
+                    .ok_or("失联文献记录不存在。")?;
+                let pdf = self.resolve(&root, &binding.path, false)?;
+                let note = self.resolve(&root, &binding.note_path, false)?;
+                if pdf.exists() || note.exists() {
+                    return Err("文献或关联笔记仍存在，请使用文件操作删除。".into());
+                }
+                index.papers.retain(|p| p.id != id);
+                self.write_index(&root, &index)?;
+            }
             Operation::Mkdir { path } => {
                 let file = self.resolve(&root, &path, false)?;
                 fs::create_dir(file).map_err(err)?;

@@ -115,6 +115,7 @@
 | F8 | 草稿冲突 | 目标文件存在未保存草稿时，任务开始前提示先处理 |
 | F9 | 脏标记隔离 | Agent 运行态不写入全局 dirty，不会阻塞其他项目的导航 |
 | F10 | 浏览器预览 | `pnpm dev` 下 agent 入口给出明确不可用提示，不静默失败 |
+| F11 | 清理失联绑定 | 文献目录中 PDF 与 `.notes.md` 均已不存在时，点击“移除失联记录” | 仅移除 `.scientify/library.json` 中的绑定，不删除其他文件；若笔记仍存在则拒绝清理 |
 
 F4 的当前状态：`components/ai/ApprovalCard` 已实现并接入 `AssistantPanel`，通过 4 项组件测试，覆盖命令、文件变更和权限画像三类请求（含「字段全缺」与「`cancel` 与 `decline` 不同」）。权限画像使用 Codex 要求的 `{ permissions, scope }` 响应格式。
 

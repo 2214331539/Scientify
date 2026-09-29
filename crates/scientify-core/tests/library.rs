@@ -323,6 +323,35 @@ fn a_missing_pdf_without_a_sidecar_does_not_raise_a_false_note_warning() {
     assert_eq!(scan.papers[0].id, paper.id);
     assert!(scan.warnings.is_empty());
 }
+
+#[test]
+fn prunes_a_missing_binding_without_touching_existing_files() {
+    let (_t, lib, root) = fixture();
+    let paper = lib.open("project", "a.pdf").unwrap();
+    fs::remove_file(root.join("a.pdf")).unwrap();
+    lib.operate(
+        "project",
+        Operation::PruneMissing {
+            id: paper.id.clone(),
+        },
+    )
+    .unwrap();
+    assert!(lib.scan("project").unwrap().papers.is_empty());
+    assert!(!root.join("a.notes.md").exists());
+}
+
+#[test]
+fn refuses_to_prune_when_the_sidecar_still_exists() {
+    let (_t, lib, root) = fixture();
+    let paper = lib.open("project", "a.pdf").unwrap();
+    lib.save_note("project", &paper.id, "keep", None, None)
+        .unwrap();
+    fs::remove_file(root.join("a.pdf")).unwrap();
+    assert!(lib
+        .operate("project", Operation::PruneMissing { id: paper.id })
+        .is_err());
+    assert!(root.join("a.notes.md").exists());
+}
 #[test]
 fn folder_transfer_updates_descendants_and_recycle_manifest() {
     let (_t, lib, root) = fixture();

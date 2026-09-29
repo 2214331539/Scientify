@@ -369,6 +369,8 @@ Agent 直接写磁盘，不经过应用的文件会话层。理由是引擎的�
 
 **文献配对。** `crates/scientify-core/src/library.rs` 中 PDF 与相邻 `.notes.md` 是配对管理的。外部改名已有指纹重关联，但「移动 PDF 未带走笔记」这一分支需要专门覆盖测试。
 
+绑定笔记不存放在 `.scientify` 目录：例如 `paper.pdf` 的笔记实际是文献根目录下的 `paper.notes.md`；`.scientify/library.json` 只保存相对路径、绑定 id 和 PDF 指纹，`.scientify/operation.json` 只在事务进行中保存恢复清单。PDF 与笔记都不存在时，左栏会显示可重新关联的失联记录；用户可以用“移除失联记录”清理索引，不会删除仍存在的文件。
+
 **受管元数据。** `.scientify/` 目录不应出现在 Agent 的可写范围内。
 
 ## 8. 审批与权限

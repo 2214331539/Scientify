@@ -24,6 +24,7 @@ import {
   NotebookPen,
   FileText,
   X,
+  Trash2,
 } from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
 import { TreeView, type TreeItem } from '../../components/workspace/TreeView';
@@ -727,16 +728,36 @@ export function LocalLiterature({
               {scan.papers
                 .filter((p) => !scan.entries.some((e) => e.path === p.path))
                 .map((p) => (
-                  <Button
-                    key={p.id}
-                    variant="ghost"
-                    className="missing-paper"
-                    onClick={() => {
-                      setDialog({ kind: 'relink', path: p.id, value: p.path });
-                    }}
-                  >
-                    {t('重新关联')} · {filename(p.path)}
-                  </Button>
+                  <div key={p.id} className="missing-paper-row">
+                    <Button
+                      variant="ghost"
+                      className="missing-paper"
+                      onClick={() => {
+                        setDialog({ kind: 'relink', path: p.id, value: p.path });
+                      }}
+                    >
+                      {t('重新关联')} · {filename(p.path)}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      iconOnly
+                      size="sm"
+                      aria-label={t('移除失联记录')}
+                      title={t('移除失联记录')}
+                      onClick={async () => {
+                        if (
+                          await confirmAction(
+                            t('移除“{name}”的失联记录？不会删除仍存在的文件。', {
+                              name: filename(p.path),
+                            }),
+                          )
+                        )
+                          void mutate({ op: 'pruneMissing', id: p.id });
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 ))}
             </div>
             <div className="library-bottom">

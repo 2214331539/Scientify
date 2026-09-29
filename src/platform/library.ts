@@ -20,6 +20,7 @@ export type LibraryScan = {
 };
 export type LibraryOperation =
   | { op: 'scan' | 'detach' }
+  | { op: 'pruneMissing'; id: string }
   | { op: 'mkdir' | 'open' | 'delete'; path: string }
   | { op: 'transfer'; path: string; destination: string; copy: boolean }
   | { op: 'relink'; id: string; path: string };
