@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-read-file"
+description = "Enables the library_read_file command without any pre-configured scope."
+commands.allow = ["library_read_file"]
+
+[[permission]]
+identifier = "deny-library-read-file"
+description = "Denies the library_read_file command without any pre-configured scope."
+commands.deny = ["library_read_file"]

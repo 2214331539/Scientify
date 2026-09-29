@@ -61,7 +61,7 @@
 | T11 | 审批不丢 | 桩引擎测试 | 通知与审批请求被保留、保持顺序、不被误认为响应 | 已验证 |
 | T12 | 审批往返 | 桩引擎测试 | 回应后引擎收到同一 id 的决策 | 已验证 |
 | T13 | 决策词正确 | `pnpm vitest run src/platform/agent.test.ts` | 使用 `accept` / `decline` / `cancel`；`cancel` 与 `decline` 区分 | 已验证 |
-| T14 | 事件需要轮询 | 桩引擎测试 | 响应后追发的事件会被 reader 排队并由 `agent_events` 排空；轮次期间持续轮询不会丢事件 | 已验证 |
+| T14 | 事件唤醒与恢复 | 桩引擎测试 | 响应后追发的事件进入 reader 队列并触发 `agent-event` 唤醒；`agent_events` 仍可排空恢复队列，事件不会丢失 | 已验证 |
 | T15a | 配置写入引擎 | `cargo test -p scientify --lib agent --locked` | `config.toml` 含 model / model_provider / base_url / wire_api；密钥不入文件 | 已验证 |
 | T15b | 协议支持范围 | 同上 | `openai` 与 `ollama` 接受；`anthropic` 与 `gemini` 在启动前被拒并给出原因 | 已验证 |
 | T15c | 面板接线 | 在 AI 面板配置服务商后建立线程 | 面板把当前设置传给 `agent_start_thread` | 已验证（静态） |
@@ -78,7 +78,7 @@
 
 关于 T11–T14 的说明：
 
-1. 引擎在同一个时间片里可能先回响应、再发通知与审批。宿主在看到自己的响应后就返回，所以**尾随事件要等下一次读取**。这不是缺陷，而是同步调用模型的必然结果；界面在轮次进行中必须轮询 `agent_events`，否则审批会一直悬着。
+1. 引擎在同一个时间片里可能先回响应、再发通知与审批。宿主在看到自己的响应后就返回，因此尾随事件由 reader 保存在 session 队列，并通过 `agent-event` 唤醒前端；`agent_events` 仍作为恢复接口。桌面端不依赖 SSE，浏览器预览则使用低频恢复轮询。
 2. 审批请求必须被回答，否则轮次阻塞。`EngineSession` 因此把非响应的消息排队而不是丢弃。
 3. 决策词属于传输层，由 `platform/agent.ts` 组装，Rust 侧只做透传，`RequestId` 原样回显（它可以是字符串）。
 4. T11–T14 用桩引擎验证客户端侧的框架正确性，**不证明真实引擎会在预期时机发出审批**。后者依赖 T6/T7，需要配置模型服务商。
@@ -111,16 +111,16 @@
 | F4 | 审批卡片 | 命令执行、文件变更、权限提升三类请求都有内联确认，可允许或拒绝 |
 | F5 | 工具调用展示 | 读文件、执行命令等步骤在消息流中可见，含结果状态 |
 | F6 | 文件变更可见 | 任务结束后可查看被改动的文件并可打开差异 |
-| F7 | 关闭保护 | 任务进行中关闭窗口或切换项目会被拦截并给出说明 |
+| F7 | 导航不中断 | 任务进行中仍可点击页面、切换项目和切换 Scientify 对话；后台 session 继续运行并只更新所属面板 |
 | F8 | 草稿冲突 | 目标文件存在未保存草稿时，任务开始前提示先处理 |
-| F9 | 脏标记隔离 | 不同项目的任务状态互不覆盖 |
+| F9 | 脏标记隔离 | Agent 运行态不写入全局 dirty，不会阻塞其他项目的导航 |
 | F10 | 浏览器预览 | `pnpm dev` 下 agent 入口给出明确不可用提示，不静默失败 |
 
 F4 的当前状态：`components/ai/ApprovalCard` 已实现并接入 `AssistantPanel`，通过 4 项组件测试，覆盖命令、文件变更和权限画像三类请求（含「字段全缺」与「`cancel` 与 `decline` 不同」）。权限画像使用 Codex 要求的 `{ permissions, scope }` 响应格式。
 
-F4 与 F7 已在 `features/assistant/agent-session` 实现并通过测试：线程开启、轮次发送、尾随审批的抓取、去重（同一 id 不重复显示）、数字与字符串 id 的匹配、决策回传与清行、完成事件回到空闲、失败时不假装线程存在。`hasPendingWork()` 即 F7 所需的判定。
+F4 与 F7 已在 `features/assistant/agent-session` 实现并通过测试：线程开启、轮次发送、尾随审批的抓取、去重（同一 id 不重复显示）、数字与字符串 id 的匹配、决策回传与清行、完成事件回到空闲、失败时不假装线程存在。中止请求同时携带 `threadId` 与 `turnId`；Agent 运行态不再写入全局 dirty。
 
-两者已接入 `AssistantPanel`：输入框不要求切换「对话 / Agent」，桌面端有项目根且服务商协议受支持时自动走 harness；轮询 `agent_events`、把 `agentState.approvals` 渲染为内联 `ApprovalCard` 并回传决策；引擎返回的 Agent 文本增量会显示在消息流中；有轮次进行或审批挂起时以 `agent:<scope>` 计入脏标记，从而进入关闭保护；任务进行中可调用 `turn/interrupt` 中止。当前仍缺少真实服务商下的端到端面板验收。
+两者已接入 `AssistantPanel`：输入框不要求切换「对话 / Agent」，桌面端有项目根且服务商协议受支持时自动走 harness；`agent-event` 唤醒后调用 `agent_events`，将 `agentState.approvals` 渲染为内联 `ApprovalCard` 并回传决策；引擎返回的 Agent 文本增量会即时显示在消息流中；任务进行中可调用携带 `turnId` 的 `turn/interrupt` 中止。当前仍缺少真实服务商下的端到端面板验收。
 
 ### 2.7 会话与持久化（M3）
 

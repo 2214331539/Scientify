@@ -7,6 +7,7 @@ fn main() {
             "library_command",
             "library_open",
             "library_pdf",
+            "library_read_file",
             "library_note",
             "library_external",
             "library_import",

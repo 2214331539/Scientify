@@ -24,11 +24,13 @@ export type LibraryOperation =
   | { op: 'transfer'; path: string; destination: string; copy: boolean }
   | { op: 'relink'; id: string; path: string };
 export type LibraryNote = { content: string; revision: string | null };
+export type LibraryFile = { path: string; content: string; version: string };
 export interface LibraryBackend {
   choose(projectId: string): Promise<LibraryScan | null>;
   command(projectId: string, operation: LibraryOperation): Promise<LibraryScan>;
   open(projectId: string, path: string): Promise<LibraryPaper>;
   pdf(projectId: string, id: string): Promise<Uint8Array>;
+  readFile?(projectId: string, path: string): Promise<LibraryFile>;
   note(projectId: string, id: string): Promise<LibraryNote>;
   saveNote(
     projectId: string,
@@ -52,6 +54,7 @@ export const nativeLibrary: LibraryBackend = {
   open: (projectId, path) => localCommand('library_open', { projectId, path }),
   pdf: async (projectId, id) =>
     new Uint8Array(await localCommand<ArrayBuffer>('library_pdf', { projectId, id })),
+  readFile: (projectId, path) => localCommand('library_read_file', { projectId, path }),
   note: (projectId, id) =>
     localCommand('library_note', { projectId, id, content: null, revision: null, copy: null }),
   saveNote: (projectId, id, content, revision, copy) =>

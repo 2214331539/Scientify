@@ -147,6 +147,19 @@ pub async fn library_pdf(
     .map_err(|e| e.to_string())?
 }
 #[tauri::command]
+pub async fn library_read_file(
+    app: tauri::AppHandle,
+    view: tauri::Webview,
+    project_id: String,
+    path: String,
+) -> Result<scientify_core::research::FileContent, String> {
+    trusted(&view)?;
+    let service = app.state::<LibraryState>().service.clone();
+    tauri::async_runtime::spawn_blocking(move || service.read_file(&project_id, &path))
+        .await
+        .map_err(|e| e.to_string())?
+}
+#[tauri::command]
 pub async fn library_note(
     app: tauri::AppHandle,
     view: tauri::Webview,

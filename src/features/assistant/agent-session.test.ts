@@ -124,6 +124,23 @@ describe('AgentSession', () => {
     expect(session.state.agentText).toBe('已读取文件。');
   });
 
+  it('passes the active turn id when interrupting and clears it', async () => {
+    const interrupt = vi.fn(async () => {});
+    const agent = backend({ interrupt });
+    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    await session.open();
+    await session.send('执行一个长任务');
+    expect(session.state.turnId).toBe('turn1');
+    expect(await session.interrupt()).toBe(true);
+    expect(interrupt).toHaveBeenCalledWith({
+      projectId: 'p1',
+      domain: 'code',
+      threadId: 't1',
+      turnId: 'turn1',
+    });
+    expect(session.state.turnId).toBeNull();
+  });
+
   it('answers with the decision the user picked and clears the row', async () => {
     const respond = vi.fn(async () => {});
     const agent = backend({ events: vi.fn(async () => [approval('a1')]), respond });

@@ -45,6 +45,7 @@
     "allow-library-command",
     "allow-library-open",
     "allow-library-pdf",
+    "allow-library-read-file",
     "allow-library-note",
     "allow-library-external",
     "allow-library-import",

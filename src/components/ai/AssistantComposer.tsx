@@ -1,11 +1,13 @@
 import { t } from '../../i18n';
-import { ArrowUp, ChevronUp, Paperclip } from 'lucide-react';
+import { ArrowUp, ChevronUp, LoaderCircle, Paperclip, Square } from 'lucide-react';
 import type { Ref, MouseEvent } from 'react';
 import { Button, Textarea } from '../primitives';
 
 interface Props {
   prompt: string;
   disabled: boolean;
+  isBusy: boolean;
+  canInterrupt: boolean;
   model: string;
   endpoint: string;
   includeContext: boolean;
@@ -13,6 +15,7 @@ interface Props {
   inputRef?: Ref<HTMLTextAreaElement>;
   onPromptChange: (value: string) => void;
   onSend: () => void;
+  onInterrupt: () => void;
   onModelMenu: (event: MouseEvent<HTMLButtonElement>) => void;
   onContext: () => void;
   modelMenuOpen: boolean;
@@ -21,6 +24,8 @@ interface Props {
 export function AssistantComposer({
   prompt,
   disabled,
+  isBusy,
+  canInterrupt,
   model,
   endpoint,
   includeContext,
@@ -28,6 +33,7 @@ export function AssistantComposer({
   inputRef,
   onPromptChange,
   onSend,
+  onInterrupt,
   onModelMenu,
   onContext,
   modelMenuOpen,
@@ -37,7 +43,9 @@ export function AssistantComposer({
       className="sf-ai-composer"
       onSubmit={(event) => {
         event.preventDefault();
-        onSend();
+        if (isBusy) {
+          if (canInterrupt) onInterrupt();
+        } else onSend();
       }}
     >
       <Textarea
@@ -46,14 +54,16 @@ export function AssistantComposer({
         maxLength={12000}
         rows={2}
         value={prompt}
-        disabled={disabled}
+        disabled={disabled || isBusy}
         placeholder={t('Ask about this project...')}
         onChange={(event) => onPromptChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing || event.keyCode === 229) return;
           if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            onSend();
+            if (isBusy) {
+              if (canInterrupt) onInterrupt();
+            } else onSend();
           }
         }}
       />
@@ -79,7 +89,7 @@ export function AssistantComposer({
           aria-label={t('选择模型')}
           aria-haspopup="menu"
           aria-expanded={modelMenuOpen}
-          disabled={disabled}
+          disabled={disabled || isBusy}
           onClick={onModelMenu}
         >
           <span>{model || t('Select model')}</span>
@@ -90,12 +100,27 @@ export function AssistantComposer({
           variant="primary"
           size="sm"
           iconOnly
-          type="submit"
-          aria-label={t('发送')}
-          title={t('发送 · Enter；Shift + Enter 换行')}
-          disabled={disabled || !prompt.trim()}
+          type={isBusy ? 'button' : 'submit'}
+          aria-label={isBusy ? (canInterrupt ? t('中止任务') : t('正在处理')) : t('发送')}
+          title={
+            isBusy
+              ? canInterrupt
+                ? t('中止本次会话')
+                : t('正在处理')
+              : t('发送 · Enter；Shift + Enter 换行')
+          }
+          disabled={isBusy ? !canInterrupt : disabled || !prompt.trim()}
+          onClick={isBusy && canInterrupt ? onInterrupt : undefined}
         >
-          <ArrowUp size={15} />
+          {isBusy ? (
+            canInterrupt ? (
+              <Square size={13} fill="currentColor" />
+            ) : (
+              <LoaderCircle className="sf-ai-spinner" size={15} />
+            )
+          ) : (
+            <ArrowUp size={15} />
+          )}
         </Button>
       </div>
     </form>

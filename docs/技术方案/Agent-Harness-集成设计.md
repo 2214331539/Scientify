@@ -309,11 +309,11 @@ export interface AgentBackend {
 
 接口按本仓库既有约定手写，与 `platform/research.ts`、`platform/library.ts` 一致。`scripts/prepare-agent.mjs` 会用锁定的引擎生成完整协议类型到 `src/generated/agent-protocol/`（不进入版本库），用于编写时对齐字段名并支撑后续对账测试；手写接口不 import 生成树，以免 `pnpm check` 依赖生成步骤。
 
-### 6.2 事件流用 Channel
+### 6.2 事件流用 Tauri 唤醒事件 + 恢复队列
 
 一轮任务的事件是高频流。Tauri 2 的 Channel 为该场景设计，优于现有的 `listen`。既有 `library-changed` 与 `scientify:browser` 属于低频粗粒度事件，继续使用 `@tauri-apps/api/event`。
 
-当前实现先提供 `agent_events(projectId, domain)` 轮询：`call()` 收到自己的响应后会立即返回，但 reader channel 中的通知和审批会由 `take_pending()` 非阻塞排空，稍晚到达的事件由面板定时轮询获取。轮次进行中必须轮询，否则审批会被挂起。Channel 推送是接续实现，用于替换轮询而不是改变语义。
+Codex `app-server` 使用 stdio JSON-RPC，不是 HTTP SSE。Rust reader 线程把通知和审批放入按 session 保存的恢复队列，同时发出 `agent-event` Tauri 唤醒事件；前端收到事件后立即调用 `agent_events(projectId, domain)` 排空队列。面板保留低频轮询作为断线恢复，因此增量不会依赖固定的 1 秒延迟，也不会因为 webview 短暂丢事件而丢失审批。`agent_events` 仍是唯一的队列消费接口，推送只负责唤醒。
 
 ```ts
 export const nativeAgent: AgentBackend = {
@@ -333,9 +333,9 @@ export const nativeAgent: AgentBackend = {
 
 ### 6.3 与应用状态的对接
 
-**脏标记。** `src/stores/workspace.ts` 的 `setDirtySource` 已是分来源的集合。Agent 进行中应注册独立来源，例如 `agent:<projectId>:literature`、`agent:<projectId>:code`，使关闭保护与状态栏能正确反映，并避免不同项目的任务互相覆盖状态。
+**运行态与脏标记分离。** `setDirtySource` 只表示未发送草稿、未保存对话或文件编辑。Agent 运行态保存在对应 `AssistantPanel` 的 session 状态中，不能把它写入全局 dirty，否则切换项目和对话会被错误拦截。隐藏的项目面板继续订阅自己的 session，因此多个项目可以同时运行。
 
-**关闭保护。** `src/editor/sessions.ts` 的 `hasPendingFileOperations` 目前只统计文件会话。必须把进行中的 Agent 轮次计入，否则用户会在任务中途退出。`src/app/App.tsx` 的 `useCloseProtection` 沿用同一判定。
+**关闭保护。** Agent 运行不再伪装成未保存草稿，也不阻塞页面导航；应用退出时 sidecar 会随应用进程结束。若产品后续需要“退出前确认仍在运行的 Agent”，应新增独立的退出确认状态，不要复用 workspace dirty。
 
 **上下文。** `src/domain/context.ts` 的 `WorkContext` 已表达「当前在哪里」。Agent 面板的绑定默认由它经 §4.2 的映射派生，但绑定是独立状态：用户可手动锁定到另一域，锁定后不随导航变化。
 

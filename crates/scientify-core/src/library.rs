@@ -1,5 +1,5 @@
 //! Authorized local literature roots. All mutations share one queue and fail closed.
-use crate::research::reject_links;
+use crate::research::{reject_links, FileContent};
 use atomicwrites::{AllowOverwrite, AtomicFile, DisallowOverwrite};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -14,6 +14,9 @@ use uuid::Uuid;
 
 pub const PDF_LIMIT: u64 = 150 * 1024 * 1024;
 const NOTE_LIMIT: u64 = 2 * 1024 * 1024;
+/// Text previews in the literature browser use the same conservative bound as
+/// project files. Binary files remain available through the external opener.
+const TEXT_LIMIT: u64 = 2 * 1024 * 1024;
 type Result<T> = std::result::Result<T, String>;
 fn err(e: impl std::fmt::Display) -> String {
     format!("文献文件操作失败：{e}")
@@ -475,7 +478,15 @@ impl LocalLibrary {
                     warnings.push(format!("存在多个相同 PDF，未自动关联：{}", original.path));
                 }
             } else {
-                warnings.push(format!("PDF 已移除，笔记仍保留：{}", original.path));
+                // An externally removed PDF keeps its binding so the user can
+                // relink it later. Only report a retained note when the note
+                // actually exists; stale index entries without a sidecar are
+                // common after a manual cleanup and should not raise a false
+                // startup warning.
+                let note = self.resolve(root, &original.note_path, false)?;
+                if note.exists() {
+                    warnings.push(format!("PDF 已移除，笔记仍保留：{}", original.path));
+                }
             }
         }
         if changed {
@@ -561,6 +572,21 @@ impl LocalLibrary {
             return Err("不是有效的 PDF 文件。".into());
         }
         Ok(bytes)
+    }
+    /// Read a UTF-8 literature file without handing it to the operating
+    /// system's default application. This is intentionally read-only: the
+    /// library tree is a reader, while project files keep the editing runtime.
+    pub fn read_file(&self, project: &str, path: &str) -> Result<FileContent> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let full = self.resolve(&root, path, false)?;
+        let bytes = bounded(&full, TEXT_LIMIT)?;
+        let content = String::from_utf8(bytes.clone()).map_err(|_| "该文件不是 UTF-8 文本。")?;
+        Ok(FileContent {
+            path: path.to_string(),
+            content,
+            version: digest(&bytes),
+        })
     }
     pub fn note(&self, project: &str, id: &str) -> Result<Note> {
         let _g = self.gate.lock().map_err(err)?;

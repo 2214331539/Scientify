@@ -15,6 +15,7 @@ export type AgentPhase = 'idle' | 'opening' | 'running' | 'waiting';
 export interface AgentSessionSnapshot {
   phase: AgentPhase;
   threadId: string | null;
+  turnId: string | null;
   approvals: ApprovalRequest[];
   error: string | null;
   /** Text streamed by the engine for the current turn. */
@@ -26,6 +27,7 @@ export interface AgentSessionSnapshot {
 export const initialAgentSession: AgentSessionSnapshot = {
   phase: 'idle',
   threadId: null,
+  turnId: null,
   approvals: [],
   error: null,
   agentText: '',
@@ -97,6 +99,7 @@ export function hasPendingWork(snapshot: AgentSessionSnapshot): boolean {
  */
 export class AgentSession {
   private snapshot: AgentSessionSnapshot = { ...initialAgentSession };
+  private polling = false;
 
   constructor(
     private readonly agent: AgentBackend,
@@ -149,6 +152,7 @@ export class AgentSession {
         text,
       });
       this.set({
+        turnId: turn.turnId || null,
         approvals: mergeApprovals(this.snapshot.approvals, turn.events),
         agentText: appendAgentText(this.snapshot.agentText, turn.events),
       });
@@ -156,7 +160,7 @@ export class AgentSession {
       // more rather than assuming the handle is complete.
       const events = await this.poll();
       if (!this.snapshot.approvals.length && (turnFinished(turn.status) || events.completed)) {
-        this.set({ phase: 'idle' });
+        this.set({ phase: 'idle', turnId: null });
       }
       return true;
     } catch (reason) {
@@ -170,6 +174,8 @@ export class AgentSession {
 
   /** Read queued messages and fold approvals into the snapshot. */
   async poll(): Promise<{ completed: boolean }> {
+    if (this.polling) return { completed: false };
+    this.polling = true;
     let approvals = this.snapshot.approvals;
     try {
       const events = await this.agent.events(this.binding.projectId, this.binding.domain);
@@ -182,7 +188,12 @@ export class AgentSession {
           : this.snapshot.phase === 'waiting'
             ? 'running'
             : this.snapshot.phase;
-      this.set({ approvals, phase, agentText: appendAgentText(this.snapshot.agentText, events) });
+      this.set({
+        approvals,
+        phase,
+        turnId: completed ? null : this.snapshot.turnId,
+        agentText: appendAgentText(this.snapshot.agentText, events),
+      });
       return { completed };
     } catch (reason) {
       this.set({
@@ -190,13 +201,16 @@ export class AgentSession {
         error: reason instanceof Error ? reason.message : String(reason),
       });
       return { completed: false };
+    } finally {
+      this.polling = false;
     }
   }
 
   /** Stop the active turn without discarding the thread or its history. */
   async interrupt(): Promise<boolean> {
     const threadId = this.snapshot.threadId;
-    if (!threadId) return false;
+    const turnId = this.snapshot.turnId;
+    if (!threadId || !turnId) return false;
     if (!this.agent.interrupt) {
       this.set({ phase: 'idle', approvals: [] });
       return true;
@@ -206,8 +220,9 @@ export class AgentSession {
         projectId: this.binding.projectId,
         domain: this.binding.domain,
         threadId,
+        turnId,
       });
-      this.set({ phase: 'idle', approvals: [] });
+      this.set({ phase: 'idle', approvals: [], turnId: null });
       return true;
     } catch (reason) {
       this.set({

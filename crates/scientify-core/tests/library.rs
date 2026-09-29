@@ -315,6 +315,15 @@ fn unique_external_rename_recovers_identity_but_ambiguous_candidates_do_not() {
     assert!(root.join("renamed.notes.md").exists());
 }
 #[test]
+fn a_missing_pdf_without_a_sidecar_does_not_raise_a_false_note_warning() {
+    let (_t, lib, root) = fixture();
+    let paper = lib.open("project", "a.pdf").unwrap();
+    fs::remove_file(root.join("a.pdf")).unwrap();
+    let scan = lib.scan("project").unwrap();
+    assert_eq!(scan.papers[0].id, paper.id);
+    assert!(scan.warnings.is_empty());
+}
+#[test]
 fn folder_transfer_updates_descendants_and_recycle_manifest() {
     let (_t, lib, root) = fixture();
     lib.operate(

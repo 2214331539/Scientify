@@ -223,6 +223,7 @@ pub fn run() {
             library::library_command,
             library::library_open,
             library::library_pdf,
+            library::library_read_file,
             library::library_note,
             library::library_external,
             library::library_import,

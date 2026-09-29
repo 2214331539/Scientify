@@ -15,9 +15,9 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 
 /// Domains in display order.
 pub const DOMAINS: [&str; 2] = ["literature", "code"];
@@ -34,7 +34,7 @@ const TURN_BUDGET: Duration = Duration::from_secs(600);
 /// which terminates the sidecar.
 #[derive(Default)]
 pub struct AgentState {
-    sessions: Mutex<HashMap<String, SessionEntry>>,
+    sessions: Mutex<HashMap<String, Arc<Mutex<SessionEntry>>>>,
 }
 
 /// A running engine plus the connection it was started with. A changed
@@ -46,6 +46,103 @@ struct SessionEntry {
     /// Keep one thread per project/domain process so reopening the AI panel
     /// continues the same Codex conversation instead of losing its memory.
     thread: Option<ThreadHandle>,
+}
+
+type SharedSession = Arc<Mutex<SessionEntry>>;
+
+struct SessionSpec<'a> {
+    engine: &'a std::path::Path,
+    home: &'a std::path::Path,
+    root: &'a std::path::Path,
+    environment: &'a [(String, String)],
+    fingerprint: u64,
+    event_sink: Option<process::EventSink>,
+}
+
+fn lookup_session(agent: &AgentState, key: &str) -> Result<SharedSession, String> {
+    agent
+        .sessions
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get(key)
+        .cloned()
+        .ok_or_else(|| "该作用域尚未启动会话，请先建立线程。".to_string())
+}
+
+fn ensure_session(
+    agent: &AgentState,
+    key: &str,
+    spec: SessionSpec<'_>,
+) -> Result<SharedSession, String> {
+    let existing = agent
+        .sessions
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get(key)
+        .cloned();
+    if let Some(session) = existing {
+        let same_connection =
+            session.lock().map_err(|e| e.to_string())?.fingerprint == spec.fingerprint;
+        if same_connection {
+            return Ok(session);
+        }
+
+        // Never hold the global map lock while waiting for an active turn on
+        // the old entry. Other projects can continue to find their sessions.
+        let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
+        if sessions
+            .get(key)
+            .is_some_and(|current| Arc::ptr_eq(current, &session))
+        {
+            sessions.remove(key);
+        }
+    }
+
+    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
+    if let Some(session) = sessions.get(key) {
+        return Ok(session.clone());
+    }
+    let session = Arc::new(Mutex::new(SessionEntry {
+        session: EngineSession::start_with_events(
+            spec.engine,
+            &["app-server", "--listen", "stdio://"],
+            spec.home,
+            spec.root,
+            spec.environment,
+            spec.event_sink,
+        )?,
+        fingerprint: spec.fingerprint,
+        thread: None,
+    }));
+    sessions.insert(key.to_string(), session.clone());
+    Ok(session)
+}
+
+fn event_sink(app: &tauri::AppHandle, project_id: &str, domain: &str) -> process::EventSink {
+    let app = app.clone();
+    let project_id = project_id.to_string();
+    let domain = domain.to_string();
+    Arc::new(move |event| {
+        let _ = app.emit(
+            "agent-event",
+            json!({
+                "projectId": project_id,
+                "domain": domain,
+                "event": event,
+            }),
+        );
+    })
+}
+
+fn remove_session_if_same(agent: &AgentState, key: &str, expected: &SharedSession) {
+    if let Ok(mut sessions) = agent.sessions.lock() {
+        if sessions
+            .get(key)
+            .is_some_and(|current| Arc::ptr_eq(current, expected))
+        {
+            sessions.remove(key);
+        }
+    }
 }
 
 /// Model service settings handed down from the assistant panel.
@@ -317,29 +414,24 @@ pub async fn agent_start_thread(
     let fingerprint = fingerprint(&connection);
     let key = format!("{project_id}:{domain}");
 
-    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
-    if sessions
-        .get(&key)
-        .is_some_and(|entry| entry.fingerprint != fingerprint)
-    {
-        // Dropping the entry terminates the previous process.
-        sessions.remove(&key);
-    }
-    if !sessions.contains_key(&key) {
-        let engine = process::engine_path()?;
-        sessions.insert(
-            key.clone(),
-            SessionEntry {
-                session: EngineSession::start(&engine, &home, &root, &environment)?,
-                fingerprint,
-                thread: None,
-            },
-        );
-    }
-    if let Some(thread) = sessions.get(&key).and_then(|entry| entry.thread.clone()) {
+    let engine = process::engine_path()?;
+    let shared = ensure_session(
+        &agent,
+        &key,
+        SessionSpec {
+            engine: &engine,
+            home: &home,
+            root: &root,
+            environment: &environment,
+            fingerprint,
+            event_sink: Some(event_sink(&app, &project_id, domain)),
+        },
+    )?;
+    let mut entry = shared.lock().map_err(|e| e.to_string())?;
+    if let Some(thread) = entry.thread.clone() {
         return Ok(thread);
     }
-    let session = &mut sessions.get_mut(&key).ok_or("会话创建失败。")?.session;
+    let session = &mut entry.session;
 
     // Match the native Codex desktop's first-use behavior: provisioning is
     // attempted automatically before the first writable thread. A failed
@@ -381,7 +473,7 @@ pub async fn agent_start_thread(
             .unwrap_or_default(),
         sandbox: sandbox_type(&response),
     };
-    sessions.get_mut(&key).ok_or("会话创建失败。")?.thread = Some(handle.clone());
+    entry.thread = Some(handle.clone());
     Ok(handle)
 }
 
@@ -410,25 +502,21 @@ pub async fn agent_windows_sandbox_setup(
     let fingerprint = fingerprint(&connection);
     let key = format!("{project_id}:{domain}");
 
-    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
-    if sessions
-        .get(&key)
-        .is_some_and(|entry| entry.fingerprint != fingerprint)
-    {
-        sessions.remove(&key);
-    }
-    if !sessions.contains_key(&key) {
-        let engine = process::engine_path()?;
-        sessions.insert(
-            key.clone(),
-            SessionEntry {
-                session: EngineSession::start(&engine, &home, &root, &environment)?,
-                fingerprint,
-                thread: None,
-            },
-        );
-    }
-    let session = &mut sessions.get_mut(&key).ok_or("会话创建失败。")?.session;
+    let engine = process::engine_path()?;
+    let shared = ensure_session(
+        &agent,
+        &key,
+        SessionSpec {
+            engine: &engine,
+            home: &home,
+            root: &root,
+            environment: &environment,
+            fingerprint,
+            event_sink: Some(event_sink(&app, &project_id, domain)),
+        },
+    )?;
+    let mut entry = shared.lock().map_err(|e| e.to_string())?;
+    let session = &mut entry.session;
     let response = session.call(
         "windowsSandbox/setupStart",
         json!({
@@ -451,9 +539,7 @@ pub async fn agent_windows_sandbox_setup(
     if started {
         // The existing thread carries the old read-only policy. Force the next
         // panel request to create a fresh thread after setup completes.
-        if let Some(entry) = sessions.get_mut(&key) {
-            entry.thread = None;
-        }
+        entry.thread = None;
     }
     let status = if started {
         if completed {
@@ -486,11 +572,9 @@ pub async fn agent_start_turn(
         return Err("任务内容无效或过长。".into());
     }
     let key = format!("{project_id}:{domain}");
-    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
-    let session = sessions
-        .get_mut(&key)
-        .map(|entry| &mut entry.session)
-        .ok_or("该作用域尚未启动会话，请先建立线程。")?;
+    let shared = lookup_session(&agent, &key)?;
+    let mut entry = shared.lock().map_err(|e| e.to_string())?;
+    let session = &mut entry.session;
     let response = match session.call(
         "turn/start",
         json!({
@@ -505,7 +589,8 @@ pub async fn agent_start_turn(
             // A crashed or externally terminated sidecar leaves a closed pipe
             // behind. Drop the entry so the next request starts a clean engine
             // instead of repeating os error 232 forever.
-            sessions.remove(&key);
+            drop(entry);
+            remove_session_if_same(&agent, &key, &shared);
             return Err(error);
         }
     };
@@ -530,17 +615,20 @@ pub async fn agent_interrupt(
     project_id: String,
     domain: String,
     thread_id: String,
+    turn_id: String,
 ) -> Result<(), String> {
     super::library::trusted(&view)?;
     let domain = valid_domain(&domain)?;
-    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
-    let session = sessions
-        .get_mut(&format!("{project_id}:{domain}"))
-        .map(|entry| &mut entry.session)
-        .ok_or("该作用域尚未启动会话。")?;
+    if thread_id.is_empty() || turn_id.is_empty() {
+        return Err("缺少当前 turn 标识，无法中止。".into());
+    }
+    let key = format!("{project_id}:{domain}");
+    let shared = lookup_session(&agent, &key)?;
+    let mut entry = shared.lock().map_err(|e| e.to_string())?;
+    let session = &mut entry.session;
     session.call(
         "turn/interrupt",
-        json!({ "threadId": thread_id }),
+        json!({ "threadId": thread_id, "turnId": turn_id }),
         HANDSHAKE_BUDGET,
     )?;
     Ok(())
@@ -548,9 +636,8 @@ pub async fn agent_interrupt(
 
 /// Drain messages the engine raised since the last call.
 ///
-/// The UI polls this while a turn runs so an approval raised between two host
-/// requests is not missed. A push channel replaces it once the event pipeline
-/// lands; polling is honest about the fact that nothing is pushed yet.
+/// The sidecar now emits a host wake-up event as soon as a notification arrives;
+/// this command remains the queue-draining and reconnect recovery path.
 #[tauri::command]
 pub async fn agent_events(
     view: tauri::Webview,
@@ -560,11 +647,10 @@ pub async fn agent_events(
 ) -> Result<Vec<Value>, String> {
     super::library::trusted(&view)?;
     let domain = valid_domain(&domain)?;
-    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
-    let session = sessions
-        .get_mut(&format!("{project_id}:{domain}"))
-        .map(|entry| &mut entry.session)
-        .ok_or("该作用域尚未启动会话。")?;
+    let key = format!("{project_id}:{domain}");
+    let shared = lookup_session(&agent, &key)?;
+    let mut entry = shared.lock().map_err(|e| e.to_string())?;
+    let session = &mut entry.session;
     Ok(session.take_pending())
 }
 
@@ -586,11 +672,10 @@ pub async fn agent_respond(
     if !result.is_object() {
         return Err("审批回应的内容无效。".into());
     }
-    let mut sessions = agent.sessions.lock().map_err(|e| e.to_string())?;
-    let session = sessions
-        .get_mut(&format!("{project_id}:{domain}"))
-        .map(|entry| &mut entry.session)
-        .ok_or("该作用域尚未启动会话。")?;
+    let key = format!("{project_id}:{domain}");
+    let shared = lookup_session(&agent, &key)?;
+    let mut entry = shared.lock().map_err(|e| e.to_string())?;
+    let session = &mut entry.session;
     session.respond(&id, result)
 }
 

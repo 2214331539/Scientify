@@ -84,6 +84,15 @@ async function fixture(requestedPaper?: string) {
         size: 10,
         paperId: 'b',
       },
+      {
+        path: 'notes.md',
+        name: 'notes.md',
+        directory: false,
+        pdf: false,
+        note: false,
+        size: 18,
+        paperId: null,
+      },
     ],
     papers: [
       { id: 'a', path: 'a.pdf', notePath: 'a.notes.md', fingerprint: 'one' },
@@ -95,6 +104,11 @@ async function fixture(requestedPaper?: string) {
     command: vi.fn(async () => scan),
     open: async (_p, path) => scan.papers.find((p) => p.path === path)!,
     pdf: async () => new Uint8Array(),
+    readFile: async (_p, path) => ({
+      path,
+      content: '# Local notes\n\nOpened in Scientify.',
+      version: 'v1',
+    }),
     note: async () => ({ content: 'existing note', revision: 'v1' }),
     saveNote: vi.fn(async (_p, _id, content) => ({ content, revision: 'v2' })),
     external: vi.fn(async () => {}),
@@ -187,6 +201,15 @@ it('opens a requested source only after its local binding is available', async (
   expect(
     within(screen.getByRole('tablist', { name: '文献标签页' })).getByRole('tab', { name: 'b.pdf' }),
   ).toBeTruthy();
+});
+
+it('opens Markdown literature files in the center instead of launching an external app', async () => {
+  const { Host, library, user } = await fixture();
+  render(<Host />);
+  await user.click(await screen.findByRole('treeitem', { name: 'notes.md' }));
+  await screen.findByRole('article', { name: 'Markdown 预览' });
+  expect(screen.getByText('Local notes')).toBeTruthy();
+  expect(library.external).not.toHaveBeenCalled();
 });
 
 it('copies external files into the folder under the pointer', async () => {

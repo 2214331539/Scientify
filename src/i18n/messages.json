@@ -3247,6 +3247,18 @@
     "发送 · Enter；Shift + Enter 换行",
     "Send · Enter; Shift + Enter for a new line"
   ],
+  "中止任务": [
+    "中止任务",
+    "Stop task"
+  ],
+  "中止本次会话": [
+    "中止本次会话",
+    "Stop this turn"
+  ],
+  "正在处理": [
+    "正在处理",
+    "Working"
+  ],
   "OpenAI 兼容": [
     "OpenAI 兼容",
     "OpenAI compatible"

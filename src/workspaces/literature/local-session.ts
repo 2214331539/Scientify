@@ -9,9 +9,10 @@ import { nativeLibrary, noteFiles, type LibraryBackend } from '../../platform/li
 
 export type LocalTab = {
   id: string;
-  kind: 'pdf' | 'web';
+  kind: 'pdf' | 'text' | 'web';
   title: string;
   paperId?: string;
+  path?: string;
   url?: string;
 };
 export type LocalSession = {
@@ -56,6 +57,7 @@ export function readLocalSession(project: string): LocalSession {
             typeof t.id === 'string' &&
             typeof t.title === 'string' &&
             ((t.kind === 'pdf' && typeof t.paperId === 'string') ||
+              (t.kind === 'text' && typeof t.path === 'string') ||
               (t.kind === 'web' && (!t.url || typeof t.url === 'string'))),
         ),
         root: typeof s.root === 'string' ? s.root : null,
@@ -78,6 +80,14 @@ export function openLocalPdf(s: LocalSession, id: string, title: string): LocalS
     notes: existing ? s.notes : s.notes.includes(id) ? s.notes : [...s.notes, id],
     activeNote: s.notes.includes(id) || !existing ? id : s.activeNote,
     showNotes: s.notes.includes(id) || !existing ? true : s.showNotes,
+  };
+}
+export function openLocalText(s: LocalSession, path: string, title: string): LocalSession {
+  const existing = s.tabs.find((t) => t.kind === 'text' && t.path === path);
+  return {
+    ...s,
+    tabs: existing ? s.tabs : [...s.tabs, { id: `text:${path}`, path, title, kind: 'text' }],
+    active: existing?.id ?? `text:${path}`,
   };
 }
 export function closeLocalTab(s: LocalSession, id: string): LocalSession {

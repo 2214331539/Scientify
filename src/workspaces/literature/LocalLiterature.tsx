@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   Globe,
   NotebookPen,
+  FileText,
   X,
 } from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
@@ -54,6 +55,7 @@ import {
   readLocalSession,
   saveLocalSession,
   openLocalPdf,
+  openLocalText,
   closeLocalTab,
   paperNote,
   notesDirty,
@@ -61,6 +63,7 @@ import {
 } from './local-session';
 import { PaperNotes } from './PaperNotes';
 import { BrowserPane } from './BrowserPane';
+import '../files/files.css';
 import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { ResearchBackend } from '../../platform/research';
@@ -68,10 +71,17 @@ import type { WorkContext } from '../../domain/context';
 import './local-literature.css';
 
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
+const TextMarkdownPreview = lazy(() => import('../files/MarkdownPreview'));
 const parent = (path: string) => path.split('/').slice(0, -1).join('/');
 const filename = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 const join = (folder: string, name: string) => (folder ? `${folder}/${name}` : name);
 const asError = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const textExtensions =
+  /\.(md|markdown|mdown|txt|text|csv|tsv|json|tex|bib|xml|yaml|yml|toml|ini|log|rst|py|js|jsx|ts|tsx|css|scss|html|sql|sh|ps1|c|cc|cpp|h|hpp)$/i;
+const isTextEntry = (entry: { name: string; directory: boolean; note: boolean }) =>
+  !entry.directory && (entry.note || textExtensions.test(entry.name));
+const isBelowPath = (path: string, parentPath: string) =>
+  path === parentPath || path.startsWith(`${parentPath}/`);
 
 export function LocalLiterature({
   project,
@@ -211,7 +221,8 @@ export function LocalLiterature({
       projectId: project.id,
       workspace: 'literature',
       title: active?.kind === 'web' ? t('浏览器新页') : (active?.title ?? t('文献')),
-      resourceId: active?.paperId,
+      resourceId: active?.paperId ?? active?.path,
+      ...(active?.kind === 'text' && active.path ? { path: active.path } : {}),
     });
   }, [active?.id, active?.kind, project.id]);
   useEffect(() => {
@@ -279,7 +290,10 @@ export function LocalLiterature({
     if (!entry) return;
     await run(async () => {
       if (entry.pdf) await selectPdf(path);
-      else await library.external(project.id, path, true);
+      else if (isTextEntry(entry) && library.readFile) {
+        setSession((s) => openLocalText(s, path, entry.name));
+        setSelected(path);
+      } else await library.external(project.id, path, true);
     });
   }
   async function mutate(operation: LibraryOperation) {
@@ -305,7 +319,10 @@ export function LocalLiterature({
         setSession((previous) => {
           let current = previous;
           for (const tab of previous.tabs)
-            if (tab.paperId && !remaining.has(tab.paperId))
+            if (
+              (tab.paperId && !remaining.has(tab.paperId)) ||
+              (tab.kind === 'text' && tab.path && isBelowPath(tab.path, operation.path))
+            )
               current = closeLocalTab(current, tab.id);
           const notes = current.notes.filter((id) => remaining.has(id));
           return {
@@ -788,7 +805,9 @@ export function LocalLiterature({
               newLabel={t('浏览器新页')}
               onContextMenu={(id, position) => {
                 const tab = session.tabs.find((t) => t.id === id);
-                const path = scan.papers.find((p) => p.id === tab?.paperId)?.path;
+                const path = tab?.paperId
+                  ? scan.papers.find((p) => p.id === tab.paperId)?.path
+                  : tab?.path;
                 if (path) void showMenu(path, position.x, position.y);
               }}
               onSelect={(id) =>
@@ -821,6 +840,26 @@ export function LocalLiterature({
                       ),
                     }))
                   }
+                />
+              ) : active?.kind === 'text' && active.path ? (
+                <LocalTextFile
+                  key={active.id}
+                  library={library}
+                  project={project.id}
+                  path={active.path}
+                  title={active.title}
+                  onContext={(value) => {
+                    const textContext: WorkContext = {
+                      projectId: project.id,
+                      workspace: 'literature',
+                      title: active.title,
+                      resourceId: active.path,
+                      path: active.path,
+                      text: value,
+                    };
+                    setSelection(textContext);
+                    changed.current(textContext);
+                  }}
                 />
               ) : paper ? (
                 <Suspense fallback={<p>{t('正在打开阅读器…')}</p>}>
@@ -1124,6 +1163,106 @@ export function LocalLiterature({
           </form>
         </Modal>
       )}
+    </div>
+  );
+}
+
+function LocalTextFile({
+  library,
+  project,
+  path,
+  title,
+  onContext,
+}: {
+  library: LibraryBackend;
+  project: string;
+  path: string;
+  title: string;
+  onContext: (text: string) => void;
+}) {
+  const [content, setContent] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const onContextRef = useRef(onContext);
+  onContextRef.current = onContext;
+  const markdown = /\.(md|markdown|mdown)$/i.test(path);
+  const load = useCallback(async () => {
+    if (!library.readFile) {
+      setError(t('当前版本不支持在文献区读取此文件。'));
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const file = await library.readFile(project, path);
+      setContent(file.content);
+      onContextRef.current(file.content.slice(0, 24000));
+    } catch (reason) {
+      setError(asError(reason));
+      setContent(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [library, path, project]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  return (
+    <div className="local-text-file">
+      <div className="local-text-toolbar">
+        <FileText size={14} />
+        <span className="truncate" title={path}>
+          {title}
+        </span>
+        <span className="sf-spacer" />
+        <Button
+          variant="ghost"
+          iconOnly
+          aria-label={t('重新读取文件')}
+          title={t('重新读取文件')}
+          disabled={loading}
+          onClick={() => void load()}
+        >
+          <RefreshCw size={14} />
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() =>
+            void library
+              .external?.(project, path, true)
+              .catch((reason) => setError(asError(reason)))
+          }
+        >
+          {t('在外部程序打开')}
+        </Button>
+      </div>
+      {loading ? (
+        <div className="local-text-state">{t('正在读取文件…')}</div>
+      ) : error ? (
+        <div className="local-text-state" role="alert">
+          {translateError(error)}
+        </div>
+      ) : content === null ? (
+        <div className="local-text-state">{t('没有可显示的内容。')}</div>
+      ) : markdown ? (
+        <div className="local-text-preview">
+          <Suspense fallback={<div className="local-text-state">{t('正在加载预览…')}</div>}>
+            <TextMarkdownPreview content={content} />
+          </Suspense>
+        </div>
+      ) : (
+        <pre className="local-text-raw">{content}</pre>
+      )}
+      {content !== null && !loading ? (
+        <div className="local-text-footer">
+          <span>{markdown ? 'Markdown' : t('纯文本')}</span>
+          <span>UTF-8</span>
+          <span>{t('{count} 行', { count: content.split('\n').length })}</span>
+          <span className="sf-spacer" />
+          <span>{t('只读预览')}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

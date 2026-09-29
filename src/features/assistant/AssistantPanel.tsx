@@ -1,5 +1,6 @@
 import { t, translateError } from '../../i18n';
 import { isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip } from 'lucide-react';
@@ -128,22 +129,16 @@ export function AssistantPanel({
   ].join('|');
   const history = (data?.sessions ?? []).filter((item) => item.project === scope);
   const key = `assistant:${scope}`;
-  // `turn/start` returns before Codex finishes tool calls. Keep the panel
-  // marked busy for navigation/close protection while leaving approval cards
-  // interactive during the waiting phase.
+  // `turn/start` returns before Codex finishes tool calls. Agent activity is
+  // kept in this panel's local state so it never masquerades as an unsaved
+  // workspace edit and cannot block project or conversation navigation.
   const agentPending = hasPendingWork(agentState);
-  const dirty = !!prompt.trim() || unsaved || busy || agentPending;
+  const dirty = !!prompt.trim() || unsaved;
 
   useEffect(() => {
     store.getState().setDirtySource(key, dirty);
     onDirtyChange?.(dirty);
   }, [store, key, dirty, onDirtyChange]);
-  // A turn the engine is still running, or an approval it is waiting on, is
-  // unfinished work: quitting now would abandon it.
-  useEffect(() => {
-    store.getState().setDirtySource(`agent:${scope}`, agentPending);
-    return () => store.getState().setDirtySource(`agent:${scope}`, false);
-  }, [store, scope, agentPending]);
   /**
    * Read the key filed for one provider endpoint. A failure is not fatal: the
    * panel then behaves as it did before, with a key for this session only.
@@ -186,13 +181,43 @@ export function AssistantPanel({
       setKeyStored(!!stored);
     });
   }, [recallKey, settings.provider, settings.endpoint]);
-  // The engine answers a request before it emits approvals, so the queue has to
-  // be read while a turn runs; nothing is pushed yet.
+  // The engine speaks stdio JSON-RPC. Rust emits a wake-up event for each
+  // notification so deltas render immediately; this slower poll remains as a
+  // recovery path if the webview temporarily misses an event.
   useEffect(() => {
     if (agentState.phase !== 'running' && agentState.phase !== 'waiting') return;
-    const timer = setInterval(() => void sessionRef.current?.poll(), 1200);
+    const timer = setInterval(() => void sessionRef.current?.poll(), 1000);
     return () => clearInterval(timer);
   }, [agentState.phase]);
+  useEffect(() => {
+    if (
+      !isTauri() ||
+      !agentProject ||
+      !domain ||
+      (agentState.phase !== 'opening' &&
+        agentState.phase !== 'running' &&
+        agentState.phase !== 'waiting')
+    )
+      return;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen<{ projectId?: string; domain?: string }>('agent-event', (event) => {
+      if (event.payload.projectId !== agentProject || event.payload.domain !== domain) return;
+      void sessionRef.current?.poll();
+    })
+      .then((stop) => {
+        if (disposed) stop();
+        else unlisten = stop;
+      })
+      .catch(() => {
+        // Browser previews and unit tests may report Tauri as available while
+        // exposing no event bridge. Polling remains the recovery path there.
+      });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [agentProject, domain, agentState.phase]);
   // A session is scoped to one project, domain, and model connection. When any
   // of those changes, discard the frontend handle so the next send opens the
   // matching native session instead of accidentally continuing another root.
@@ -694,10 +719,12 @@ export function AssistantPanel({
         ) : null}
         {agentPending && !agentState.approvals.length ? (
           <div className="sf-ai-progress sf-ai-agent-progress" role="status">
+            <span className="sf-ai-progress-indicator" aria-hidden="true">
+              <span className="sf-ai-progress-dot" />
+              <span className="sf-ai-progress-dot" />
+              <span className="sf-ai-progress-dot" />
+            </span>
             <span>{t('Agent 正在工作…')}</span>
-            <Button variant="ghost" size="sm" type="button" onClick={() => void interruptAgent()}>
-              {t('中止任务')}
-            </Button>
           </div>
         ) : null}
         {agentState.sandbox === 'readOnly' ? (
@@ -776,12 +803,15 @@ export function AssistantPanel({
       <AssistantComposer
         inputRef={composerRef}
         prompt={prompt}
-        disabled={busy || agentPending || settingsBusy || unsaved || !!retry}
+        disabled={settingsBusy || unsaved || !!retry}
+        isBusy={busy || agentPending}
+        canInterrupt={agentPending && !!sessionRef.current?.state.turnId}
         model={settings.model}
         endpoint={settings.endpoint}
         includeContext={includeContext}
         onPromptChange={setPrompt}
         onSend={() => void send()}
+        onInterrupt={() => void interruptAgent()}
         contextLabel={context.path || context.title || t('当前材料')}
         modelMenuOpen={menu?.kind === 'models'}
         onContext={() => setShowContext(true)}

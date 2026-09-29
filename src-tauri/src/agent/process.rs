@@ -8,6 +8,11 @@ use std::time::Duration;
 
 const TRIPLE: &str = "x86_64-pc-windows-msvc";
 
+/// Optional host callback for low-latency notifications. The JSON-RPC queue
+/// remains the source of truth; the callback only wakes the UI so it can drain
+/// that queue immediately instead of waiting for a timer tick.
+pub type EventSink = Arc<dyn Fn(serde_json::Value) + Send + Sync + 'static>;
+
 /// Locate the engine binary.
 ///
 /// Release bundles place `externalBin` next to the application executable with the
@@ -139,23 +144,6 @@ pub struct EngineSession {
 }
 
 impl EngineSession {
-    pub fn start(
-        engine: &Path,
-        codex_home: &Path,
-        root: &Path,
-        extra_env: &[(String, String)],
-    ) -> Result<Self, String> {
-        let mut session = Self::start_with(
-            engine,
-            &["app-server", "--listen", "stdio://"],
-            codex_home,
-            root,
-            extra_env,
-        )?;
-        session.initialize()?;
-        Ok(session)
-    }
-
     /// The app-server must complete JSON-RPC initialization before it accepts
     /// thread/turn requests. Older builds happened to fail later with a closed
     /// pipe, which hid the real startup mistake from the user.
@@ -189,12 +177,41 @@ impl EngineSession {
     /// Spawn an engine-shaped process. Tests substitute a stub so the framing
     /// can be verified without credentials; production always passes the
     /// packaged binary.
+    #[cfg(test)]
     pub fn start_with(
         program: &Path,
         args: &[&str],
         codex_home: &Path,
         root: &Path,
         extra_env: &[(String, String)],
+    ) -> Result<Self, String> {
+        Self::start_with_events_raw(program, args, codex_home, root, extra_env, None)
+    }
+
+    /// Spawn and initialize a session, forwarding non-response messages to a
+    /// host callback as soon as they arrive. The callback never replaces the
+    /// recovery queue.
+    pub fn start_with_events(
+        program: &Path,
+        args: &[&str],
+        codex_home: &Path,
+        root: &Path,
+        extra_env: &[(String, String)],
+        event_sink: Option<EventSink>,
+    ) -> Result<Self, String> {
+        let mut session =
+            Self::start_with_events_raw(program, args, codex_home, root, extra_env, event_sink)?;
+        session.initialize()?;
+        Ok(session)
+    }
+
+    fn start_with_events_raw(
+        program: &Path,
+        args: &[&str],
+        codex_home: &Path,
+        root: &Path,
+        extra_env: &[(String, String)],
+        event_sink: Option<EventSink>,
     ) -> Result<Self, String> {
         let mut child = Command::new(program)
             .args(args)
@@ -214,10 +231,19 @@ impl EngineSession {
         let stdout = child.stdout.take().ok_or("无法读取 Agent 引擎输出。")?;
         let stderr = child.stderr.take().ok_or("无法读取 Agent 引擎错误输出。")?;
         let (sender, lines) = mpsc::channel();
+        let event_sink = event_sink.clone();
         std::thread::spawn(move || {
             for line in BufReader::new(stdout).lines() {
                 match line {
                     Ok(line) if !line.trim().is_empty() => {
+                        if let Some(sink) = &event_sink {
+                            if let Some(incoming) = super::protocol::classify(&line) {
+                                let described = super::protocol::describe(&incoming);
+                                if !described.is_null() {
+                                    sink(described);
+                                }
+                            }
+                        }
                         if sender.send(line).is_err() {
                             break;
                         }
@@ -370,11 +396,30 @@ impl EngineSession {
             .lock()
             .ok()
             .map(|text| text.trim().to_string())
+            .map(|text| {
+                text.lines()
+                    .filter(|line| !is_nonfatal_diagnostic(line))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
             .filter(|text| !text.is_empty())
             .map(|text| format!("\n引擎输出：{text}"))
             .unwrap_or_default();
         format!("{prefix}：{error}{detail}")
     }
+}
+
+/// Codex performs optional plugin/catalog work in the background. Its stderr
+/// contains warnings such as a GitHub rate-limit response even when the JSON
+/// RPC engine is healthy. Those diagnostics must not turn a later transport
+/// error into a frightening, unrelated warning in the assistant panel.
+fn is_nonfatal_diagnostic(line: &str) -> bool {
+    let line = line.to_ascii_lowercase();
+    line.starts_with("warning:")
+        || line.contains("curated plugin sync")
+        || line.contains("featured plugin ids cache")
+        || line.contains("shell snapshot not supported")
+        || line.contains("unknown model")
 }
 
 impl Drop for EngineSession {
@@ -468,5 +513,38 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
         assert_eq!(echoed.len(), 1);
         assert_eq!(echoed[0]["method"], "approval/answered");
         assert_eq!(echoed[0]["params"]["decision"], "accept");
+    }
+
+    #[test]
+    fn event_sink_wakes_the_host_without_replacing_the_recovery_queue() {
+        let home = std::env::temp_dir();
+        let received = Arc::new(Mutex::new(Vec::<serde_json::Value>::new()));
+        let copy = Arc::clone(&received);
+        let sink: EventSink = Arc::new(move |event| {
+            copy.lock().unwrap().push(event);
+        });
+        let mut session = EngineSession::start_with_events_raw(
+            Path::new("node"),
+            &["-e", STUB],
+            &home,
+            &home,
+            &[],
+            Some(sink),
+        )
+        .expect("node must be available to run the stub engine");
+
+        session
+            .call(
+                "thread/start",
+                serde_json::json!({}),
+                Duration::from_secs(20),
+            )
+            .expect("the stub answers immediately");
+        std::thread::sleep(Duration::from_millis(20));
+        let events = received.lock().unwrap().clone();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0]["method"], "turn/started");
+        assert_eq!(events[1]["method"], "item/fileChange/requestApproval");
+        assert_eq!(session.take_pending().len(), 2);
     }
 }

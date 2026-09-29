@@ -44,7 +44,15 @@ Codex 的权限请求不是 `{ decision: ... }`，而是 `{ permissions, scope }
 
 ### 5. 缺少本地 Codex 的中止能力
 
-新增 `agent_interrupt`，对应 `turn/interrupt`，并在 Agent 工作状态旁提供“中止任务”。中止只结束当前轮次，保留线程历史。
+新增 `agent_interrupt`，对应带有 `threadId` 与 `turnId` 的 `turn/interrupt`，并复用输入框发送键显示停止按钮。中止只结束当前轮次，保留线程历史。
+
+### 6. 宿主层把所有项目错误地串行化
+
+此前 `AgentState` 用一把全局 `Mutex<HashMap<...>>` 包住整个 `EngineSession::call()`，一个项目的长 turn 会阻塞其他项目的启动、事件和审批。现在 map 只保存 `Arc<Mutex<SessionEntry>>`，全局锁在查找后立即释放；同一项目/域仍按 session 串行，不同项目或域可以并行。
+
+### 7. 运行态错误地复用了全局 dirty，并且事件流依赖慢轮询
+
+Agent 运行中不再写入 workspace dirty，因此切换项目、页面和 Scientify 对话不会被拦截。sidecar reader 现在在排队事件的同时发出 `agent-event` Tauri 唤醒，前端立即消费 `agent_events`；低频轮询只做恢复。Codex 的这条链路是 stdio JSON-RPC，不是 HTTP SSE。
 
 ## 仍然存在的产品/工程边界
 
@@ -55,7 +63,7 @@ Codex 的权限请求不是 `{ decision: ... }`，而是 `{ permissions, scope }
 3. **Agent 直接删除 PDF 不会自动调用 Scientify 文献库的级联删除。** UI 的“移入回收站”已经通过 `LocalLibrary::delete_inner` 将 PDF 与关联 `.notes.md` 成对处理并有 Rust 测试；Codex 通过 shell 删除文件时会绕过这条业务逻辑。后续应提供一个受控的 Scientify 文献工具（或文件删除拦截），让 Agent 删除文献时走同一事务。
 4. **审批不是“所有写操作都必然弹卡片”。** `approvalPolicy = on-request` 由 Codex 根据沙箱和策略决定何时询问；工作区内允许的读写可能自动执行，越出边界、网络和额外权限才会请求审批。宿主必须持续读取所有 server request，不能只识别三种审批。
 5. **当前内置模型协议仍只接受 OpenAI Responses 形状的 `openai` / `ollama` 配置。** Anthropic、Gemini 等原生协议不能直接交给 Codex，需要在 Scientify 内增加 Responses 适配代理或明确提示“当前服务商只能用于普通 Chat”。endpoint 也应针对 Ollama 统一 `/v1` 约定。
-6. **当前消息流只展示 Agent 文本增量。** 命令执行、文件 diff、工具输出、计划和失败详情尚未做成完整的可审阅时间线；这会影响用户判断 AI 改了什么，不能以“文本回复出现”作为完整验收。
+6. **当前消息流主要展示 Agent 文本增量。** 唤醒和审批已经实时接入，但命令执行、文件 diff、工具输出、计划和失败详情尚未做成完整的可审阅时间线；这会影响用户判断 AI 改了什么，不能以“文本回复出现”作为完整验收。
 
 ## 用户验收路径
 
@@ -69,8 +77,10 @@ Codex 的权限请求不是 `{ decision: ... }`，而是 `{ permissions, scope }
 ## 验证记录
 
 - `pnpm check`：通过。
-- `pnpm test -- --maxWorkers=2`：35 个文件、151 项通过。
-- `cargo test -p scientify --lib agent --locked`：16 项通过。
+- `pnpm test -- --run`：35 个文件、154 项通过。
+- `cargo test --workspace --locked`：34 个 Agent/核心单元测试及 workspace 集成测试通过。
+- `cargo clippy --workspace --all-targets --locked -- -D warnings`：通过。
 - `cargo fmt --all -- --check`：通过。
+- `pnpm tauri build --no-bundle`：Release 构建成功，产物为 `target/release/scientify.exe`。
 - sidecar 协议探针：`codex-cli 0.158.0`；隔离 home 的 readiness/setup/完成事件链通过。
 - 尚未完成：真实模型服务下的文件写入、审批、长任务中止和完整桌面 UI 验收；这些需要用户本机的模型服务和一次 Windows 系统初始化。
