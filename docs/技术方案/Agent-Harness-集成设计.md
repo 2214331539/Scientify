@@ -2,7 +2,7 @@
 
 本文规定 Scientify 从「单轮对话」升级为「本地可执行代理」的集成方案：内置 Codex 作为执行引擎，保留用户自配模型服务商，按工作区隔离记忆与操作边界。
 
-文档状态：M1/M2 核心链路已落地并通过编译与单元测试。当前 AI 面板已经接入本地 Agent、内联审批、凭据回填和模式切换；真实服务商、域绑定和打包后的桌面端行为仍需人工验收。第 0 节说明范围与当前事实，后续各节是实施依据。技术栈与长期架构以 [架构设计/技术方案.md](../架构设计/技术方案.md) 第 0 节为准；本文只补充 Agent 相关的边界与契约。逐项验收见 [Agent Harness 验收计划](Agent-Harness-验收计划.md)。
+文档状态：M1/M2 核心链路已落地并通过编译与单元测试。当前 AI 面板已经接入本地 Agent、内联审批、凭据回填和自动路由；真实服务商、域绑定、Windows 沙箱配置和打包后的桌面端行为仍需人工验收。第 0 节说明范围与当前事实，后续各节是实施依据。技术栈与长期架构以 [架构设计/技术方案.md](../架构设计/技术方案.md) 第 0 节为准；本文只补充 Agent 相关的边界与契约。逐项验收见 [Agent Harness 验收计划](Agent-Harness-验收计划.md)。
 
 ## 0. 目标与边界
 
@@ -188,7 +188,7 @@ type AgentBinding = {
 
 **Git 仓库检查。** 引擎默认要求工作目录是 Git 仓库。文献根通常不是。文献域必须显式关闭该检查，否则首个任务无法启动。
 
-**Windows 沙箱状态。** `workspace-write` 依赖 Codex 的 Windows 沙箱。若 `windowsSandbox/readiness` 返回 `notConfigured`，Codex 会把线程响应降级为 `readOnly`；Scientify 会拒绝把这个线程呈现为可编辑 Agent，并提示先完成沙箱配置。不能默默改用 `danger-full-access`，因为那会破坏按工作区隔离的安全承诺。
+**Windows 沙箱状态。** `workspace-write` 依赖 Codex 的 Windows 沙箱。若 `windowsSandbox/readiness` 返回 `notConfigured`，Codex 会把线程响应降级为 `readOnly`；Scientify 仍允许用户使用该线程进行阅读和分析，同时在消息流内显示沙箱状态和“配置 Windows 沙箱”入口。配置入口调用 Codex 的 `windowsSandbox/setupStart`，完成系统提示后重新建立线程即可获得写入能力。不能默默改用 `danger-full-access`，因为那会破坏按工作区隔离的安全承诺。
 
 **凭据重复。** 两个 home 需要各写一份服务商配置。由 Scientify 的模型设置作为唯一事实来源，写入时同步两个 home，用户只配置一次。
 
@@ -245,6 +245,7 @@ src-tauri/src/agent/
 
 ```text
 agent_start_thread      建立或复用线程（projectId + domain）
+agent_windows_sandbox_setup  启动 Codex 的 Windows 沙箱配置流程
 agent_list_threads      列出某项目某域的线程
 agent_start_turn        发起一轮，事件走 Channel
 agent_interrupt         中断当前轮
@@ -350,6 +351,8 @@ export const nativeAgent: AgentBackend = {
 - 消息渲染继续使用 `src/components/ai/ChatMessageView.tsx`；工具调用与结果作为独立卡片插入消息流，不改变既有消息样式。
 
 默认绑定按 §4.2 的映射表派生，并在绑定选择器中显示域名称与根目录摘要，使用户随时可见 Agent 的操作范围。个人作用域与文献根未挂载时，选择器置灰并给出原因，而不是让入口看似可用。跨域任务由用户显式移交，不自动继承记忆。
+
+AI 输入框不再要求用户在“对话 / Agent”之间切换。桌面端在存在项目工作区且服务商协议受内置引擎支持时统一走 Agent harness；模型根据用户任务自行决定是否调用工具。没有可绑定工作区、浏览器预览或不兼容协议时才回退到原有单轮聊天。
 
 ## 7. 文件所有权与冲突
 

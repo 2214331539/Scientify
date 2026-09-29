@@ -33,6 +33,7 @@
     "allow-agent-handshake",
     "allow-agent-domains",
     "allow-agent-start-thread",
+    "allow-agent-windows-sandbox-setup",
     "allow-agent-start-turn",
     "allow-agent-events",
     "allow-agent-respond",

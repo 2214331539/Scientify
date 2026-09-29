@@ -251,6 +251,7 @@ pub fn run() {
             agent::agent_handshake,
             agent::agent_domains,
             agent::agent_start_thread,
+            agent::agent_windows_sandbox_setup,
             agent::agent_start_turn,
             agent::agent_events,
             agent::agent_respond,

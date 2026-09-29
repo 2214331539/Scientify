@@ -67,6 +67,15 @@ async function fixture(requestedPaper?: string) {
         paperId: 'a',
       },
       {
+        path: 'a.notes.md',
+        name: 'a.notes.md',
+        directory: false,
+        pdf: false,
+        note: true,
+        size: 10,
+        paperId: 'a',
+      },
+      {
         path: 'b.pdf',
         name: 'b.pdf',
         directory: false,
@@ -131,7 +140,7 @@ it('closes PDF and note tabs only after a paired deletion succeeds', async () =>
   await screen.findByRole('textbox', { name: '论文笔记正文' });
   vi.mocked(library.command).mockResolvedValueOnce({
     ...scan,
-    entries: scan.entries.filter((e) => e.path !== 'a.pdf'),
+    entries: scan.entries.filter((e) => !['a.pdf', 'a.notes.md'].includes(e.path)),
     papers: scan.papers.filter((p) => p.id !== 'a'),
   });
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'a.pdf' }));
@@ -143,6 +152,7 @@ it('closes PDF and note tabs only after a paired deletion succeeds', async () =>
   );
   await waitFor(() => expect(screen.queryByRole('textbox', { name: '论文笔记正文' })).toBeNull());
   expect(screen.queryByRole('tab', { name: 'a.pdf' })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'a.notes.md' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'b.pdf' })).toBeTruthy();
   expect(library.command).toHaveBeenCalledWith(project.id, { op: 'delete', path: 'a.pdf' });
   expect(getFileRuntime(noteFiles(library)).sessions.size).toBe(0);

@@ -19,6 +19,8 @@ export interface AgentSessionSnapshot {
   error: string | null;
   /** Text streamed by the engine for the current turn. */
   agentText: string;
+  /** Effective sandbox reported by Codex for the current thread. */
+  sandbox: string | null;
 }
 
 export const initialAgentSession: AgentSessionSnapshot = {
@@ -27,6 +29,7 @@ export const initialAgentSession: AgentSessionSnapshot = {
   approvals: [],
   error: null,
   agentText: '',
+  sandbox: null,
 };
 
 /**
@@ -119,7 +122,7 @@ export class AgentSession {
         this.binding.domain,
         this.connection,
       );
-      this.set({ phase: 'running', threadId: thread.threadId });
+      this.set({ phase: 'running', threadId: thread.threadId, sandbox: thread.sandbox ?? null });
       return true;
     } catch (reason) {
       this.set({

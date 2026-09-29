@@ -1,5 +1,5 @@
 import { t } from '../../i18n';
-import { ArrowUp, Bot, ChevronUp, MessageCircle, Paperclip } from 'lucide-react';
+import { ArrowUp, ChevronUp, Paperclip } from 'lucide-react';
 import type { Ref, MouseEvent } from 'react';
 import { Button, Textarea } from '../primitives';
 
@@ -16,8 +16,6 @@ interface Props {
   onModelMenu: (event: MouseEvent<HTMLButtonElement>) => void;
   onContext: () => void;
   modelMenuOpen: boolean;
-  agentMode: boolean;
-  onAgentModeToggle: () => void;
 }
 
 export function AssistantComposer({
@@ -33,8 +31,6 @@ export function AssistantComposer({
   onModelMenu,
   onContext,
   modelMenuOpen,
-  agentMode,
-  onAgentModeToggle,
 }: Props) {
   return (
     <form
@@ -62,24 +58,6 @@ export function AssistantComposer({
         }}
       />
       <div className="sf-ai-composer-actions">
-        <Button
-          variant="ghost"
-          size="sm"
-          type="button"
-          className="sf-ai-mode-control"
-          aria-label={agentMode ? t('切换到对话模式') : t('切换到 Agent 模式')}
-          aria-pressed={agentMode}
-          title={
-            agentMode
-              ? t('Agent 模式：可读取和修改当前工作区文件')
-              : t('对话模式：只回答问题，不修改文件')
-          }
-          disabled={disabled}
-          onClick={onAgentModeToggle}
-        >
-          {agentMode ? <Bot size={13} /> : <MessageCircle size={13} />}
-          <span>{agentMode ? 'Agent' : t('对话')}</span>
-        </Button>
         <Button
           variant="ghost"
           size="sm"

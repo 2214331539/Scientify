@@ -402,7 +402,7 @@ it('supports custom provider protocols and returns no invented models for an emp
   );
 });
 
-it('toggles local execution mode and reports the state to assistive tech', async () => {
+it('routes a workspace prompt through the harness without a mode toggle', async () => {
   const data = emptyWorkspace();
   data.projects.push({
     id: 'p1',
@@ -411,25 +411,44 @@ it('toggles local execution mode and reports the state to assistive tech', async
     createdAt: new Date().toISOString(),
     space: 'personal',
   });
+  data.settings.model.model = 'test-model';
   const store = createWorkspaceStore({
     load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
     save: async (value: Workspace) => value,
   } as unknown as WorkspaceBackend);
   await store.getState().load();
 
+  const startThread = vi.fn(async () => ({ threadId: 't1', sandbox: 'readOnly' }));
+  const startTurn = vi.fn(async () => ({ turnId: 'turn-1', status: 'completed', events: [] }));
+  const setupSandbox = vi.fn(async () => ({ started: true, status: 'setupStarted' }));
+  const agent = {
+    status: vi.fn(),
+    handshake: vi.fn(),
+    domains: vi.fn(),
+    startThread,
+    setupSandbox,
+    startTurn,
+    events: vi.fn(async () => []),
+    respond: vi.fn(),
+  } as never;
   render(
-    <AssistantPanel store={store} backend={{} as ResearchBackend} scope="p1" context={context} />,
+    <AssistantPanel
+      store={store}
+      backend={{} as ResearchBackend}
+      agent={agent}
+      scope="p1"
+      context={context}
+    />,
   );
-  const toggle = screen.getByRole('button', { name: '切换到 Agent 模式' });
-  // The pressed attribute is what the unlayered panel rule keys off, so a
-  // failure here means the click never reached the handler.
-  expect(toggle.getAttribute('aria-pressed')).toBe('false');
-  await userEvent.setup().click(toggle);
-  expect(screen.getByRole('button', { name: '切换到对话模式' }).getAttribute('aria-pressed')).toBe(
-    'true',
-  );
-  // The mode must also be legible without the button styling.
-  expect(screen.getByText('描述一个要在这个目录里执行的任务')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: '切换到 Agent 模式' })).toBeNull();
+  expect(screen.getByText('提问，或直接描述要在当前工作区完成的任务')).toBeTruthy();
+  await userEvent.setup().type(screen.getByLabelText('向 AI 提问'), '读取当前项目');
+  await userEvent.setup().click(screen.getByRole('button', { name: '发送' }));
+  await waitFor(() => expect(startThread).toHaveBeenCalledOnce());
+  expect(startTurn).toHaveBeenCalledOnce();
+  const setup = await screen.findByRole('button', { name: '配置 Windows 沙箱' });
+  await userEvent.setup().click(setup);
+  await waitFor(() => expect(setupSandbox).toHaveBeenCalledOnce());
 });
 
 async function keyHarness(load: () => Promise<string | null>) {

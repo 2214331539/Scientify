@@ -3422,5 +3422,33 @@
   "复制失败，请重试": [
     "复制失败，请重试",
     "Copy failed. Try again."
+  ],
+  "提问，或直接描述要在当前工作区完成的任务": [
+    "提问，或直接描述要在当前工作区完成的任务",
+    "Ask a question or describe a task for the current workspace"
+  ],
+  "正在处理…": [
+    "正在处理…",
+    "Working…"
+  ],
+  "当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。": [
+    "当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。",
+    "The Windows sandbox is not configured, so the Agent can only read the workspace. Configure it before modifying, deleting, or running files."
+  ],
+  "配置 Windows 沙箱": [
+    "配置 Windows 沙箱",
+    "Configure Windows sandbox"
+  ],
+  "正在配置…": [
+    "正在配置…",
+    "Configuring…"
+  ],
+  "Windows 沙箱配置已启动，请完成系统提示后再次发送任务。": [
+    "Windows 沙箱配置已启动，请完成系统提示后再次发送任务。",
+    "Windows sandbox setup has started. Complete the system prompt, then send the task again."
+  ],
+  "Windows 沙箱配置没有启动，请重试或查看系统权限设置。": [
+    "Windows 沙箱配置没有启动，请重试或查看系统权限设置。",
+    "Windows sandbox setup did not start. Try again or check system permissions."
   ]
 }

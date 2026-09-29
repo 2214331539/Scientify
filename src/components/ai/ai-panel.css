@@ -186,6 +186,26 @@
   color: var(--sf-text-muted);
   font-size: 12px;
 }
+.sf-agent-sandbox-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 8px;
+  background: var(--sf-surface-sunken);
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.sf-agent-sandbox-notice > span {
+  flex: 1;
+  min-width: 0;
+}
+.sf-agent-sandbox-notice .sf-button {
+  flex-shrink: 0;
+}
 .sf-ai-composer {
   flex-shrink: 0;
   margin: 6px 10px 10px;
@@ -234,32 +254,6 @@
   border-radius: 999px;
   background: var(--sf-surface-sunken);
   font-size: 11px;
-}
-.sf-ai-composer .sf-ai-mode-control {
-  flex-shrink: 0;
-  height: 24px;
-  min-height: 24px;
-  gap: 5px;
-  padding-inline: 9px;
-  border: 1px solid var(--sf-border-subtle);
-  border-radius: 999px;
-  color: var(--sf-text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  transition:
-    background var(--sf-motion-feedback) var(--sf-ease-standard),
-    border-color var(--sf-motion-feedback) var(--sf-ease-standard),
-    color var(--sf-motion-feedback) var(--sf-ease-standard);
-}
-.sf-ai-composer .sf-ai-mode-control[aria-pressed='true'] {
-  border-color: var(--sf-border-hover);
-  background: var(--sf-surface-selected);
-  color: var(--sf-text-primary);
-}
-.sf-ai-composer .sf-ai-mode-control:hover:not(:disabled) {
-  border-color: var(--sf-border-hover);
-  color: var(--sf-text-primary);
 }
 .sf-ai-composer-actions > .sf-button-icon {
   width: 24px;

@@ -38,6 +38,13 @@ export interface ThreadHandle {
   modelProvider: string;
   /** Instruction files the engine actually loaded, such as an `AGENTS.md`. */
   instructionSources: string[];
+  /** Effective Codex sandbox. `readOnly` means Windows setup is pending. */
+  sandbox?: string;
+}
+
+export interface SandboxSetupHandle {
+  started: boolean;
+  status: string;
 }
 
 export interface TurnHandle {
@@ -109,6 +116,12 @@ export interface AgentBackend {
     domain: AgentDomain,
     connection: AgentConnection,
   ): Promise<ThreadHandle>;
+  /** Start Codex's explicit Windows sandbox installer/elevation flow. */
+  setupSandbox?(
+    projectId: string,
+    domain: AgentDomain,
+    connection: AgentConnection,
+  ): Promise<SandboxSetupHandle>;
   startTurn(request: {
     projectId: string;
     domain: AgentDomain;
@@ -150,6 +163,8 @@ export const nativeAgent: AgentBackend = {
   domains: (projectId) => command('agent_domains', { projectId }),
   startThread: (projectId, domain, connection) =>
     command('agent_start_thread', { projectId, domain, connection }),
+  setupSandbox: (projectId, domain, connection) =>
+    command('agent_windows_sandbox_setup', { projectId, domain, connection }),
   startTurn: ({ projectId, domain, threadId, text }) =>
     command('agent_start_turn', { projectId, domain, threadId, text }),
   events: (projectId, domain) => command('agent_events', { projectId, domain }),

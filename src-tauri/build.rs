@@ -35,6 +35,7 @@ fn main() {
             "agent_handshake",
             "agent_domains",
             "agent_start_thread",
+            "agent_windows_sandbox_setup",
             "agent_start_turn",
             "agent_events",
             "agent_respond",

@@ -1,4 +1,5 @@
 import { t, translateError } from '../../i18n';
+import { isTauri } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { Plus, Settings2, ChevronDown, MoreHorizontal, Paperclip } from 'lucide-react';
@@ -103,10 +104,11 @@ export function AssistantPanel({
   const [error, setError] = useState('');
   const [retry, setRetry] = useState<Conversation | null>(null);
   const busyRef = useRef(false);
-  // Agent mode is additive: with it off, the panel behaves exactly as before.
-  const [agentMode, setAgentMode] = useState(false);
   const [agentState, setAgentState] = useState(() => ({ ...initialAgentSession }));
-  const [agentTasks, setAgentTasks] = useState<string[]>([]);
+  const [agentMessages, setAgentMessages] = useState<
+    { role: 'user' | 'assistant'; text: string }[]
+  >([]);
+  const [sandboxBusy, setSandboxBusy] = useState(false);
   const sessionRef = useRef<AgentSession | null>(null);
   const agentProject = context.projectId;
   const domain = domainForWorkspace(context.workspace);
@@ -126,7 +128,11 @@ export function AssistantPanel({
   ].join('|');
   const history = (data?.sessions ?? []).filter((item) => item.project === scope);
   const key = `assistant:${scope}`;
-  const dirty = !!prompt.trim() || unsaved || busy;
+  // `turn/start` returns before Codex finishes tool calls. Keep the panel
+  // marked busy for navigation/close protection while leaving approval cards
+  // interactive during the waiting phase.
+  const agentPending = hasPendingWork(agentState);
+  const dirty = !!prompt.trim() || unsaved || busy || agentPending;
 
   useEffect(() => {
     store.getState().setDirtySource(key, dirty);
@@ -134,7 +140,6 @@ export function AssistantPanel({
   }, [store, key, dirty, onDirtyChange]);
   // A turn the engine is still running, or an approval it is waiting on, is
   // unfinished work: quitting now would abandon it.
-  const agentPending = hasPendingWork(agentState);
   useEffect(() => {
     store.getState().setDirtySource(`agent:${scope}`, agentPending);
     return () => store.getState().setDirtySource(`agent:${scope}`, false);
@@ -194,7 +199,7 @@ export function AssistantPanel({
   useEffect(() => {
     sessionRef.current = null;
     setAgentState({ ...initialAgentSession });
-    setAgentTasks([]);
+    setAgentMessages([]);
   }, [agentBindingKey]);
   useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
 
@@ -389,9 +394,18 @@ export function AssistantPanel({
           return;
         }
       }
-      setAgentTasks((tasks) => [...tasks, text]);
+      // Keep completed Agent turns visible in the same global conversation.
+      // The current answer remains streamed from `agentState` until the next
+      // task starts, then it is folded into this local transcript.
+      setAgentMessages((messages) => [
+        ...(agentState.agentText
+          ? [...messages, { role: 'assistant' as const, text: agentState.agentText }]
+          : messages),
+        { role: 'user', text },
+      ]);
       setPrompt('');
       if (!(await sessionRef.current.send(agentText))) {
+        setPrompt(text);
         setError(sessionRef.current.state.error ?? '');
       }
     } finally {
@@ -401,8 +415,13 @@ export function AssistantPanel({
   }
 
   async function send() {
-    if (!prompt.trim() || busyRef.current || settingsBusy) return;
-    if (agentMode) {
+    if (!prompt.trim() || busyRef.current || settingsBusy || agentPending) return;
+    // The global assistant automatically uses the local harness whenever the
+    // current page has a project root and the configured provider speaks an
+    // OpenAI-shaped protocol. Users should describe the outcome; they should
+    // not have to choose a transport mode before every request.
+    const harnessAvailable = agent !== nativeAgent || isTauri();
+    if (harnessAvailable && agentProject && domain && engineSupports(settings.provider)) {
       await sendToAgent();
       return;
     }
@@ -442,6 +461,28 @@ export function AssistantPanel({
     const existing = history.find((item) => item.id === id);
     setConversation(existing ? asConversation(existing) : newConversation(scope));
     setError('');
+  }
+
+  async function setupWindowsSandbox() {
+    if (!agentProject || !domain || !agent.setupSandbox) return;
+    setSandboxBusy(true);
+    setError('');
+    try {
+      const result = await agent.setupSandbox(agentProject, domain, agentConnection);
+      // A setup request may start an elevated helper. Reopen the Codex thread
+      // after the user completes that flow so it picks up the new sandbox.
+      sessionRef.current = null;
+      setAgentState({ ...initialAgentSession });
+      if (result.started) {
+        setError(t('Windows 沙箱配置已启动，请完成系统提示后再次发送任务。'));
+      } else {
+        setError(t('Windows 沙箱配置没有启动，请重试或查看系统权限设置。'));
+      }
+    } catch (reason) {
+      setError(safeError(reason));
+    } finally {
+      setSandboxBusy(false);
+    }
   }
 
   return (
@@ -627,21 +668,39 @@ export function AssistantPanel({
           pinnedToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 48;
         }}
       >
-        {!conversation.messages.length && !(agentMode && agentTasks.length) ? (
+        {!conversation.messages.length && !agentMessages.length ? (
           <div className="sf-ai-conversation-empty">
-            {agentMode ? t('描述一个要在这个目录里执行的任务') : t('从一个问题开始')}
+            {t('提问，或直接描述要在当前工作区完成的任务')}
           </div>
         ) : (
           conversation.messages.map((message) => (
             <ChatMessageView key={message.id} role={message.role} text={message.text} />
           ))
         )}
-        {agentMode &&
-          agentTasks.map((task, index) => (
-            <ChatMessageView key={`agent-task-${index}`} role="user" text={task} />
-          ))}
-        {agentMode && agentState.agentText ? (
+        {agentMessages.map((message, index) => (
+          <ChatMessageView key={`agent-message-${index}`} role={message.role} text={message.text} />
+        ))}
+        {agentState.agentText ? (
           <ChatMessageView role="assistant" text={agentState.agentText} />
+        ) : null}
+        {agentState.sandbox === 'readOnly' ? (
+          <div className="sf-agent-sandbox-notice" role="status">
+            <span>
+              {t(
+                '当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。',
+              )}
+            </span>
+            {agent.setupSandbox ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={sandboxBusy || busy}
+                onClick={() => void setupWindowsSandbox()}
+              >
+                {sandboxBusy ? t('正在配置…') : t('配置 Windows 沙箱')}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
         {agentState.approvals.map((approval) => (
           <ApprovalCard
@@ -653,7 +712,7 @@ export function AssistantPanel({
         ))}
         {busy ? (
           <div className="sf-ai-progress" role="status">
-            {agentMode ? t('正在执行…') : t('正在等待模型回答…')}
+            {t('正在处理…')}
           </div>
         ) : null}
       </div>
@@ -700,7 +759,7 @@ export function AssistantPanel({
       <AssistantComposer
         inputRef={composerRef}
         prompt={prompt}
-        disabled={busy || settingsBusy || unsaved || !!retry}
+        disabled={busy || agentPending || settingsBusy || unsaved || !!retry}
         model={settings.model}
         endpoint={settings.endpoint}
         includeContext={includeContext}
@@ -708,8 +767,6 @@ export function AssistantPanel({
         onSend={() => void send()}
         contextLabel={context.path || context.title || t('当前材料')}
         modelMenuOpen={menu?.kind === 'models'}
-        agentMode={agentMode}
-        onAgentModeToggle={() => setAgentMode((value) => !value)}
         onContext={() => setShowContext(true)}
         onModelMenu={(event) => openMenu('models', event.currentTarget)}
       />
