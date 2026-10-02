@@ -135,7 +135,7 @@ type AgentBinding = {
 };
 ```
 
-不按一级导航拆分，原因是 `src/components/navigation/workspaces.ts` 中的 `experiments`（Code）、`writing`（Manuscript）、`files`（All files）渲染的是同一个代码根的三种视图。拆成三段互不相通的记忆会导致「在 Code 中让 Agent 读过的文件，切到 Files 后不再记得」，且换不来任何边界收益。`overview` 与 `notes` 没有对应的根，独立成域会变成悬空作用域。
+不按一级导航拆分，原因是 `src/components/navigation/workspaces.ts` 中的 `experiments`（Code）与 `writing`（Manuscript）使用同一个项目文件根。拆成两段互不相通的记忆会导致「在 Code 中让 Agent 读过的文件，切到 Manuscript 后不再记得」，且换不来任何边界收益。`overview` 与 `notes` 没有对应的根，独立成域会变成悬空作用域。2026-09-30 产品基线直接移除 Files 入口及独立 All files 页面，不再将其列为导航或新增独立 Agent 域；共享文件编辑模块继续保留。
 
 ### 4.2 导航到域的映射
 
@@ -144,11 +144,10 @@ type AgentBinding = {
 | `literature` | `literature` | 根为该项目的文献根 |
 | `experiments` | `code` | 根为项目文件根 |
 | `writing` | `code` | 同根，绑定不变 |
-| `files` | `code` | 同根，绑定不变 |
 | `overview` | 保持上次 | 无根，不切换 |
 | `notes` | 保持上次 | 无根，不切换 |
 
-由此得到一个必要性质：在 `experiments`、`writing`、`files` 之间切换时绑定不变、对话延续。
+由此得到一个必要性质：在 `experiments` 与 `writing` 之间切换时绑定不变、对话延续。
 
 ### 4.3 域到根目录
 

@@ -8,7 +8,7 @@
 
 双击 **Scientify-MVP.cmd** 即可运行桌面版，无需启动开发服务器。脚本从 `target/release/` 与 `target/ui-shell/release/` 中选择修改时间最新的 release，没有 release 时回退到 debug。需要 Windows WebView2 Runtime；若旧窗口仍打开，请先关闭旧窗口再启动新版，避免单实例机制只唤起旧界面。两处 release 使用相同的应用标识和数据目录。
 
-Projects 启动页采用左侧品牌/空间导航、右侧搜索与项目书架：默认书本封面网格，可切换列表，支持搜索、收藏、归档、创建、编辑与右键重命名/删除；顶部不显示筛选或排序。头像/登录仅为静态组件。左下角复用工作区的亮暗切换，底部工具仅保留设置和亮暗切换；右上角提供原生窗口操作，关闭继续经过未保存保护。进入项目后显示原有单行 Topbar 与六入口 Rail。
+Projects 启动页采用左侧品牌/空间导航、右侧搜索与项目书架：默认书本封面网格，可切换列表，支持搜索、收藏、归档、创建、编辑与右键重命名/删除；顶部不显示筛选或排序。头像/登录仅为静态组件。左下角复用工作区的亮暗切换，底部工具仅保留设置和亮暗切换；右上角提供原生窗口操作，关闭继续经过未保存保护。进入项目后显示单行 Topbar 与五入口 Rail。
 
 桌面版采用两个独立窗口：启动显示 1100×740 的 Projects 管理窗口；打开项目后创建最大化 Workspace，载入后隐藏 Projects。点击工作区左上角品牌入口或关闭工作区会经过未保存检查，再返回并刷新 Projects；关闭 Projects 退出应用。首版同时保留一个工作区，可在其中切换项目。浏览器预览仍为单窗口。
 
@@ -33,13 +33,19 @@ pnpm start
 | 项目管理 | 书本封面网格/列表、新建、编辑、删除、目录关联、收藏、归档、搜索；个人与团队空间管理 |
 | 项目概览 | 项目研究方向、继续工作、最近材料更新、下一步待办 |
 | 文献 | 关联真实目录、递归树与文件名搜索；PDF/相邻 Markdown 笔记配对管理、双标签组、自动保存与冲突保护；原生网页标签与下载；旧资料可显式复制迁移 |
-| 实验 | 项目文件树、代码编辑、保存、重读、冲突提示与另存副本、Git 变更查看、实验参数/指标/结论记录 |
+| 实验 | Code 文件编辑与保存保护、运行配置、本地并行执行与日志/停止、Runs 记录与指标比较、运行产物、Changes Git 文本差异 |
 | 论文 | Markdown / LaTeX / BibTeX 等文本编辑，Markdown 源码/分栏/预览，项目文献引用信息 |
-| Notes / Files | 项目笔记的中央编辑入口；复用现有文件能力的全项目文件视图 |
+| Notes | 项目笔记的中央编辑入口，与侧栏复用同一编辑实例 |
 | 全局辅助 | 项目笔记与个人收集箱、自动保存、来源返回；Ollama / OpenAI 兼容 / Anthropic / Gemini 模型提问、对话记录、回答转笔记 |
 | 全局操作 | 项目/文献/笔记搜索，主题偏好，数据导入/导出/恢复，可拖动侧栏 |
 
 典型流程：创建项目 → 导入 PDF → 阅读并记录带来源的小结 → 编辑实验文件并记录结果 → 撰写 Markdown 草稿。右侧笔记和 AI 在这些步骤间保持可用。
+
+产品导航基线（2026-09-30）：直接移除 Files 入口及独立的 All files 功能页面，不保留隐藏页面或替代入口。项目文件树与编辑、保存和冲突保护仍由 Experiments / Code 与 Paper / Manuscript 复用；移除页面不删除用户文件。
+
+产品下一阶段的定位与范围建议见 [产品功能说明](docs/产品功能文档/产品功能说明.md)；各页面的职责、布局、交互和失败状态见 [页面功能与交互设计](docs/产品功能文档/页面功能与交互设计.md)。两份文档是设计建议，不代表新增能力已经交付。
+
+当前各页面和操作入口见 [产品功能入口说明](docs/产品功能文档/产品功能入口说明.md)。本地执行只在桌面版开放；脚本通过 SCIENTIFY_RUN_DIR 写入各次运行的产物目录。
 
 ## AI 配置
 
@@ -79,8 +85,8 @@ pnpm start
 ## 当前边界
 
 - 团队空间为本机分类，无账号登录、多人同步或权限系统。
-- 实验状态/指标手动记录；尚无终端、进程执行、调度、运行日志采集。
-- Git 仅查看状态；LaTeX 可编辑但未接入编译；Markdown 已提供实际预览。
+- 实验支持真实本地进程、独立停止、日志、受限产物查看与手动指标记录；尚无交互终端、远程调度或 Notebook 内核。
+- Git 可查看状态与文本差异，不提供提交、推送或合并；LaTeX 可编辑但未接入编译；Markdown 已提供实际预览。
 - 文献推荐和个人信息源明确显示未启用；已有旧订阅数据与 arXiv 后端接口保留。无后台订阅、实时翻译、PDF 批注和 OCR。
 - 本地文献目录已接入文件监听与唯一指纹重关联；实验/论文文件仍需重读获取外部修改。保存均有冲突校验。
 - 本机 UTF-8 文本限 2 MiB；新文献 PDF 限 150 MiB，旧附件限 100 MiB；HTTP 预览的 PDF 限 25 MiB。目录最多 10,000 项、32 层。
@@ -116,12 +122,12 @@ pnpm tauri build --no-bundle
 src/
   components/layout/      顶栏、项目切换、整体布局
   components/primitives/  Button / Input / Dropdown / Tooltip / Badge
-  components/navigation/  六个 Rail 入口与二级视图配置
+  components/navigation/  五个 Rail 入口与二级视图配置
   components/workspace/   Section / ResourceList / ActivityList / TreeView / WorkspaceFrame
   components/ai/          当前上下文、辅助操作与项目提问输入区
   app/                    应用装配、导航、关闭保护
   shell/                  全局辅助栏、分隔拖动、布局
-  workspaces/             overview / literature / files / experiments
+  workspaces/             overview / literature / files / experiments（files 为共享编辑模块，不是独立页面）
   features/               projects / literature / assistant / notes / search / settings
   editor/                 文件会话、CodeMirror、Markdown 预览
   reader/                 PDF 阅读器
@@ -140,7 +146,7 @@ scripts/                  PDF 资源准备
 
 文档现位于本仓库的 [docs](docs/README.md)。前端开发先读 [UI/UX 标准](docs/UI-UX/README.md)，涵盖视觉、组件、交互、动效与验收；技术方案第 0 节区分当前实现和后续目标。开发记录见 [第一轮MVP交付](docs/开发记录/第一轮MVP交付.md)。
 
-最新页面结构以 [前端工作区重构：第一阶段](docs/架构设计/前端工作区重构-第一阶段.md) 为基础。旧四入口布局规则已由六入口 Rail 取代；本轮已将页面控件迁入共享 primitive，并统一分区、列表、活动与文件树。组件边界、组合方式与样式约束见 [Workspace UI](src/components/README.md)。现有数据和业务能力沿用。
+最新页面结构以 [前端工作区重构：第一阶段](docs/架构设计/前端工作区重构-第一阶段.md) 为基础。当前采用五入口 Rail，不再保留 Files 独立页面；旧四入口布局与六入口交付记录均不作为当前导航要求。本轮已将页面控件迁入共享 primitive，并统一分区、列表、活动与文件树。组件边界、组合方式与样式约束见 [Workspace UI](src/components/README.md)。现有数据和业务能力沿用。
 
 本轮验证记录见 [UI Shell 第一阶段验收](docs/开发记录/UI-Shell第一阶段验收.md)。
 
