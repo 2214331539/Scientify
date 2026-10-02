@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 import { FileText, RefreshCw, Square } from 'lucide-react';
 import { Button } from '../../components/primitives';
 import { Modal } from '../../components/Modal';
 import { t, translateError } from '../../i18n';
 import type { ResearchFile } from '../../platform/research';
-import { describeError, experimentApi, type Execution } from './runtime';
+import { describeError, experimentApi, experimentOutput, type Execution } from './runtime';
 
 export function ExecutionPanel({
   run,
@@ -23,20 +24,45 @@ export function ExecutionPanel({
   const [artifact, setArtifact] = useState<{ path: string; content: string } | null>(null);
   const [revision, setRevision] = useState(0);
   const [stopping, setStopping] = useState(false);
+  const outputRevision = useStore(experimentOutput, (s) => s.revisions[run?.id ?? ''] ?? 0);
+  const logTicket = useRef(0);
+  const logRef = useRef<HTMLPreElement>(null);
+  const followLog = useRef(true);
+  useEffect(() => {
+    if (!run || tab !== 'logs' || !outputRevision) return;
+    let alive = true;
+    const ticket = ++logTicket.current;
+    void experimentApi
+      .log(run.id)
+      .then((text) => {
+        if (alive && ticket === logTicket.current) setLog(text);
+      })
+      .catch((e) => {
+        if (alive) setError(describeError(e));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [run?.id, tab, outputRevision]);
+  useEffect(() => {
+    if (followLog.current && logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [log]);
   useEffect(() => {
     setLog('');
     setFiles([]);
     setError('');
     setArtifact(null);
     setStopping(false);
+    followLog.current = true;
     if (!run) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
     async function read() {
       try {
         if (tab === 'logs') {
+          const ticket = ++logTicket.current;
           const text = await experimentApi.log(run!.id);
-          if (alive) setLog(text);
+          if (alive && ticket === logTicket.current) setLog(text);
         }
         if (tab === 'artifacts') {
           const result = await experimentApi.artifacts(run!.id);
@@ -101,7 +127,15 @@ export function ExecutionPanel({
       </div>
       {error || run.error ? <p role="alert">{translateError(error || run.error || '')}</p> : null}
       {tab === 'logs' && (
-        <pre className="sf-execution-log" aria-label={t('只读运行日志')}>
+        <pre
+          ref={logRef}
+          className="sf-execution-log"
+          aria-label={t('只读运行日志')}
+          onScroll={(event) => {
+            const el = event.currentTarget;
+            followLog.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+          }}
+        >
           {log || t('暂无输出')}
         </pre>
       )}
@@ -117,6 +151,22 @@ export function ExecutionPanel({
           <dd>{run.directory}</dd>
           <dt>{t('平台')}</dt>
           <dd>{run.platform}</dd>
+          <dt>{t('执行权限')}</dt>
+          <dd>
+            {t(run.permission === 'workspace-write' ? '工作区沙箱 · 网络关闭' : '旧版用户权限运行')}
+          </dd>
+          {run.source ? (
+            <>
+              <dt>{t('来源会话')}</dt>
+              <dd>
+                <code>{run.source.conversationId}</code>
+              </dd>
+              <dt>{t('来源任务')}</dt>
+              <dd>
+                <code>{run.source.turnId}</code>
+              </dd>
+            </>
+          ) : null}
           <dt>{t('Git 提交')}</dt>
           <dd>{run.gitCommit || t('未记录')}</dd>
           <dt>{t('启动时变更')}</dt>

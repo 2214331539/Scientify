@@ -85,6 +85,12 @@ export function ExperimentWorkspace({
     .filter((r) => r.project === project.id)
     .sort((a, b) => b.startedAt - a.startedAt);
   const activeRun = ownRuns.find((r) => r.id === logRun) ?? ownRuns[0];
+  useEffect(() => {
+    if (selectedRunId) {
+      setLogRun(selectedRunId);
+      setPanelOpen(true);
+    }
+  }, [selectedRunId]);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -128,15 +134,6 @@ export function ExperimentWorkspace({
         for (const session of drafts)
           if (!(await session.save())) throw new Error(t('文件保存失败，请处理冲突后再运行。'));
       }
-      if (
-        !(await confirmAction(
-          t('运行本地程序 {program}？参数：{args}。程序具有当前用户权限，多次运行共享项目文件。', {
-            program: configuration.executable,
-            args: JSON.stringify(configuration.args),
-          }),
-        ))
-      )
-        return;
       const result = await startExecution(store, project.id, configuration);
       if (alive.current) {
         setLogRun(result.id);
@@ -371,6 +368,8 @@ export function ExperimentWorkspace({
               <dd>
                 <code>{config ? JSON.stringify(config.args) : '—'}</code>
               </dd>
+              <dt>{t('执行权限')}</dt>
+              <dd>{t('工作区沙箱 · 网络关闭')}</dd>
             </dl>
             <p>{t('以上为配置值，不表示环境检测已通过。运行时会验证路径和程序。')}</p>
             <p>{t('产物目录由 SCIENTIFY_RUN_DIR 提供，脚本需显式将结果写入该目录。')}</p>

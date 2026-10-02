@@ -456,3 +456,44 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.sf-ai-runs {
+  margin-bottom: 12px;
+}
+.sf-ai-runs-title {
+  font-size: 12px;
+  color: var(--sf-text-secondary);
+  margin-bottom: 6px;
+}
+.sf-ai-run {
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+.sf-ai-run-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sf-ai-run-heading > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-ai-run-heading > svg {
+  flex-shrink: 0;
+}
+.sf-ai-run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--sf-text-secondary);
+}
+.sf-ai-run p {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

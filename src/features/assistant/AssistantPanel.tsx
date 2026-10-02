@@ -19,6 +19,8 @@ import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import '../../components/ai/ai-panel.css';
 import { Button, Dropdown } from '../../components/primitives';
 import { ModelSettingsDialog } from './ModelSettingsDialog';
+import { AssistantRuns } from './AssistantRuns';
+import { getFileRuntime } from '../../editor/sessions';
 import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/Menu';
 import { Modal } from '../../components/Modal';
 import { Panel } from '../../components/layout/Panel';
@@ -442,6 +444,37 @@ export function AssistantPanel({
     }
     setError('');
     const sendingId = conversation.id;
+    if (domain === 'code') {
+      const drafts = [...getFileRuntime(backend).sessions.values()].filter(
+        (session) => session.projectId === scope && session.getSnapshot().dirty,
+      );
+      if (drafts.length) {
+        busyRef.current = true;
+        setBusy(true);
+        try {
+          if (
+            !(await confirmAction(
+              t('运行前保存此项目的 {count} 个未保存文件？保存失败时不会启动。', {
+                count: drafts.length,
+              }),
+            ))
+          )
+            return;
+          for (const session of drafts)
+            if (!(await session.save())) {
+              setError(t('文件保存失败，请处理冲突后再运行。'));
+              return;
+            }
+        } catch (reason) {
+          setError(safeError(reason));
+          return;
+        } finally {
+          busyRef.current = false;
+          setBusy(false);
+        }
+      }
+    }
+    if (activeConversationId.current !== sendingId) return;
     const snapshot =
       includeContext &&
       (!domainForWorkspace(context.workspace) || domainForWorkspace(context.workspace) === domain)
@@ -845,6 +878,7 @@ export function AssistantPanel({
           pinnedToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 48;
         }}
       >
+        <AssistantRuns key={conversation.id} projectId={scope} conversationId={conversation.id} />
         {!conversation.messages.length ? (
           <div className="sf-ai-conversation-empty">
             {t('提问，或直接描述要在当前工作区完成的任务')}

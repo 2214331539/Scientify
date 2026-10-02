@@ -12,6 +12,8 @@ pub struct Binding {
     pub thread_id: String,
     #[serde(default)]
     pub started: bool,
+    #[serde(default)]
+    pub managed_runs: bool,
 }
 fn path(data: &Path, project: &str, conversation: &str) -> Result<PathBuf, String> {
     if !valid_key(project) || !valid_key(conversation) {
@@ -56,6 +58,7 @@ pub fn write(data: &Path, handle: &ThreadHandle, started: bool) -> Result<(), St
         root: PathBuf::from(&handle.cwd),
         thread_id: handle.thread_id.clone(),
         started,
+        managed_runs: handle.domain == "code",
     };
     std::fs::create_dir_all(target.parent().unwrap()).map_err(|e| e.to_string())?;
     let temporary = target.with_extension("pending");

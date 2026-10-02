@@ -143,7 +143,15 @@ export class AgentSession {
       }
       if ((event.method === 'item/started' || event.method === 'item/completed') && p.item) {
         const item = object(p.item);
-        if (['commandExecution', 'fileChange', 'mcpToolCall', 'webSearch'].includes(item.type)) {
+        if (
+          [
+            'commandExecution',
+            'fileChange',
+            'mcpToolCall',
+            'webSearch',
+            'dynamicToolCall',
+          ].includes(item.type)
+        ) {
           const label = String(
             item.command ??
               item.tool ??
@@ -156,7 +164,12 @@ export class AgentSession {
             status: String(
               item.status ?? (event.method === 'item/completed' ? 'completed' : 'running'),
             ),
-            output: String(item.aggregatedOutput ?? item.result ?? '').slice(-32000),
+            output: String(
+              item.aggregatedOutput ??
+                item.contentItems?.map((c: any) => c.text ?? '').join('\n') ??
+                item.result ??
+                '',
+            ).slice(-32000),
           };
           state.operations = [
             ...state.operations.filter((e) => e.id !== operation.id),

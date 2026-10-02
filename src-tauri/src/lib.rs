@@ -9,6 +9,7 @@ mod ai;
 mod browser;
 mod credentials;
 mod experiments;
+pub use experiments::runner::run as run_managed_experiment;
 #[cfg(test)]
 mod ipc_smoke;
 mod library;

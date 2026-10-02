@@ -65,7 +65,16 @@ try {
         },
       ],
       tasks: [],
-      sessions: [],
+      sessions: [
+        {
+          id: 'fixture-chat',
+          project: project.id,
+          title: 'AI experiment fixture',
+          messages: [],
+          context: [],
+          updatedAt: '2026-10-02',
+        },
+      ],
       subscriptions: [],
       trash: [],
       recent: [],
@@ -117,7 +126,10 @@ try {
       }),
     );
   });
-  await page.goto('http://127.0.0.1:1420', { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.goto(process.env.SCIENTIFY_UI_URL || 'http://127.0.0.1:1420', {
+    waitUntil: 'domcontentloaded',
+    timeout: 120000,
+  });
   await page.locator('.cm-editor').waitFor({ timeout: 120000 });
   check(
     await page.getByRole('button', { name: '运行', exact: true }).isDisabled(),
@@ -191,15 +203,107 @@ try {
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       'Dark English AI-open no overflow at ' + width,
     );
+    const bar = await page.locator('.workspace-commandbar').boundingBox();
+    const actions = await page.locator('.sf-experiment-actions').boundingBox();
+    check(
+      actions.y + actions.height <= bar.y + bar.height + 1,
+      'Experiment actions stay inside header at ' + width,
+    );
   }
   await page.screenshot({ path: join(directory, 'Code-dark-English-AI.png') });
   await page.getByRole('button', { name: 'Runs', exact: true }).click();
   await page.getByRole('table', { name: 'Experiment records' }).waitFor();
   check(true, 'English Runs table available with AI open');
+  await page.evaluate(async () => {
+    const { executionStore, experimentApi } =
+      await import('/src/workspaces/experiments/runtime.ts');
+    const run = {
+      id: 'fixture-run',
+      project: 'ui-experiment',
+      name: 'Evaluation · seed 42 · long experiment name',
+      status: 'running',
+      startedAt: 1,
+      endedAt: null,
+      exitCode: null,
+      configuration: {
+        id: 'cfg',
+        name: 'Evaluation',
+        executable: 'python',
+        args: ['eval.py'],
+        cwd: '.',
+      },
+      directory: 'C:/fixture',
+      executable: 'python',
+      platform: 'windows',
+      gitCommit: null,
+      gitChanges: [],
+      error: null,
+      permission: 'workspace-write',
+      source: {
+        conversationId: 'fixture-chat',
+        threadId: 'fixture-thread',
+        turnId: 'fixture-turn',
+        callId: 'fixture-call',
+        workspaceRoot: 'C:/fixture',
+      },
+    };
+    executionStore.setState({ runs: [run] });
+    experimentApi.log = async () => 'Fixture log: evaluation complete\naccuracy=0.9';
+    experimentApi.artifacts = async () => [
+      { path: 'metrics.json', name: 'metrics.json', kind: 'file', size: 16 },
+    ];
+    experimentApi.artifact = async () => ({
+      path: 'metrics.json',
+      content: '{"accuracy":0.9}',
+      version: 'fixture',
+    });
+    experimentApi.stop = async () =>
+      executionStore.setState({ runs: [{ ...run, status: 'cancelled', endedAt: 2 }] });
+  });
+  await page.locator('.sf-ai-run').waitFor();
+  for (const width of [1440, 1000, 800, 600, 390]) {
+    await page.setViewportSize({ width, height: 940 });
+    const row = await page.locator('.sf-ai-run').boundingBox();
+    check(row && row.x >= 0 && row.x + row.width <= width, 'Linked run visible at ' + width);
+    for (const button of await page.locator('.sf-ai-run button').all()) {
+      const box = await button.boundingBox();
+      check(
+        box && box.x >= row.x && box.x + box.width <= row.x + row.width + 1,
+        'Linked run action contained at ' + width,
+      );
+    }
+    await page.screenshot({ path: join(directory, 'AI-run-' + width + '.png') });
+  }
+  await page.setViewportSize({ width: 1000, height: 940 });
+  await page.getByRole('button', { name: 'View logs and results', exact: true }).click();
+  await page
+    .getByRole('dialog')
+    .getByLabel('Read-only run log')
+    .filter({ hasText: 'accuracy=0.9' })
+    .waitFor();
+  await page
+    .getByRole('dialog')
+    .evaluate(async (element) =>
+      Promise.all(
+        element
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
+  await page.screenshot({ path: join(directory, 'AI-run-logs.png') });
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await page.getByRole('button', { name: 'Open experiment run', exact: true }).click();
+  check(
+    (await page.locator('.sf-experiment-runs').innerText()).includes('AI experiment'),
+    'Chat navigates to same formal run with AI source',
+  );
+  await page.getByRole('button', { name: 'Stop experiment', exact: true }).click();
+  await page.locator('.sf-ai-run').filter({ hasText: 'Cancelled' }).waitFor();
+  check(true, 'Stopping experiment updates linked card');
   check(errors.length === 0, 'No browser runtime errors: ' + errors.join('; '));
   await writeFile(
     join(directory, 'report.json'),
-    JSON.stringify({ date: '2026-10-01', fixtureOnly: true, checks, errors }, null, 2),
+    JSON.stringify({ date: '2026-10-02', fixtureOnly: true, checks, errors }, null, 2),
   );
   console.log(JSON.stringify({ passed: checks.length, errors, screenshots: directory }, null, 2));
 } finally {

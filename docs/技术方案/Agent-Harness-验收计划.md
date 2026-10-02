@@ -2,7 +2,30 @@
 
 本文规定内置 Agent 引擎的验收方式。设计与接口见 [Agent Harness 集成设计](Agent-Harness-集成设计.md)；实施阶段沿用该文档第 10 节的 M1 / M2 / M3 划分。
 
-文档状态：M1 部分项已验证，其余为待验收。每次验收在文末记录结果与证据路径。
+文档状态：以最近日期的实施与验证记录为准，早期 M1/M2/M3 表格保留为历史检查点。每次验收在文末记录结果与证据路径；真实模型和桌面操作未执行的项目仍需人工验收。
+
+## 2026-10-02：全局 AI 与正式实验运行
+
+当前链路、执行权限、Windows 兼容方式与八步人工验收见 [全局 AI 与正式实验运行集成](全局AI与正式实验运行集成.md)。AI 代码会话通过原生动态工具启动独立 Run，聊天、实验页和后台任务共享同一记录；日志、退出码和结果文件可返回模型。手动与 AI 正式运行采用相同 workspace-write 沙箱，默认网络关闭，Windows 自动进行非提权初始化。中止 AI 轮次与停止 Run 独立。
+
+### 自动验证证据
+
+| 检查 | 结果 | 范围与限制 |
+| --- | --- | --- |
+| `pnpm check` | 通过 | 前端类型检查 |
+| `pnpm test -- --maxWorkers=2` | 38 文件 / 180 项通过 | 含关联运行入口、来源隔离、跳转、停止与动态工具活动展示 |
+| `cargo test -p scientify --lib --locked -- --test-threads=2` | 42 项通过 / 1 项忽略 | 真实打包 Codex + 本地确定性 Responses 服务；实际启动实验并回传日志、accuracy=0.9、结果读取、来源校验、请求去重、线程恢复、两个运行独立停止、首次沙箱拒绝外部文件写入及运行器启动失败日志。忽略项是这些测试使用的子进程入口，不是未验证功能 |
+| `cargo clippy --workspace --all-targets --locked -- -D warnings` | 通过 | Rust 全工作区静态检查 |
+| `node scripts/verify-experiments-ui.mjs` | 49 项通过，无页面运行错误 | 隔离浏览器夹具，检查 1440/1000/800/600/390 宽度、深色英文、日志弹窗与正确 Run 跳转；不代表原生执行已通过 |
+| `cargo fmt --check`、改动文件 Prettier、`git diff --check` | 通过 | 仅记录当前改动的格式检查 |
+| `pnpm tauri build --no-bundle` | Windows x64 Release 构建通过 | `target/release/scientify.exe`；2026-10-02 14:09:15，13,910,016 字节。保留 Vite 大分块提示与链接器创建库提示，无构建错误 |
+| `node scripts/verify-experiment-runner.mjs` | 发布版原生入口通过 | 真实打包 Codex workspace-write 沙箱，独立空引擎目录，退出码 0、4 次运行中日志快照、实际 accuracy=0.9 JSON、外部文件写入被拒绝；不调用模型 |
+
+原生端到端测试使用 [本地模型协议夹具](../../scripts/fixtures/experiment-provider.mjs)，不使用用户密钥，不调用付费服务。界面截图和报告位于 `%TEMP%/scientify-experiments-ui/`。
+
+发布版可通过仓库根目录的 `Scientify-MVP.cmd` 启动。本轮只构建和调用无界面运行入口，没有自动打开或关闭用户的桌面应用。Windows 验证明确在引擎启动时选定非提权沙箱，避免 setupCompleted 后沿用启动时旧配置；文件围栏检查使用平台临时目录之外的可删除测试文件。
+
+真实供应商下的工具选择、首次沙箱初始化耗时和桌面窗口体验仍需按上述八步验收。长实验结束不会自动发起下一轮付费模型请求；同目录的会话共享磁盘文件，线程隔离不等于独立源码副本。
 
 ## 2026-10-01：本地并行会话实施与验收
 

@@ -593,8 +593,31 @@ export function App({
           }
       }
     };
+    const openRun = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId: string; runId: string }>).detail;
+      const target = data?.projects.find((p) => p.id === detail?.projectId);
+      if (!target || typeof detail?.runId !== 'string') return;
+      setUI((s) => ({
+        ...s,
+        projectId: target.id,
+        space: target.space,
+        locations: {
+          ...s.locations,
+          [target.id]: {
+            ...(s.locations[target.id] ?? locationDefault),
+            workspace: 'experiments',
+            view: 'runs',
+            runId: detail.runId,
+          },
+        },
+      }));
+    };
     window.addEventListener('scientify-open-source', open);
-    return () => window.removeEventListener('scientify-open-source', open);
+    window.addEventListener('scientify-open-run', openRun);
+    return () => {
+      window.removeEventListener('scientify-open-source', open);
+      window.removeEventListener('scientify-open-run', openRun);
+    };
   }, [data, windowMode]);
   function openDialog(next: Dialog) {
     store.getState().clearMessage();

@@ -171,7 +171,13 @@ export function ExperimentRuns({
                       {field.kind === 'metric' ? (
                         (metricsOf(r).find((m) => m.name === field.name)?.value ?? '—')
                       ) : field.name === '来源' ? (
-                        t(native.has(r.id) ? '本地运行' : '手动记录')
+                        t(
+                          native.get(r.id)?.source
+                            ? 'AI 实验'
+                            : native.has(r.id)
+                              ? '本地运行'
+                              : '手动记录',
+                        )
                       ) : field.name === '状态' ? (
                         t(labels[text(r.status)] || text(r.status))
                       ) : field.name === '配置与参数' ? (
@@ -229,7 +235,15 @@ export function ExperimentRuns({
                       </Button>
                     </td>
                     <td>{t(labels[text(r.status)] || text(r.status))}</td>
-                    <td>{t(native.has(r.id) ? '本地运行' : '手动记录')}</td>
+                    <td>
+                      {t(
+                        native.get(r.id)?.source
+                          ? 'AI 实验'
+                          : native.has(r.id)
+                            ? '本地运行'
+                            : '手动记录',
+                      )}
+                    </td>
                     <td>{text(r.updatedAt).slice(0, 16).replace('T', ' ')}</td>
                   </tr>
                 ))}

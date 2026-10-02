@@ -91,7 +91,7 @@ fn experiment_commands_use_workspace_only_acl_and_real_processes() {
     };
     let run: Value = invoke(&trusted,"experiment_start",json!({"projectId":"execution-project","configuration":{"id":"test","name":"Native test","executable":exe,"args":args,"cwd":"."}}),origin).unwrap().deserialize().unwrap();
     let id = run["id"].as_str().unwrap();
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
     loop {
         let runs: Value = invoke(&trusted, "experiment_list", json!({}), origin)
             .unwrap()

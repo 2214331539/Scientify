@@ -1,11 +1,14 @@
-use crate::{research, AppState};
+use crate::{
+    agent::{execution, process::EventSink},
+    research, AppState,
+};
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     fs,
-    io::{Read, Seek, SeekFrom},
+    io::{Read, Seek, SeekFrom, Write},
     path::{Component, Path, PathBuf},
-    process::{Command, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -14,8 +17,9 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::{Manager, State};
+pub(crate) mod runner;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Configuration {
     pub id: String,
@@ -41,6 +45,22 @@ pub struct Run {
     pub git_commit: Option<String>,
     pub git_changes: Vec<String>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub source: Option<RunSource>,
+    #[serde(default = "legacy_permission")]
+    pub permission: String,
+}
+fn legacy_permission() -> String {
+    "legacy-current-user".into()
+}
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RunSource {
+    pub conversation_id: String,
+    pub thread_id: String,
+    pub turn_id: String,
+    pub call_id: String,
+    pub workspace_root: String,
 }
 struct Entry {
     run: Mutex<Run>,
@@ -220,7 +240,14 @@ impl ExperimentState {
             .cloned()
             .ok_or_else(|| "运行记录不存在。".into())
     }
-    fn start(&self, project: String, root: PathBuf, config: Configuration) -> Result<Run, String> {
+    pub(crate) fn start(
+        &self,
+        project: String,
+        root: PathBuf,
+        config: Configuration,
+        source: Option<RunSource>,
+        sink: Option<EventSink>,
+    ) -> Result<Run, String> {
         if config.name.trim().is_empty()
             || config.name.len() > 200
             || config.args.len() > 128
@@ -241,6 +268,17 @@ impl ExperimentState {
         }
         let executable = resolve_program(&root, &config.executable)?;
         let mut entries = self.entries.lock().map_err(|e| e.to_string())?;
+        if let Some(source) = &source {
+            for entry in entries.values() {
+                let run = entry.run.lock().map_err(|e| e.to_string())?;
+                if run.project == project && run.source.as_ref() == Some(source) {
+                    if run.configuration != config {
+                        return Err("同一工具请求不能启动不同配置。".into());
+                    }
+                    return Ok(run.clone());
+                }
+            }
+        }
         if entries
             .values()
             .filter(|e| e.run.lock().is_ok_and(|r| r.status == "running"))
@@ -273,119 +311,197 @@ impl ExperimentState {
             git_commit,
             git_changes,
             error: None,
+            source,
+            permission: "workspace-write".into(),
         };
-        persist(&directory, &run)?;
-        let log = fs::File::create(directory.join("output.log")).map_err(|e| e.to_string())?;
         fs::create_dir_all(directory.join("artifacts")).map_err(|e| e.to_string())?;
-        let mut command = Command::new(process_path(&executable));
-        command
-            .args(&config.args)
-            .current_dir(process_path(&cwd))
-            .env("PYTHONUNBUFFERED", "1")
-            .env(
-                "SCIENTIFY_RUN_DIR",
-                process_path(&directory.join("artifacts")),
-            )
-            .stdin(Stdio::null())
-            .stdout(Stdio::from(log.try_clone().map_err(|e| e.to_string())?))
-            .stderr(Stdio::from(log));
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            command.creation_flags(0x08000000);
-        }
-        let mut child = match command.spawn() {
-            Ok(child) => child,
-            Err(e) => {
-                let mut failed = run;
-                failed.status = "failed".into();
-                failed.ended_at = Some(now());
-                failed.error = Some(e.to_string());
-                persist(&directory, &failed)?;
-                entries.insert(
-                    id,
-                    Arc::new(Entry {
-                        run: Mutex::new(failed.clone()),
-                        cancel: AtomicBool::new(false),
-                    }),
-                );
-                return Ok(failed);
-            }
+        let private = directory.join("artifacts/.scientify");
+        fs::create_dir_all(&private).map_err(|e| e.to_string())?;
+        let log_path = if cfg!(windows) {
+            private.join("output.log")
+        } else {
+            directory.join("output.log")
         };
+        let mut log = fs::File::create(&log_path).map_err(|e| e.to_string())?;
         let entry = Arc::new(Entry {
             run: Mutex::new(run.clone()),
             cancel: AtomicBool::new(false),
         });
-        entries.insert(id, entry.clone());
+        let home = self
+            .directory
+            .parent()
+            .ok_or("数据目录无效。")?
+            .join("agent/code");
+        let mut command = vec![process_path(&executable).display().to_string()];
+        command.extend(config.args);
+        let artifacts = process_path(&directory.join("artifacts"));
+        #[cfg(not(windows))]
+        let params = serde_json::json!({"command":command,"processId":id,"cwd":process_path(&cwd),
+            "streamStdoutStderr":true,"disableTimeout":true,"disableOutputCap":true,
+            "env":{"PYTHONUNBUFFERED":"1","SCIENTIFY_RUN_DIR":artifacts},
+            "sandboxPolicy":execution::policy(&process_path(&root),Some(&artifacts))});
+        #[cfg(windows)]
+        let params = {
+            let request = private.join("request.json");
+            fs::write(
+                &request,
+                serde_json::to_vec(&runner::Request {
+                    command,
+                    cwd: process_path(&cwd),
+                })
+                .map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            let binary = std::env::current_exe().map_err(|e| e.to_string())?;
+            #[cfg(not(test))]
+            let argv = vec![
+                binary.display().to_string(),
+                "--scientify-runner".into(),
+                request.display().to_string(),
+            ];
+            #[cfg(test)]
+            let argv = vec![
+                binary.display().to_string(),
+                "--exact".into(),
+                "experiments::runner::tests::managed_runner_child".into(),
+                "--ignored".into(),
+                "--nocapture".into(),
+            ];
+            fs::write(private.join("heartbeat"), "alive").map_err(|e| e.to_string())?;
+            serde_json::json!({"command":argv,"processId":id,"cwd":process_path(&cwd),"disableTimeout":true,
+                "env":{"PYTHONUNBUFFERED":"1","SCIENTIFY_RUN_DIR":artifacts,"SCIENTIFY_FIXTURE_RUNNER":request},
+                "sandboxPolicy":execution::policy(&process_path(&root),Some(&artifacts))})
+        };
+        persist(&directory, &run)?;
+        entries.insert(id.clone(), entry.clone());
         thread::spawn(move || {
-            let mut cancel_sent = false;
             let mut limit_hit = false;
-            loop {
-                if !limit_hit
-                    && fs::metadata(directory.join("output.log"))
-                        .is_ok_and(|m| m.len() > 64 * 1024 * 1024)
-                {
-                    limit_hit = true;
-                    entry.cancel.store(true, Ordering::SeqCst);
-                    if let Ok(mut r) = entry.run.lock() {
-                        r.error = Some("日志超过 64 MiB，已停止运行以保护磁盘空间。".into());
-                    }
+            let result = (|| {
+                if entry.cancel.load(Ordering::SeqCst) {
+                    return Err("启动前已取消。".into());
                 }
-                if entry.cancel.load(Ordering::SeqCst) && !cancel_sent {
+                let mut session = execution::session(&home, &root)?;
+                if entry.cancel.load(Ordering::SeqCst) {
+                    return Err("启动前已取消。".into());
+                }
+                let mut bytes = 0usize;
+                let mut last_event = std::time::Instant::now();
+                session.run_command(params, &entry.cancel, |event| {
                     #[cfg(windows)]
                     {
-                        use std::os::windows::process::CommandExt;
-                        let system = std::env::var_os("SystemRoot")
-                            .map(PathBuf::from)
-                            .unwrap_or_else(|| PathBuf::from("C:/Windows"));
-                        let _ = Command::new(system.join("System32/taskkill.exe"))
-                            .args(["/PID", &child.id().to_string(), "/T", "/F"])
-                            .creation_flags(0x08000000)
-                            .stdin(Stdio::null())
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .status();
-                    }
-                    let _ = child.kill();
-                    cancel_sent = true;
-                }
-                match child.try_wait() {
-                    Ok(Some(status)) => {
-                        if let Ok(mut r) = entry.run.lock() {
-                            r.exit_code = status.code();
-                            r.status = if limit_hit {
-                                "failed"
-                            } else if cancel_sent {
-                                "cancelled"
-                            } else if status.success() {
-                                "completed"
-                            } else {
-                                "failed"
-                            }
-                            .into();
-                            r.ended_at = Some(now());
-                            if let Err(e) = persist(&directory, &r) {
-                                r.error = Some(format!("记录保存失败：{e}"));
+                        scientify_core::research::reject_links(&private)?;
+                        if fs::metadata(&log_path).is_ok_and(|meta| meta.len() > 64 * 1024 * 1024) {
+                            limit_hit = true;
+                            entry.cancel.store(true, Ordering::SeqCst);
+                        }
+                        fs::write(private.join("heartbeat"), "alive").map_err(|e| e.to_string())?;
+                        if entry.cancel.load(Ordering::SeqCst) {
+                            fs::write(private.join("stop"), "stop").map_err(|e| e.to_string())?;
+                        }
+                        let length =
+                            fs::metadata(&log_path).map_err(|e| e.to_string())?.len() as usize;
+                        if bytes != length {
+                            bytes = length;
+                            if let Some(sink) = &sink {
+                                sink(serde_json::json!({"runId":id}));
                             }
                         }
-                        break;
                     }
-                    Err(e) => {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                        if let Ok(mut r) = entry.run.lock() {
-                            r.status = "failed".into();
-                            r.ended_at = Some(now());
-                            r.error = Some(e.to_string());
-                            let _ = persist(&directory, &r);
+                    if event.is_null() {
+                        return Ok(());
+                    }
+                    let chunk = base64::engine::general_purpose::STANDARD
+                        .decode(event["deltaBase64"].as_str().ok_or("日志缺少输出字节。")?)
+                        .map_err(|e| e.to_string())?;
+                    if bytes + chunk.len() > 64 * 1024 * 1024 {
+                        limit_hit = true;
+                        entry.cancel.store(true, Ordering::SeqCst);
+                    } else {
+                        log.write_all(&chunk)
+                            .and_then(|()| log.flush())
+                            .map_err(|e| e.to_string())?;
+                        bytes += chunk.len();
+                    }
+                    if last_event.elapsed() >= Duration::from_millis(80) {
+                        if let Some(sink) = &sink {
+                            sink(serde_json::json!({"runId":id}));
                         }
-                        break;
+                        last_event = std::time::Instant::now();
                     }
-                    Ok(None) => thread::sleep(Duration::from_millis(100)),
+                    Ok(())
+                })
+            })();
+            #[cfg(windows)]
+            if let Ok(value) = &result {
+                if let Ok(mut file) = fs::OpenOptions::new().append(true).open(&log_path) {
+                    for field in ["stdout", "stderr"] {
+                        if let Some(text) = value[field].as_str() {
+                            let _ = file.write_all(text.as_bytes());
+                        }
+                    }
                 }
+            }
+            if let Ok(mut r) = entry.run.lock() {
+                r.exit_code = result
+                    .as_ref()
+                    .ok()
+                    .and_then(|value| value["exitCode"].as_i64())
+                    .map(|code| code as i32);
+                r.status = if limit_hit {
+                    "failed"
+                } else if entry.cancel.load(Ordering::SeqCst) {
+                    "cancelled"
+                } else if r.exit_code == Some(0) {
+                    "completed"
+                } else {
+                    "failed"
+                }
+                .into();
+                r.error = if limit_hit {
+                    Some("日志超过 64 MiB，已停止运行以保护磁盘空间。".into())
+                } else {
+                    result.err()
+                };
+                r.ended_at = Some(now());
+                if let Err(error) = persist(&directory, &r) {
+                    r.error = Some(format!("记录保存失败：{error}"));
+                }
+            }
+            if let Some(sink) = &sink {
+                sink(serde_json::json!({"runId":id}));
             }
         });
         Ok(run)
+    }
+    pub(crate) fn run(&self, id: &str) -> Result<Run, String> {
+        self.entry(id)?
+            .run
+            .lock()
+            .map(|run| run.clone())
+            .map_err(|e| e.to_string())
+    }
+    pub(crate) fn stop(&self, id: &str) -> Result<(), String> {
+        self.entry(id)?.cancel.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    pub(crate) fn entries_for_tools(&self, project: &str) -> Result<Vec<Run>, String> {
+        self.entries
+            .lock()
+            .map_err(|e| e.to_string())?
+            .values()
+            .map(|entry| {
+                entry
+                    .run
+                    .lock()
+                    .map(|run| run.clone())
+                    .map_err(|e| e.to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|runs| {
+                runs.into_iter()
+                    .filter(|run| run.project == project)
+                    .collect()
+            })
     }
 }
 impl Drop for ExperimentState {
@@ -416,8 +532,16 @@ pub async fn experiment_start<R: tauri::Runtime>(
     let files = state.files.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let root = research::project_root(&storage, &files, &project_id)?;
-        app.state::<ExperimentState>()
-            .start(project_id, root, configuration)
+        let copy = app.clone();
+        app.state::<ExperimentState>().start(
+            project_id,
+            root,
+            configuration,
+            None,
+            Some(Arc::new(move |value| {
+                let _ = tauri::Emitter::emit(&copy, "experiment-event", value);
+            })),
+        )
     })
     .await
     .map_err(|e| e.to_string())?
@@ -434,13 +558,21 @@ pub fn experiment_list(state: State<'_, ExperimentState>) -> Result<Vec<Run>, St
 }
 #[tauri::command]
 pub fn experiment_stop(state: State<'_, ExperimentState>, run_id: String) -> Result<(), String> {
-    state.entry(&run_id)?.cancel.store(true, Ordering::SeqCst);
-    Ok(())
+    state.stop(&run_id)
 }
 #[tauri::command]
 pub fn experiment_log(state: State<'_, ExperimentState>, run_id: String) -> Result<String, String> {
-    state.entry(&run_id)?;
-    let path = state.directory.join(&run_id).join("output.log");
+    read_log(&state, &run_id)
+}
+pub(crate) fn read_log(state: &ExperimentState, run_id: &str) -> Result<String, String> {
+    state.entry(run_id)?;
+    let folder = state.directory.join(run_id);
+    let native = folder.join("artifacts/.scientify/output.log");
+    let path = if native.exists() {
+        native
+    } else {
+        folder.join("output.log")
+    };
     scientify_core::research::reject_links(&path)?;
     let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
     let len = file.metadata().map_err(|e| e.to_string())?.len();
@@ -471,6 +603,9 @@ fn list_artifacts(
     }
     for item in fs::read_dir(directory).map_err(|e| e.to_string())? {
         let item = item.map_err(|e| e.to_string())?;
+        if item.file_name() == ".scientify" {
+            continue;
+        }
         let path = item.path();
         if scientify_core::research::reject_links(&path).is_err() {
             continue;
@@ -503,7 +638,13 @@ pub fn experiment_artifacts(
     state: State<'_, ExperimentState>,
     run_id: String,
 ) -> Result<Vec<scientify_core::research::ResearchFile>, String> {
-    state.entry(&run_id)?;
+    artifacts(&state, &run_id)
+}
+pub(crate) fn artifacts(
+    state: &ExperimentState,
+    run_id: &str,
+) -> Result<Vec<scientify_core::research::ResearchFile>, String> {
+    state.entry(run_id)?;
     let root = state.directory.join(run_id).join("artifacts");
     scientify_core::research::reject_links(&root)?;
     let mut entries = Vec::new();
@@ -517,7 +658,21 @@ pub fn experiment_read_artifact(
     run_id: String,
     path: String,
 ) -> Result<scientify_core::research::FileContent, String> {
-    state.entry(&run_id)?;
+    read_artifact(&state, &run_id, path)
+}
+pub(crate) fn read_artifact(
+    state: &ExperimentState,
+    run_id: &str,
+    path: String,
+) -> Result<scientify_core::research::FileContent, String> {
+    if path
+        .replace('\\', "/")
+        .split('/')
+        .any(|part| part == ".scientify")
+    {
+        return Err("运行内部文件不可作为结果读取。".into());
+    }
+    state.entry(run_id)?;
     let root = state.directory.join(run_id).join("artifacts");
     let target = confined(&root, &path)?;
     let file = fs::File::open(target).map_err(|e| e.to_string())?;
@@ -558,7 +713,7 @@ mod tests {
                     "-NoProfile".into(),
                     "-NonInteractive".into(),
                     "-Command".into(),
-                    "Start-Sleep -Seconds 20".into(),
+                    "Write-Output 'started'; Start-Sleep -Seconds 20".into(),
                 ],
             )
         } else {
@@ -572,9 +727,21 @@ mod tests {
             cwd: ".".into(),
         };
         let a = state
-            .start("p1".into(), root.clone(), config.clone())
+            .start("p1".into(), root.clone(), config.clone(), None, None)
             .unwrap();
-        let b = state.start("p1".into(), root, config).unwrap();
+        let b = state.start("p1".into(), root, config, None, None).unwrap();
+        if cfg!(windows) {
+            let deadline = std::time::Instant::now() + Duration::from_secs(60);
+            while !read_log(&state, &a.id).unwrap().contains("started")
+                || !read_log(&state, &b.id).unwrap().contains("started")
+            {
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "both processes must start before cancellation"
+                );
+                thread::sleep(Duration::from_millis(50));
+            }
+        }
         let before = serde_json::json!({"projects":[{"id":"p1","path":"old"}]});
         let after = serde_json::json!({"projects":[{"id":"p1","path":"new"}]});
         assert!(state.protect(Some(&before), Some(&after)).is_err());
@@ -609,6 +776,62 @@ mod tests {
         }
         assert!(relative("src/train.py").is_ok());
     }
+    #[cfg(windows)]
+    #[test]
+    fn sandbox_allows_run_artifacts_and_blocks_external_file_writes() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("project");
+        fs::create_dir(&root).unwrap();
+        // OS temporary directories can be writable under workspace-write.
+        // Check a disposable file outside those platform exceptions.
+        let external =
+            tempfile::tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap()).unwrap();
+        let outside = external.path().join("outside.txt");
+        fs::write(&outside, "unchanged").unwrap();
+        let state = ExperimentState::new(temp.path().join("experiments"));
+        let executable = std::env::var("SystemRoot").unwrap()
+            + "/System32/WindowsPowerShell/v1.0/powershell.exe";
+        let config = |name: &str, script: String| Configuration {
+            id: name.into(),
+            name: name.into(),
+            executable: executable.clone(),
+            args: vec![
+                "-NoProfile".into(),
+                "-NonInteractive".into(),
+                "-Command".into(),
+                script,
+            ],
+            cwd: ".".into(),
+        };
+        let bad=state.start("p1".into(),root.clone(),config("blocked",format!("$ErrorActionPreference='Stop'; Set-Content -LiteralPath '{}' -Value 'overwritten' -Encoding Ascii",outside.display().to_string().replace('\'',"''"))),None,None).unwrap();
+        let good=state.start("p1".into(),root,config("allowed","$ErrorActionPreference='Stop'; Set-Content -LiteralPath (Join-Path $env:SCIENTIFY_RUN_DIR 'metrics.json') -Value '{\"loss\":0.2}' -Encoding Ascii; Write-Output 'results-written'".into()),None,None).unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(60);
+        while state.run(&good.id).unwrap().status == "running"
+            || state.run(&bad.id).unwrap().status == "running"
+        {
+            assert!(std::time::Instant::now() < deadline);
+            thread::sleep(Duration::from_millis(50));
+        }
+        assert_eq!(
+            state.run(&good.id).unwrap().status,
+            "completed",
+            "{:?}; log: {:?}",
+            state.run(&good.id),
+            read_log(&state, &good.id)
+        );
+        assert_eq!(
+            read_artifact(&state, &good.id, "metrics.json".into())
+                .unwrap()
+                .content
+                .trim(),
+            "{\"loss\":0.2}"
+        );
+        assert!(read_log(&state, &good.id)
+            .unwrap()
+            .contains("results-written"));
+        assert_eq!(state.run(&bad.id).unwrap().status, "failed");
+        assert_eq!(fs::read_to_string(outside).unwrap(), "unchanged");
+    }
     #[test]
     fn interrupted_records_are_not_replayed() {
         let temp = tempfile::tempdir().unwrap();
@@ -634,6 +857,8 @@ mod tests {
             git_commit: None,
             git_changes: vec![],
             error: None,
+            source: None,
+            permission: "workspace-write".into(),
         };
         persist(&temp.path().join(&id), &run).unwrap();
         let state = ExperimentState::new(temp.path().into());

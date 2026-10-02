@@ -172,7 +172,7 @@ impl EngineSession {
                     "version": env!("CARGO_PKG_VERSION")
                 },
                 "capabilities": {
-                    "experimentalApi": false,
+                    "experimentalApi": true,
                     "requestAttestation": false
                 }
             }),
@@ -327,6 +327,72 @@ impl EngineSession {
             }
         }
         Err("Agent 引擎未在限定时间内响应。".into())
+    }
+
+    /// A managed command owns a connection, so cancellation and streamed bytes
+    /// can be handled without taking a conversation's command lock.
+    pub fn run_command(
+        &mut self,
+        params: serde_json::Value,
+        cancelled: &std::sync::atomic::AtomicBool,
+        mut output: impl FnMut(&serde_json::Value) -> Result<(), String>,
+    ) -> Result<serde_json::Value, String> {
+        use std::sync::atomic::Ordering;
+        self.next_id += 1;
+        let id = self.next_id;
+        #[cfg(not(windows))]
+        let process_id = params["processId"].clone();
+        self.stdin
+            .write_all(super::protocol::request(id, "command/exec", params).as_bytes())
+            .and_then(|()| self.stdin.flush())
+            .map_err(|e| self.pipe_error("无法启动实验", e))?;
+        let mut stopped = None;
+        loop {
+            output(&serde_json::Value::Null)?;
+            if cancelled.load(Ordering::SeqCst) && stopped.is_none() {
+                #[cfg(not(windows))]
+                {
+                    self.next_id += 1;
+                    self.stdin
+                        .write_all(
+                            super::protocol::request(
+                                self.next_id,
+                                "command/exec/terminate",
+                                serde_json::json!({"processId": process_id}),
+                            )
+                            .as_bytes(),
+                        )
+                        .and_then(|()| self.stdin.flush())
+                        .map_err(|e| self.pipe_error("无法停止实验", e))?;
+                }
+                stopped = Some(std::time::Instant::now());
+            }
+            if stopped.is_some_and(|time| time.elapsed() > Duration::from_secs(5)) {
+                self.terminate();
+                return Err("实验停止超时，已断开执行连接。".into());
+            }
+            let line = match self.lines.recv_timeout(Duration::from_millis(100)) {
+                Ok(line) => line,
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    self.ensure_alive()?;
+                    continue;
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err("实验执行连接已关闭。".into())
+                }
+            };
+            match super::protocol::classify(&line) {
+                Some(super::protocol::Incoming::Response { id: got, value }) if got == id => {
+                    return super::protocol::result(value)
+                }
+                Some(super::protocol::Incoming::Notification { method, params })
+                    if method == "command/exec/outputDelta" =>
+                {
+                    output(&params)?
+                }
+                _ => {}
+            }
+        }
     }
 
     /// Take the messages queued since the last drain.

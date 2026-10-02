@@ -67,6 +67,39 @@ describe('close protection', () => {
 });
 
 describe('AgentSession', () => {
+  it('records managed tool activity without an unsupported approval prompt', async () => {
+    const api = backend({
+      events: vi.fn(async (): Promise<AgentEvent[]> => [
+        {
+          kind: 'notification',
+          method: 'item/completed',
+          params: {
+            threadId: 't1',
+            turnId: 'turn1',
+            item: {
+              id: 'tool1',
+              type: 'dynamicToolCall',
+              tool: 'scientify_run_status',
+              status: 'completed',
+              contentItems: [
+                { type: 'inputText', text: '{"run":{"id":"r1","status":"completed"}}' },
+              ],
+            },
+          },
+        },
+      ]),
+    });
+    const session = new AgentSession(
+      api,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
+    await session.open();
+    await session.send('read result');
+    expect(session.state.unsupportedRequests).toEqual([]);
+    expect(session.state.operations[0].output).toContain('r1');
+    expect(session.state.phase).toBe('running');
+  });
   it('opens a thread and reports the engine that owns it', async () => {
     const session = new AgentSession(
       backend(),

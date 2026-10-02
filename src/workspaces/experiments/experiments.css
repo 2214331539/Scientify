@@ -438,6 +438,12 @@
 .workspace-frame:has(.sf-experiment-actions) {
   container: experiment-workspace / inline-size;
 }
+.workspace-frame:has(.sf-experiment-actions) > .workspace-commandbar {
+  flex-shrink: 0;
+}
+.workspace-frame:has(.sf-experiment-actions) .workspace-views {
+  height: 30px;
+}
 @container experiment-workspace (max-width: 720px) {
   .workspace-commandbar {
     height: auto;

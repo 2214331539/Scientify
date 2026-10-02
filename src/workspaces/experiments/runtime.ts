@@ -1,4 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useEffect } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
@@ -27,6 +28,14 @@ export type Execution = {
   gitCommit: string | null;
   gitChanges: string[];
   error: string | null;
+  permission?: string;
+  source?: {
+    conversationId: string;
+    threadId: string;
+    turnId: string;
+    callId: string;
+    workspaceRoot: string;
+  } | null;
 };
 export const experimentApi = {
   available: () => isTauri(),
@@ -46,6 +55,13 @@ export const executionStore = createStore<{ runs: Execution[]; error: string }>(
   runs: [],
   error: '',
 }));
+// One native subscription per webview; panels only subscribe to this revision.
+export const experimentOutput = createStore<{ revisions: Record<string, number> }>(() => ({
+  revisions: {},
+}));
+export function openExecution(projectId: string, runId: string) {
+  window.dispatchEvent(new CustomEvent('scientify-open-run', { detail: { projectId, runId } }));
+}
 export const describeError = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export function useExecutions(store: WorkspaceStore, enabled = true) {
   const snapshot = useStore(executionStore);
@@ -53,7 +69,16 @@ export function useExecutions(store: WorkspaceStore, enabled = true) {
     if (!enabled || !experimentApi.available()) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
+    let unlisten: (() => void) | undefined;
+    let polling = false;
+    let pending = false;
     async function poll() {
+      if (polling) {
+        pending = true;
+        return;
+      }
+      polling = true;
+      clearTimeout(timer);
       try {
         const version = generation;
         const runs = await experimentApi.list();
@@ -69,7 +94,6 @@ export function useExecutions(store: WorkspaceStore, enabled = true) {
         )
           throw new Error('Invalid experiment list response');
         if (version !== generation) {
-          if (alive) timer = setTimeout(() => void poll(), 1200);
           return;
         }
         if (!alive) return;
@@ -91,13 +115,34 @@ export function useExecutions(store: WorkspaceStore, enabled = true) {
             store.getState().setAgentTask(key, project);
       } catch (e) {
         if (alive) executionStore.setState({ error: describeError(e) });
+      } finally {
+        polling = false;
+        if (alive) timer = setTimeout(() => void poll(), pending ? 80 : 1200);
+        pending = false;
       }
-      if (alive) timer = setTimeout(() => void poll(), 1200);
     }
+    void listen<{ runId: string }>('experiment-event', ({ payload }) => {
+      if (!alive || typeof payload?.runId !== 'string') return;
+      experimentOutput.setState((s) => ({
+        revisions: { ...s.revisions, [payload.runId]: (s.revisions[payload.runId] ?? 0) + 1 },
+      }));
+      if (polling) {
+        pending = true;
+        return;
+      }
+      clearTimeout(timer);
+      timer = setTimeout(() => void poll(), 80);
+    })
+      .then((stop) => {
+        if (alive) unlisten = stop;
+        else stop();
+      })
+      .catch(() => {});
     void poll();
     return () => {
       alive = false;
       clearTimeout(timer);
+      unlisten?.();
     };
   }, [store, enabled]);
   return snapshot;

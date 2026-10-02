@@ -112,6 +112,12 @@ pub fn arguments(connection: &Connection<'_>) -> Result<Vec<String>, String> {
     ] {
         args.extend(["-c".into(), value]);
     }
+    if cfg!(windows) {
+        args.extend([
+            "-c".into(),
+            super::execution::WINDOWS_SANDBOX_OVERRIDE.into(),
+        ]);
+    }
     Ok(args)
 }
 
