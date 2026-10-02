@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-experiment-artifacts"
+description = "Enables the experiment_artifacts command without any pre-configured scope."
+commands.allow = ["experiment_artifacts"]
+
+[[permission]]
+identifier = "deny-experiment-artifacts"
+description = "Denies the experiment_artifacts command without any pre-configured scope."
+commands.deny = ["experiment_artifacts"]

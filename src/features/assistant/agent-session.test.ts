@@ -70,19 +70,23 @@ describe('AgentSession', () => {
   it('opens a thread and reports the engine that owns it', async () => {
     const session = new AgentSession(
       backend(),
-      { projectId: 'p1', domain: 'literature' },
+      { projectId: 'p1', domain: 'literature', conversationId: 'c1' },
       connection,
     );
     expect(await session.open()).toBe(true);
     expect(session.state.threadId).toBe('t1');
-    expect(session.state.phase).toBe('running');
+    expect(session.state.phase).toBe('idle');
   });
 
   it('surfaces an approval raised after the turn response', async () => {
     // startTurn returns before the trailing approval is readable, so `send`
     // must poll once more or the request would sit unanswered.
     const agent = backend({ events: vi.fn(async () => [approval('a1')]) });
-    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
     await session.open();
     await session.send('整理数据');
     expect(session.state.approvals.map((entry) => entry.id)).toEqual(['a1']);
@@ -100,7 +104,11 @@ describe('AgentSession', () => {
       startTurn: vi.fn(async () => ({ turnId: 'turn1', status: 'inProgress', events: [] })),
       events: vi.fn(async () => [completed]),
     });
-    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
     await session.open();
     await session.send('运行实验');
     expect(session.state.phase).toBe('idle');
@@ -118,16 +126,24 @@ describe('AgentSession', () => {
         { kind: 'notification', method: 'turn/completed', params: {} },
       ]),
     });
-    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
     await session.open();
     await session.send('读取文件');
     expect(session.state.agentText).toBe('已读取文件。');
   });
 
-  it('passes the active turn id when interrupting and clears it', async () => {
+  it('waits for engine completion after interrupt acknowledgement', async () => {
     const interrupt = vi.fn(async () => {});
     const agent = backend({ interrupt });
-    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
     await session.open();
     await session.send('执行一个长任务');
     expect(session.state.turnId).toBe('turn1');
@@ -135,22 +151,39 @@ describe('AgentSession', () => {
     expect(interrupt).toHaveBeenCalledWith({
       projectId: 'p1',
       domain: 'code',
+      conversationId: 'c1',
       threadId: 't1',
       turnId: 'turn1',
     });
-    expect(session.state.turnId).toBeNull();
+    expect(session.state.turnId).toBe('turn1');
+    expect(session.state.phase).toBe('stopping');
+    vi.mocked(agent.events).mockResolvedValueOnce([
+      {
+        kind: 'notification',
+        method: 'turn/completed',
+        params: { turn: { id: 'turn1', status: 'interrupted' } },
+      },
+    ]);
+    await session.poll();
+    expect(session.state.phase).toBe('idle');
+    expect(session.state.outcome).toBe('interrupted');
   });
 
   it('answers with the decision the user picked and clears the row', async () => {
     const respond = vi.fn(async () => {});
     const agent = backend({ events: vi.fn(async () => [approval('a1')]), respond });
-    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
     await session.open();
     await session.poll();
     expect(await session.decide(session.state.approvals[0], 'decline')).toBe(true);
     expect(respond).toHaveBeenCalledWith({
       projectId: 'p1',
       domain: 'code',
+      conversationId: 'c1',
       id: 'a1',
       result: { decision: 'decline' },
     });
@@ -164,7 +197,11 @@ describe('AgentSession', () => {
         throw new Error('暂不支持该服务商的原始协议。');
       }),
     });
-    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
     expect(await session.open()).toBe(false);
     expect(session.state.threadId).toBeNull();
     expect(session.state.error).toContain('暂不支持');
@@ -172,8 +209,93 @@ describe('AgentSession', () => {
 
   it('refuses to send before a thread exists', async () => {
     const agent = backend();
-    const session = new AgentSession(agent, { projectId: 'p1', domain: 'code' }, connection);
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+      connection,
+    );
     expect(await session.send('你好')).toBe(false);
     expect(agent.startTurn).not.toHaveBeenCalled();
   });
+});
+
+it('ignores a stale completion and deduplicates final text after streaming', async () => {
+  const agent = backend();
+  const session = new AgentSession(
+    agent,
+    { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+    connection,
+  );
+  await session.open();
+  await session.send('任务');
+  vi.mocked(agent.events).mockResolvedValueOnce([
+    {
+      kind: 'notification',
+      method: 'turn/completed',
+      params: { threadId: 't1', turn: { id: 'old-turn', status: 'completed' } },
+    },
+    {
+      kind: 'notification',
+      method: 'item/agentMessage/delta',
+      params: { threadId: 't1', turnId: 'turn1', itemId: 'answer', delta: '部分' },
+    },
+    {
+      kind: 'notification',
+      method: 'item/completed',
+      params: {
+        threadId: 't1',
+        turnId: 'turn1',
+        item: { id: 'answer', type: 'agentMessage', text: '完整结果' },
+      },
+    },
+  ]);
+  await session.poll();
+  expect(session.state.phase).toBe('running');
+  expect(session.state.agentText).toBe('完整结果');
+  vi.mocked(agent.events).mockResolvedValueOnce([
+    {
+      kind: 'notification',
+      method: 'turn/completed',
+      params: {
+        threadId: 't1',
+        turn: { id: 'turn1', status: 'failed', error: { message: 'provider error' } },
+      },
+    },
+    approval('late-request'),
+  ]);
+  await session.poll();
+  expect(session.state.outcome).toBe('failed');
+  expect(session.state.error).toBe('provider error');
+  expect(session.state.approvals).toEqual([]);
+  expect(session.state.phase).toBe('idle');
+});
+
+it('coalesces event reads so simultaneous wakeups cannot drain each others stream', async () => {
+  const agent = backend();
+  const session = new AgentSession(
+    agent,
+    { projectId: 'p1', domain: 'code', conversationId: 'c1' },
+    connection,
+  );
+  await session.open();
+  await session.send('任务');
+  let resolve!: (events: AgentEvent[]) => void;
+  vi.mocked(agent.events).mockImplementationOnce(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const first = session.poll(),
+    second = session.poll();
+  expect(second).toBe(first);
+  resolve([
+    {
+      kind: 'notification',
+      method: 'item/agentMessage/delta',
+      params: { itemId: 'a', delta: '唯一输出' },
+    },
+  ]);
+  await Promise.all([first, second]);
+  expect(session.state.agentText).toBe('唯一输出');
 });

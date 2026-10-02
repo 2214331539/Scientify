@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-experiment-read-artifact"
+description = "Enables the experiment_read_artifact command without any pre-configured scope."
+commands.allow = ["experiment_read_artifact"]
+
+[[permission]]
+identifier = "deny-experiment-read-artifact"
+description = "Denies the experiment_read_artifact command without any pre-configured scope."
+commands.deny = ["experiment_read_artifact"]

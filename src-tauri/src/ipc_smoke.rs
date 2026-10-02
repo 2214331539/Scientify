@@ -22,6 +22,138 @@ fn runtime_window_icon_uses_high_resolution_frame() {
     assert_eq!((icon.width(), icon.height()), (256, 256));
 }
 
+#[test]
+fn experiment_commands_use_workspace_only_acl_and_real_processes() {
+    let temporary = tempfile::tempdir().unwrap();
+    let directory = temporary.path().join("workspace");
+    let storage = Arc::new(Storage::open(directory.clone()).unwrap());
+    let mut data = scientify_core::workspace::empty();
+    data["projects"] = json!([{"id":"execution-project","name":"Execution","question":"Test","createdAt":"2026-10-01","space":"personal"}]);
+    data["revision"] = json!(1);
+    storage.save(data, 0).unwrap();
+    let files = Arc::new(scientify_core::research::ResearchFiles::new(
+        directory.clone(),
+    ));
+    let root = files.project_root("execution-project", None).unwrap();
+    std::fs::create_dir_all(&root).unwrap();
+    let app = mock_builder()
+        .manage(AppState {
+            storage,
+            files,
+            legacy: temporary.path().join("legacy"),
+        })
+        .manage(experiments::ExperimentState::new(
+            directory.join("experiments"),
+        ))
+        .invoke_handler(tauri::generate_handler![
+            experiments::experiment_start,
+            experiments::experiment_list,
+            experiments::experiment_stop,
+            experiments::experiment_log,
+            experiments::experiment_artifacts,
+            experiments::experiment_read_artifact,
+            research::research_git_diff
+        ])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let trusted = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+        .build()
+        .unwrap();
+    let denied = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for cmd in [
+        "experiment_start",
+        "experiment_list",
+        "experiment_stop",
+        "experiment_log",
+        "experiment_artifacts",
+        "experiment_read_artifact",
+        "research_git_diff",
+    ] {
+        for (window, source) in [(&denied, origin), (&trusted, "https://example.com")] {
+            let e = invoke(window, cmd, json!({}), source).expect_err("untrusted IPC must fail");
+            assert!(e.to_string().contains("not allowed"), "{cmd}: {e}");
+        }
+    }
+    let (exe, args) = if cfg!(windows) {
+        (
+            std::env::var("SystemRoot").unwrap() + "/System32/whoami.exe",
+            vec![],
+        )
+    } else {
+        ("/bin/echo".into(), vec!["native-experiment-test"])
+    };
+    let run: Value = invoke(&trusted,"experiment_start",json!({"projectId":"execution-project","configuration":{"id":"test","name":"Native test","executable":exe,"args":args,"cwd":"."}}),origin).unwrap().deserialize().unwrap();
+    let id = run["id"].as_str().unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let runs: Value = invoke(&trusted, "experiment_list", json!({}), origin)
+            .unwrap()
+            .deserialize()
+            .unwrap();
+        if runs[0]["status"] != "running" {
+            assert_eq!(runs[0]["status"], "completed", "{:?}", runs[0]);
+            assert_eq!(runs[0]["exitCode"], 0);
+            break;
+        }
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    let log: String = invoke(&trusted, "experiment_log", json!({"runId":id}), origin)
+        .unwrap()
+        .deserialize()
+        .unwrap();
+    assert!(!log.trim().is_empty());
+    assert!(directory
+        .join("experiments")
+        .join(id)
+        .join("record.json")
+        .is_file());
+    let list: Value = invoke(
+        &trusted,
+        "experiment_artifacts",
+        json!({"runId":id}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    assert_eq!(list, json!([]));
+    let artifacts = directory.join("experiments").join(id).join("artifacts");
+    std::fs::write(artifacts.join("metrics.json"), "{\"accuracy\":0.8}").unwrap();
+    let artifact: Value = invoke(
+        &trusted,
+        "experiment_read_artifact",
+        json!({"runId":id,"path":"metrics.json"}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    assert_eq!(artifact["content"], "{\"accuracy\":0.8}");
+    assert!(invoke(
+        &trusted,
+        "experiment_read_artifact",
+        json!({"runId":id,"path":"../record.json"}),
+        origin
+    )
+    .is_err());
+    assert!(invoke(&trusted, "experiment_stop", json!({"runId":id}), origin).is_ok());
+    assert!(invoke(
+        &trusted,
+        "research_git_diff",
+        json!({"projectId":"execution-project","path":"../outside"}),
+        origin
+    )
+    .is_err());
+}
+
 fn invoke(
     window: &WebviewWindow<MockRuntime>,
     command: &str,
@@ -130,8 +262,14 @@ fn ipc_acl_and_local_file_pdf_workflow_are_wired() {
     let temporary = tempfile::tempdir().unwrap();
     let directory = temporary.path().join("workspace");
     let storage = Arc::new(Storage::open(directory.clone()).unwrap());
-    let files = Arc::new(scientify_core::research::ResearchFiles::new(directory));
+    let files = Arc::new(scientify_core::research::ResearchFiles::new(
+        directory.clone(),
+    ));
     let app = mock_builder()
+        .manage(agent::AgentState::default())
+        .manage(experiments::ExperimentState::new(
+            directory.join("experiments"),
+        ))
         .manage(AppState {
             storage: storage.clone(),
             files: files.clone(),
@@ -252,4 +390,29 @@ fn ipc_acl_and_local_file_pdf_workflow_are_wired() {
         InvokeResponseBody::Json(_) => panic!("PDF IPC must return binary, not JSON"),
     }
     assert_eq!(storage.load().unwrap().unwrap()["revision"], 1);
+}
+
+#[test]
+fn agent_release_uses_generated_acl_for_both_local_views() {
+    let app = mock_builder()
+        .manage(agent::AgentState::default())
+        .invoke_handler(tauri::generate_handler![agent::agent_release])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for label in ["main", "workspace", "browser-untrusted"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        let body = json!({"projectId":"p1","conversationId":"c1","domain":"code"});
+        assert_eq!(
+            invoke(&window, "agent_release", body.clone(), origin).is_ok(),
+            label != "browser-untrusted"
+        );
+        assert!(invoke(&window, "agent_release", body, "https://untrusted.example").is_err());
+    }
 }

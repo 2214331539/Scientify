@@ -14,7 +14,14 @@ const nativeWindow = vi.hoisted(() => ({
   close: undefined as undefined | ((event: { preventDefault(): void }) => Promise<void>),
   destroy: vi.fn(),
 }));
-vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true, invoke: vi.fn() }));
+vi.mock('@tauri-apps/api/core', () => ({
+  isTauri: () => true,
+  invoke: vi.fn(async (command: string) => {
+    if (command === 'experiment_list') return [];
+    if (command === 'research_git_diff') return '@@ -1 +1 @@\n-old\n+new\n';
+    return undefined;
+  }),
+}));
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
     isMaximized: async () => false,
@@ -123,7 +130,8 @@ it('remembers the code view after opening a changed file and leaving the workspa
   await screen.findByRole('textbox', { name: '编辑 paper.md' });
   await user.click(screen.getByRole('button', { name: t('Experiments') }));
   await user.click(screen.getByRole('button', { name: t('Changes') }));
-  await user.click(await screen.findByRole('button', { name: 'paper.md' }));
+  await user.click(await screen.findByRole('button', { name: /paper\.md/ }));
+  await user.click(screen.getByRole('button', { name: t('打开文件') }));
   expect(
     (await screen.findByRole('button', { name: t('Code') })).getAttribute('aria-current'),
   ).toBe('page');

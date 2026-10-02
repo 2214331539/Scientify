@@ -23,7 +23,7 @@ impl LibraryState {
         }
     }
 }
-pub fn trusted(view: &tauri::Webview) -> Result<(), String> {
+pub fn trusted<R: tauri::Runtime>(view: &tauri::Webview<R>) -> Result<(), String> {
     if matches!(view.label(), "main" | "workspace") {
         Ok(())
     } else {
@@ -80,6 +80,8 @@ pub async fn library_choose(
         let Some(file) = a.dialog().file().blocking_pick_folder() else {
             return Ok(None);
         };
+        a.state::<super::agent::AgentState>()
+            .protect(None, None, Some(&id))?;
         service
             .mount(&id, &file.into_path().map_err(|e| e.to_string())?)
             .map(Some)

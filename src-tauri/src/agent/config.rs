@@ -8,12 +8,10 @@
 //!    and Gemini speak different wire formats, so they are refused with a reason
 //!    rather than written out and left to fail at request time.
 
-use std::path::Path;
-
 /// Environment variable the engine reads the API key from.
 pub const KEY_ENV: &str = "SCIENTIFY_AGENT_KEY";
 
-/// Provider id written into `config.toml`.
+/// Provider id passed in per-process configuration overrides.
 const PROVIDER_ID: &str = "scientify";
 
 pub struct Connection<'a> {
@@ -84,57 +82,37 @@ pub fn prepare(connection: &Connection<'_>) -> Result<(), String> {
     }
 }
 
-/// Write `config.toml` for one domain.
-pub fn write(home: &Path, connection: &Connection<'_>) -> Result<(), String> {
+/// Per-process overrides prevent parallel conversations from rewriting a shared
+/// config.toml. Sandbox setup remains the only writer of the shared home config.
+pub fn arguments(connection: &Connection<'_>) -> Result<Vec<String>, String> {
     prepare(connection)?;
-    // The Windows sandbox setup writes its own `[windows]` settings into this
-    // file. Keep that section when refreshing the model connection; replacing
-    // the whole file used to erase the setup on the next app launch.
-    let previous = std::fs::read_to_string(home.join("config.toml")).unwrap_or_default();
-    let windows_section = previous
-        .lines()
-        .enumerate()
-        .find(|(_, line)| line.trim() == "[windows]")
-        .map(|(start, _)| {
-            let mut section = Vec::new();
-            for line in previous.lines().skip(start) {
-                if !section.is_empty() && line.trim_start().starts_with('[') {
-                    break;
-                }
-                section.push(line);
-            }
-            section.join("\n")
-        });
-
-    let mut text = String::new();
-    text.push_str("# 由 Scientify 生成，用于内置 Agent 引擎。请通过应用界面修改。\n");
-    text.push_str(&format!("model = {}\n", quoted(connection.model.trim())));
-    text.push_str(&format!("model_provider = {}\n\n", quoted(PROVIDER_ID)));
-    text.push_str(&format!("[model_providers.{PROVIDER_ID}]\n"));
-    text.push_str("name = \"Scientify\"\n");
-    text.push_str(&format!(
-        "base_url = {}\n",
-        quoted(connection.endpoint.trim().trim_end_matches('/'))
-    ));
-    // The engine only speaks the Responses wire format.
-    text.push_str("wire_api = \"responses\"\n");
-    if connection.api_key.is_some_and(|key| !key.trim().is_empty()) {
-        text.push_str(&format!("env_key = {}\n", quoted(KEY_ENV)));
+    let endpoint = connection.endpoint.trim().trim_end_matches('/');
+    let endpoint = if connection.provider == "ollama" && !endpoint.ends_with("/v1") {
+        format!("{endpoint}/v1")
+    } else {
+        endpoint.to_string()
+    };
+    let mut args = vec!["app-server".into(), "--listen".into(), "stdio://".into()];
+    for value in [
+        // Conversation history is the memory boundary. Do not synthesize or
+        // import cross-thread memory in a CODEX_HOME shared by several projects.
+        "features.memories=false".to_string(),
+        "features.external_agent_memory_import=false".to_string(),
+        format!("model={}", quoted(connection.model.trim())),
+        format!("model_provider={}", quoted(PROVIDER_ID)),
+        format!("model_providers.{PROVIDER_ID}.name=\"Scientify\""),
+        format!(
+            "model_providers.{PROVIDER_ID}.base_url={}",
+            quoted(&endpoint)
+        ),
+        format!("model_providers.{PROVIDER_ID}.wire_api=\"responses\""),
+        format!("model_providers.{PROVIDER_ID}.requires_openai_auth=false"),
+        // Always override a possible env_key left by older Scientify versions.
+        format!("model_providers.{PROVIDER_ID}.env_key={}", quoted(KEY_ENV)),
+    ] {
+        args.extend(["-c".into(), value]);
     }
-    // A key supplied by the application is not a ChatGPT login.
-    text.push_str("requires_openai_auth = false\n");
-    if let Some(section) = windows_section.filter(|section| !section.trim().is_empty()) {
-        text.push('\n');
-        text.push_str(&section);
-        text.push('\n');
-    }
-
-    std::fs::create_dir_all(home).map_err(|e| format!("无法创建 Agent 数据目录：{e}"))?;
-    let target = home.join("config.toml");
-    let pending = home.join("config.pending.toml");
-    std::fs::write(&pending, text).map_err(|e| format!("无法写入 Agent 配置：{e}"))?;
-    std::fs::rename(&pending, &target).map_err(|e| format!("无法写入 Agent 配置：{e}"))?;
-    Ok(())
+    Ok(args)
 }
 
 /// Environment entries the engine process needs.
@@ -145,7 +123,7 @@ pub fn environment(connection: &Connection<'_>) -> Vec<(String, String)> {
         .filter(|key| !key.is_empty())
     {
         Some(key) => vec![(KEY_ENV.to_string(), key.to_string())],
-        None => Vec::new(),
+        None => vec![(KEY_ENV.to_string(), "local-no-key".to_string())],
     }
 }
 
@@ -199,52 +177,22 @@ mod tests {
     }
 
     #[test]
-    fn the_key_is_passed_through_the_environment_rather_than_the_file() {
-        let with_key = connection("openai", "https://api.openai.com/v1", Some("sk-secret"));
-        let env = environment(&with_key);
-        assert_eq!(env.len(), 1);
-        assert_eq!(env[0].0, KEY_ENV);
-        assert_eq!(env[0].1, "sk-secret");
-        // What gets written declares where to read the key; it never contains it.
-        let home = std::env::temp_dir().join(format!("scientify-config-{}", std::process::id()));
-        write(&home, &with_key).unwrap();
-        let text = std::fs::read_to_string(home.join("config.toml")).unwrap();
-        assert!(text.contains("env_key = \"SCIENTIFY_AGENT_KEY\""));
-        assert!(!text.contains("sk-secret"));
-        std::fs::remove_dir_all(&home).ok();
-    }
-
-    #[test]
-    fn a_missing_key_omits_the_env_key_line() {
-        let without = connection("ollama", "http://127.0.0.1:11434", None);
-        assert!(environment(&without).is_empty());
-        let home =
-            std::env::temp_dir().join(format!("scientify-config-nokey-{}", std::process::id()));
-        write(&home, &without).unwrap();
-        let text = std::fs::read_to_string(home.join("config.toml")).unwrap();
-        assert!(!text.contains("env_key"));
-        std::fs::remove_dir_all(&home).ok();
-    }
-
-    #[test]
-    fn refreshing_connection_keeps_windows_sandbox_configuration() {
-        let home =
-            std::env::temp_dir().join(format!("scientify-config-windows-{}", std::process::id()));
-        std::fs::create_dir_all(&home).unwrap();
-        std::fs::write(
-            home.join("config.toml"),
-            "[windows]\nsandbox = \"elevated\"\nsandbox_private_desktop = false\n",
-        )
-        .unwrap();
-        write(
-            &home,
-            &connection("openai", "https://api.openai.com/v1", None),
-        )
-        .unwrap();
-        let text = std::fs::read_to_string(home.join("config.toml")).unwrap();
-        assert!(text.contains("[windows]"));
-        assert!(text.contains("sandbox = \"elevated\""));
-        assert!(text.contains("sandbox_private_desktop = false"));
-        std::fs::remove_dir_all(&home).ok();
+    fn connections_have_independent_overrides_and_no_keys_in_arguments() {
+        let first = connection("openai", "https://first.example/v1", Some("secret-first"));
+        let second = connection("ollama", "http://localhost:11434", None);
+        let first_args = arguments(&first).unwrap().join("\n");
+        let second_args = arguments(&second).unwrap().join("\n");
+        assert!(first_args.contains("https://first.example/v1"));
+        assert!(!second_args.contains("first.example"));
+        assert!(second_args.contains("http://localhost:11434/v1"));
+        assert!(!first_args.contains("secret-first"));
+        assert_eq!(
+            environment(&first),
+            vec![(KEY_ENV.into(), "secret-first".into())]
+        );
+        assert_eq!(
+            environment(&second),
+            vec![(KEY_ENV.into(), "local-no-key".into())]
+        );
     }
 }

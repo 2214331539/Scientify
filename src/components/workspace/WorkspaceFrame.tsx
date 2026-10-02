@@ -16,6 +16,7 @@ export function WorkspaceFrame({
   width,
   resize,
   children,
+  actions,
 }: {
   label: string;
   views: { id: string; label: string }[];
@@ -27,6 +28,7 @@ export function WorkspaceFrame({
   width: number;
   resize?: ReactNode;
   children: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
     <Panel className="workspace-frame" aria-label={t('{label} 工作区', { label: t(label) })}>
@@ -58,6 +60,7 @@ export function WorkspaceFrame({
             ))}
           </nav>
         )}
+        {actions && <div className="workspace-command-actions">{actions}</div>}
       </header>
       <div className="workspace-frame-body">
         {sidebar && (

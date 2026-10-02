@@ -7,23 +7,25 @@ import {
   type AgentEvent,
   type ApprovalDecision,
   type ApprovalRequest,
+  type ThreadHandle,
 } from '../../platform/agent';
 import { t } from '../../i18n';
 
-export type AgentPhase = 'idle' | 'opening' | 'running' | 'waiting';
-
+export type AgentPhase = 'idle' | 'opening' | 'running' | 'waiting' | 'stopping';
+export type AgentOperation = { id: string; label: string; status: string; output: string };
 export interface AgentSessionSnapshot {
   phase: AgentPhase;
   threadId: string | null;
   turnId: string | null;
   approvals: ApprovalRequest[];
   error: string | null;
-  /** Text streamed by the engine for the current turn. */
   agentText: string;
-  /** Effective sandbox reported by Codex for the current thread. */
   sandbox: string | null;
+  cwd: string | null;
+  outcome: 'completed' | 'failed' | 'interrupted' | null;
+  operations: AgentOperation[];
+  unsupportedRequests: string[];
 }
-
 export const initialAgentSession: AgentSessionSnapshot = {
   phase: 'idle',
   threadId: null,
@@ -32,230 +34,276 @@ export const initialAgentSession: AgentSessionSnapshot = {
   error: null,
   agentText: '',
   sandbox: null,
+  cwd: null,
+  outcome: null,
+  operations: [],
+  unsupportedRequests: [],
 };
-
-/**
- * Requests are identified by id, so an approval the engine repeats is not shown
- * twice. Order is preserved because a turn can ask for several in sequence.
- */
 export function mergeApprovals(
   current: ApprovalRequest[],
   incoming: AgentEvent[],
 ): ApprovalRequest[] {
-  const seen = new Set(current.map((entry) => String(entry.id)));
-  const added = incoming.filter(isApprovalRequest).filter((entry) => !seen.has(String(entry.id)));
+  const seen = new Set(current.map((e) => String(e.id)));
+  const added = incoming.filter(isApprovalRequest).filter((e) => {
+    if (seen.has(String(e.id))) return false;
+    seen.add(String(e.id));
+    return true;
+  });
   return added.length ? [...current, ...added] : current;
 }
-
-export function resolveApproval(
-  current: ApprovalRequest[],
-  id: string | number,
-): ApprovalRequest[] {
-  return current.filter((entry) => String(entry.id) !== String(id));
+export function resolveApproval(current: ApprovalRequest[], id: string | number) {
+  return current.filter((e) => String(e.id) !== String(id));
 }
-
-function turnFinished(status: unknown): boolean {
-  return status === 'completed' || status === 'interrupted' || status === 'failed';
+export function hasPendingWork(snapshot: AgentSessionSnapshot) {
+  return snapshot.phase !== 'idle';
 }
+const object = (value: unknown): Record<string, any> =>
+  value && typeof value === 'object' ? (value as Record<string, any>) : {};
+const terminal = (value: unknown): value is 'completed' | 'failed' | 'interrupted' =>
+  ['completed', 'failed', 'interrupted'].includes(String(value));
 
-function hasTurnCompletion(events: AgentEvent[]): boolean {
-  return events.some((event) => event.kind === 'notification' && event.method === 'turn/completed');
-}
-
-function appendAgentText(current: string, events: AgentEvent[]): string {
-  const delta = events
-    .filter(
-      (event): event is Extract<AgentEvent, { kind: 'notification' }> =>
-        event.kind === 'notification' && event.method === 'item/agentMessage/delta',
-    )
-    .map((event) => {
-      const params = event.params;
-      return typeof params === 'object' && params !== null && 'delta' in params
-        ? String((params as { delta: unknown }).delta ?? '')
-        : '';
-    })
-    .join('');
-  return current + delta;
-}
-
-/**
- * Whether the workspace has unfinished agent work.
- *
- * A pending approval counts: the engine is blocked waiting for an answer, so
- * closing the window would abandon a turn mid-flight.
- */
-export function hasPendingWork(snapshot: AgentSessionSnapshot): boolean {
-  return (
-    snapshot.phase === 'opening' || snapshot.phase === 'running' || snapshot.approvals.length > 0
-  );
-}
-
-/**
- * Drives one (project, domain) thread.
- *
- * The engine answers a host request immediately and may raise approvals after
- * it, so a turn is not finished until the event queue stops yielding requests.
- * Callers poll while a turn runs.
- */
+/** One conversation's protocol state. The application runtime owns its lifetime. */
 export class AgentSession {
   private snapshot: AgentSessionSnapshot = { ...initialAgentSession };
-  private polling = false;
-  private pollQueued = false;
-
+  private polling: Promise<{ completed: boolean }> | null = null;
+  private starting = false;
+  private deciding = new Set<string>();
+  private textItems = new Map<string, string>();
+  private resolvedRequests = new Set<string>();
+  handle: ThreadHandle | null = null;
   constructor(
     private readonly agent: AgentBackend,
-    private readonly binding: { projectId: string; domain: AgentDomain },
+    readonly binding: { projectId: string; domain: AgentDomain; conversationId: string },
     private readonly connection: AgentConnection,
     private readonly onUpdate: (snapshot: AgentSessionSnapshot) => void = () => {},
   ) {}
-
-  get state(): AgentSessionSnapshot {
+  get state() {
     return this.snapshot;
   }
-
   private set(patch: Partial<AgentSessionSnapshot>) {
     this.snapshot = { ...this.snapshot, ...patch };
     this.onUpdate(this.snapshot);
   }
-
+  private failure(reason: unknown) {
+    const value = reason instanceof Error ? reason.message : String(reason);
+    return this.connection.apiKey
+      ? value.split(this.connection.apiKey).join(t('[已隐藏密钥]'))
+      : value;
+  }
   async open(): Promise<boolean> {
     this.set({ phase: 'opening', error: null });
     try {
-      const thread = await this.agent.startThread(
+      this.handle = await this.agent.startThread(
         this.binding.projectId,
         this.binding.domain,
         this.connection,
+        { conversationId: this.binding.conversationId },
       );
-      this.set({ phase: 'running', threadId: thread.threadId, sandbox: thread.sandbox ?? null });
+      if (!this.handle.threadId) throw new Error(t('Agent 返回了空线程标识。'));
+      this.set({
+        phase: this.handle.activeTurnId ? 'running' : 'idle',
+        threadId: this.handle.threadId,
+        turnId: this.handle.activeTurnId ?? null,
+        sandbox: this.handle.sandbox ?? null,
+        cwd: this.handle.cwd ?? null,
+      });
+      this.consume(this.handle.events ?? []);
       return true;
     } catch (reason) {
-      this.set({
-        phase: 'idle',
-        error: reason instanceof Error ? reason.message : String(reason),
-      });
+      this.set({ phase: 'idle', threadId: null, error: this.failure(reason), outcome: 'failed' });
       return false;
     }
   }
-
-  /** Start a turn and pick up whatever it raised. */
-  async send(text: string): Promise<boolean> {
-    const threadId = this.snapshot.threadId;
-    if (!threadId) {
-      this.set({ error: t('请先建立 Agent 线程。') });
-      return false;
+  private consume(events: AgentEvent[]) {
+    let state = { ...this.snapshot };
+    for (const event of events) {
+      const p = object(event.params);
+      if (p.threadId && p.threadId !== state.threadId) continue;
+      const turn = object(p.turn);
+      const incomingTurn = p.turnId ?? turn.id;
+      if (incomingTurn && state.turnId && incomingTurn !== state.turnId) continue;
+      if (state.outcome) continue; // Ignore late events for an already completed turn.
+      if (event.kind === 'request') {
+        if (this.resolvedRequests.has(String(event.id))) continue;
+        if (isApprovalRequest(event)) state.approvals = mergeApprovals(state.approvals, [event]);
+        else if (!state.unsupportedRequests.includes(event.method))
+          state.unsupportedRequests = [...state.unsupportedRequests, event.method];
+        state.phase = 'waiting';
+        continue;
+      }
+      if (event.method === 'turn/started' && !state.turnId) state.turnId = turn.id ?? null;
+      if (event.method === 'item/agentMessage/delta') {
+        const id = String(p.itemId ?? 'answer');
+        this.textItems.set(id, (this.textItems.get(id) ?? '') + String(p.delta ?? ''));
+        state.agentText = [...this.textItems.values()].join('\n\n');
+      }
+      if (event.method === 'item/completed' && p.item?.type === 'agentMessage') {
+        this.textItems.set(String(p.item.id ?? 'answer'), String(p.item.text ?? ''));
+        state.agentText = [...this.textItems.values()].join('\n\n');
+      }
+      if ((event.method === 'item/started' || event.method === 'item/completed') && p.item) {
+        const item = object(p.item);
+        if (['commandExecution', 'fileChange', 'mcpToolCall', 'webSearch'].includes(item.type)) {
+          const label = String(
+            item.command ??
+              item.tool ??
+              item.query ??
+              (item.changes?.map((c: any) => c.path).join(', ') || item.type),
+          );
+          const operation = {
+            id: String(item.id),
+            label,
+            status: String(
+              item.status ?? (event.method === 'item/completed' ? 'completed' : 'running'),
+            ),
+            output: String(item.aggregatedOutput ?? item.result ?? '').slice(-32000),
+          };
+          state.operations = [
+            ...state.operations.filter((e) => e.id !== operation.id),
+            operation,
+          ].slice(-100);
+        }
+      }
+      if (event.method === 'item/commandExecution/outputDelta') {
+        state.operations = state.operations.map((op) =>
+          op.id === p.itemId
+            ? { ...op, output: (op.output + String(p.delta ?? '')).slice(-32000) }
+            : op,
+        );
+      }
+      if (event.method === 'error' && !p.willRetry)
+        state.error = this.failure(p.error?.message ?? p.message ?? t('Agent 任务失败。'));
+      if (event.method === 'turn/completed') {
+        state.outcome = terminal(turn.status) ? turn.status : 'completed';
+        state.error = turn.error?.message ? this.failure(turn.error.message) : state.error;
+        // Some providers emit the final items only in turn/completed.
+        for (const item of turn.items ?? [])
+          if (item.type === 'agentMessage')
+            this.textItems.set(String(item.id ?? 'answer'), String(item.text ?? ''));
+        state.agentText = [...this.textItems.values()].join('\n\n');
+        state.phase = 'idle';
+        state.approvals = [];
+        state.unsupportedRequests = [];
+      }
     }
-    this.set({ phase: 'running', error: null, agentText: '' });
+    this.set(state);
+  }
+  async send(text: string): Promise<boolean> {
+    if (!this.snapshot.threadId || hasPendingWork(this.snapshot)) return false;
+    this.starting = true;
+    this.textItems.clear();
+    this.resolvedRequests.clear();
+    this.set({
+      phase: 'running',
+      turnId: null,
+      error: null,
+      agentText: '',
+      outcome: null,
+      approvals: [],
+      operations: [],
+      unsupportedRequests: [],
+    });
     try {
       const turn = await this.agent.startTurn({
-        projectId: this.binding.projectId,
-        domain: this.binding.domain,
-        threadId,
+        ...this.binding,
+        threadId: this.snapshot.threadId!,
         text,
       });
-      this.set({
-        turnId: turn.turnId || null,
-        approvals: mergeApprovals(this.snapshot.approvals, turn.events),
-        agentText: appendAgentText(this.snapshot.agentText, turn.events),
-      });
-      // A response returns before trailing events are readable, so drain once
-      // more rather than assuming the handle is complete.
-      const events = await this.poll();
-      if (!this.snapshot.approvals.length && (turnFinished(turn.status) || events.completed)) {
-        this.set({ phase: 'idle', turnId: null });
-      }
+      if (!turn.turnId) throw new Error(t('Agent 返回了空 turn 标识。'));
+      this.set({ turnId: turn.turnId });
+      this.consume(turn.events);
+      if (terminal(turn.status))
+        this.set({ phase: 'idle', outcome: turn.status, approvals: [], unsupportedRequests: [] });
+      this.starting = false;
+      await this.poll();
       return true;
     } catch (reason) {
       this.set({
         phase: 'idle',
-        error: reason instanceof Error ? reason.message : String(reason),
+        error: this.failure(reason),
+        outcome: 'failed',
+        threadId: null,
+        approvals: [],
       });
       return false;
-    }
-  }
-
-  /** Read queued messages and fold approvals into the snapshot. */
-  async poll(): Promise<{ completed: boolean }> {
-    if (this.polling) {
-      // A native event can arrive while the previous invoke is still draining
-      // the queue. Remember the wake-up so a burst cannot strand unread deltas.
-      this.pollQueued = true;
-      return { completed: false };
-    }
-    this.polling = true;
-    let approvals = this.snapshot.approvals;
-    try {
-      const events = await this.agent.events(this.binding.projectId, this.binding.domain);
-      approvals = mergeApprovals(approvals, events);
-      const completed = hasTurnCompletion(events);
-      const phase = approvals.length
-        ? 'waiting'
-        : completed
-          ? 'idle'
-          : this.snapshot.phase === 'waiting'
-            ? 'running'
-            : this.snapshot.phase;
-      this.set({
-        approvals,
-        phase,
-        turnId: completed ? null : this.snapshot.turnId,
-        agentText: appendAgentText(this.snapshot.agentText, events),
-      });
-      return { completed };
-    } catch (reason) {
-      this.set({
-        phase: 'idle',
-        error: reason instanceof Error ? reason.message : String(reason),
-      });
-      return { completed: false };
     } finally {
-      this.polling = false;
-      if (this.pollQueued) {
-        this.pollQueued = false;
-        void this.poll();
-      }
+      this.starting = false;
     }
   }
-
-  /** Stop the active turn without discarding the thread or its history. */
+  poll(): Promise<{ completed: boolean }> {
+    if (this.polling) return this.polling;
+    if (this.starting || !this.snapshot.threadId) return Promise.resolve({ completed: false });
+    const work = async () => {
+      try {
+        const events = await this.agent.events(
+          this.binding.projectId,
+          this.binding.domain,
+          this.binding.conversationId,
+          this.snapshot.threadId!,
+        );
+        if (events.length) this.consume(events);
+        return { completed: this.snapshot.phase === 'idle' };
+      } catch (reason) {
+        this.set({
+          phase: 'idle',
+          error: this.failure(reason),
+          outcome: 'failed',
+          threadId: null,
+          approvals: [],
+        });
+        return { completed: true };
+      } finally {
+        this.polling = null;
+      }
+    };
+    this.polling = work();
+    return this.polling;
+  }
   async interrupt(): Promise<boolean> {
-    const threadId = this.snapshot.threadId;
-    const turnId = this.snapshot.turnId;
-    if (!threadId || !turnId) return false;
-    if (!this.agent.interrupt) {
-      this.set({ phase: 'idle', approvals: [] });
-      return true;
-    }
+    const { threadId, turnId } = this.snapshot;
+    if (
+      !threadId ||
+      !turnId ||
+      !this.agent.interrupt ||
+      !hasPendingWork(this.snapshot) ||
+      this.snapshot.phase === 'stopping'
+    )
+      return false;
+    this.set({ phase: 'stopping', error: null });
     try {
-      await this.agent.interrupt({
-        projectId: this.binding.projectId,
-        domain: this.binding.domain,
-        threadId,
-        turnId,
-      });
-      this.set({ phase: 'idle', approvals: [], turnId: null });
+      await this.agent.interrupt({ ...this.binding, threadId, turnId });
+      await this.poll();
       return true;
     } catch (reason) {
-      this.set({
-        error: reason instanceof Error ? reason.message : String(reason),
-      });
+      if (hasPendingWork(this.snapshot))
+        this.set({ phase: 'running', error: this.failure(reason) });
       return false;
     }
   }
-
   async decide(approval: ApprovalRequest, decision: ApprovalDecision): Promise<boolean> {
+    const key = String(approval.id);
+    if (this.deciding.has(key) || !this.snapshot.approvals.some((e) => String(e.id) === key))
+      return false;
+    this.deciding.add(key);
     try {
+      // Permissions approval has no cancel variant. Stop the turn explicitly.
+      if (decision === 'cancel') return await this.interrupt();
       await this.agent.respond({
-        projectId: this.binding.projectId,
-        domain: this.binding.domain,
+        ...this.binding,
         id: approval.id,
         result: approvalResult(decision, approval),
       });
+      this.resolvedRequests.add(key);
+      if (this.snapshot.outcome) return true;
       const approvals = resolveApproval(this.snapshot.approvals, approval.id);
       this.set({ approvals, phase: approvals.length ? 'waiting' : 'running' });
+      await this.poll();
       return true;
     } catch (reason) {
-      this.set({ error: reason instanceof Error ? reason.message : String(reason) });
+      this.set({ error: this.failure(reason) });
       return false;
+    } finally {
+      this.deciding.delete(key);
     }
   }
 }

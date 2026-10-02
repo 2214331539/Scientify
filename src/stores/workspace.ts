@@ -8,6 +8,7 @@ interface WorkspaceState {
   phase: 'idle' | 'loading' | 'ready' | 'error';
   busy: boolean;
   dirty: boolean;
+  agentTasks: Record<string, string>;
   dirtySources: Record<string, true>;
   epoch: number;
   error: string | null;
@@ -15,10 +16,12 @@ interface WorkspaceState {
   directory: string;
   legacyAvailable: boolean;
   load(): Promise<void>;
+  refreshSaved(): Promise<boolean>;
   update(edit: (draft: Workspace) => void): Promise<boolean>;
   replace(kind: 'restore' | 'migrateLegacy' | 'importWorkspace'): Promise<boolean>;
   exportWorkspace(): Promise<void>;
   chooseDirectory(): Promise<string | null>;
+  setAgentTask(id: string, project: string | null): void;
   setDirty(dirty: boolean): void;
   setDirtySource(source: string, dirty: boolean): void;
   clearMessage(): void;
@@ -35,6 +38,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
     phase: 'idle',
     busy: false,
     dirty: false,
+    agentTasks: {},
     dirtySources: {},
     epoch: 0,
     error: null,
@@ -42,7 +46,13 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
     directory: '',
     legacyAvailable: false,
     async load() {
-      if (get().busy || get().phase === 'loading' || get().dirty) return;
+      if (
+        get().busy ||
+        get().phase === 'loading' ||
+        get().dirty ||
+        Object.keys(get().agentTasks).length
+      )
+        return;
       set({ phase: 'loading', error: null });
       try {
         const result = await backend.load();
@@ -57,6 +67,24 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         set({ phase: 'error', error: message(error) });
       }
     },
+    async refreshSaved() {
+      // Refresh committed metadata only. Keep panel drafts, task memory and epoch.
+      if (get().busy || exclusive || get().phase !== 'ready') return false;
+      exclusive = true;
+      set({ busy: true });
+      try {
+        const result = await backend.load();
+        if (!result.workspace) throw new Error(t('工作区尚未载入。'));
+        set({ data: result.workspace, error: null });
+        return true;
+      } catch (error) {
+        set({ error: message(error) });
+        return false;
+      } finally {
+        exclusive = false;
+        set({ busy: false });
+      }
+    },
     async update(edit) {
       if (!get().data || exclusive || get().phase !== 'ready') return false;
       pending += 1;
@@ -68,6 +96,20 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
           const data = get().data!;
           const draft = structuredClone(data);
           edit(draft);
+          for (const projectId of Object.values(get().agentTasks)) {
+            const before = data.projects.find((project) => project.id === projectId);
+            const after = draft.projects.find((project) => project.id === projectId);
+            if (!after || before?.path !== after.path)
+              throw new Error(t('请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。'));
+          }
+          for (const taskKey of Object.keys(get().agentTasks)) {
+            const [project, id] = taskKey.split(':');
+            if (
+              data.sessions.some((chat) => chat.project === project && chat.id === id) &&
+              !draft.sessions.some((chat) => chat.project === project && chat.id === id)
+            )
+              throw new Error(t('请先中止并等待此会话任务结束。'));
+          }
           draft.revision = data.revision + 1;
           draft.updatedAt = new Date().toISOString();
           const saved = await backend.save(draft, data.revision);
@@ -86,6 +128,10 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
       return result;
     },
     async replace(kind) {
+      if (Object.keys(get().agentTasks).length) {
+        set({ error: t('请先结束 Agent 任务并保存结果，再替换工作区数据。') });
+        return false;
+      }
       if (get().busy || get().dirty || get().phase === 'loading') return false;
       exclusive = true;
       set({ busy: true, error: null, notice: null });
@@ -136,6 +182,13 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         set({ error: message(error) });
         return null;
       }
+    },
+    setAgentTask(id, project) {
+      if (get().agentTasks[id] === (project ?? undefined)) return;
+      const agentTasks = { ...get().agentTasks };
+      if (project) agentTasks[id] = project;
+      else delete agentTasks[id];
+      set({ agentTasks });
     },
     setDirty: (dirty) => get().setDirtySource('form', dirty),
     setDirtySource(source, dirty) {

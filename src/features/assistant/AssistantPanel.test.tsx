@@ -8,6 +8,8 @@ import type { WorkspaceBackend } from '../../platform/desktop';
 import type { ResearchBackend } from '../../platform/research';
 import { createWorkspaceStore } from '../../stores/workspace';
 import { AssistantPanel } from './AssistantPanel';
+import { getAgentRuntime } from './agent-runtime';
+import type { AgentBackend, AgentEvent } from '../../platform/agent';
 import { freezeContext, newConversation, requestMessages } from './model';
 
 afterEach(cleanup);
@@ -558,4 +560,107 @@ it('files a saved key against its own endpoint so another service cannot pick it
     expect.objectContaining({ endpoint: 'https://api.example.com/v1' }),
     'deepseek-key',
   );
+});
+
+it('creates parallel chats, keeps the first binding after navigation, and saves background results after unmount', async () => {
+  const data = emptyWorkspace();
+  data.projects.push({
+    id: 'p1',
+    name: '研究项目',
+    question: '',
+    createdAt: '',
+    space: 'personal',
+  });
+  data.settings.model.model = 'test-model';
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+  } as unknown as WorkspaceBackend);
+  await store.getState().load();
+  const events = new Map<string, AgentEvent[]>();
+  const agent: AgentBackend = {
+    status: vi.fn(),
+    handshake: vi.fn(),
+    domains: vi.fn(async () => []),
+    startThread: vi.fn(async (projectId, domain, connection, { conversationId }) => ({
+      threadId: conversationId,
+      conversationId,
+      domain,
+      projectId,
+      cwd: 'C:/' + domain,
+      model: connection.model,
+      modelProvider: 'scientify',
+      instructionSources: [],
+    })),
+    startTurn: vi.fn(async (request) => ({
+      turnId: 'turn-' + request.conversationId,
+      status: 'inProgress',
+      events: [],
+    })),
+    events: vi.fn(async (_p, _d, id) => events.get(id)?.splice(0) ?? []),
+    respond: vi.fn(async () => {}),
+    interrupt: vi.fn(async () => {}),
+    release: vi.fn(async () => {}),
+  };
+  const runtime = getAgentRuntime(store, agent);
+  const props = { store, backend: {} as ResearchBackend, agent, scope: 'p1', context };
+  const view = render(<AssistantPanel {...props} />);
+  const user = userEvent.setup();
+  try {
+    await user.type(screen.getByLabelText('向 AI 提问'), '任务 A');
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    await waitFor(() => expect(agent.startTurn).toHaveBeenCalledTimes(1));
+    const first = vi.mocked(agent.startTurn).mock.calls[0][0];
+    expect(first.domain).toBe('literature');
+    await user.click(screen.getByRole('button', { name: '新建 AI 对话' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: '执行工作区' }), 'code');
+    await user.type(screen.getByLabelText('向 AI 提问'), '任务 B');
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    await waitFor(() => expect(agent.startTurn).toHaveBeenCalledTimes(2));
+    const second = vi.mocked(agent.startTurn).mock.calls[1][0];
+    expect(second.conversationId).not.toBe(first.conversationId);
+    expect(second.domain).toBe('code');
+    await user.click(screen.getByRole('button', { name: /任务 A/ }));
+    view.rerender(<AssistantPanel {...props} context={{ ...context, workspace: 'experiments' }} />);
+    expect((screen.getByRole('combobox', { name: '执行工作区' }) as HTMLSelectElement).value).toBe(
+      'literature',
+    );
+    await user.click(screen.getByRole('button', { name: '中止任务' }));
+    expect(agent.interrupt).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: first.conversationId }),
+    );
+    view.unmount();
+    for (const [request, text, status] of [
+      [first, 'A 停止', 'interrupted'],
+      [second, 'B 完成', 'completed'],
+    ] as const)
+      events.set(request.conversationId, [
+        {
+          kind: 'notification',
+          method: 'turn/completed',
+          params: {
+            threadId: request.threadId,
+            turn: {
+              id: 'turn-' + request.conversationId,
+              status,
+              items: [{ id: 'answer', type: 'agentMessage', text }],
+            },
+          },
+        },
+      ]);
+    await act(async () => {
+      await runtime.poll();
+    });
+    await waitFor(() => expect(Object.keys(store.getState().agentTasks)).toHaveLength(0));
+    expect(
+      store.getState().data!.sessions.find((item) => item.id === first.conversationId)?.agentStatus,
+    ).toBe('interrupted');
+    expect(
+      store.getState().data!.sessions.find((item) => item.id === second.conversationId)
+        ?.agentStatus,
+    ).toBe('completed');
+    expect(JSON.stringify(store.getState().data!.sessions)).toContain('B 完成');
+  } finally {
+    runtime.dispose();
+  }
 });

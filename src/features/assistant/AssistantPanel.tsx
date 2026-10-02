@@ -1,7 +1,6 @@
 import { t, translateError } from '../../i18n';
 import { isTauri } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
 import {
   Plus,
@@ -18,7 +17,7 @@ import { ApprovalCard } from '../../components/ai/ApprovalCard';
 import { AssistantComposer } from '../../components/ai/AssistantComposer';
 import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import '../../components/ai/ai-panel.css';
-import { Button } from '../../components/primitives';
+import { Button, Dropdown } from '../../components/primitives';
 import { ModelSettingsDialog } from './ModelSettingsDialog';
 import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/Menu';
 import { Modal } from '../../components/Modal';
@@ -31,6 +30,7 @@ import {
   nativeAgent,
   type AgentBackend,
   type AgentConnection,
+  type AgentDomain,
 } from '../../platform/agent';
 import type { AIProtocol, ResearchBackend } from '../../platform/research';
 import {
@@ -39,7 +39,8 @@ import {
   type CredentialBackend,
 } from '../../platform/credentials';
 import type { WorkspaceStore } from '../../stores/workspace';
-import { AgentSession, hasPendingWork, initialAgentSession } from './agent-session';
+import { hasPendingWork, initialAgentSession } from './agent-session';
+import { getAgentRuntime } from './agent-runtime';
 import {
   asConversation,
   freezeContext,
@@ -97,7 +98,7 @@ export function AssistantPanel({
   } | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
-  const pollFrame = useRef<number | null>(null);
+
   const [apiKey, setApiKey] = useState('');
   // True while `apiKey` is the key read back from this machine rather than one
   // typed in this session, so the settings dialog can say so.
@@ -106,89 +107,86 @@ export function AssistantPanel({
   // not wait on the disk again.
   const keyCache = useRef(new Map<string, string>());
   const keyTicket = useRef(0);
-  const [conversation, setConversation] = useState<Conversation>(() => {
+  const [localConversation, setConversation] = useState<Conversation>(() => {
     const recent = data?.sessions
       .filter((item) => item.project === scope)
       .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
     return recent ? asConversation(recent) : newConversation(scope);
   });
+  const activeConversationId = useRef(localConversation.id);
+  activeConversationId.current = localConversation.id;
+  const [unsaved, setUnsaved] = useState(false);
+  const savedConversation = data?.sessions.find(
+    (item) => item.project === scope && item.id === localConversation.id,
+  );
+  const conversation =
+    savedConversation && !unsaved ? asConversation(savedConversation) : localConversation;
+  const runtime = getAgentRuntime(store, agent);
+  useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
+  const activeTask = runtime.get(scope, conversation.id);
+  const agentState = activeTask?.state ?? initialAgentSession;
+  const agentPending = !!activeTask && (activeTask.starting || hasPendingWork(agentState));
+  const [newDomain, setNewDomain] = useState<AgentDomain | null>(null);
+  const domain =
+    conversation.agentDomain ?? newDomain ?? domainForWorkspace(context.workspace) ?? 'code';
   const [prompt, setPrompt] = useState('');
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [includeContext, setIncludeContext] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [unsaved, setUnsaved] = useState(false);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState<Conversation | null>(null);
   const busyRef = useRef(false);
-  const [agentState, setAgentState] = useState(() => ({ ...initialAgentSession }));
-  const [agentMessages, setAgentMessages] = useState<ChatMessage[]>([]);
-  const persistedAgentSignature = useRef('');
-  const deletedConversationIds = useRef(new Set<string>());
   const [sandboxBusy, setSandboxBusy] = useState(false);
-  const sessionRef = useRef<AgentSession | null>(null);
   const agentProject = context.projectId;
-  const domain = domainForWorkspace(context.workspace);
   const agentConnection: AgentConnection = {
     endpoint: settings.endpoint,
     model: settings.model,
     provider: settings.provider,
     ...(apiKey ? { apiKey } : {}),
   };
-  const agentBindingKey = [
-    agentProject ?? '',
-    domain ?? '',
-    settings.provider,
-    settings.endpoint,
-    settings.model,
-    apiKey,
-  ].join('|');
   const history = (data?.sessions ?? []).filter((item) => item.project === scope);
   const key = `assistant:${scope}`;
-  // `turn/start` returns before Codex finishes tool calls. Agent activity is
-  // kept in this panel's local state so it never masquerades as an unsaved
-  // workspace edit and cannot block project or conversation navigation.
-  const agentPending = hasPendingWork(agentState);
   const dirty = !!prompt.trim() || unsaved;
-  const conversationActionsDisabled = dirty || !!retry || agentPending || busy || settingsBusy;
-
-  function agentConversationSnapshot(): Conversation | null {
-    const messages = [...conversation.messages, ...agentMessages];
-    if (agentState.agentText) {
-      messages.push({
-        id: `agent:${conversation.id}:${agentState.agentText.length}`,
-        role: 'assistant',
-        text: agentState.agentText,
-        createdAt: new Date().toISOString(),
-      });
-    }
-    if (!messages.length) return null;
-    const firstUser = messages.find((message) => message.role === 'user');
-    return {
-      ...conversation,
-      title:
-        conversation.messages.length || conversation.title !== t('新对话')
-          ? conversation.title
-          : firstUser?.text.trim().slice(0, 36) || conversation.title,
-      messages,
-      updatedAt: new Date().toISOString(),
-    };
-  }
-
-  // Agent transcripts used to live only in component state, so they could
-  // neither appear in the history menu nor survive creating a new chat.
+  const conversationActionsDisabled = dirty || !!retry || busy || settingsBusy;
+  const backgroundTasks = [...runtime.tasks.values()].filter(
+    (task) =>
+      (runtime.pending(task) || task.saveError) &&
+      task.projectId === scope &&
+      task.conversationId !== conversation.id,
+  );
+  const needsReconnect = conversation.agentStatus === 'running' && !activeTask;
+  const operations = activeTask?.state.operations ?? conversation.agentRun?.operations ?? [];
+  const [domainRoots, setDomainRoots] = useState<Partial<Record<AgentDomain, string>>>({});
   useEffect(() => {
-    if (agentState.phase !== 'idle' || (!agentMessages.length && !agentState.agentText)) return;
-    if (deletedConversationIds.current.has(conversation.id)) return;
-    const snapshot = agentConversationSnapshot();
-    if (!snapshot) return;
-    const signature = `${snapshot.id}:${snapshot.messages.length}:${snapshot.messages.at(-1)?.text ?? ''}`;
-    if (signature === persistedAgentSignature.current) return;
-    persistedAgentSignature.current = signature;
-    void persistConversation(store, snapshot);
-    if (!conversation.messages.length && conversation.title === t('新对话'))
-      setConversation((current) => ({ ...current, title: snapshot.title }));
-  }, [agentState.phase, agentState.agentText, agentMessages, conversation, store]);
-
+    let disposed = false;
+    if (agentProject)
+      void Promise.resolve(agent.domains(agentProject))
+        .then((bindings) => {
+          if (!disposed)
+            setDomainRoots(
+              Object.fromEntries(
+                (bindings ?? []).map((binding) => [
+                  binding.domain,
+                  binding.root ?? binding.reason ?? '',
+                ]),
+              ),
+            );
+        })
+        .catch(() => {});
+    return () => {
+      disposed = true;
+    };
+  }, [agent, agentProject, context.workspace]);
+  useEffect(() => {
+    if (!model) return;
+    setSettings({
+      endpoint: model.endpoint,
+      model: model.model,
+      provider: model.provider ?? 'ollama',
+      serviceId: model.serviceId,
+      modelCatalog: model.modelCatalog,
+    });
+  }, [model?.endpoint, model?.model, model?.provider, model?.serviceId, model?.modelCatalog]);
   useEffect(() => {
     store.getState().setDirtySource(key, dirty);
     onDirtyChange?.(dirty);
@@ -235,62 +233,6 @@ export function AssistantPanel({
       setKeyStored(!!stored);
     });
   }, [recallKey, settings.provider, settings.endpoint]);
-  // The engine speaks stdio JSON-RPC. Rust emits a wake-up event for each
-  // notification so deltas render immediately; this slower poll remains as a
-  // recovery path if the webview temporarily misses an event.
-  useEffect(() => {
-    if (agentState.phase !== 'running' && agentState.phase !== 'waiting') return;
-    const timer = setInterval(() => void sessionRef.current?.poll(), 1000);
-    return () => clearInterval(timer);
-  }, [agentState.phase]);
-  useEffect(() => {
-    if (
-      !isTauri() ||
-      !agentProject ||
-      !domain ||
-      (agentState.phase !== 'opening' &&
-        agentState.phase !== 'running' &&
-        agentState.phase !== 'waiting')
-    )
-      return;
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    const schedulePoll = () => {
-      if (pollFrame.current !== null) return;
-      pollFrame.current = requestAnimationFrame(() => {
-        pollFrame.current = null;
-        void sessionRef.current?.poll();
-      });
-    };
-    void listen<{ projectId?: string; domain?: string }>('agent-event', (event) => {
-      if (event.payload.projectId !== agentProject || event.payload.domain !== domain) return;
-      schedulePoll();
-    })
-      .then((stop) => {
-        if (disposed) stop();
-        else unlisten = stop;
-      })
-      .catch(() => {
-        // Browser previews and unit tests may report Tauri as available while
-        // exposing no event bridge. Polling remains the recovery path there.
-      });
-    return () => {
-      disposed = true;
-      if (pollFrame.current !== null) {
-        cancelAnimationFrame(pollFrame.current);
-        pollFrame.current = null;
-      }
-      unlisten?.();
-    };
-  }, [agentProject, domain, agentState.phase]);
-  // A session is scoped to one project, domain, and model connection. When any
-  // of those changes, discard the frontend handle so the next send opens the
-  // matching native session instead of accidentally continuing another root.
-  useEffect(() => {
-    sessionRef.current = null;
-    setAgentState({ ...initialAgentSession });
-    setAgentMessages([]);
-  }, [agentBindingKey]);
   useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
 
   const safeError = useCallback(
@@ -456,24 +398,26 @@ export function AssistantPanel({
     if (conversationActionsDisabled) return;
     const item = history.find((entry) => entry.id === id);
     if (!item) return;
+    const targetTask = runtime.get(scope, id);
+    if (targetTask && (runtime.pending(targetTask) || targetTask.saveError)) {
+      setError(t('请先中止并等待此会话任务结束。'));
+      return;
+    }
     const name = String(item.title || t('历史对话'));
     if (!(await confirmAction(t('删除对话“{name}”？', { name })))) return;
-    const saved = await store.getState().update((workspace) => {
-      workspace.sessions = workspace.sessions.filter(
-        (entry) => !(entry.id === id && entry.project === scope),
-      );
-    });
+    let saved = false;
+    try {
+      saved = await runtime.deleteConversation(scope, id);
+    } catch (reason) {
+      setError(safeError(reason));
+      return;
+    }
     if (!saved) {
       setError(store.getState().error || t('对话删除失败，请重试。'));
       return;
     }
-    deletedConversationIds.current.add(id);
     if (conversation.id !== id) return;
     setConversation(newConversation(scope));
-    sessionRef.current = null;
-    setAgentState({ ...initialAgentSession });
-    setAgentMessages([]);
-    persistedAgentSignature.current = '';
     setError('');
   }
 
@@ -496,76 +440,35 @@ export function AssistantPanel({
       openSettings();
       return;
     }
-    busyRef.current = true;
-    setBusy(true);
     setError('');
-    try {
-      const snapshot = includeContext ? freezeContext(context) : undefined;
-      const agentText = snapshot
-        ? [
-            text,
-            '',
-            '<current-material>',
-            `对象：${snapshot.title}`,
-            snapshot.path ? `路径：${snapshot.path}` : '',
-            snapshot.page ? `页码：${snapshot.page}` : '',
-            snapshot.selection
-              ? `选区：\n${snapshot.selection}`
-              : snapshot.text
-                ? `正文摘录：\n${snapshot.text}`
-                : t('当前没有可提取的正文。'),
-            '</current-material>',
-          ]
-            .filter(Boolean)
-            .join('\n')
-        : text;
-      if (!sessionRef.current || sessionRef.current.state.threadId === null) {
-        sessionRef.current = new AgentSession(
-          agent,
-          { projectId: agentProject, domain },
-          agentConnection,
-          setAgentState,
-        );
-        if (!(await sessionRef.current.open())) {
-          setError(sessionRef.current.state.error ?? '');
-          return;
-        }
-      }
-      // Keep completed Agent turns visible in the same global conversation.
-      // The current answer remains streamed from `agentState` until the next
-      // task starts, then it is folded into this local transcript.
-      setAgentMessages((messages) => [
-        ...(agentState.agentText
-          ? [
-              ...messages,
-              {
-                id: `agent:${conversation.id}:${agentState.agentText.length}`,
-                role: 'assistant' as const,
-                text: agentState.agentText,
-                createdAt: new Date().toISOString(),
-              },
-            ]
-          : messages),
-        {
-          id: crypto.randomUUID(),
-          role: 'user',
-          text,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-      setPrompt('');
-      if (!(await sessionRef.current.send(agentText))) {
+    const sendingId = conversation.id;
+    const snapshot =
+      includeContext &&
+      (!domainForWorkspace(context.workspace) || domainForWorkspace(context.workspace) === domain)
+        ? freezeContext(context)
+        : undefined;
+    setPrompt('');
+    pinnedToBottom.current = true;
+    const sent = await runtime.send(conversation, domain, agentConnection, text, snapshot);
+    if (sent === false) {
+      if (activeConversationId.current === sendingId) {
+        setError(store.getState().error ?? t('当前输入尚未发送，请在任务结束后重试。'));
         setPrompt(text);
-        setError(sessionRef.current.state.error ?? '');
       }
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
     }
   }
 
   async function send() {
-    if (!prompt.trim() || busyRef.current || settingsBusy || agentPending) return;
+    if (
+      !prompt.trim() ||
+      busyRef.current ||
+      settingsBusy ||
+      agentPending ||
+      activeTask?.saving ||
+      activeTask?.saveError ||
+      needsReconnect
+    )
+      return;
     // The global assistant automatically uses the local harness whenever the
     // current page has a project root and the configured provider speaks an
     // OpenAI-shaped protocol. Users should describe the outcome; they should
@@ -606,19 +509,13 @@ export function AssistantPanel({
   }
 
   function selectConversation(id: string) {
-    if (dirty || retry || agentPending) return;
-    const snapshot = agentConversationSnapshot();
-    if (snapshot) void persistConversation(store, snapshot);
+    if (dirty || retry || busy) return;
     pinnedToBottom.current = true;
-    const existing = history.find((item) => item.id === id);
+    const existing = store
+      .getState()
+      .data?.sessions.find((item) => item.id === id && item.project === scope);
     setConversation(existing ? asConversation(existing) : newConversation(scope));
-    // Agent turns are kept in a local transcript while they stream. Clear it
-    // together with the selected conversation; otherwise a new chat appears
-    // to contain the previous Agent answer and the + button looks inert.
-    sessionRef.current = null;
-    setAgentState({ ...initialAgentSession });
-    setAgentMessages([]);
-    persistedAgentSignature.current = '';
+    setNewDomain(null);
     setError('');
   }
 
@@ -630,8 +527,7 @@ export function AssistantPanel({
       const result = await agent.setupSandbox(agentProject, domain, agentConnection);
       // A setup request may start an elevated helper. Reopen the Codex thread
       // after the user completes that flow so it picks up the new sandbox.
-      sessionRef.current = null;
-      setAgentState({ ...initialAgentSession });
+      if (activeTask && !runtime.pending(activeTask)) await runtime.remove(scope, conversation.id);
       if (result.status === 'setupCompleted') {
         setError(t('Windows 沙箱配置已完成，请再次发送任务。'));
       } else if (result.started) {
@@ -647,7 +543,7 @@ export function AssistantPanel({
   }
 
   async function interruptAgent() {
-    const session = sessionRef.current;
+    const session = activeTask?.session;
     if (!session) return;
     setError('');
     if (!(await session.interrupt())) setError(session.state.error ?? t('中止任务失败，请重试。'));
@@ -671,9 +567,7 @@ export function AssistantPanel({
           onClick={(event) => openMenu('sessions', event.currentTarget)}
         >
           <span>
-            {conversation.messages.length ||
-            agentMessages.length ||
-            conversation.title !== t('新对话')
+            {conversation.messages.length || conversation.title !== t('新对话')
               ? conversation.title
               : t('新对话')}
           </span>
@@ -684,13 +578,7 @@ export function AssistantPanel({
           size="sm"
           iconOnly
           aria-label={t('新建 AI 对话')}
-          tooltip={
-            agentPending
-              ? t('请等待当前 Agent 任务完成')
-              : dirty
-                ? t('先发送或清空草稿，并保存对话')
-                : t('新建 AI 对话')
-          }
+          tooltip={dirty ? t('先发送或清空草稿，并保存对话') : t('新建 AI 对话')}
           disabled={conversationActionsDisabled}
           onClick={() => selectConversation('')}
         >
@@ -708,6 +596,50 @@ export function AssistantPanel({
           <MoreHorizontal size={16} />
         </Button>
       </div>
+      {agentProject ? (
+        <div className="sf-ai-binding">
+          <Dropdown
+            aria-label={t('执行工作区')}
+            value={domain}
+            disabled={!!conversation.agentDomain || agentPending}
+            onChange={(event) => setNewDomain(event.target.value as AgentDomain)}
+          >
+            <option value="literature">{t('文献目录')}</option>
+            <option value="code">{t('代码目录')}</option>
+          </Dropdown>
+          <span title={agentState.cwd ?? conversation.agentCwd ?? domainRoots[domain] ?? ''}>
+            {agentState.cwd ?? conversation.agentCwd ?? domainRoots[domain] ?? t('发送时绑定目录')}
+          </span>
+        </div>
+      ) : null}
+      {backgroundTasks.length ? (
+        <div className="sf-ai-background-tasks" aria-label={t('后台任务')}>
+          {backgroundTasks.map((task) => (
+            <Button
+              key={task.conversationId}
+              variant="ghost"
+              size="sm"
+              onClick={() => selectConversation(task.conversationId)}
+            >
+              <LoaderCircle className="sf-ai-spinner" size={12} />
+              <span>
+                {String(
+                  history.find((item) => item.id === task.conversationId)?.title ?? t('历史对话'),
+                )}
+              </span>
+              <span>
+                {task.saveError
+                  ? t('待保存')
+                  : task.state.phase === 'waiting'
+                    ? t('等待审批')
+                    : task.state.phase === 'stopping'
+                      ? t('正在中止…')
+                      : t('运行中')}
+              </span>
+            </Button>
+          ))}
+        </div>
+      ) : null}
       <Menu
         anchor={menu?.anchor ?? null}
         label={
@@ -763,7 +695,17 @@ export function AssistantPanel({
                       setMenu(null);
                     }}
                   >
-                    {String(item.title || t('历史对话'))}
+                    <span className="sf-ai-session-name">
+                      {String(item.title || t('历史对话'))}
+                    </span>
+                    {runtime.get(scope, item.id) &&
+                    runtime.pending(runtime.get(scope, item.id)!) ? (
+                      <LoaderCircle
+                        className="sf-ai-spinner"
+                        size={12}
+                        aria-label={t('任务进行中')}
+                      />
+                    ) : null}
                   </Button>
                 ))}
             </div>
@@ -831,7 +773,13 @@ export function AssistantPanel({
               variant="ghost"
               role="menuitem"
               className="sf-menu-danger"
-              disabled={conversationActionsDisabled}
+              disabled={
+                conversationActionsDisabled ||
+                !!(
+                  runtime.get(scope, sessionAction.id) &&
+                  runtime.pending(runtime.get(scope, sessionAction.id)!)
+                )
+              }
               onClick={() => void deleteConversation(sessionAction.id)}
             >
               <Trash2 size={14} />
@@ -897,7 +845,7 @@ export function AssistantPanel({
           pinnedToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 48;
         }}
       >
-        {!conversation.messages.length && !agentMessages.length ? (
+        {!conversation.messages.length ? (
           <div className="sf-ai-conversation-empty">
             {t('提问，或直接描述要在当前工作区完成的任务')}
           </div>
@@ -906,16 +854,20 @@ export function AssistantPanel({
             <ChatMessageView key={message.id} role={message.role} text={message.text} />
           ))
         )}
-        {agentMessages.map((message, index) => (
-          <ChatMessageView key={`agent-message-${index}`} role={message.role} text={message.text} />
-        ))}
-        {agentState.agentText ? (
+        {agentState.agentText &&
+        !conversation.messages.some((message) => message.id === activeTask?.answerId) ? (
           <ChatMessageView role="assistant" text={agentState.agentText} streaming={agentPending} />
         ) : null}
         {agentPending && !agentState.approvals.length ? (
           <div className="sf-ai-progress sf-ai-agent-progress" role="status">
             <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
-            <span>{t('Agent 正在工作…')}</span>
+            <span>
+              {agentState.phase === 'stopping'
+                ? t('正在中止…')
+                : activeTask?.starting
+                  ? t('正在连接 Agent…')
+                  : t('Agent 正在工作…')}
+            </span>
           </div>
         ) : null}
         {agentState.sandbox === 'readOnly' ? (
@@ -929,7 +881,7 @@ export function AssistantPanel({
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={sandboxBusy || busy}
+                disabled={sandboxBusy || busy || agentPending || !!activeTask?.saving}
                 onClick={() => void setupWindowsSandbox()}
               >
                 {sandboxBusy ? t('正在配置…') : t('配置 Windows 沙箱')}
@@ -937,12 +889,32 @@ export function AssistantPanel({
             ) : null}
           </div>
         ) : null}
+        {operations.length ? (
+          <details className="sf-ai-task-details">
+            <summary>
+              {t('执行记录')} · {operations.length}
+            </summary>
+            {operations.map((op) => (
+              <div key={op.id}>
+                <strong>{op.label}</strong>
+                <span>{t(op.status)}</span>
+                {op.output ? <pre>{op.output}</pre> : null}
+              </div>
+            ))}
+          </details>
+        ) : null}
+        {agentState.unsupportedRequests.length ? (
+          <div role="alert" className="sf-aux-error">
+            {t('此任务需要当前界面尚未支持的交互，请中止后重试。')}
+            <code>{agentState.unsupportedRequests.join(', ')}</code>
+          </div>
+        ) : null}
         {agentState.approvals.map((approval) => (
           <ApprovalCard
             key={String(approval.id)}
             event={approval}
             busy={busy}
-            onDecide={(decision) => void sessionRef.current?.decide(approval, decision)}
+            onDecide={(decision) => void activeTask?.session.decide(approval, decision)}
           />
         ))}
         {busy && !agentPending ? (
@@ -952,10 +924,38 @@ export function AssistantPanel({
           </div>
         ) : null}
       </div>
-      {error || agentState.error ? (
+      {needsReconnect ? (
+        <div className="sf-agent-sandbox-notice" role="status">
+          <span>{t('上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。')}</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void runtime.resume(conversation, agentConnection)}
+          >
+            {t('恢复连接')}
+          </Button>
+        </div>
+      ) : null}
+      {!agentPending && conversation.agentStatus && !needsReconnect ? (
+        <div className="sf-ai-task-status" role="status">
+          {activeTask?.saving ? t('正在保存结果…') : t(conversation.agentStatus)}
+          {conversation.agentRun?.model ? <span>{conversation.agentRun.model}</span> : null}
+        </div>
+      ) : null}
+      {error ||
+      agentState.error ||
+      activeTask?.saveError ||
+      (!activeTask && conversation.agentRun?.error) ? (
         <div className="sf-aux-error" role="alert">
-          {translateError(error || agentState.error)}
+          {translateError(
+            activeTask?.saveError || error || agentState.error || conversation.agentRun?.error,
+          )}
           <div>
+            {activeTask?.saveError ? (
+              <Button variant="ghost" size="sm" onClick={() => void runtime.retrySave(activeTask)}>
+                {t('重试保存对话')}
+              </Button>
+            ) : null}
             {retry ? (
               <Button
                 variant="ghost"
@@ -995,9 +995,16 @@ export function AssistantPanel({
       <AssistantComposer
         inputRef={composerRef}
         prompt={prompt}
-        disabled={settingsBusy || unsaved || !!retry}
+        disabled={
+          settingsBusy ||
+          unsaved ||
+          !!retry ||
+          !!activeTask?.saving ||
+          !!activeTask?.saveError ||
+          needsReconnect
+        }
         isBusy={busy || agentPending}
-        canInterrupt={agentPending && !!sessionRef.current?.state.turnId}
+        canInterrupt={agentPending && !!agentState.turnId && agentState.phase !== 'stopping'}
         model={settings.model}
         endpoint={settings.endpoint}
         includeContext={includeContext}

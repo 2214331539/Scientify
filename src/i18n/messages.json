@@ -1,4 +1,89 @@
 {
+  "Git 仓库与代码目录不同，请在对应目录打开文件。": ["Git 仓库与代码目录不同，请在对应目录打开文件。", "The Git repository differs from the code directory. Open this file in its repository."],
+  "运行前保存此项目的 {count} 个未保存文件？保存失败时不会启动。": ["运行前保存此项目的 {count} 个未保存文件？保存失败时不会启动。","Save {count} unsaved project files before running? A failed save prevents launch."],
+  "文件保存失败，请处理冲突后再运行。": ["文件保存失败，请处理冲突后再运行。","File save failed. Resolve the conflict before running."],
+  "运行本地程序 {program}？参数：{args}。程序具有当前用户权限，多次运行共享项目文件。": ["运行本地程序 {program}？参数：{args}。程序具有当前用户权限，多次运行共享项目文件。","Run {program} locally with arguments {args}? The program uses your user permissions. Runs share project files."],
+  "后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。": ["后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。","Background tasks are running or have unsaved results. Stop tasks in Experiments or the AI assistant and save results before closing."],
+  "运行配置": ["运行配置","Run configuration"],
+  "选择运行配置": ["选择运行配置","Select configuration"],
+  "新建运行配置": ["新建运行配置","New run configuration"],
+  "环境与依赖": ["环境与依赖","Environment & dependencies"],
+  "保存当前文件": ["保存当前文件","Save current file"],
+  "编辑运行配置": ["编辑运行配置","Edit run configuration"],
+  "本地执行仅在桌面应用可用": ["本地执行仅在桌面应用可用","Local execution requires the desktop app"],
+  "查看运行输出": ["查看运行输出","Select run output"],
+  "尚无本地运行": ["尚无本地运行","No local runs yet"],
+  "应用托管目录": ["应用托管目录","App-managed directory"],
+  "可执行程序": ["可执行程序","Executable"],
+  "工作目录": ["工作目录","Working directory"],
+  "参数": ["参数","Arguments"],
+  "以上为配置值，不表示环境检测已通过。运行时会验证路径和程序。": ["以上为配置值，不表示环境检测已通过。运行时会验证路径和程序。","These are configured values, not verified environment results. Paths and the executable are checked at launch."],
+  "产物目录由 SCIENTIFY_RUN_DIR 提供，脚本需显式将结果写入该目录。": ["产物目录由 SCIENTIFY_RUN_DIR 提供，脚本需显式将结果写入该目录。","The script must write results to the directory provided by SCIENTIFY_RUN_DIR."],
+  "请切换到对应项目查看运行详情。": ["请切换到对应项目查看运行详情。","Switch to the corresponding project for run details."],
+  "查看": ["查看","View"],
+  "暂无后台实验任务": ["暂无后台实验任务","No background experiment tasks"],
+  "请输入名称和可执行程序。": ["请输入名称和可执行程序。","Enter a name and executable."],
+  "项目不存在": ["项目不存在","Project not found"],
+  "保存失败": ["保存失败","Save failed"],
+  "配置名称": ["配置名称","Configuration name"],
+  "参数（JSON 数组）": ["参数（JSON 数组）","Arguments (JSON array)"],
+  "工作目录（相对项目根目录）": ["工作目录（相对项目根目录）","Working directory (relative to project root)"],
+  "删除此运行配置？已有运行记录不会删除。": ["删除此运行配置？已有运行记录不会删除。","Delete this configuration? Existing runs will be preserved."],
+  "删除配置": ["删除配置","Delete configuration"],
+  "保存配置": ["保存配置","Save configuration"],
+  "搜索实验记录": ["搜索实验记录","Search experiment records"],
+  "搜索运行…": ["搜索运行…","Search runs…"],
+  "筛选实验状态": ["筛选实验状态","Filter run status"],
+  "失败": ["失败","Failed"],
+  "已取消": ["已取消","Cancelled"],
+  "已中断": ["已中断","Interrupted"],
+  "手动记录": ["手动记录","Manual record"],
+  "本地运行": ["本地运行","Local run"],
+  "比较": ["比较","Compare"],
+  "运行比较": ["运行比较","Run comparison"],
+  "字段": ["字段","Field"],
+  "运行": ["运行","Run"],
+  "来源": ["来源","Source"],
+  "更新时间": ["更新时间","Updated"],
+  "比较 {name}": ["比较 {name}","Compare {name}"],
+  "再次运行": ["再次运行","Run again"],
+  "退出码": ["退出码","Exit code"],
+  "刷新运行输出": ["刷新运行输出","Refresh run output"],
+  "只读运行日志": ["只读运行日志","Read-only run log"],
+  "暂无输出": ["暂无输出","No output yet"],
+  "平台": ["平台","Platform"],
+  "Git 提交": ["Git 提交","Git commit"],
+  "未记录": ["未记录","Not recorded"],
+  "启动时变更": ["启动时变更","Changes at launch"],
+  "导入指标": ["导入指标","Import metrics"],
+  "暂无运行产物": ["暂无运行产物","No run artifacts"],
+  "修改的文件": ["修改的文件","Changed files"],
+  "刷新 Git 差异": ["刷新 Git 差异","Refresh Git diff"],
+  "打开文件": ["打开文件","Open file"],
+  "工作区": ["工作区","Working tree"],
+  "文件版本差异": ["文件版本差异","File version diff"],
+  "暂无文本差异": ["暂无文本差异","No text diff"],
+  "环境与版本": ["环境与版本","Environment & version"],
+  "产物": ["产物","Artifacts"],
+  "日志": ["日志","Logs"],
+  "结果": ["结果","Results"],
+  "启动中…": ["启动中…","Starting…"],
+  "停止中…": ["停止中…","Stopping…"],
+  "执行状态（只读）": ["执行状态（只读）","Execution status (read only)"],
+  "参数必须是 JSON 字符串数组。": ["参数必须是 JSON 字符串数组。","Arguments must be a JSON array of strings."],
+  "指标文件需为 JSON 对象，字段值为有限数字。": ["指标文件需为 JSON 对象，字段值为有限数字。","Metrics must be a JSON object with finite numeric values."],
+  "指标文件需包含 1 至 100 项指标。": ["指标文件需包含 1 至 100 项指标。","The file must contain 1 to 100 metrics."],
+  "必须使用工作区内的相对路径。": ["必须使用工作区内的相对路径。","Use a relative path inside the workspace."],
+  "请选择可执行程序。": ["请选择可执行程序。","Select an executable."],
+  "找不到可执行程序，请填写绝对路径或检查 PATH。": ["找不到可执行程序，请填写绝对路径或检查 PATH。","Executable not found. Enter an absolute path or check PATH."],
+  "可执行程序不存在。": ["可执行程序不存在。","Executable not found."],
+  "运行配置无效。": ["运行配置无效。","Invalid run configuration."],
+  "工作目录不存在。": ["工作目录不存在。","Working directory not found."],
+  "最多同时运行 8 个实验，请等待或停止已有任务。": ["最多同时运行 8 个实验，请等待或停止已有任务。","At most 8 experiments can run concurrently. Wait or stop an existing run."],
+  "实验仍在运行，请停止后再删除项目、更换目录或恢复数据。": ["实验仍在运行，请停止后再删除项目、更换目录或恢复数据。","Stop running experiments before deleting the project, changing its directory, or restoring data."],
+  "运行记录不存在。": ["运行记录不存在。","Run not found."],
+  "应用上次退出时运行未完成；未自动重新执行。": ["应用上次退出时运行未完成；未自动重新执行。","The run was unfinished when the app last exited. It was not restarted."],
+  "日志超过 64 MiB，已停止运行以保护磁盘空间。": ["日志超过 64 MiB，已停止运行以保护磁盘空间。","The log exceeded 64 MiB. The run was stopped to protect disk space."],
   "外观与语言": [
     "外观与语言",
     "Appearance & language"
@@ -3494,5 +3579,157 @@
   "Windows 沙箱配置没有启动，请重试或查看系统权限设置。": [
     "Windows 沙箱配置没有启动，请重试或查看系统权限设置。",
     "Windows sandbox setup did not start. Try again or check system permissions."
+  ],
+  "执行工作区": [
+    "执行工作区",
+    "Execution workspace"
+  ],
+  "文献目录": [
+    "文献目录",
+    "Literature folder"
+  ],
+  "代码目录": [
+    "代码目录",
+    "Code folder"
+  ],
+  "发送时绑定目录": [
+    "发送时绑定目录",
+    "Folder binds on first send"
+  ],
+  "后台任务": [
+    "后台任务",
+    "Background tasks"
+  ],
+  "等待审批": [
+    "等待审批",
+    "Awaiting approval"
+  ],
+  "运行中": [
+    "运行中",
+    "Running"
+  ],
+  "待保存": [
+    "待保存",
+    "Save required"
+  ],
+  "任务进行中": [
+    "任务进行中",
+    "Task in progress"
+  ],
+  "正在中止…": [
+    "正在中止…",
+    "Stopping…"
+  ],
+  "正在连接 Agent…": [
+    "正在连接 Agent…",
+    "Connecting to Agent…"
+  ],
+  "执行记录": [
+    "执行记录",
+    "Execution log"
+  ],
+  "正在保存结果…": [
+    "正在保存结果…",
+    "Saving results…"
+  ],
+  "恢复连接": [
+    "恢复连接",
+    "Reconnect"
+  ],
+  "上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。": [
+    "上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。",
+    "Check the previous task by reconnecting. Existing results will be recovered without sending the task again."
+  ],
+  "当前输入尚未发送，请在任务结束后重试。": [
+    "当前输入尚未发送，请在任务结束后重试。",
+    "This input was not sent. Try again after the current task ends."
+  ],
+  "此任务需要当前界面尚未支持的交互，请中止后重试。": [
+    "此任务需要当前界面尚未支持的交互，请中止后重试。",
+    "This task requires an interaction that is not supported yet. Stop the task and try again."
+  ],
+  "请先中止并等待此会话任务结束。": [
+    "请先中止并等待此会话任务结束。",
+    "Stop this conversation’s task and wait for it to finish first."
+  ],
+  "Agent 任务失败。": [
+    "Agent 任务失败。",
+    "Agent task failed."
+  ],
+  "请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。": [
+    "请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。",
+    "Finish this project’s Agent tasks and save their results before deleting the project or changing its folder."
+  ],
+  "请先结束 Agent 任务并保存结果，再替换工作区数据。": [
+    "请先结束 Agent 任务并保存结果，再替换工作区数据。",
+    "Finish Agent tasks and save their results before replacing workspace data."
+  ],
+  "Agent 任务仍在运行或有结果未保存。请在 AI 助手中中止任务或保存结果后再关闭窗口。": [
+    "Agent 任务仍在运行或有结果未保存。请在 AI 助手中中止任务或保存结果后再关闭窗口。",
+    "Agent tasks are still running or have unsaved results. Stop tasks or save their results in the AI assistant before closing this window."
+  ],
+  "请先结束 Agent 任务并保存结果，再删除会话、项目或更换工作区。": [
+    "请先结束 Agent 任务并保存结果，再删除会话、项目或更换工作区。",
+    "Finish Agent tasks and save their results before deleting a chat or project, or changing the workspace."
+  ],
+  "该会话绑定的工作区已变化，请新建会话。": [
+    "该会话绑定的工作区已变化，请新建会话。",
+    "The folder bound to this conversation has changed. Start a new conversation."
+  ],
+  "会话与 Agent 线程不匹配。": [
+    "会话与 Agent 线程不匹配。",
+    "The conversation does not match the Agent thread."
+  ],
+  "会话工作区不匹配。": [
+    "会话工作区不匹配。",
+    "The conversation workspace does not match."
+  ],
+  "该会话尚未启动，请重新连接。": [
+    "该会话尚未启动，请重新连接。",
+    "This conversation has not started. Reconnect to continue."
+  ],
+  "审批请求已失效或不属于此会话。": [
+    "审批请求已失效或不属于此会话。",
+    "This approval request has expired or belongs to another conversation."
+  ],
+  "此会话已有任务正在运行。": [
+    "此会话已有任务正在运行。",
+    "This conversation already has a running task."
+  ],
+  "请等待此会话的当前任务结束后再切换模型。": [
+    "请等待此会话的当前任务结束后再切换模型。",
+    "Wait for this conversation’s task to finish before switching models."
+  ],
+  "此任务已结束或 turn 标识不匹配。": [
+    "此任务已结束或 turn 标识不匹配。",
+    "This task has ended or its turn ID does not match."
+  ],
+  "running": [
+    "运行中",
+    "Running"
+  ],
+  "inProgress": [
+    "运行中",
+    "Running"
+  ],
+  "completed": [
+    "已完成",
+    "Completed"
+  ],
+  "failed": [
+    "失败",
+    "Failed"
+  ],
+  "interrupted": [
+    "已中止",
+    "Stopped"
+  ],
+  "declined": [
+    "已拒绝",
+    "Declined"
+  ],
+  "Agent 正在工作…": [
+    "Agent 正在工作…",
+    "Agent is working…"
   ]
 }

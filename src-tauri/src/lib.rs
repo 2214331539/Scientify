@@ -8,6 +8,7 @@ mod agent;
 mod ai;
 mod browser;
 mod credentials;
+mod experiments;
 #[cfg(test)]
 mod ipc_smoke;
 mod library;
@@ -46,23 +47,41 @@ async fn workspace_load(state: State<'_, AppState>) -> Result<LoadResult, String
 }
 
 #[tauri::command]
-async fn workspace_save(
+async fn workspace_save<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     state: State<'_, AppState>,
     workspace: Value,
     expected_revision: u64,
 ) -> Result<Value, String> {
     let storage = state.storage.clone();
-    tauri::async_runtime::spawn_blocking(move || storage.save(workspace, expected_revision))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<agent::AgentState>().protect(
+            storage.load()?.as_ref(),
+            Some(&workspace),
+            None,
+        )?;
+        app.state::<experiments::ExperimentState>()
+            .protect(storage.load()?.as_ref(), Some(&workspace))?;
+        storage.save(workspace, expected_revision)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-async fn workspace_restore(state: State<'_, AppState>) -> Result<Value, String> {
+async fn workspace_restore(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Value, String> {
     let storage = state.storage.clone();
-    tauri::async_runtime::spawn_blocking(move || storage.restore())
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<agent::AgentState>().protect(None, None, None)?;
+        app.state::<experiments::ExperimentState>()
+            .protect(None, None)?;
+        storage.restore()
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -90,6 +109,9 @@ async fn workspace_import(
             return Ok(None);
         };
         let path = file.into_path().map_err(|e| e.to_string())?;
+        app.state::<agent::AgentState>().protect(None, None, None)?;
+        app.state::<experiments::ExperimentState>()
+            .protect(None, None)?;
         storage.import(read_workspace(&path)?).map(Some)
     })
     .await
@@ -193,6 +215,9 @@ pub fn run() {
                 .join("scientify-desktop-sample/workspace");
             app.manage(library::LibraryState::new(directory.clone()));
             app.manage(agent::AgentState::default());
+            app.manage(experiments::ExperimentState::new(
+                directory.join("experiments"),
+            ));
             app.manage(AppState {
                 files: Arc::new(scientify_core::research::ResearchFiles::new(
                     directory.clone(),
@@ -244,6 +269,13 @@ pub fn run() {
             research::research_import_pdf,
             research::research_read_pdf,
             research::research_git_status,
+            research::research_git_diff,
+            experiments::experiment_start,
+            experiments::experiment_list,
+            experiments::experiment_stop,
+            experiments::experiment_log,
+            experiments::experiment_artifacts,
+            experiments::experiment_read_artifact,
             ai::research_ask_ai,
             ai::research_list_models,
             ai::research_test_model,
@@ -257,6 +289,7 @@ pub fn run() {
             agent::agent_interrupt,
             agent::agent_events,
             agent::agent_respond,
+            agent::agent_release,
             credentials::secret_save,
             credentials::secret_load,
             credentials::secret_clear,

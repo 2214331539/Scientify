@@ -8,7 +8,11 @@ use std::{path::PathBuf, time::Duration};
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
-fn project_root(storage: &Storage, files: &ResearchFiles, id: &str) -> Result<PathBuf, String> {
+pub(crate) fn project_root(
+    storage: &Storage,
+    files: &ResearchFiles,
+    id: &str,
+) -> Result<PathBuf, String> {
     project_root_for(storage, files, id, false)
 }
 
@@ -121,9 +125,9 @@ pub async fn research_read_pdf(
 }
 
 #[derive(Serialize)]
-pub struct GitChange {
-    path: String,
-    status: String,
+pub(crate) struct GitChange {
+    pub(crate) path: String,
+    pub(crate) status: String,
 }
 
 fn parse_git(bytes: &[u8]) -> Result<Vec<GitChange>, String> {
@@ -265,7 +269,7 @@ fn bounded_git(
     Ok((status, reader.join().map_err(|_| "Git 输出读取失败。")??))
 }
 
-fn git_status(root: &std::path::Path) -> Result<Vec<GitChange>, String> {
+pub(crate) fn git_status(root: &std::path::Path) -> Result<Vec<GitChange>, String> {
     if !root.join(".git").exists() {
         return Err("所选目录不是 Git 仓库根目录，请在项目设置中选择仓库目录。".into());
     }
@@ -321,6 +325,71 @@ fn git_status(root: &std::path::Path) -> Result<Vec<GitChange>, String> {
         return Err("此项目不是可读取的 Git 仓库，或 Git 权限/配置不允许访问。".into());
     }
     parse_git(&bytes)
+}
+
+pub(crate) fn git_head(root: &std::path::Path) -> Result<String, String> {
+    let mut command = git_command(root)?;
+    command.args(["rev-parse", "--verify", "HEAD"]);
+    let (status, bytes) = bounded_git(command)?;
+    if !status.success() {
+        return Err("没有 HEAD 提交。".into());
+    }
+    Ok(String::from_utf8_lossy(&bytes).trim().into())
+}
+#[tauri::command]
+pub async fn research_git_diff(
+    state: State<'_, AppState>,
+    project_id: String,
+    path: String,
+) -> Result<String, String> {
+    let (storage, files) = (state.storage.clone(), state.files.clone());
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_root_for(&storage, &files, &project_id, true)?;
+        let changes = git_status(&root)?;
+        if !changes.iter().any(|c| c.path == path) {
+            return Err("文件不在当前变更列表中，请刷新。".into());
+        }
+        if path.starts_with('-')
+            || path.contains(['\0', ':'])
+            || std::path::Path::new(&path)
+                .components()
+                .any(|c| !matches!(c, std::path::Component::Normal(_)))
+        {
+            return Err("差异路径无效。".into());
+        }
+        if changes.iter().any(|c| c.path == path && c.status == "??") {
+            let file = files.read(&root, &path)?;
+            return Ok(format!(
+                "--- /dev/null\n+++ b/{path}\n@@ -0,0 +1,{} @@\n{}",
+                file.content.lines().count(),
+                file.content
+                    .lines()
+                    .map(|l| format!("+{l}\n"))
+                    .collect::<String>()
+            ));
+        }
+        let mut command = git_command(&root)?;
+        command.args([
+            "diff",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            "--no-color",
+            "--unified=3",
+        ]);
+        // Unborn repositories compare against the index; otherwise include staged changes.
+        if git_head(&root).is_ok() {
+            command.arg("HEAD");
+        }
+        command.arg("--").arg(&path);
+        let (status, bytes) = bounded_git(command)?;
+        if !status.success() {
+            return Err("无法读取 Git 差异。".into());
+        }
+        String::from_utf8(bytes).map_err(|_| "二进制或非 UTF-8 文件无法显示文本差异。".into())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 fn client(timeout: u64) -> Result<reqwest::Client, String> {

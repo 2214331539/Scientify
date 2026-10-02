@@ -37,6 +37,7 @@
     "allow-agent-start-turn",
     "allow-agent-interrupt",
     "allow-agent-events",
+    "allow-agent-release",
     "allow-agent-respond",
     "allow-secret-save",
     "allow-secret-load",

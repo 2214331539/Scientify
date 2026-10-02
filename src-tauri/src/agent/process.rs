@@ -143,7 +143,7 @@ pub fn exchange(
 
 /// A long-lived engine process.
 ///
-/// Threads and turns share one process per (project, domain): the engine keeps
+/// Threads and turns share one process per (project, conversation): the engine keeps
 /// thread state in memory, so a one-shot process could not continue a
 /// conversation. Reading happens on a worker thread; notifications are queued so
 /// a caller waiting on a response never loses them.
@@ -254,6 +254,9 @@ impl EngineSession {
             for line in BufReader::new(stdout).lines() {
                 match line {
                     Ok(line) if !line.trim().is_empty() => {
+                        if sender.send(line.clone()).is_err() {
+                            break;
+                        }
                         if let Some(sink) = &event_sink {
                             if let Some(incoming) = super::protocol::classify(&line) {
                                 let described = super::protocol::describe(&incoming);
@@ -261,9 +264,6 @@ impl EngineSession {
                                     sink(described);
                                 }
                             }
-                        }
-                        if sender.send(line).is_err() {
-                            break;
                         }
                     }
                     Ok(_) => {}
@@ -337,6 +337,20 @@ impl EngineSession {
         // first turn events (and leave the UI waiting forever).
         self.drain_available();
         std::mem::take(&mut self.pending)
+    }
+
+    pub fn terminate(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+
+    pub fn ensure_alive(&mut self) -> Result<(), String> {
+        match self.child.try_wait().map_err(|e| e.to_string())? {
+            None => Ok(()),
+            Some(status) => Err(format!(
+                "Agent 引擎已退出（{status}），可重新连接后继续会话。"
+            )),
+        }
     }
 
     /// Collect every line currently available without blocking. This is used

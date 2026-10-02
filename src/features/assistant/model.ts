@@ -18,6 +18,17 @@ export type Conversation = Entity & {
   updatedAt: string;
   messages: ChatMessage[];
   context: ContextSnapshot[];
+  /** A chat keeps its execution root when the user navigates to another page. */
+  agentDomain?: 'literature' | 'code';
+  agentCwd?: string;
+  agentStatus?: 'running' | 'completed' | 'failed' | 'interrupted';
+  agentRun?: {
+    model: string;
+    startedAt: string;
+    completedAt?: string;
+    error: string | null;
+    operations: { id: string; label: string; status: string; output: string }[];
+  };
 };
 export type AISettings = {
   endpoint: string;

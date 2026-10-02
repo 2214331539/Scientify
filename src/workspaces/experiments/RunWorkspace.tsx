@@ -22,7 +22,7 @@ const statuses: Record<string, string> = {
   completed: '已完成',
   failed: '未成功',
 };
-function metricsOf(run?: Run): Metric[] {
+export function metricsOf(run?: Run): Metric[] {
   return Array.isArray(run?.metrics)
     ? run.metrics.filter(
         (metric): metric is Metric =>
@@ -201,7 +201,7 @@ export function RunWorkspace({
   );
 }
 
-function RunForm({
+export function RunForm({
   project,
   store,
   initial,
@@ -214,6 +214,7 @@ function RunForm({
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
+  const lockedExecution = !!initial?.executionId;
   const [fields, setFields] = useState(() => ({
     name: str(initial?.name),
     protocol: str(initial?.protocol),
@@ -313,14 +314,16 @@ function RunForm({
             <Input
               autoFocus
               required
+              disabled={lockedExecution}
               value={fields.name}
               onChange={(event) => edit('name', event.target.value)}
               placeholder={t('例如：不同学习率对收敛速度的影响')}
             />
           </label>
           <label>
-            {t('状态（手动标记）')}
+            {t(lockedExecution ? '执行状态（只读）' : '状态（手动标记）')}
             <Dropdown
+              disabled={lockedExecution}
               value={fields.status}
               onChange={(event) => edit('status', event.target.value)}
             >
@@ -348,6 +351,7 @@ function RunForm({
             <Textarea
               className="sf-run-config-input"
               rows={3}
+              disabled={lockedExecution}
               value={fields.config}
               onChange={(event) => edit('config', event.target.value)}
               placeholder={t('记录命令、环境与超参数')}

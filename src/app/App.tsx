@@ -31,7 +31,8 @@ import { nativeLibrary, noteFiles } from '../platform/library';
 import { flushPaperNotes, notesDirty, notesPending } from '../workspaces/literature/local-session';
 import { browserLayout } from '../platform/browser-pane';
 import { FileResources, FileWorkspace } from '../workspaces/files/FileWorkspace';
-import { RunWorkspace } from '../workspaces/experiments/RunWorkspace';
+import { ExperimentWorkspace } from '../workspaces/experiments/ExperimentWorkspace';
+import { useExecutions } from '../workspaces/experiments/runtime';
 import { GlobalDock } from '../shell/GlobalDock';
 import { ResizeHandle } from '../shell/ResizeHandle';
 import {
@@ -159,7 +160,12 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
   }, [store, backend]);
   useEffect(() => {
     function beforeUnload(event: BeforeUnloadEvent) {
-      if (store.getState().dirty || store.getState().busy || hasPendingFileOperations(backend)) {
+      if (
+        store.getState().dirty ||
+        store.getState().busy ||
+        hasPendingFileOperations(backend) ||
+        Object.keys(store.getState().agentTasks).length
+      ) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -175,6 +181,14 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
           if (closing) return;
           const { busy } = store.getState();
           if (busy || hasPendingFileOperations(backend)) return;
+          if (Object.keys(store.getState().agentTasks).length) {
+            store.setState({
+              error: t(
+                '后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。',
+              ),
+            });
+            return;
+          }
           closing = true;
           try {
             if (!(await flushPaperNotes())) {
@@ -217,6 +231,7 @@ export function App({
   preview?: boolean;
   windowMode?: 'projects' | 'workspace' | 'browser';
 }) {
+  const experiments = useExecutions(store, windowMode !== 'projects');
   const preferences = usePreferences();
   const epoch = useStore(store, (s) => s.epoch);
   const data = useStore(store, (s) => s.data),
@@ -740,7 +755,52 @@ export function App({
         onTool={openTool}
       />
     </div>
-  ) : workspace === 'notes' ? null : (
+  ) : workspace === 'notes' ? null : workspace === 'experiments' ? (
+    <ExperimentWorkspace
+      key={project.id}
+      project={project}
+      store={store}
+      backend={backend}
+      executions={experiments.runs}
+      runtimeError={experiments.error}
+      view={view}
+      onView={(view) => patchLocation({ view })}
+      activePath={location.paths?.experiments}
+      onOpen={openFile}
+      selectedRunId={location.runId}
+      onSelect={(runId) => patchLocation({ runId })}
+      onContext={receiveContext}
+      sidebarOpen={sidebarExpanded}
+      onProjectRun={(projectId, runId) =>
+        setUI((s) => ({
+          ...s,
+          projectId,
+          space: data.projects.find((p) => p.id === projectId)?.space ?? s.space,
+          locations: {
+            ...s.locations,
+            [projectId]: {
+              ...(s.locations[projectId] ?? locationDefault),
+              workspace: 'experiments',
+              view: 'runs',
+              runId,
+            },
+          },
+        }))
+      }
+      onSidebarToggle={() => setSidebarExpanded((v) => !v)}
+      width={resourceWidth}
+      resize={
+        <ResizeHandle
+          value={resourceWidth}
+          min={180}
+          max={maxResourceWidth}
+          side="left"
+          label={t('调整资源宽度')}
+          onChange={(leftWidth) => setUI((s) => ({ ...s, leftWidth }))}
+        />
+      }
+    />
+  ) : (
     <WorkspaceFrame
       label={t(workspaceLabel)}
       views={secondary[workspace]}
@@ -761,30 +821,17 @@ export function App({
         />
       }
     >
-      {workspace === 'experiments' && view === 'runs' ? (
-        <RunWorkspace
-          key={project.id}
-          project={project}
-          store={store}
-          onContext={receiveContext}
-          selectedRunId={location.runId}
-          onSelect={(runId) => patchLocation({ runId })}
-        />
-      ) : (
-        <FileWorkspace
-          key={`${project.id}:${workspace}`}
-          project={project}
-          store={store}
-          backend={backend}
-          mode={
-            workspace === 'writing' ? 'writing' : workspace === 'files' ? 'files' : 'experiments'
-          }
-          view={view}
-          activePath={location.paths?.[workspace]}
-          onActivePathChange={openFile}
-          onContext={receiveContext}
-        />
-      )}
+      <FileWorkspace
+        key={`${project.id}:${workspace}`}
+        project={project}
+        store={store}
+        backend={backend}
+        mode={workspace === 'writing' ? 'writing' : workspace === 'files' ? 'files' : 'experiments'}
+        view={view}
+        activePath={location.paths?.[workspace]}
+        onActivePathChange={openFile}
+        onContext={receiveContext}
+      />
     </WorkspaceFrame>
   );
   return (

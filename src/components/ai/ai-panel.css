@@ -370,3 +370,89 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
+
+/* Execution binding remains visible when navigation changes the current material. */
+.sf-ai-binding {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 8px;
+  min-width: 0;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--sf-text-muted);
+}
+.sf-ai-binding .sf-dropdown {
+  width: auto;
+  max-width: 120px;
+  font-size: 11px;
+}
+.sf-ai-binding > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-ai-background-tasks {
+  flex-shrink: 0;
+  max-height: 112px;
+  overflow: auto;
+  padding: 0 8px 4px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+}
+.sf-ai-background-tasks .sf-button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 6px;
+}
+.sf-ai-background-tasks .sf-button > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+}
+.sf-ai-background-tasks .sf-button > span:last-of-type {
+  flex-shrink: 0;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.sf-ai-task-details {
+  margin-block: 8px;
+  font-size: 11px;
+  color: var(--sf-text-muted);
+}
+.sf-ai-task-details summary {
+  cursor: pointer;
+  padding-block: 5px;
+}
+.sf-ai-task-details > div {
+  padding: 6px 0;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.sf-ai-task-details strong {
+  display: block;
+  font-weight: 500;
+  color: var(--sf-text-primary);
+  overflow-wrap: anywhere;
+}
+.sf-ai-task-details pre {
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sf-ai-task-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--sf-text-muted);
+}
+.sf-ai-task-status span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

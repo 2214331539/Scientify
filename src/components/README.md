@@ -15,7 +15,7 @@ components/
     TopBar.tsx         项目切换和全局操作
     StatusBarTools.tsx 底栏右下角的 AI/笔记图标入口，保留开关状态与焦点返回标识
     WindowControls.tsx 原生窗口最小化、最大化/还原与受保护的关闭请求
-  navigation/         六个一级入口与二级视图配置
+  navigation/         五个一级入口与二级视图配置
   primitives/
     Button.tsx        primary / secondary / ghost，含 IconButton
     Input.tsx         Input / Textarea
@@ -40,7 +40,8 @@ components/
 
 - 页面控制业务状态，布局和 primitive 不读写 store、磁盘或模型服务。
 - 桌面只保留主 Topbar；空白区域通过 Tauri 拖动属性操作窗口，关闭按钮发起 close 请求，由 App 的未保存保护决定是否退出。浏览器不显示窗口控制。
-- 项目管理只显示空间侧栏，其底部工具只保留设置与亮暗按钮；进入项目后显示 48px 六入口纯图标 Rail。名称放入 Tooltip 和 aria-label，不显示固定文字。
+- 项目管理只显示空间侧栏，其底部工具只保留设置与亮暗按钮；进入项目后显示 48px 五入口纯图标 Rail（Overview、Literature、Notes、Experiments、Paper）。名称放入 Tooltip 和 aria-label，不显示固定文字。
+- Files 入口及独立 All files 页面直接移除，不作为隐藏页面保留。`src/workspaces/files/` 是实验 Code 与论文 Manuscript 复用的文件编辑模块，不能据此新增独立文件入口；文件会话、草稿与保存保护继续沿用。
 - Panel 是无外阴影、无圆角外框的连续工作区域；Section 分组内容；List 表达对象集合；Tree 表达层级关系。表格保留其列语义。
 - Button 接收原生属性与 ref。主要提交用 `primary`，普通操作用 `secondary`，工具栏与导航用 `ghost`。表单内明确指定 `type="submit"` 或 `type="button"`。
 - 图标按钮使用 `iconOnly` 并提供 `aria-label`；`tooltip` 可补充快捷键或不可用原因。提示同时支持悬停、键盘焦点和 Escape，不使用额外布局包装。

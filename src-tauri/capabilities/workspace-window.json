@@ -3,7 +3,14 @@
   "identifier": "workspace-window",
   "description": "Only Workspace can acknowledge that its frontend is ready.",
   "permissions": [
-    "allow-workspace-window-ready"
+    "allow-workspace-window-ready",
+    "allow-experiment-start",
+    "allow-experiment-list",
+    "allow-experiment-stop",
+    "allow-experiment-log",
+    "allow-experiment-artifacts",
+    "allow-experiment-read-artifact",
+    "allow-research-git-diff"
   ],
   "webviews": [
     "workspace"
