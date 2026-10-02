@@ -416,3 +416,56 @@ fn agent_release_uses_generated_acl_for_both_local_views() {
         assert!(invoke(&window, "agent_release", body, "https://untrusted.example").is_err());
     }
 }
+
+#[test]
+fn storage_location_commands_are_local_only_and_schedule_without_replacing_services() {
+    let temporary = tempfile::tempdir().unwrap();
+    let installation = temporary.path().join("install");
+    std::fs::create_dir(&installation).unwrap();
+    let locator = scientify_core::storage_location::Locator::new(
+        installation,
+        temporary.path().join("roaming"),
+        temporary.path().join("local"),
+    );
+    let location = locator.prepare().unwrap();
+    let app = mock_builder()
+        .manage(data_location::DataLocation {
+            locator: Some(locator),
+            container: location.directory.clone(),
+        })
+        .manage(agent::AgentState::default())
+        .manage(experiments::ExperimentState::new(
+            location.directory.join("workspace/experiments"),
+        ))
+        .invoke_handler(tauri::generate_handler![
+            data_location::storage_location,
+            data_location::storage_schedule,
+            data_location::storage_cancel
+        ])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for label in ["main", "workspace", "browser-untrusted"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        for command in ["storage_location", "storage_schedule", "storage_cancel"] {
+            let body = json!({"directory":temporary.path().join("destination")});
+            let result = invoke(&window, command, body.clone(), origin);
+            assert_eq!(
+                result.is_ok(),
+                label != "browser-untrusted",
+                "{command} {label}"
+            );
+            assert!(invoke(&window, command, body, "https://untrusted.example").is_err());
+        }
+    }
+    assert_eq!(
+        app.state::<data_location::DataLocation>().container,
+        location.directory
+    );
+}

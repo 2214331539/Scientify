@@ -8,6 +8,8 @@ mod agent;
 mod ai;
 mod browser;
 mod credentials;
+mod data_location;
+pub use data_location::migrate_offline as migrate_storage_offline;
 mod experiments;
 pub use experiments::runner::run as run_managed_experiment;
 #[cfg(test)]
@@ -165,15 +167,9 @@ pub fn run() {
     let isolated_smoke = std::env::var_os("SCIENTIFY_NATIVE_SMOKE").is_some();
     #[cfg(not(debug_assertions))]
     let isolated_smoke = false;
-    let context = tauri::generate_context!();
-    #[cfg(debug_assertions)]
-    let context = {
-        let mut context = context;
-        if isolated_smoke {
-            context.config_mut().app.windows[0].create = false;
-        }
-        context
-    };
+    let mut context = tauri::generate_context!();
+    // Resolve and migrate before WebView2 opens any profile in the old directory.
+    context.config_mut().app.windows[0].create = false;
     let builder = if isolated_smoke {
         builder
     } else {
@@ -199,17 +195,18 @@ pub fn run() {
             }
         })
         .setup(move |app| {
-            #[cfg(debug_assertions)]
-            let directory = std::env::var_os("SCIENTIFY_DATA_DIR")
-                .map(PathBuf::from)
-                .unwrap_or_else(|| {
-                    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                        .parent()
-                        .expect("repository root")
-                        .join(".tauri-data/workspace")
-                });
-            #[cfg(not(debug_assertions))]
-            let directory = app.path().app_data_dir()?.join("workspace");
+            let (directory, location) = data_location::prepare().map_err(|error| {
+                rfd::MessageDialog::new()
+                    .set_title("Scientify 数据位置")
+                    .set_level(rfd::MessageLevel::Error)
+                    .set_description(format!(
+                        "{error}\n请确认安装目录可写、目标文件夹为空，且旧应用已关闭。"
+                    ))
+                    .show();
+                std::io::Error::other(error)
+            })?;
+            let profile = location.container.join("ui-profile");
+            app.manage(location);
             let legacy = app
                 .path()
                 .data_dir()?
@@ -235,12 +232,13 @@ pub fn run() {
                 if std::env::var_os("SCIENTIFY_NATIVE_UI").is_some() {
                     literature_smoke::seed_ui(app.handle())?;
                 }
-                tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
-                    .data_directory(data.parent().unwrap().join("ui-profile"))
-                    .build()?;
-                if std::env::var_os("SCIENTIFY_NATIVE_UI").is_none() {
-                    literature_smoke::start(app.handle().clone());
-                }
+            }
+            tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                .data_directory(profile)
+                .build()?;
+            #[cfg(debug_assertions)]
+            if isolated_smoke && std::env::var_os("SCIENTIFY_NATIVE_UI").is_none() {
+                literature_smoke::start(app.handle().clone());
             }
             Ok(())
         })
@@ -264,6 +262,9 @@ pub fn run() {
             workspace_import,
             workspace_export,
             choose_directory,
+            data_location::storage_location,
+            data_location::storage_schedule,
+            data_location::storage_cancel,
             research::research_list_files,
             research::research_read_file,
             research::research_write_file,

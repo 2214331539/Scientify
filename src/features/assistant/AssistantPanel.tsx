@@ -17,7 +17,7 @@ import { ApprovalCard } from '../../components/ai/ApprovalCard';
 import { AssistantComposer } from '../../components/ai/AssistantComposer';
 import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import '../../components/ai/ai-panel.css';
-import { Button, Dropdown } from '../../components/primitives';
+import { Button } from '../../components/primitives';
 import { ModelSettingsDialog } from './ModelSettingsDialog';
 import { AssistantRuns } from './AssistantRuns';
 import { getFileRuntime } from '../../editor/sessions';
@@ -158,27 +158,6 @@ export function AssistantPanel({
   );
   const needsReconnect = conversation.agentStatus === 'running' && !activeTask;
   const operations = activeTask?.state.operations ?? conversation.agentRun?.operations ?? [];
-  const [domainRoots, setDomainRoots] = useState<Partial<Record<AgentDomain, string>>>({});
-  useEffect(() => {
-    let disposed = false;
-    if (agentProject)
-      void Promise.resolve(agent.domains(agentProject))
-        .then((bindings) => {
-          if (!disposed)
-            setDomainRoots(
-              Object.fromEntries(
-                (bindings ?? []).map((binding) => [
-                  binding.domain,
-                  binding.root ?? binding.reason ?? '',
-                ]),
-              ),
-            );
-        })
-        .catch(() => {});
-    return () => {
-      disposed = true;
-    };
-  }, [agent, agentProject, context.workspace]);
   useEffect(() => {
     if (!model) return;
     setSettings({
@@ -629,22 +608,6 @@ export function AssistantPanel({
           <MoreHorizontal size={16} />
         </Button>
       </div>
-      {agentProject ? (
-        <div className="sf-ai-binding">
-          <Dropdown
-            aria-label={t('执行工作区')}
-            value={domain}
-            disabled={!!conversation.agentDomain || agentPending}
-            onChange={(event) => setNewDomain(event.target.value as AgentDomain)}
-          >
-            <option value="literature">{t('文献目录')}</option>
-            <option value="code">{t('代码目录')}</option>
-          </Dropdown>
-          <span title={agentState.cwd ?? conversation.agentCwd ?? domainRoots[domain] ?? ''}>
-            {agentState.cwd ?? conversation.agentCwd ?? domainRoots[domain] ?? t('发送时绑定目录')}
-          </span>
-        </div>
-      ) : null}
       {backgroundTasks.length ? (
         <div className="sf-ai-background-tasks" aria-label={t('后台任务')}>
           {backgroundTasks.map((task) => (
@@ -767,6 +730,23 @@ export function AssistantPanel({
           </>
         ) : (
           <>
+            {agentProject
+              ? (['literature', 'code'] as const).map((option) => (
+                  <Button
+                    key={option}
+                    role="menuitemradio"
+                    aria-checked={domain === option}
+                    variant="ghost"
+                    disabled={!!conversation.agentDomain || agentPending}
+                    onClick={() => {
+                      setNewDomain(option);
+                      setMenu(null);
+                    }}
+                  >
+                    {option === 'literature' ? t('文献任务') : t('实验代码任务')}
+                  </Button>
+                ))
+              : null}
             <Button
               role="menuitem"
               variant="ghost"
@@ -970,10 +950,9 @@ export function AssistantPanel({
           </Button>
         </div>
       ) : null}
-      {!agentPending && conversation.agentStatus && !needsReconnect ? (
+      {activeTask?.saving ? (
         <div className="sf-ai-task-status" role="status">
-          {activeTask?.saving ? t('正在保存结果…') : t(conversation.agentStatus)}
-          {conversation.agentRun?.model ? <span>{conversation.agentRun.model}</span> : null}
+          {t('正在保存结果…')}
         </div>
       ) : null}
       {error ||

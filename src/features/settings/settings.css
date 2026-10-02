@@ -157,6 +157,13 @@ dialog.settings-dialog[open] {
   display: grid;
   gap: 18px;
 }
+.storage-pending {
+  font-size: 12px;
+  color: var(--sf-text-secondary);
+}
+.storage-pending button {
+  margin-top: 8px;
+}
 .settings-about h3 {
   font-size: 18px;
   font-weight: 600;

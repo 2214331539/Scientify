@@ -613,7 +613,8 @@ it('creates parallel chats, keeps the first binding after navigation, and saves 
     const first = vi.mocked(agent.startTurn).mock.calls[0][0];
     expect(first.domain).toBe('literature');
     await user.click(screen.getByRole('button', { name: '新建 AI 对话' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: '执行工作区' }), 'code');
+    await user.click(screen.getByRole('button', { name: '对话选项' }));
+    await user.click(screen.getByRole('menuitemradio', { name: '实验代码任务' }));
     await user.type(screen.getByLabelText('向 AI 提问'), '任务 B');
     await user.click(screen.getByRole('button', { name: '发送' }));
     await waitFor(() => expect(agent.startTurn).toHaveBeenCalledTimes(2));
@@ -622,9 +623,13 @@ it('creates parallel chats, keeps the first binding after navigation, and saves 
     expect(second.domain).toBe('code');
     await user.click(screen.getByRole('button', { name: /任务 A/ }));
     view.rerender(<AssistantPanel {...props} context={{ ...context, workspace: 'experiments' }} />);
-    expect((screen.getByRole('combobox', { name: '执行工作区' }) as HTMLSelectElement).value).toBe(
-      'literature',
-    );
+    expect(screen.queryByRole('combobox', { name: '执行工作区' })).toBeNull();
+    expect(view.container.querySelector('.sf-ai-binding')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '对话选项' }));
+    const bound = screen.getByRole('menuitemradio', { name: '文献任务' });
+    expect(bound.getAttribute('aria-checked')).toBe('true');
+    expect((bound as HTMLButtonElement).disabled).toBe(true);
+    await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: '中止任务' }));
     expect(agent.interrupt).toHaveBeenCalledWith(
       expect.objectContaining({ conversationId: first.conversationId }),

@@ -72,7 +72,7 @@ pnpm start
 ## 数据与文件
 
 - debug 开发构建：仓库 `.tauri-data/workspace/`。
-- 本次 release 构建：`%APPDATA%/com.scientify.desktop/workspace/`。
+- release：安装目录附近的 `ScientifyData/`；本仓库构建统一使用仓库根的 `ScientifyData/`，实际记录在其 `workspace/` 子目录。
 - Electron 旧目录：`%APPDATA%/scientify-desktop-sample/workspace/`。
 - debug 验收可设置 `SCIENTIFY_DATA_DIR` 为独立绝对目录，release 忽略此变量。
 
@@ -82,7 +82,13 @@ pnpm start
 
 迁移旧应用时，先关闭 Electron，在「数据与备份」选择「复制旧数据」。只支持迁入空的新数据目录；源数据不修改，两版之后各自独立。
 
-从 debug 切换到本次 release 时，两者的数据目录独立。如果需要保留 debug 中的项目，请先关闭所有 Scientify 窗口并备份两个目录，再将 `.tauri-data/workspace/` 的完整内容复制到**空的** `%APPDATA%/com.scientify.desktop/workspace/`。目标已有项目时不要覆盖或合并；JSON 导出仅适用于元数据迁移，不会携带 PDF 和源码。关联在外部目录的项目文件仍留在原位置。
+正式版首次启动会迁移旧 `%APPDATA%/com.scientify.desktop/workspace/` 及对应浏览缓存：先复制、逐文件 SHA-256 校验、更新内部路径与 Codex 历史数据库，再切换位置并清理源目录。目标已有数据时停止，不自动合并。设置 → 数据与备份 → 更改位置，选择空文件夹；迁移在退出后下次启动执行，可以提前取消。应用凭据、托管代码、实验结果、Agent 历史和 WebView2 浏览资料均随应用数据迁移，外部关联目录不移动。
+
+安装位置须可写，应用不会静默回退 C 盘；只读安装位置需要调整目录权限或重新安装到可写位置。`scientify-storage.json` 仅记录当前/待迁移路径，放在安装目录旁，应用数据与该文件已加入 Git 忽略。系统 WebView2 Runtime、用户自行安装的解释器和外部研究目录不属于应用托管数据。
+
+本轮迁移、AI 界面和实际校验见 [存储迁移与 AI 界面整理](docs/开发记录/存储迁移与AI界面整理-2026-10-02.md)；实验下一步的版本管理设计见 [产品页面说明](docs/产品功能文档/实验代码版本管理页面说明.md)。
+
+debug 与 release 的数据独立。迁移开发数据前先关闭应用并备份，再将 `.tauri-data/workspace/` 完整复制到空的正式版 `ScientifyData/workspace/`，不能覆盖或合并既有项目；JSON 导出不含 PDF 和源码。
 
 ## 当前边界
 

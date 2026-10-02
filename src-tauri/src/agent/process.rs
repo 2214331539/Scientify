@@ -1,8 +1,14 @@
 //! Engine process lifecycle. The sidecar is spawned by Rust, never by the webview.
 
+#[cfg(windows)]
+use super::quiet_process::QuietChild as Child;
+#[cfg(windows)]
+use std::fs::File as ChildStdin;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+#[cfg(not(windows))]
+use std::process::{Child, ChildStdin};
+use std::process::{Command, Stdio};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
@@ -23,6 +29,20 @@ fn hide_console_window(command: &mut Command) {
 /// remains the source of truth; the callback only wakes the UI so it can drain
 /// that queue immediately instead of waiting for a timer tick.
 pub type EventSink = Arc<dyn Fn(serde_json::Value) + Send + Sync + 'static>;
+
+fn spawn_engine(command: &mut Command, home: &Path) -> Result<Child, String> {
+    let temp = home.join("runtime-temp");
+    std::fs::create_dir_all(&temp).map_err(|e| e.to_string())?;
+    command
+        .env("TEMP", &temp)
+        .env("TMP", &temp)
+        .env("TMPDIR", &temp);
+    #[cfg(windows)]
+    let child = Child::spawn(command);
+    #[cfg(not(windows))]
+    let child = command.spawn();
+    child.map_err(|e| format!("无法启动 Agent 引擎：{e}"))
+}
 
 /// Locate the engine binary.
 ///
@@ -52,9 +72,16 @@ pub fn engine_path() -> Result<PathBuf, String> {
 }
 
 /// Report the engine version without starting a session.
-pub fn version(engine: &Path) -> Result<String, String> {
+pub fn version(engine: &Path, codex_home: &Path) -> Result<String, String> {
     let mut command = Command::new(engine);
-    command.arg("--version").stdin(Stdio::null());
+    let temp = codex_home.join("runtime-temp");
+    std::fs::create_dir_all(&temp).map_err(|e| e.to_string())?;
+    command
+        .arg("--version")
+        .env("CODEX_HOME", codex_home)
+        .env("TEMP", &temp)
+        .env("TMP", &temp)
+        .stdin(Stdio::null());
     hide_console_window(&mut command);
     let output = command
         .output()
@@ -82,9 +109,27 @@ pub fn exchange(
     id: u64,
     budget: Duration,
 ) -> Result<serde_json::Value, String> {
+    exchange_with(
+        engine,
+        &["app-server", "--listen", "stdio://"],
+        codex_home,
+        request,
+        id,
+        budget,
+    )
+}
+
+fn exchange_with(
+    engine: &Path,
+    args: &[&str],
+    codex_home: &Path,
+    request: String,
+    id: u64,
+    budget: Duration,
+) -> Result<serde_json::Value, String> {
     let mut command = Command::new(engine);
     command
-        .args(["app-server", "--listen", "stdio://"])
+        .args(args)
         // Analytics stay off: this is a local-first product and the engine
         // defaults to off for app-server, so we simply do not enable it.
         .env("CODEX_HOME", codex_home)
@@ -92,9 +137,13 @@ pub fn exchange(
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
     hide_console_window(&mut command);
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("无法启动 Agent 引擎：{e}"))?;
+    let mut child = spawn_engine(&mut command, codex_home)?;
+    // The Windows quiet launcher always creates pipes, including discarded diagnostics.
+    if let Some(mut stderr) = child.stderr.take() {
+        std::thread::spawn(move || {
+            let _ = std::io::copy(&mut stderr, &mut std::io::sink());
+        });
+    }
 
     let result = (|| {
         let mut stdin = child.stdin.take().ok_or("无法写入 Agent 引擎。")?;
@@ -149,7 +198,7 @@ pub fn exchange(
 /// a caller waiting on a response never loses them.
 pub struct EngineSession {
     child: Child,
-    stdin: std::process::ChildStdin,
+    stdin: ChildStdin,
     lines: mpsc::Receiver<String>,
     stderr: Arc<Mutex<String>>,
     next_id: u64,
@@ -242,9 +291,7 @@ impl EngineSession {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         hide_console_window(&mut command);
-        let mut child = command
-            .spawn()
-            .map_err(|e| format!("无法启动 Agent 引擎：{e}"))?;
+        let mut child = spawn_engine(&mut command, codex_home)?;
         let stdin = child.stdin.take().ok_or("无法写入 Agent 引擎。")?;
         let stdout = child.stdout.take().ok_or("无法读取 Agent 引擎输出。")?;
         let stderr = child.stderr.take().ok_or("无法读取 Agent 引擎错误输出。")?;
@@ -565,8 +612,31 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
     }
 
     #[test]
+    fn handshake_diagnostics_cannot_fill_the_pipe_and_block_the_response() {
+        let temporary = tempfile::tempdir().unwrap();
+        let script = r#"
+require('node:readline').createInterface({input:process.stdin}).once('line', () => {
+  process.stderr.write('diagnostic\n'.repeat(100000), () => {
+    process.stdout.write(JSON.stringify({id:1,result:{ready:true}}) + '\n');
+  });
+});
+"#;
+        let response = exchange_with(
+            Path::new("node"),
+            &["-e", script],
+            temporary.path(),
+            "{}\n".into(),
+            1,
+            Duration::from_secs(20),
+        )
+        .unwrap();
+        assert_eq!(response["ready"], true);
+    }
+
+    #[test]
     fn an_approval_request_is_surfaced_kept_in_order_and_can_be_answered() {
-        let home = std::env::temp_dir();
+        let temporary = tempfile::tempdir().unwrap();
+        let home = temporary.path().to_path_buf();
         // This repository already requires Node, so the stub needs no extra tool.
         let mut session =
             EngineSession::start_with(Path::new("node"), &["-e", STUB], &home, &home, &[])
@@ -615,7 +685,8 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
 
     #[test]
     fn event_sink_wakes_the_host_without_replacing_the_recovery_queue() {
-        let home = std::env::temp_dir();
+        let temporary = tempfile::tempdir().unwrap();
+        let home = temporary.path().to_path_buf();
         let received = Arc::new(Mutex::new(Vec::<serde_json::Value>::new()));
         let copy = Arc::clone(&received);
         let sink: EventSink = Arc::new(move |event| {

@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   clearScreen: false,
-  server: { host: '127.0.0.1', port: 1420, strictPort: true, watch: { ignored: ['**/src-tauri/**', '**/crates/**', '**/.tauri-data/**', '**/target/**'] } },
+  server: { host: '127.0.0.1', port: 1420, strictPort: true, watch: { ignored: ['**/src-tauri/**', '**/crates/**', '**/.tauri-data/**', '**/target/**', '**/ScientifyData/**', '**/.scientify-move-*/**', '**/.test-artifacts/**', '**/.test-tools/**'] } },
   preview: { host: '127.0.0.1', port: 1421, strictPort: true },
   build: { target: 'es2022' },
 });

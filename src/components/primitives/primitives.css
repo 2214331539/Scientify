@@ -153,6 +153,7 @@
   }
   .sf-tooltip {
     position: fixed;
+    width: max-content;
     z-index: 10000;
     max-width: min(280px, calc(100vw - 16px));
     padding: 4px 7px;

@@ -6,12 +6,45 @@ import { useStore } from 'zustand';
 import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import type { WorkspaceStore } from '../../stores/workspace';
+import type { StorageLocation } from '../../platform/desktop';
 import { CircleHelp, Database, Palette, Settings } from 'lucide-react';
 import './settings.css';
 
 function DataPreferences({ store }: { store: WorkspaceStore }) {
   const state = useStore(store);
-  const blocked = state.busy || state.dirty;
+  const [location, setLocation] = useState<StorageLocation | null>(null);
+  const [locationError, setLocationError] = useState('');
+  const [changing, setChanging] = useState(false);
+  const blocked = state.busy || state.dirty || changing || !!Object.keys(state.agentTasks).length;
+  useEffect(() => {
+    let disposed = false;
+    void store
+      .getState()
+      .storageLocation()
+      .then((value) => {
+        if (!disposed) setLocation(value);
+      })
+      .catch((error) => {
+        if (!disposed) setLocationError(String(error));
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [store]);
+  async function changeLocation(cancel = false) {
+    if (blocked) return;
+    setChanging(true);
+    setLocationError('');
+    try {
+      const directory = cancel ? null : await state.chooseDirectory();
+      if (!cancel && !directory) return;
+      setLocation(await store.getState().changeStorage(directory));
+    } catch (error) {
+      setLocationError(String(error));
+    } finally {
+      setChanging(false);
+    }
+  }
   const confirmReplace = async (
     kind: 'restore' | 'migrateLegacy' | 'importWorkspace',
     text: string,
@@ -20,11 +53,36 @@ function DataPreferences({ store }: { store: WorkspaceStore }) {
   };
   return (
     <div className="settings-data">
-      <p className="muted">{t('工作区记录与附件均保存在本机。开发版与正式版使用独立数据目录。')}</p>
+      <p className="muted">{t('应用数据保存在本机。已关联的项目和文献目录保留原位置。')}</p>
       <label>
         {t('当前目录')}
-        <code className="data-path">{state.directory || t('尚未载入')}</code>
+        <code className="data-path">{location?.directory || state.directory || t('尚未载入')}</code>
       </label>
+      <section className="setting-row">
+        <div>
+          <h3>{t('数据存储位置')}</h3>
+          <p>
+            {t('选择空文件夹。保存并退出应用后，下次启动将迁移数据、托管代码、AI 历史和浏览缓存。')}
+          </p>
+        </div>
+        <Button disabled={blocked || !location} onClick={() => void changeLocation()}>
+          {t('更改位置')}
+        </Button>
+      </section>
+      {location?.pending ? (
+        <div className="storage-pending" role="status">
+          <span>{t('下次启动迁移到')}</span>
+          <code className="data-path">{location.pending}</code>
+          <Button disabled={blocked} variant="ghost" onClick={() => void changeLocation(true)}>
+            {t('取消迁移')}
+          </Button>
+        </div>
+      ) : null}
+      {locationError ? (
+        <p role="alert" className="error-text">
+          {translateError(locationError)}
+        </p>
+      ) : null}
       <section className="setting-row">
         <div>
           <h3>{t('迁移 Electron 数据')}</h3>
@@ -222,15 +280,15 @@ export function SettingsDialog({
         <section hidden={section !== 'about'} aria-label={t('关于 Scientify')}>
           <div className="settings-about">
             <h3>Scientify</h3>
-            <p>{t('Project workspace · Literature / Notes / Experiments / Paper / Files')}</p>
+            <p>{t('本地科研工作区 · 文献 / 笔记 / 实验 / 论文')}</p>
             <p>
               {t(
-                '已支持：项目管理、文献元信息与 PDF 阅读、arXiv 手动订阅、代码编辑与保存、Git 状态、实验记录、Markdown 预览、笔记和模型提问。',
+                '已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。',
               )}
             </p>
             <p>
               {t(
-                '后续接入：实验执行、Git 提交、LaTeX 编译、自动订阅更新、PDF 批注与实时翻译。AI 需要自行配置模型，首版返回完整回答。',
+                '后续接入：代码版本管理、LaTeX 编译、自动订阅更新与 PDF 批注。模型服务在 AI 助手中配置。',
               )}
             </p>
             <p>

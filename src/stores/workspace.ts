@@ -1,7 +1,7 @@
 import { t } from '../i18n';
 import { createStore } from 'zustand/vanilla';
 import { emptyWorkspace, type Workspace } from '../domain/workspace';
-import { desktop, type WorkspaceBackend } from '../platform/desktop';
+import { desktop, type WorkspaceBackend, type StorageLocation } from '../platform/desktop';
 
 interface WorkspaceState {
   data: Workspace | null;
@@ -21,6 +21,8 @@ interface WorkspaceState {
   replace(kind: 'restore' | 'migrateLegacy' | 'importWorkspace'): Promise<boolean>;
   exportWorkspace(): Promise<void>;
   chooseDirectory(): Promise<string | null>;
+  storageLocation(): Promise<StorageLocation | null>;
+  changeStorage(directory: string | null): Promise<StorageLocation>;
   setAgentTask(id: string, project: string | null): void;
   setDirty(dirty: boolean): void;
   setDirtySource(source: string, dirty: boolean): void;
@@ -181,6 +183,25 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
       } catch (error) {
         set({ error: message(error) });
         return null;
+      }
+    },
+    async storageLocation() {
+      return backend.storageLocation ? backend.storageLocation() : null;
+    },
+    async changeStorage(directory) {
+      if (get().busy || get().dirty || Object.keys(get().agentTasks).length)
+        throw new Error(t('请先保存内容并结束任务，再更改数据位置。'));
+      if (!backend.scheduleStorage || !backend.cancelStorage)
+        throw new Error(t('请在 Scientify 桌面版更改数据位置。'));
+      exclusive = true;
+      set({ busy: true });
+      try {
+        return await (directory === null
+          ? backend.cancelStorage()
+          : backend.scheduleStorage(directory));
+      } finally {
+        exclusive = false;
+        set({ busy: false });
       }
     },
     setAgentTask(id, project) {

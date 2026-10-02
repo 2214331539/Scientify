@@ -10,3 +10,8 @@ src-tauri/gen/
 public/pdfjs/
 src-tauri/binaries/
 src/generated/
+ScientifyData/
+scientify-storage.json
+.scientify-storage.lock
+.scientify-move-*/
+.test-tools/

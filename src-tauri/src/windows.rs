@@ -61,20 +61,12 @@ pub async fn open_project_window(
     }
     let route = format!("index.html?{}", url.query().unwrap_or_default());
     WORKSPACE_READY.store(false, Ordering::SeqCst);
-    let profile = if cfg!(debug_assertions) && std::env::var_os("SCIENTIFY_NATIVE_SMOKE").is_some()
-    {
-        state
-            .storage
-            .directory()
-            .parent()
-            .unwrap()
-            .join("workspace-ui-profile")
-    } else {
-        app.path()
-            .app_local_data_dir()
-            .map_err(|e| e.to_string())?
-            .join("workspace-ui-profile")
-    };
+    let profile = state
+        .storage
+        .directory()
+        .parent()
+        .ok_or("数据位置无效")?
+        .join("workspace-ui-profile");
     let builder =
         tauri::WebviewWindowBuilder::new(&app, "workspace", tauri::WebviewUrl::App(route.into()))
             .data_directory(profile)

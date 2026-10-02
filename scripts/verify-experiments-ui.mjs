@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
-const require = createRequire(join(process.env.TEMP, 'scientify-prototype-tools', 'package.json'));
+const require = createRequire(resolve('.test-tools/package.json'));
 const { chromium } = require('playwright');
 const browser = await chromium.launch({
   executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
@@ -10,7 +10,7 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 940 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-const directory = join(process.env.TEMP, 'scientify-experiments-ui');
+const directory = resolve('.test-artifacts/experiments-ui');
 await mkdir(directory, { recursive: true });
 const checks = [];
 const check = (value, label) => {
@@ -192,6 +192,25 @@ try {
   await page.locator('.cm-editor').waitFor();
   await page.setViewportSize({ width: 1440, height: 940 });
   await page.getByRole('button', { name: 'AI assistant', exact: true }).click();
+  check((await page.locator('.sf-ai-binding').count()) === 0, 'AI has no permanent directory row');
+  check(
+    (await page.locator('.sf-ai-task-status').count()) === 0,
+    'AI has no idle completion/model status row',
+  );
+  await page.getByRole('button', { name: 'Chat options', exact: true }).click();
+  check(
+    (await page.getByRole('menuitemradio', { name: 'Experiment code tasks' }).count()) === 1,
+    'Task binding remains available in conversation options',
+  );
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Chat options', exact: true }).hover();
+  const tip = page.getByRole('tooltip', { name: 'Chat options', exact: true });
+  await tip.waitFor();
+  const tipBox = await tip.boundingBox();
+  check(
+    tipBox && tipBox.width > 70 && tipBox.x >= 0 && tipBox.x + tipBox.width <= 1440,
+    'Edge tooltip keeps readable width inside the viewport',
+  );
   for (const width of [1440, 1000, 800]) {
     await page.setViewportSize({ width, height: 940 });
     const rect = await page.getByRole('button', { name: 'Run', exact: true }).boundingBox();

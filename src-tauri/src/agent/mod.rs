@@ -4,6 +4,8 @@ mod config;
 pub(crate) mod execution;
 pub(crate) mod process;
 mod protocol;
+#[cfg(windows)]
+mod quiet_process;
 mod registry;
 mod tools;
 
@@ -325,10 +327,11 @@ fn create_engine(
     )
 }
 #[tauri::command]
-pub async fn agent_status() -> Result<EngineStatus, String> {
-    blocking(|| {
+pub async fn agent_status(app: tauri::AppHandle) -> Result<EngineStatus, String> {
+    blocking(move || {
         let path = process::engine_path().ok();
-        let version = path.as_ref().and_then(|p| process::version(p).ok());
+        let home = codex_home(&app, "status")?;
+        let version = path.as_ref().and_then(|p| process::version(p, &home).ok());
         Ok(EngineStatus {
             available: version.is_some(),
             engine_path: path.map(|p| p.display().to_string()),

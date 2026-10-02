@@ -18,6 +18,15 @@ after launching an unrestricted connection does not update its sandbox mode.
 
 Protocol reference: https://developers.openai.com/codex/app-server
 
+Windows engine startup uses `quiet_process.rs`: stdio pipes with an explicit
+handle allowlist, `CREATE_NO_WINDOW`, and a private non-interactive desktop.
+Upstream startup helpers inherit that desktop, so they cannot display consoles
+over Scientify. This is a presentation boundary, not a replacement for Codex's
+workspace sandbox. Agent-owned temporary files use `CODEX_HOME/runtime-temp`.
+No upstream binary patches, sandbox disabling, or hiding of unrelated windows
+are used. Tests monitor the interactive desktop while a real direct helper executes and run the
+bundled engine's protocol and managed experiment flow.
+
 After a Windows release build, `node scripts/verify-experiment-runner.mjs`
 verifies the production entrypoint through the real bundled Codex sandbox.
 It uses disposable directories, observes live logs, reads the result JSON,

@@ -371,28 +371,6 @@
   scrollbar-gutter: stable;
 }
 
-/* Execution binding remains visible when navigation changes the current material. */
-.sf-ai-binding {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px 8px;
-  min-width: 0;
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--sf-text-muted);
-}
-.sf-ai-binding .sf-dropdown {
-  width: auto;
-  max-width: 120px;
-  font-size: 11px;
-}
-.sf-ai-binding > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .sf-ai-background-tasks {
   flex-shrink: 0;
   max-height: 112px;

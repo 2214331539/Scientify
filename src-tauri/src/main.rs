@@ -3,6 +3,18 @@ fn main() {
     let args: Vec<_> = std::env::args_os().collect();
     if args
         .get(1)
+        .is_some_and(|value| value == "--scientify-migrate-storage")
+    {
+        match scientify_lib::migrate_storage_offline() {
+            Ok(()) => std::process::exit(0),
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
+        }
+    }
+    if args
+        .get(1)
         .is_some_and(|value| value == "--scientify-runner")
     {
         let result = args

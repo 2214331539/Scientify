@@ -10,6 +10,15 @@ export interface WorkspaceBackend {
   importWorkspace(): Promise<Workspace | null>;
   exportWorkspace(): Promise<boolean>;
   chooseDirectory(): Promise<string | null>;
+  storageLocation?(): Promise<StorageLocation>;
+  scheduleStorage?(directory: string): Promise<StorageLocation>;
+  cancelStorage?(): Promise<StorageLocation>;
+}
+
+export interface StorageLocation {
+  directory: string;
+  pending: string | null;
+  cleanup: string[];
 }
 
 function command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
@@ -28,4 +37,7 @@ export const desktop: WorkspaceBackend = {
   importWorkspace: () => command('workspace_import'),
   exportWorkspace: () => command('workspace_export'),
   chooseDirectory: () => command('choose_directory'),
+  storageLocation: () => command('storage_location'),
+  scheduleStorage: (directory) => command('storage_schedule', { directory }),
+  cancelStorage: () => command('storage_cancel'),
 };

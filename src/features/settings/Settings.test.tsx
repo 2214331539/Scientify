@@ -108,3 +108,41 @@ it('blocks closing while a profile save is in flight', async () => {
   );
   await act(async () => finish());
 });
+
+it('schedules a storage move without replacing live data, and supports cancellation', async () => {
+  const { user, store, adapter } = await fixture();
+  adapter.storageLocation = vi.fn(async () => ({
+    directory: 'F:/Scientify/ScientifyData',
+    pending: null,
+    cleanup: [],
+  }));
+  adapter.scheduleStorage = vi.fn(async (directory) => ({
+    directory: 'F:/Scientify/ScientifyData',
+    pending: directory,
+    cleanup: [],
+  }));
+  adapter.cancelStorage = vi.fn(async () => ({
+    directory: 'F:/Scientify/ScientifyData',
+    pending: null,
+    cleanup: [],
+  }));
+  adapter.chooseDirectory = vi.fn(async () => 'D:/ScientifyData');
+  cleanup();
+  render(<SettingsDialog store={store} onClose={vi.fn()} initialSection="data" />);
+  await waitFor(() => expect(screen.getByText('F:/Scientify/ScientifyData')).toBeTruthy());
+  const epoch = store.getState().epoch;
+  await user.click(screen.getByRole('button', { name: '更改位置' }));
+  expect(await screen.findByText('D:/ScientifyData')).toBeTruthy();
+  expect(adapter.scheduleStorage).toHaveBeenCalledWith('D:/ScientifyData');
+  expect(store.getState().directory).toBe('test/data');
+  expect(store.getState().epoch).toBe(epoch);
+  await user.click(screen.getByRole('button', { name: '取消迁移' }));
+  await waitFor(() => expect(screen.queryByText('D:/ScientifyData')).toBeNull());
+  await act(async () => store.getState().setAgentTask('p1:chat', 'p1'));
+  expect((screen.getByRole('button', { name: '更改位置' }) as HTMLButtonElement).disabled).toBe(
+    true,
+  );
+  await expect(store.getState().changeStorage('D:/another')).rejects.toThrow(
+    '请先保存内容并结束任务',
+  );
+});
