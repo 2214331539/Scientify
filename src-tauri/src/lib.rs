@@ -189,13 +189,18 @@ async fn choose_directory(app: tauri::AppHandle) -> Result<Option<String>, Strin
     .map_err(|e| e.to_string())?
 }
 
+// Generate native application metadata once, shared by production and IPC tests.
+fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
+    tauri::generate_context!()
+}
+
 pub fn run() {
     let builder = tauri::Builder::default();
     #[cfg(debug_assertions)]
     let isolated_smoke = std::env::var_os("SCIENTIFY_NATIVE_SMOKE").is_some();
     #[cfg(not(debug_assertions))]
     let isolated_smoke = false;
-    let mut context = tauri::generate_context!();
+    let mut context = crate::app_context();
     // Resolve and migrate before WebView2 opens any profile in the old directory.
     context.config_mut().app.windows[0].create = false;
     let builder = if isolated_smoke {

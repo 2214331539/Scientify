@@ -1,5 +1,7 @@
 //! The common filesystem/network boundary for AI turns and managed runs.
-use super::{process::EngineSession, HANDSHAKE_BUDGET};
+use super::process::EngineSession;
+#[cfg(windows)]
+use super::HANDSHAKE_BUDGET;
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,

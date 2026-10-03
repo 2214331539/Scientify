@@ -45,12 +45,12 @@ pub fn reject_links(path: &Path) -> Result<(), String> {
     for ancestor in path.ancestors().filter(|p| !p.as_os_str().is_empty()) {
         match fs::symlink_metadata(ancestor) {
             Ok(meta) => {
-                let mut linked = meta.file_type().is_symlink();
+                let linked = meta.file_type().is_symlink();
                 #[cfg(windows)]
-                {
+                let linked = {
                     use std::os::windows::fs::MetadataExt;
-                    linked |= meta.file_attributes() & 0x400 != 0;
-                }
+                    linked || meta.file_attributes() & 0x400 != 0
+                };
                 if linked {
                     return Err("文件路径不能包含符号链接或目录联接。".into());
                 }

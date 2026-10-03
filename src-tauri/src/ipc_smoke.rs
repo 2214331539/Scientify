@@ -17,7 +17,7 @@ use tauri::{
 
 #[test]
 fn runtime_window_icon_uses_high_resolution_frame() {
-    let context: tauri::Context<MockRuntime> = tauri::generate_context!();
+    let context: tauri::Context<MockRuntime> = crate::app_context();
     let icon = context.default_window_icon().expect("application icon");
     assert_eq!((icon.width(), icon.height()), (256, 256));
 }
@@ -47,7 +47,7 @@ fn experiment_registration_uses_native_acl_and_enables_only_its_own_projects_roo
             research::research_read_file,
             research::research_write_file
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
@@ -140,7 +140,7 @@ fn git_commands_enforce_acl_and_use_the_selected_registered_worktree() {
             research::research_read_file,
             research::research_write_file
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
@@ -277,7 +277,7 @@ fn experiment_commands_use_workspace_only_acl_and_real_processes() {
             experiments::experiment_read_artifact,
             research::research_git_diff
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let trusted = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
@@ -405,7 +405,7 @@ fn model_discovery_and_verification_pass_generated_acl_only_for_local_app_views(
             ai::research_test_model,
             ai::research_ask_ai,
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
         "http://tauri.localhost"
@@ -506,7 +506,7 @@ fn ipc_acl_and_local_file_pdf_workflow_are_wired() {
             research::research_write_file,
             research::research_read_pdf,
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
@@ -620,7 +620,7 @@ fn agent_release_uses_generated_acl_for_both_local_views() {
     let app = mock_builder()
         .manage(agent::AgentState::default())
         .invoke_handler(tauri::generate_handler![agent::agent_release])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
         "http://tauri.localhost"
@@ -665,7 +665,7 @@ fn storage_location_commands_are_local_only_and_schedule_without_replacing_servi
             data_location::storage_schedule,
             data_location::storage_cancel
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
         "http://tauri.localhost"

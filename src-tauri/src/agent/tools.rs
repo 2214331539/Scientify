@@ -468,7 +468,7 @@ mod tests {
                     legacy: temp.path().join("legacy"),
                 })
                 .manage(AgentState::default())
-                .build(tauri::generate_context!())
+                .build(crate::app_context())
                 .unwrap();
             let mut command = Command::new("node");
             command
@@ -628,7 +628,7 @@ mod tests {
             .manage(ExperimentState::new(
                 storage.directory().join("experiments"),
             ))
-            .build(tauri::generate_context!())
+            .build(crate::app_context())
             .unwrap();
         let executable = std::env::var("SystemRoot").unwrap()
             + "/System32/WindowsPowerShell/v1.0/powershell.exe";

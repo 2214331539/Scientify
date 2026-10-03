@@ -485,6 +485,7 @@ impl EngineSession {
     /// Wait for one named notification while preserving every other message.
     /// Codex's Windows sandbox setup returns before it finishes and reports the
     /// final result as `windowsSandbox/setupCompleted` on the same stream.
+    #[cfg(windows)]
     pub fn wait_for_notification(
         &mut self,
         method: &str,
