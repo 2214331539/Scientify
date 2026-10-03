@@ -14,7 +14,7 @@
 ![Desktop: Windows x64](https://img.shields.io/badge/desktop-Windows_x64-blue)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-> **当前是早期开发版本。** 已验证的桌面平台为 Windows x64。仓库提供源码与本机构建流程；本次源码公开不代表已发布签名安装包。macOS、Linux 和移动端尚未交付。
+> **当前是早期开发版本。** Windows x64 安装包通过 [GitHub Releases](https://github.com/2214331539/Scientify/releases) 分发，标记为 Pre-release，尚未进行代码签名。macOS、Linux 和移动端尚未交付。
 
 ## 为什么做 Scientify
 
@@ -46,6 +46,15 @@
 
 ## 快速开始
 
+### 下载安装
+
+在 [Releases](https://github.com/2214331539/Scientify/releases) 打开最新的预发布版本，下载 `Scientify_<版本>_windows_x64_setup.exe`，运行安装后打开 Scientify。普通使用无需安装 Node.js 或 Rust。
+
+- 适用于 Windows 10 / 11 x64；缺少 WebView2 时安装器需要联网安装运行时。
+- Python 与 Git 按需自行安装。阅读论文与笔记无需模型密钥；AI 使用自己的模型服务配置。
+- 当前安装包未签名，Windows 可能显示“未知发布者”。发布页附 `SHA256SUMS.txt`，可使用 `Get-FileHash <安装包路径> -Algorithm SHA256` 核对完整性。
+- 更新前关闭应用并备份 `ScientifyData` 和关联的外部目录，再运行新安装包。第一版暂不提供自动更新。
+
 ### 从源码运行 Windows 桌面版
 
 需要 Windows x64、[Node.js 24 LTS](https://nodejs.org/)、pnpm 10.11.0、Rust stable，以及 [Tauri Windows 前置依赖](https://v2.tauri.app/start/prerequisites/#windows)中的 MSVC C++ Build Tools 和 WebView2 Runtime。
@@ -67,7 +76,7 @@ pnpm start
 pnpm tauri build --no-bundle
 ```
 
-构建后运行 `Scientify-MVP.cmd`。该脚本从仓库构建目录选择最新程序，本身不是安装包。完整 Windows NSIS 打包命令为 `pnpm tauri build`；安装包验收、签名及自动更新仍在[发布路线图](ROADMAP.md)中。实际可下载产物以 [GitHub Releases](https://github.com/2214331539/Scientify/releases) 为准。
+构建后运行 `Scientify-MVP.cmd`。该脚本从仓库构建目录选择最新程序，本身不是安装包。Windows NSIS 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles nsis -- --locked`，产物位于 `target/release/bundle/nsis/`。自动发布和分支约定见[版本发布说明](docs/技术方案/版本发布与分支管理.md)，签名与自动更新仍在[路线图](ROADMAP.md)中。
 
 `pnpm dev` 用于前端浏览器预览，使用独立数据。它不具备桌面文件访问、真实终端、实验执行和内嵌浏览器能力，不能当作完整 Web 版。
 

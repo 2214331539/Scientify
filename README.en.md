@@ -6,7 +6,7 @@ Read papers, keep notes, edit and run Python experiments, and revisit the parame
 
 [简体中文](README.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) · [Issues](https://github.com/2214331539/Scientify/issues) · [License](LICENSE)
 
-> **Early alpha; Windows x64 is the only validated desktop platform.** This repository provides source and local build instructions. Publishing the source does not mean a signed installer has been released. macOS, Linux, and mobile applications are not available yet.
+> **Early alpha; Windows x64 is the only validated desktop platform.** Installers are distributed as unsigned pre-releases on [GitHub Releases](https://github.com/2214331539/Scientify/releases). macOS, Linux, and mobile applications are not available yet.
 
 ## What you can do
 
@@ -21,6 +21,12 @@ Read papers, keep notes, edit and run Python experiments, and revisit the parame
 - Connect your model provider and use project-bound Agent sessions with approval and interruption controls.
 
 Start with a small task: **create a project → connect papers and code → take a reading note → run a Python script → inspect its results.**
+
+## Download
+
+Open [Releases](https://github.com/2214331539/Scientify/releases) and download `Scientify_<version>_windows_x64_setup.exe` from the newest pre-release. Node.js and Rust are not needed to use the installed app. Windows 10 / 11 x64 is required; the installer downloads WebView2 if it is missing. Install Python and Git separately when using their respective features.
+
+The alpha installer is not code-signed and Windows may display an unknown-publisher warning. Compare `Get-FileHash <installer> -Algorithm SHA256` with the release's `SHA256SUMS.txt` to verify integrity. Before updating, close Scientify and back up `ScientifyData` and externally linked folders. Automatic updates are not available yet.
 
 ## Run from source
 
@@ -43,7 +49,7 @@ Build a local desktop executable:
 pnpm tauri build --no-bundle
 ```
 
-Then run `Scientify-MVP.cmd`. This repository launcher is not an installer. `pnpm tauri build` requests an NSIS installer; distribution validation, signing, and automatic updates remain planned. Check [Releases](https://github.com/2214331539/Scientify/releases) for actual published assets.
+Then run `Scientify-MVP.cmd`. This repository launcher is not an installer. Use `node node_modules/@tauri-apps/cli/tauri.js build --bundles nsis -- --locked` to build an NSIS installer. The release workflow runs checks and isolated installer smoke tests before publishing; signing and automatic updates remain planned. See the [release and branch guide](docs/技术方案/版本发布与分支管理.md).
 
 `pnpm dev` starts an isolated frontend preview. It is not a complete web application: desktop filesystem access, execution, terminals, and embedded browsing are unavailable there.
 

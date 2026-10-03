@@ -26,7 +26,7 @@ The executable is not committed to this repository. A binary distribution contai
 | [Vite](https://github.com/vitejs/vite)                      | Frontend build tooling              | MIT                                          |
 | [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) | Styling tooling                     | MIT                                          |
 
-This is an orientation list, not an exhaustive license report. Exact versions and transitive dependencies are recorded in [pnpm-lock.yaml](pnpm-lock.yaml) and [Cargo.lock](Cargo.lock). Each dependency's distributed license remains authoritative. Before publishing an installer, generate and review the full notices for the locked dependency graph and all copied PDF assets, and include required texts in the distribution. This source-publication change does not certify a completed binary license audit.
+Exact versions and transitive dependencies are recorded in [pnpm-lock.yaml](pnpm-lock.yaml) and [Cargo.lock](Cargo.lock). The build runs [prepare-licenses.mjs](scripts/prepare-licenses.mjs) to collect their license texts, including build/test dependencies, and bundles them under `licenses/` with the Agent and copied PDF asset notices. GitHub Releases also provides `THIRD_PARTY_LICENSES.txt`. Each dependency's original terms remain authoritative. Packages whose archives omit notices use the version-specific sources documented in [supplemental notices](docs/licenses/upstream/README.md); the test-only `stackback` package has an explicitly identified declaration-only record.
 
 ## References, contributions, and research material
 

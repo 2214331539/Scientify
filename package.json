@@ -1,6 +1,6 @@
 {
   "name": "scientify-desktop",
-  "version": "0.3.0",
+  "version": "0.3.0-alpha.1",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -10,7 +10,7 @@
   "description": "Scientify local desktop research workspace",
   "scripts": {
     "predev": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs",
-    "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs",
+    "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs && node scripts/prepare-licenses.mjs",
     "prepare:agent": "node scripts/prepare-agent.mjs",
     "start": "tauri dev",
     "dev": "vite",

@@ -27,7 +27,27 @@ pnpm install --frozen-lockfile
 pnpm start
 ```
 
-`YOUR-USERNAME` 替换为你的 GitHub 用户名。PR 的目标是 GitHub 显示的默认分支；目前为 `codex/literature-workspace-browser`，不要假定已有 `main`。
+`YOUR-USERNAME` 替换为你的 GitHub 用户名。默认分支与 PR 目标统一为 `main`。开始任务前先同步上游 `main`，再创建短期分支。
+
+## 分支与合并
+
+采用 GitHub Flow：`main` 保持可构建、可发布；每个任务独立分支，通过 PR 合入，不设置长期 `develop`。
+
+| 分支 | 用途 | 示例 |
+| --- | --- | --- |
+| `main` | 唯一长期主分支 | 从这里创建发行标签 |
+| `feat/<topic>` | 新功能 | `feat/paper-search` |
+| `fix/<topic>` | 修复与热修复 | `fix/pdf-note-rename` |
+| `docs/<topic>` | 文档 | `docs/getting-started` |
+| `chore/<topic>` | 构建、依赖与维护 | `chore/release-0.3.0` |
+| `refactor/<topic>`、`test/<topic>` | 重构与验证 | `test/workspace-save` |
+| `codex/<topic>` | 自动化助手创建的任务分支 | `codex/windows-alpha-release` |
+
+分支名使用小写英文和连字符，可加入 Issue 编号。提交与 PR 标题使用 `feat:`、`fix:`、`docs:`、`chore:`、`refactor:` 或 `test:` 前缀。破坏兼容性的改动需显式说明。
+
+合并前必须通过 `Windows checks / windows` 并解决讨论。维护者使用 squash merge，合并后删除任务分支；不直接在 `main` 开发，不强推或删除 `main`。当前单维护者阶段不要求另一位维护者审批，以免阻塞自身 PR；外部贡献仍由维护者审阅。GitHub 服务端保护是否可强制执行取决于仓库可见性和套餐，不能用书面约定代替实际保护。
+
+发布流程与故障处理见[版本发布说明](docs/技术方案/版本发布与分支管理.md)。
 
 首次启动或构建会下载固定版本的 Agent 引擎并生成协议类型。请使用 `pnpm run build` 准备资源后再运行检查；仅执行 `pnpm install` 不会生成这些文件。`pnpm dev` 是隔离的前端预览，仍会执行资源准备脚本，不能验证原生能力。
 
