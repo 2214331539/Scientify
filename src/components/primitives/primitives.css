@@ -20,15 +20,14 @@
       background-color var(--sf-motion-feedback) var(--sf-ease-standard),
       border-color var(--sf-motion-feedback) var(--sf-ease-standard),
       color var(--sf-motion-feedback) var(--sf-ease-standard),
-      transform var(--sf-motion-feedback) var(--sf-ease-apple),
       box-shadow var(--sf-motion-feedback) var(--sf-ease-standard);
   }
   .sf-button:hover:not(:disabled) {
     background: var(--sf-surface-hover);
   }
   .sf-button:active:not(:disabled) {
-    background: var(--sf-surface-selected);
-    transform: scale(0.97);
+    background: var(--sf-surface-selected-hover);
+    transition-duration: 0s;
   }
   .sf-button-primary:active:not(:disabled) {
     background: var(--sf-accent-hover);
@@ -36,6 +35,9 @@
   .sf-button:disabled {
     cursor: default;
     color: var(--sf-text-disabled);
+  }
+  .sf-button {
+    touch-action: manipulation;
   }
   .sf-button svg {
     flex-shrink: 0;

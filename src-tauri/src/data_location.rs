@@ -91,6 +91,12 @@ pub async fn storage_schedule<R: tauri::Runtime>(
         .protect(None, None, None)?;
     app.state::<crate::experiments::ExperimentState>()
         .protect(None, None)?;
+    if let Some(terminal) = app.try_state::<crate::experiments::terminal::TerminalState>() {
+        terminal.protect(None, None)?;
+    }
+    if let Some(python) = app.try_state::<crate::experiments::python::PythonState>() {
+        python.protect(None, None)?;
+    }
     locator.schedule(&state.container, Path::new(&directory))
 }
 

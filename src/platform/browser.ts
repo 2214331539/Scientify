@@ -1,7 +1,7 @@
 import { t } from '../i18n';
 import type { WorkspaceBackend } from './desktop';
 import type { FileContent, ResearchBackend, ResearchFile } from './research';
-import { emptyWorkspace, type Workspace } from '../domain/workspace';
+import { emptyWorkspace, normalizeExperiments, type Workspace } from '../domain/workspace';
 
 const DATA_KEY = 'scientify.mvp.preview.workspace.v1';
 const FILE_KEY = 'scientify.mvp.preview.files.v1';
@@ -18,14 +18,14 @@ function parseWorkspace(raw: string): Workspace {
     !Number.isSafeInteger(value.revision) ||
     value.revision < 0 ||
     Object.entries(emptyWorkspace()).some(
-      ([key, entry]) => Array.isArray(entry) && !Array.isArray(value[key]),
+      ([key, entry]) => key !== 'experiments' && Array.isArray(entry) && !Array.isArray(value[key]),
     ) ||
     !value.settings ||
     typeof value.settings !== 'object' ||
     !value.settings.model
   )
     throw new Error(t('浏览器预览数据无法读取，请先导出浏览器存储进行恢复。'));
-  return value;
+  return normalizeExperiments(value);
 }
 function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));

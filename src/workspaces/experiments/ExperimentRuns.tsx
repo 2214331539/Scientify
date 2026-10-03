@@ -22,6 +22,7 @@ const labels: { [key: string]: string } = {
 };
 export function ExperimentRuns({
   project,
+  experimentId,
   store,
   executions,
   selectedId,
@@ -30,6 +31,7 @@ export function ExperimentRuns({
   onRerun,
 }: {
   project: Project;
+  experimentId?: string;
   store: WorkspaceStore;
   executions: Execution[];
   selectedId?: string | null;
@@ -46,12 +48,20 @@ export function ExperimentRuns({
   const [tab, setTab] = useState('results');
   const native = new Map(executions.map((r) => [r.id, r]));
   const runs: Record[] = (records ?? [])
-    .filter((r) => r.project === project.id && !native.has(r.id))
+    .filter(
+      (r) =>
+        r.project === project.id &&
+        (!experimentId ||
+          r.experimentId === experimentId ||
+          (!r.experimentId && experimentId === project.id)) &&
+        !native.has(r.id),
+    )
     .concat(
       executions.map((r) => ({
         ...(records?.find((v) => v.id === r.id) ?? {}),
         id: r.id,
         project: r.project,
+        experimentId: r.experimentId,
         name: r.name,
         status: r.status,
         executionId: r.id,
@@ -85,6 +95,8 @@ export function ExperimentRuns({
         workspace: 'experiments',
         resourceId: selected.id,
         title: text(selected.name),
+        experimentId,
+        workspaceRoot: execution?.workspaceRoot,
         text: contextText,
       });
   }, [project.id, selected?.id, selected?.name, contextText, onContext]);
@@ -339,6 +351,7 @@ export function ExperimentRuns({
       {editing && (
         <RunForm
           project={project}
+          experimentId={experimentId}
           store={store}
           initial={editing === 'new' ? undefined : editing}
           onClose={() => setEditing(null)}

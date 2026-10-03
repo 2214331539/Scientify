@@ -1,6 +1,7 @@
 // Deterministic Responses provider for native integration tests. No API key.
 import { createServer } from 'node:http';
 const command = JSON.parse(process.env.SCIENTIFY_FIXTURE_COMMAND);
+const toolName = process.env.SCIENTIFY_FIXTURE_TOOL || 'scientify_start_run';
 let sequence = 0;
 const values = (value) => {
   if (typeof value === 'string') {
@@ -23,7 +24,15 @@ const server = createServer(async (request, response) => {
     throw new Error(`Fixture run failed: ${snapshot.run.error}; ${snapshot.log}`);
   const id = `fixture-${++sequence}`;
   let item;
-  if (!snapshot) {
+  if (toolName !== 'scientify_start_run') {
+    const reply = data.find((value) => typeof value.output === 'string' || typeof value.error === 'string');
+    if (!reply) {
+      if (!values(input.tools).some((value) => value.name === toolName)) throw new Error('Missing Git tool');
+      item = { type: 'function_call', id: `fc-${sequence}`, call_id: `call-${sequence}`, name: toolName, arguments: JSON.stringify(command), status: 'completed' };
+    } else {
+      item = { type: 'message', id: `message-${sequence}`, role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: `Git result received: ${JSON.stringify(reply)}`, annotations: [] }] };
+    }
+  } else if (!snapshot) {
     if (!values(input.tools).some((v) => v.name === 'scientify_start_run'))
       throw new Error('Missing managed tool');
     item = {

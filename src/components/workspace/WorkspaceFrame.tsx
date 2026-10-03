@@ -17,6 +17,8 @@ export function WorkspaceFrame({
   resize,
   children,
   actions,
+  activity,
+  footer,
 }: {
   label: string;
   views: { id: string; label: string }[];
@@ -29,11 +31,13 @@ export function WorkspaceFrame({
   resize?: ReactNode;
   children: ReactNode;
   actions?: ReactNode;
+  activity?: ReactNode;
+  footer?: ReactNode;
 }) {
   return (
     <Panel className="workspace-frame" aria-label={t('{label} 工作区', { label: t(label) })}>
       <header className="workspace-commandbar">
-        {sidebar && (
+        {sidebar && !activity && (
           <Button
             variant="ghost"
             iconOnly
@@ -63,6 +67,7 @@ export function WorkspaceFrame({
         {actions && <div className="workspace-command-actions">{actions}</div>}
       </header>
       <div className="workspace-frame-body">
+        {activity}
         {sidebar && (
           <>
             <Sidebar
@@ -78,6 +83,7 @@ export function WorkspaceFrame({
         )}
         <div className="workspace-document">{children}</div>
       </div>
+      {footer}
     </Panel>
   );
 }

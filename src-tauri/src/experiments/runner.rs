@@ -89,13 +89,15 @@ fn execute(request: &Path) -> Result<i32, String> {
 }
 
 #[cfg(windows)]
-mod job {
+pub(crate) mod job {
     use std::{os::windows::io::AsRawHandle, process::Child};
     use windows::Win32::{
         Foundation::{CloseHandle, HANDLE},
         System::{Diagnostics::ToolHelp::*, JobObjects::*, Threading::*},
     };
     struct Owned(HANDLE);
+    // Job handles are kernel objects; ownership may move across threads.
+    unsafe impl Send for Owned {}
     impl Drop for Owned {
         fn drop(&mut self) {
             unsafe {
@@ -105,6 +107,22 @@ mod job {
     }
     pub struct Job(Owned);
     impl Job {
+        pub fn attach_pty(handle: std::os::windows::io::RawHandle) -> Result<Self, String> {
+            unsafe {
+                let owned = Owned(CreateJobObjectW(None, None).map_err(|e| e.to_string())?);
+                let mut limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+                limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+                SetInformationJobObject(
+                    owned.0,
+                    JobObjectExtendedLimitInformation,
+                    &limits as *const _ as *const _,
+                    std::mem::size_of_val(&limits) as u32,
+                )
+                .map_err(|e| e.to_string())?;
+                AssignProcessToJobObject(owned.0, HANDLE(handle)).map_err(|e| e.to_string())?;
+                Ok(Self(owned))
+            }
+        }
         pub fn attach(child: &Child) -> Result<Self, String> {
             // Start suspended, assign the job, then resume. No descendant can
             // escape between process creation and job assignment.

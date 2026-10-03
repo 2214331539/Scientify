@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-development-snapshot"
+description = "Enables the development_snapshot command without any pre-configured scope."
+commands.allow = ["development_snapshot"]
+
+[[permission]]
+identifier = "deny-development-snapshot"
+description = "Denies the development_snapshot command without any pre-configured scope."
+commands.deny = ["development_snapshot"]

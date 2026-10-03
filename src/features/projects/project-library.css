@@ -21,7 +21,7 @@
   gap: 12px;
   font-size: 24px;
   font-weight: 650;
-  letter-spacing: -0.8px;
+  letter-spacing: 0;
   flex-shrink: 0;
   user-select: none;
 }
@@ -116,7 +116,7 @@
   flex: 1;
   height: 46px;
   border: 1px solid var(--sf-border-subtle);
-  border-radius: 9px;
+  border-radius: var(--sf-radius-overlay);
   padding: 0 14px;
   background: var(--sf-surface-raised);
   box-shadow: 0 1px 4px rgb(0 0 0 / 3%);
@@ -149,7 +149,7 @@
   flex-shrink: 0;
   background: var(--sf-surface-sunken);
   border: 1px solid var(--sf-border-subtle);
-  border-radius: 9px;
+  border-radius: var(--sf-radius-overlay);
   overflow: hidden;
 }
 .launcher-view-switch .sf-button {

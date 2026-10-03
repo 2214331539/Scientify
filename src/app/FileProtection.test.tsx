@@ -9,6 +9,10 @@ import type { WorkspaceBackend } from '../platform/desktop';
 import { createWorkspaceStore } from '../stores/workspace';
 import { getFileSession, type FileSession } from '../editor/sessions';
 import { App } from './App';
+import { codeContext } from '../workspaces/experiments/code-context';
+import { AgentRuntime } from '../features/assistant/agent-runtime';
+import { newConversation } from '../features/assistant/model';
+import type { AgentBackend, AgentEvent } from '../platform/agent';
 
 const nativeWindow = vi.hoisted(() => ({
   close: undefined as undefined | ((event: { preventDefault(): void }) => Promise<void>),
@@ -19,6 +23,20 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (command: string) => {
     if (command === 'experiment_list') return [];
     if (command === 'research_git_diff') return '@@ -1 +1 @@\n-old\n+new\n';
+    if (command === 'code_git_diff') return '@@ -1 +1 @@\n-old\n+new\n';
+    if (command === 'code_git_inspect')
+      return {
+        root: 'F:/old',
+        repository: true,
+        branch: 'main',
+        head: '123456',
+        changes: [{ path: 'paper.md', status: ' M' }],
+        branches: [],
+        history: [],
+        stashes: [],
+        worktrees: [],
+        busy: false,
+      };
     return undefined;
   }),
 }));
@@ -64,6 +82,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  codeContext.setState({ roots: {} });
   nativeWindow.destroy.mockClear();
 });
 
@@ -129,8 +148,8 @@ it('remembers the code view after opening a changed file and leaving the workspa
   render(<App store={store} backend={backend} />);
   await screen.findByRole('textbox', { name: '编辑 paper.md' });
   await user.click(screen.getByRole('button', { name: t('Experiments') }));
-  await user.click(screen.getByRole('button', { name: t('Changes') }));
-  await user.click(await screen.findByRole('button', { name: /paper\.md/ }));
+  await user.click(screen.getByRole('button', { name: 'Git' }));
+  await user.click(await screen.findByRole('button', { name: '查看更改 paper.md' }));
   await user.click(screen.getByRole('button', { name: t('打开文件') }));
   expect(
     (await screen.findByRole('button', { name: t('Code') })).getAttribute('aria-current'),
@@ -174,6 +193,54 @@ it('blocks native close and workspace replacement while a clean-looking file sav
     complete({ path: 'paper.md', content: 'submitted', version: 'v2' });
     await saving;
   });
+});
+
+it('allows native close after an interrupted AI result is saved', async () => {
+  const { store, backend } = setup();
+  render(<App store={store} backend={backend} />);
+  await screen.findByRole('textbox', { name: '编辑 paper.md' });
+  const events: AgentEvent[] = [];
+  const agent = {
+    startThread: async () => ({ threadId: 'thread', cwd: 'F:/old' }),
+    startTurn: async () => ({ turnId: 'turn', status: 'inProgress', events: [] }),
+    events: async () => events.splice(0),
+    interrupt: async () => {
+      events.push({
+        kind: 'notification',
+        method: 'turn/completed',
+        params: { threadId: 'thread', turn: { id: 'turn', status: 'interrupted' } },
+      });
+    },
+  } as unknown as AgentBackend;
+  const runtime = new AgentRuntime(store, agent);
+  const chat = newConversation('p1');
+  try {
+    await act(async () => {
+      await runtime.send(
+        chat,
+        'code',
+        { endpoint: 'http://localhost/v1', model: 'test', provider: 'openai' },
+        '运行实验',
+      );
+    });
+    await act(async () => {
+      await nativeWindow.close?.({ preventDefault() {} });
+    });
+    expect(nativeWindow.destroy).not.toHaveBeenCalled();
+    await act(async () => {
+      await runtime.get('p1', chat.id)!.session.interrupt();
+    });
+    await waitFor(() => expect(store.getState().agentTasks).toEqual({}));
+    await act(async () => {
+      await nativeWindow.close?.({ preventDefault() {} });
+    });
+    expect(nativeWindow.destroy).toHaveBeenCalledOnce();
+    expect(store.getState().data!.sessions.find((s) => s.id === chat.id)?.agentStatus).toBe(
+      'interrupted',
+    );
+  } finally {
+    runtime.dispose();
+  }
 });
 
 it('blocks directory changes with drafts and reloads the tree and editor after a clean rebind', async () => {

@@ -1,4 +1,34 @@
 {
+  "实验管理": ["实验管理", "Experiments"],
+  "当前实验": ["当前实验", "Current experiment"],
+  "实验": ["实验", "Experiment"],
+  "Python": ["Python", "Python"],
+  "操作": ["操作", "Actions"],
+  "未配置": ["未配置", "Not configured"],
+  "最近运行": ["最近运行", "Latest run"],
+  "搜索实验": ["搜索实验", "Search experiments"],
+  "显示归档": ["显示归档", "Show archived"],
+  "新建实验": ["新建实验", "New experiment"],
+  "打开实验": ["打开实验", "Open experiment"],
+  "重命名实验": ["重命名实验", "Rename experiment"],
+  "归档实验": ["归档实验", "Archive experiment"],
+  "恢复实验": ["恢复实验", "Restore experiment"],
+  "移除实验": ["移除实验", "Remove experiment"],
+  "暂无实验": ["暂无实验", "No experiments"],
+  "实验目的": ["实验目的", "Purpose"],
+  "代码来源": ["代码来源", "Code source"],
+  "新建空目录": ["新建空目录", "Create empty folder"],
+  "关联已有目录 / worktree": ["关联已有目录 / worktree", "Link existing folder / worktree"],
+  "创建实验": ["创建实验", "Create experiment"],
+  "已结束": ["已结束", "Finished"],
+  "请先停止此实验的 AI 和运行任务。": ["请先停止此实验的 AI 和运行任务。", "Stop this experiment's AI and runs first."],
+  "移除实验登记？磁盘文件、Git 提交、AI 对话和运行记录会保留。": ["移除实验登记？磁盘文件、Git 提交、AI 对话和运行记录会保留。", "Remove the experiment registration? Files, Git commits, chats and run history will be kept."],
+  "实验不存在。": ["实验不存在。", "Experiment not found."],
+  "此材料的实验已移除或归档，请先恢复实验登记。": ["此材料的实验已移除或归档，请先恢复实验登记。", "This material's experiment was removed or archived. Restore its registration first."],
+  "此实验已归档，请恢复后再执行。": ["此实验已归档，请恢复后再执行。", "This experiment is archived. Restore it before executing."],
+  "该目录与已登记实验的目录相同或相互包含，请选择独立目录。": ["该目录与已登记实验的目录相同或相互包含，请选择独立目录。", "This folder overlaps a registered experiment. Choose an independent folder."],
+  "所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。": ["所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。", "This experiment is inside a Git repository. Register its repository root to manage the entire repository."],
+  "此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。": ["此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。", "This worktree is registered as an experiment. Remove that registration before deleting the worktree folder."],
   "数据存储位置": ["数据存储位置", "Data storage location"],
   "更改位置": ["更改位置", "Change location"],
   "取消迁移": ["取消迁移", "Cancel move"],
@@ -3758,5 +3788,381 @@
   "Agent 正在工作…": [
     "Agent 正在工作…",
     "Agent is working…"
-  ]
+  ],
+  "Git 视图": [
+    "Git 视图",
+    "Git views"
+  ],
+  "Git 管理仅在桌面应用可用": [
+    "Git 管理仅在桌面应用可用",
+    "Git management is available in the desktop app"
+  ],
+  "更改": [
+    "更改",
+    "Changes"
+  ],
+  "已暂存": [
+    "已暂存",
+    "Staged"
+  ],
+  "提交历史": [
+    "提交历史",
+    "History"
+  ],
+  "分支": [
+    "分支",
+    "Branches"
+  ],
+  "提交说明": [
+    "提交说明",
+    "Commit message"
+  ],
+  "查看更改 {path}": [
+    "查看更改 {path}",
+    "View changes for {path}"
+  ],
+  "查看已暂存 {path}": [
+    "查看已暂存 {path}",
+    "View staged changes for {path}"
+  ],
+  "暂存文件": [
+    "暂存文件",
+    "Stage file"
+  ],
+  "暂存 {path}": [
+    "暂存 {path}",
+    "Stage {path}"
+  ],
+  "取消暂存": [
+    "取消暂存",
+    "Unstage file"
+  ],
+  "取消暂存 {path}": [
+    "取消暂存 {path}",
+    "Unstage {path}"
+  ],
+  "暂存区": [
+    "暂存区",
+    "Index"
+  ],
+  "从暂存区恢复文件": [
+    "从暂存区恢复文件",
+    "Restore file from index"
+  ],
+  "恢复 {path}": [
+    "恢复 {path}",
+    "Restore {path}"
+  ],
+  "从暂存区恢复“{path}”？此文件尚未暂存的磁盘修改会被覆盖。": [
+    "从暂存区恢复“{path}”？此文件尚未暂存的磁盘修改会被覆盖。",
+    "Restore {path} from the index? Its unstaged changes on disk will be overwritten."
+  ],
+  "此目录有未保存或正在读写的文件，请先保存后再执行 Git 操作。": [
+    "此目录有未保存或正在读写的文件，请先保存后再执行 Git 操作。",
+    "This directory has unsaved files or file operations in progress. Save them before running Git operations."
+  ],
+  "操作完成": [
+    "操作完成",
+    "Operation completed"
+  ],
+  "刷新 Git": [
+    "刷新 Git",
+    "Refresh Git"
+  ],
+  "打开项目原目录": [
+    "打开项目原目录",
+    "Open original project directory"
+  ],
+  "此代码目录尚未初始化 Git。": [
+    "此代码目录尚未初始化 Git。",
+    "This code directory has no Git repository."
+  ],
+  "初始化 Git 仓库": [
+    "初始化 Git 仓库",
+    "Initialize Git repository"
+  ],
+  "暂无已暂存文件": [
+    "暂无已暂存文件",
+    "No staged files"
+  ],
+  "文件差异": [
+    "文件差异",
+    "File diff"
+  ],
+  "选择文件查看差异": [
+    "选择文件查看差异",
+    "Select a file to view its diff"
+  ],
+  "搜索提交": [
+    "搜索提交",
+    "Search commits"
+  ],
+  "尚无提交": [
+    "尚无提交",
+    "No commits yet"
+  ],
+  "选择提交查看差异": [
+    "选择提交查看差异",
+    "Select a commit to view its diff"
+  ],
+  "创建分支": [
+    "创建分支",
+    "Create branch"
+  ],
+  "当前分支": [
+    "当前分支",
+    "Current branch"
+  ],
+  "切换": [
+    "切换",
+    "Switch"
+  ],
+  "删除分支": [
+    "删除分支",
+    "Delete branch"
+  ],
+  "删除分支 {name}": [
+    "删除分支 {name}",
+    "Delete branch {name}"
+  ],
+  "删除分支“{name}”？Git 将保护尚未合并的提交。": [
+    "删除分支“{name}”？Git 将保护尚未合并的提交。",
+    "Delete branch {name}? Git will protect unmerged commits."
+  ],
+  "保存到 Stash": [
+    "保存到 Stash",
+    "Save to stash"
+  ],
+  "将 {name} 应用到当前 worktree？可能产生需要手动解决的冲突。": [
+    "将 {name} 应用到当前 worktree？可能产生需要手动解决的冲突。",
+    "Apply {name} to this worktree? Conflicts may require manual resolution."
+  ],
+  "暂无 Stash": [
+    "暂无 Stash",
+    "No stashes"
+  ],
+  "创建 Worktree": [
+    "创建 Worktree",
+    "Create worktree"
+  ],
+  "当前 worktree": [
+    "当前 worktree",
+    "Current worktree"
+  ],
+  "{count} 项更改": [
+    "{count} 项更改",
+    "{count} changes"
+  ],
+  "干净": [
+    "干净",
+    "Clean"
+  ],
+  "移除 Worktree": [
+    "移除 Worktree",
+    "Remove worktree"
+  ],
+  "移除 Worktree {name}": [
+    "移除 Worktree {name}",
+    "Remove worktree {name}"
+  ],
+  "移除 worktree“{path}”？将删除该工作目录，保留分支和提交；未提交更改会阻止移除。": [
+    "移除 worktree“{path}”？将删除该工作目录，保留分支和提交；未提交更改会阻止移除。",
+    "Remove worktree {path}? Its directory will be deleted, while its branch and commits remain. Uncommitted changes block removal."
+  ],
+  "创建新分支": [
+    "创建新分支",
+    "Create a new branch"
+  ],
+  "说明": [
+    "说明",
+    "Message"
+  ],
+  "分支名称": [
+    "分支名称",
+    "Branch name"
+  ],
+  "已有分支": [
+    "已有分支",
+    "Existing branch"
+  ],
+  "起始 Branch / Commit": [
+    "起始 Branch / Commit",
+    "Starting branch / commit"
+  ],
+  "Worktree 目录（新的绝对路径）": [
+    "Worktree 目录（新的绝对路径）",
+    "Worktree directory (new absolute path)"
+  ],
+  "包含未跟踪文件": [
+    "包含未跟踪文件",
+    "Include untracked files"
+  ],
+  "收起运行日志": [
+    "收起运行日志",
+    "Collapse run output"
+  ],
+  "展开运行日志": [
+    "展开运行日志",
+    "Expand run output"
+  ],
+  "请求执行 Git 操作": [
+    "请求执行 Git 操作",
+    "Git operation approval"
+  ],
+  "请求执行命令": [
+    "请求执行命令",
+    "Command approval"
+  ],
+  "请求修改文件": [
+    "请求修改文件",
+    "File change approval"
+  ],
+  "请求提升权限": [
+    "请求提升权限",
+    "Permission approval"
+  ],
+  "目录：{path}": [
+    "目录：{path}",
+    "Directory: {path}"
+  ],
+  "允许本次权限": [
+    "允许本次权限",
+    "Allow these permissions"
+  ],
+  "拒绝权限": [
+    "拒绝权限",
+    "Deny permissions"
+  ],
+  "允许": [
+    "允许",
+    "Allow"
+  ],
+  "本会话允许": [
+    "本会话允许",
+    "Allow for this session"
+  ],
+  "拒绝": [
+    "拒绝",
+    "Deny"
+  ],
+  "此目录有活动任务或 Git 操作，请等待完成后重试。": [
+    "此目录有活动任务或 Git 操作，请等待完成后重试。",
+    "This directory has active tasks or a Git operation. Wait for them to finish and retry."
+  ],
+  "此目录有运行或文件写入，暂不能执行 Git 写操作。": [
+    "此目录有运行或文件写入，暂不能执行 Git 写操作。",
+    "A run or file write is active in this directory. Git mutations must wait."
+  ],
+  "此目录已有 AI 任务。请等待任务结束，或选择另一个 worktree 新建会话。": [
+    "此目录已有 AI 任务。请等待任务结束，或选择另一个 worktree 新建会话。",
+    "An AI task is already active in this directory. Wait for it to finish, or create a conversation in another worktree."
+  ],
+  "所选目录不是此项目仓库登记的 worktree，请刷新目录列表。": [
+    "所选目录不是此项目仓库登记的 worktree，请刷新目录列表。",
+    "This directory is not a registered worktree of this project. Refresh the directory list."
+  ],
+  "文件差异已变化，请重新检查后再恢复。": [
+    "文件差异已变化，请重新检查后再恢复。",
+    "The diff has changed. Review it again before restoring."
+  ],
+  "Stash 列表已变化，请刷新。": [
+    "Stash 列表已变化，请刷新。",
+    "The stash list has changed. Refresh it and retry."
+  ],
+  "worktree 有未提交更改，请先 commit 或 stash。": [
+    "worktree 有未提交更改，请先 commit 或 stash。",
+    "This worktree has uncommitted changes. Commit or stash them first."
+  ],
+  "worktree 不能访问 Scientify 的内部数据、凭据或浏览缓存目录。": [
+    "worktree 不能访问 Scientify 的内部数据、凭据或浏览缓存目录。",
+    "A worktree cannot access Scientify's internal data, credentials or browser cache directories."
+  ],
+  "Git 操作超时，请检查仓库状态后重试。": [
+    "Git 操作超时，请检查仓库状态后重试。",
+    "The Git operation timed out. Check the repository state before retrying."
+  ],
+  "代码工具": ["代码工具", "Code tools"],
+  "撤销": ["撤销", "Undo"],
+  "重做": ["重做", "Redo"],
+  "行 {line}，列 {column}": ["行 {line}，列 {column}", "Ln {line}, Col {column}"],
+  "{count} 个变更": ["{count} 个变更", "{count} changes"],
+  "查找": ["查找", "Find"],
+  "替换": ["替换", "Replace"],
+  "全部": ["全部", "All"],
+  "关闭": ["关闭", "Close"],
+  "源代码管理": ["源代码管理", "Source control"],
+  "搜索工作区": ["搜索工作区", "Search workspace"],
+  "搜索工作区内容": ["搜索工作区内容", "Search workspace contents"],
+  "搜索表达式无效。": ["搜索表达式无效。", "Invalid search expression."],
+  "停止搜索": ["停止搜索", "Stop search"],
+  "{count} 个匹配": ["{count} 个匹配", "{count} matches"],
+  "搜索达到上限": ["搜索达到上限", "Search limit reached"],
+  "{count} 个文件未读取": ["{count} 个文件未读取", "{count} files not read"],
+  "没有匹配的内容": ["没有匹配的内容", "No matching content"],
+  "管理 worktree": ["管理 worktree", "Manage worktrees"],
+  "保存全部": ["保存全部", "Save all"],
+  "停止当前运行": ["停止当前运行", "Stop current run"],
+  "最大化输出面板": ["最大化输出面板", "Maximize output panel"],
+  "还原输出面板": ["还原输出面板", "Restore output panel"],
+  "关闭输出面板": ["关闭输出面板", "Close output panel"],
+  "查找文件内容": ["查找文件内容", "Find in file"],
+  "替换文件内容": ["替换文件内容", "Replace in file"],
+  "自动换行": ["自动换行", "Word wrap"],
+  "折叠所有文件夹": ["折叠所有文件夹", "Collapse all folders"],
+  "区分大小写": ["区分大小写", "Match case"],
+  "全字匹配": ["全字匹配", "Whole word"],
+  "正则表达式": ["正则表达式", "Regular expression"],
+  "上一个": ["上一个", "Previous"],
+  "下一个": ["下一个", "Next"],
+  "全部替换": ["全部替换", "Replace all"],
+  "此目录有未保存或正在读写的文件，请先保存后再批准 Git 操作。": [
+    "此目录有未保存或正在读写的文件，请先保存后再批准 Git 操作。",
+    "This directory has unsaved files or file operations in progress. Save them before approving the Git operation."
+  ],
+  "终端": ["终端", "Terminal"],
+  "新建终端": ["新建终端", "New terminal"],
+  "打开终端": ["打开终端", "Open terminal"],
+  "拆分终端": ["拆分终端", "Split terminal"],
+  "中断命令": ["中断命令", "Interrupt command"],
+  "终止终端": ["终止终端", "Terminate terminal"],
+  "终端会话": ["终端会话", "Terminal sessions"],
+  "终端类型": ["终端类型", "Terminal profile"],
+  "较早的终端输出已截断。": ["较早的终端输出已截断。", "Earlier terminal output has been truncated."],
+  "Python 环境": ["Python 环境", "Python environments"],
+  "Python 工具": ["Python 工具", "Python tools"],
+  "选择 Python 解释器": ["选择 Python 解释器", "Select Python interpreter"],
+  "刷新解释器": ["刷新解释器", "Refresh interpreters"],
+  "当前解释器": ["当前解释器", "Current interpreter"],
+  "解释器路径": ["解释器路径", "Interpreter path"],
+  "使用解释器": ["使用解释器", "Use interpreter"],
+  "创建环境": ["创建环境", "Create environment"],
+  "环境类型": ["环境类型", "Environment manager"],
+  "基础 Python": ["基础 Python", "Base Python"],
+  "Python 版本": ["Python 版本", "Python version"],
+  "环境目录（相对实验根）": ["环境目录（相对实验根）", "Environment directory (relative to experiment)"],
+  "环境": ["环境", "Environment"],
+  "依赖": ["依赖", "Packages"],
+  "任务": ["任务", "Tasks"],
+  "包名称": ["包名称", "Package names"],
+  "安装": ["安装", "Install"],
+  "升级": ["升级", "Upgrade"],
+  "卸载": ["卸载", "Uninstall"],
+  "刷新依赖": ["刷新依赖", "Refresh packages"],
+  "安装 requirements": ["安装 requirements", "Install requirements"],
+  "安装当前项目（editable）": ["安装当前项目（editable）", "Install project (editable)"],
+  "从 environment.yml 更新": ["从 environment.yml 更新", "Update from environment.yml"],
+  "停止环境任务": ["停止环境任务", "Stop environment task"],
+  "使用此环境": ["使用此环境", "Use this environment"],
+  "在终端运行当前 Python 文件": ["在终端运行当前 Python 文件", "Run Python file in terminal"],
+  "信任目录并检测 Python": ["信任目录并检测 Python", "Trust directory and detect Python"],
+  "信任此实验目录？终端、Python 和手动运行将使用本机用户权限，可访问本机文件与网络。": ["信任此实验目录？终端、Python 和手动运行将使用本机用户权限，可访问本机文件与网络。", "Trust this experiment directory? Terminals, Python and manual runs will use your local user permissions and can access local files and the network."],
+  "从当前 Python 环境卸载这些包？": ["从当前 Python 环境卸载这些包？", "Uninstall these packages from the current Python environment?"],
+  "当前选择的是系统 Python，安装或删除包将影响其他使用此环境的项目。继续？": ["当前选择的是系统 Python，安装或删除包将影响其他使用此环境的项目。继续？", "The selected system Python is shared. Changing its packages affects other projects. Continue?"],
+  "可信本地执行 · 本机文件与网络": ["可信本地执行 · 本机文件与网络", "Trusted local execution · local files and network"],
+  "实验显示方式": ["实验显示方式", "Experiment layout"],
+  "卡片视图": ["卡片视图", "Card view"],
+  "实验详情": ["实验详情", "Experiment details"],
+  "未配置 Python": ["未配置 Python", "Python not configured"],
+  "{count} 个活动任务": ["{count} 个活动任务", "{count} active tasks"],
+  "暂无活动任务": ["暂无活动任务", "No active tasks"]
 }

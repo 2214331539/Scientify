@@ -34,6 +34,37 @@ fn creates_reads_updates_and_preserves_external_edits() {
 }
 
 #[test]
+fn code_tree_omits_python_environment_dependencies_but_keeps_project_sources() {
+    let fixture = tempdir().unwrap();
+    let files = ResearchFiles::new(fixture.path().join("data"));
+    let root = files.project_root("p1", None).unwrap();
+    files
+        .write(&root, "train.py", "print('research')", None)
+        .unwrap();
+    for folder in [".venv", ".conda", "venv", "custom-python", "custom-conda"] {
+        let path = root.join(folder);
+        fs::create_dir_all(path.join("Lib/site-packages")).unwrap();
+        fs::write(
+            path.join("Lib/site-packages/dependency.py"),
+            "# third party",
+        )
+        .unwrap();
+        if folder == "venv" || folder == "custom-python" {
+            fs::write(path.join("pyvenv.cfg"), "home = base").unwrap();
+        }
+        if folder == "custom-conda" {
+            fs::create_dir(path.join("conda-meta")).unwrap();
+        }
+    }
+    let entries = files.list(&root).unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].path, "train.py");
+    assert!(root
+        .join("custom-python/Lib/site-packages/dependency.py")
+        .is_file());
+}
+
+#[test]
 fn concurrent_writes_have_one_winner_for_the_same_base() {
     use std::sync::{Arc, Barrier};
     let temp = tempdir().unwrap();

@@ -44,6 +44,72 @@ fn old_schema_three_normalizes_without_discarding_unmigrated_fields() {
 }
 
 #[test]
+fn experiment_migration_is_idempotent_and_does_not_recreate_removed_experiments() {
+    let mut old = fixture();
+    old.as_object_mut().unwrap().remove("experiments");
+    old["projects"][0]["path"] = json!("F:/existing/code");
+    old["projects"][0]["updatedAt"] = Value::Null;
+    old["projects"][0]["runConfigurations"] = json!([{"id":"cfg","name":"train"}]);
+    let migrated = validate(old).unwrap();
+    assert_eq!(migrated["experiments"][0]["project"], "p1");
+    assert_eq!(migrated["experiments"][0]["root"], "");
+    assert_eq!(
+        migrated["experiments"][0]["runConfigurations"][0]["id"],
+        "cfg"
+    );
+    assert_eq!(migrated["projects"][0]["path"], "F:/existing/code");
+    assert_eq!(validate(migrated.clone()).unwrap(), migrated);
+    let mut removed = migrated;
+    removed["experiments"] = json!([]);
+    assert_eq!(validate(removed).unwrap()["experiments"], json!([]));
+}
+
+#[test]
+fn experiment_ownership_and_unique_default_directory_are_validated() {
+    let base = validate(fixture()).unwrap();
+    let mut other = base.clone();
+    other["experiments"][0]["project"] = json!("unknown");
+    assert!(validate(other).is_err());
+    let mut duplicate = base.clone();
+    let mut experiment = duplicate["experiments"][0].clone();
+    experiment["id"] = json!("second");
+    duplicate["experiments"]
+        .as_array_mut()
+        .unwrap()
+        .push(experiment);
+    assert!(validate(duplicate).is_err());
+    let mut directory = base;
+    directory["experiments"][0]["source"] = json!("existing");
+    assert!(validate(directory).is_err());
+}
+
+#[test]
+fn python_binding_is_optional_and_invalid_environment_metadata_is_rejected() {
+    let base = validate(fixture()).unwrap();
+    assert!(base["experiments"][0].get("python").is_none());
+    let valid = json!({"executable":"F:/env/Scripts/python.exe","prefix":"F:/env","version":"3.12.9","manager":"venv"});
+    let mut configured = base.clone();
+    configured["experiments"][0]["python"] = valid.clone();
+    assert_eq!(
+        validate(configured).unwrap()["experiments"][0]["python"],
+        valid
+    );
+    let mut unknown = valid.clone();
+    unknown["manager"] = json!("unknown");
+    for invalid in [json!("python"), json!({}), unknown] {
+        let mut data = base.clone();
+        data["experiments"][0]["python"] = invalid;
+        assert!(validate(data).is_err());
+    }
+    for field in ["executable", "prefix", "version", "manager"] {
+        let mut data = base.clone();
+        data["experiments"][0]["python"] = valid.clone();
+        data["experiments"][0]["python"][field] = json!("");
+        assert!(validate(data).is_err());
+    }
+}
+
+#[test]
 fn rejects_invalid_relations_teams_ids_and_text() {
     let mut data = fixture();
     data["records"][0]["project"] = json!("missing");

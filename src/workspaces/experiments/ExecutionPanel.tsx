@@ -115,8 +115,10 @@ export function ExecutionPanel({
               try {
                 await experimentApi.stop(run.id);
               } catch (e) {
-                setError(describeError(e));
-                setStopping(false);
+                if (identity.current === run.id) {
+                  setError(describeError(e));
+                  setStopping(false);
+                }
               }
             }}
           >
@@ -149,12 +151,32 @@ export function ExecutionPanel({
           </dd>
           <dt>{t('工作目录')}</dt>
           <dd>{run.directory}</dd>
+          <dt>Worktree</dt>
+          <dd>{run.workspaceRoot || run.source?.workspaceRoot || t('未记录')}</dd>
+          <dt>{t('分支')}</dt>
+          <dd>{run.branch || t('未记录')}</dd>
           <dt>{t('平台')}</dt>
           <dd>{run.platform}</dd>
           <dt>{t('执行权限')}</dt>
           <dd>
-            {t(run.permission === 'workspace-write' ? '工作区沙箱 · 网络关闭' : '旧版用户权限运行')}
+            {t(
+              run.permission === 'workspace-write'
+                ? '工作区沙箱 · 网络关闭'
+                : run.permission === 'trusted-current-user'
+                  ? '可信本地执行 · 本机文件与网络'
+                  : '旧版用户权限运行',
+            )}
           </dd>
+          {run.environment && (
+            <>
+              <dt>Python</dt>
+              <dd>
+                {run.environment.version} · {run.environment.manager}
+                <br />
+                {run.environment.executable}
+              </dd>
+            </>
+          )}
           {run.source ? (
             <>
               <dt>{t('来源会话')}</dt>

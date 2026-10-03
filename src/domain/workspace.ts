@@ -25,6 +25,18 @@ export type ResearchRecord = Entity & {
 };
 export type Paper = Entity & { title: string; projects: string[] };
 export type Task = Entity & { project: string; title: string; done?: boolean };
+export type Experiment = Entity & {
+  project: string;
+  name: string;
+  purpose: string;
+  root: string;
+  source: 'project' | 'existing' | 'empty';
+  createdAt: string;
+  updatedAt: string;
+  archived?: boolean;
+  runConfigurations?: unknown;
+  python?: { executable: string; version: string; prefix: string; manager: string };
+};
 export type Workspace = {
   [key: string]: unknown;
   schema: 3;
@@ -32,6 +44,7 @@ export type Workspace = {
   updatedAt: string;
   teams: Team[];
   projects: Project[];
+  experiments?: Experiment[];
   papers: Paper[];
   records: ResearchRecord[];
   runs: (Entity & { project: string })[];
@@ -70,6 +83,7 @@ export function emptyWorkspace(): Workspace {
     updatedAt: new Date().toISOString(),
     teams: [],
     projects: [],
+    experiments: [],
     papers: [],
     records: [],
     runs: [],
@@ -86,6 +100,33 @@ export function emptyWorkspace(): Workspace {
     },
     navigation: { tabs: ['home'], active: 'home', expanded: [], panel: null },
   };
+}
+
+/** Legacy projects retain their existing directory, configurations and chat history. */
+export function normalizeExperiments(data: Workspace): Workspace {
+  data.experiments ??= [];
+  for (const project of data.projects) {
+    if (project.experimentsInitialized === true) continue;
+    if (!data.experiments.some((experiment) => experiment.project === project.id)) {
+      if (data.experiments.some((experiment) => experiment.id === project.id))
+        throw new Error('默认实验标识冲突。');
+      data.experiments.push({
+        id: project.id,
+        project: project.id,
+        name: '默认实验',
+        purpose: '',
+        root: '',
+        source: 'project',
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt ?? project.createdAt,
+        runConfigurations: project.runConfigurations ?? [],
+      });
+      for (const run of data.runs)
+        if (run.project === project.id && !run.experimentId) run.experimentId = project.id;
+    }
+    project.experimentsInitialized = true;
+  }
+  return data;
 }
 
 /** The launcher exposes a single collection, including recoverable archived projects. */

@@ -1,6 +1,6 @@
 import { t, translateError } from '../i18n';
 import { Button } from '../components/primitives';
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -33,6 +33,9 @@ import { browserLayout } from '../platform/browser-pane';
 import { FileResources, FileWorkspace } from '../workspaces/files/FileWorkspace';
 import { ExperimentWorkspace } from '../workspaces/experiments/ExperimentWorkspace';
 import { useExecutions } from '../workspaces/experiments/runtime';
+import { useDevelopmentRuntime } from '../workspaces/experiments/development';
+import { clearCodeRoot, selectExperiment } from '../workspaces/experiments/code-context';
+import { sameCodeRoot } from '../workspaces/experiments/catalog';
 import { GlobalDock } from '../shell/GlobalDock';
 import { ResizeHandle } from '../shell/ResizeHandle';
 import {
@@ -47,7 +50,7 @@ import type { Project, Team } from '../domain/workspace';
 import type { WorkContext, WorkspaceId } from '../domain/context';
 import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
 import { nativeResearch, type ResearchBackend } from '../platform/research';
-import { runViewTransition } from '../platform/view-transition';
+import { animateWorkspaceNavigation } from '../platform/view-transition';
 
 type Dialog =
   | { kind: 'project'; project?: Project }
@@ -149,9 +152,13 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
       if (next.data === previous.data) return;
       for (const project of next.data?.projects ?? []) {
         const old = previous.data?.projects.find((value) => value.id === project.id);
-        if (old && (old.path ?? '') !== (project.path ?? ''))
+        if (old && (old.path || old.repo || '') !== (project.path || project.repo || '')) {
           invalidateProjectFileSessions(backend, project.id);
+          clearCodeRoot(project.id);
+        }
       }
+      for (const project of previous.data?.projects ?? [])
+        if (!next.data?.projects.some((p) => p.id === project.id)) clearCodeRoot(project.id);
     });
     return () => {
       runtime.listeners.delete(update);
@@ -232,6 +239,7 @@ export function App({
   windowMode?: 'projects' | 'workspace' | 'browser';
 }) {
   const experiments = useExecutions(store, windowMode !== 'projects');
+  useDevelopmentRuntime(store, windowMode !== 'projects');
   const preferences = usePreferences();
   const epoch = useStore(store, (s) => s.epoch);
   const data = useStore(store, (s) => s.data),
@@ -260,6 +268,7 @@ export function App({
   });
   const [pendingNote, setPendingNote] = useState<{ scope: string; id: string } | null>(null);
   const [launching, setLaunching] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   useCloseProtection(store, backend, windowMode === 'workspace');
   useEffect(() => {
     if (!epoch || store.getState().dirty) return;
@@ -354,6 +363,10 @@ export function App({
   const view = secondary[workspace].some((v) => v.id === location.view)
     ? location.view
     : (secondary[workspace][0]?.id ?? '');
+  useLayoutEffect(
+    () => animateWorkspaceNavigation(contentRef.current),
+    [project?.id, workspace, view, phase],
+  );
   const effectiveContext: WorkContext =
     context.projectId === project?.id && context.workspace === (project ? workspace : 'projects')
       ? context
@@ -365,30 +378,28 @@ export function App({
         };
   const receiveContext = useCallback((next: WorkContext) => setContext(next), []);
   const patchLocation = useCallback((patch: Partial<Location>) => {
-    runViewTransition(() =>
-      setUI((s) => {
-        if (!s.projectId) return s;
-        return {
-          ...s,
-          locations: {
-            ...s.locations,
-            [s.projectId]: {
-              ...(s.locations[s.projectId] ?? locationDefault),
-              ...patch,
-              ...(patch.view !== undefined
-                ? {
-                    views: {
-                      ...s.locations[s.projectId]?.views,
-                      [patch.workspace ?? s.locations[s.projectId]?.workspace ?? 'overview']:
-                        patch.view,
-                    },
-                  }
-                : {}),
-            },
+    setUI((s) => {
+      if (!s.projectId) return s;
+      return {
+        ...s,
+        locations: {
+          ...s.locations,
+          [s.projectId]: {
+            ...(s.locations[s.projectId] ?? locationDefault),
+            ...patch,
+            ...(patch.view !== undefined
+              ? {
+                  views: {
+                    ...s.locations[s.projectId]?.views,
+                    [patch.workspace ?? s.locations[s.projectId]?.workspace ?? 'overview']:
+                      patch.view,
+                  },
+                }
+              : {}),
           },
-        };
-      }),
-    );
+        },
+      };
+    });
   }, []);
   const openTool = useCallback(
     (tool: 'assistant' | 'notes') => setUI((s) => ({ ...s, dock: tool, dockOpen: true })),
@@ -430,6 +441,7 @@ export function App({
     else setUI((s) => ({ ...s, projectId: null }));
   }
   function navigate(id: WorkspaceId) {
+    if (id === workspace) return;
     patchLocation({ workspace: id, view: location.views?.[id] ?? secondary[id][0]?.id ?? '' });
     setSidebarExpanded(true);
   }
@@ -541,6 +553,19 @@ export function App({
         return;
       }
       const w = source.workspace === 'projects' ? 'overview' : source.workspace;
+      if (w === 'experiments' && (source.experimentId || source.workspaceRoot)) {
+        const target = data.experiments?.find(
+          (experiment) =>
+            experiment.project === source.projectId &&
+            (experiment.id === source.experimentId ||
+              sameCodeRoot(experiment.root, source.workspaceRoot)),
+        );
+        if (target && !target.archived) selectExperiment(source.projectId!, target);
+        else if (source.path) {
+          store.setState({ error: t('此材料的实验已移除或归档，请先恢复实验登记。') });
+          return;
+        }
+      }
       const run =
         w === 'experiments' && !source.path
           ? data.runs.find(
@@ -977,7 +1002,14 @@ export function App({
             </Button>
           </div>
         )}
-        <div className="workspace-content">{content}</div>
+        <div
+          className="workspace-content"
+          ref={contentRef}
+          data-workspace={workspace}
+          data-view={view}
+        >
+          {content}
+        </div>
       </main>
       {ready && (
         <GlobalDock

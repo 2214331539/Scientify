@@ -1,4 +1,4 @@
-import { ShieldAlert, TerminalSquare, FileWarning } from 'lucide-react';
+import { ShieldAlert, TerminalSquare, FileWarning, GitBranch } from 'lucide-react';
 import { Button } from '../primitives';
 import { t } from '../../i18n';
 import type { ApprovalDecision, ApprovalRequest } from '../../platform/agent';
@@ -22,6 +22,14 @@ function describe(event: ApprovalRequest): {
   target: string;
 } {
   const params = (event.params ?? {}) as ApprovalParams;
+  if (event.method === 'scientify/git/requestApproval') {
+    return {
+      icon: GitBranch,
+      title: t('请求执行 Git 操作'),
+      detail: text(params.reason),
+      target: text(params.command),
+    };
+  }
   if (event.method === 'item/commandExecution/requestApproval') {
     return {
       icon: TerminalSquare,
@@ -116,15 +124,17 @@ export function ApprovalCard({
           >
             {t('允许')}
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            type="button"
-            disabled={busy}
-            onClick={() => onDecide('acceptForSession')}
-          >
-            {t('本会话允许')}
-          </Button>
+          {event.method !== 'scientify/git/requestApproval' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              disabled={busy}
+              onClick={() => onDecide('acceptForSession')}
+            >
+              {t('本会话允许')}
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="sm"

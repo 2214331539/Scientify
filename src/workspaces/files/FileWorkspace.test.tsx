@@ -1,8 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useSyncExternalStore } from 'react';
 import type { FileSession } from '../../editor/sessions';
+import { getFileRuntime } from '../../editor/sessions';
 import { emptyWorkspace, type Project } from '../../domain/workspace';
 import { createWorkspaceStore } from '../../stores/workspace';
 import type { WorkspaceBackend } from '../../platform/desktop';
@@ -10,18 +11,69 @@ import type { ResearchBackend } from '../../platform/research';
 import { FileWorkspace } from './FileWorkspace';
 
 vi.mock('../../editor/CodeEditor', () => ({
-  CodeEditor: ({ session }: { session: FileSession }) => {
+  CodeEditor: ({
+    session,
+    onSelection,
+  }: {
+    session: FileSession;
+    onSelection?: (text: string) => void;
+  }) => {
     const data = useSyncExternalStore(session.subscribe, session.getSnapshot);
     return (
       <textarea
         aria-label={`编辑 ${session.path}`}
         value={data.content}
         onChange={(event) => session.edit(event.target.value)}
+        onSelect={(event) =>
+          onSelection?.(
+            event.currentTarget.value.slice(
+              event.currentTarget.selectionStart,
+              event.currentTarget.selectionEnd,
+            ),
+          )
+        }
       />
     );
   },
 }));
 afterEach(cleanup);
+it('reselecting an open file from the tree remembers it across page unmounts', async () => {
+  const props = setup();
+  const view = render(<FileWorkspace {...props} activePath="paper.md" />);
+  await screen.findByRole('textbox', { name: '编辑 paper.md' });
+  view.rerender(<FileWorkspace {...props} activePath="notes.md" />);
+  await screen.findByRole('textbox', { name: '编辑 notes.md' });
+  view.rerender(<FileWorkspace {...props} activePath="paper.md" />);
+  expect(getFileRuntime(props.backend).active.get(JSON.stringify(['p1', 'writing', '']))).toBe(
+    'paper.md',
+  );
+  view.unmount();
+  render(<FileWorkspace {...props} />);
+  expect(await screen.findByRole('textbox', { name: '编辑 paper.md' })).toBeTruthy();
+});
+it('same-named worktree files keep independent selection and AI context even with identical content', async () => {
+  const props = setup();
+  const view = render(
+    <FileWorkspace {...props} mode="experiments" activePath="train.py" workspaceRoot="F:/main" />,
+  );
+  const editor = await screen.findByRole('textbox', { name: '编辑 train.py' });
+  (editor as HTMLTextAreaElement).setSelectionRange(2, 7);
+  fireEvent.select(editor);
+  await waitFor(() =>
+    expect(props.onContext).toHaveBeenLastCalledWith(
+      expect.objectContaining({ workspaceRoot: 'F:/main', selection: 'Draft' }),
+    ),
+  );
+  view.rerender(
+    <FileWorkspace {...props} mode="experiments" activePath="train.py" workspaceRoot="F:/other" />,
+  );
+  await waitFor(() =>
+    expect(props.onContext).toHaveBeenLastCalledWith(
+      expect.objectContaining({ workspaceRoot: 'F:/other', selection: '' }),
+    ),
+  );
+  expect(props.backend.readFile).toHaveBeenCalledWith('p1', 'train.py', 'F:/other');
+});
 const project: Project = {
   id: 'p1',
   name: 'Research',

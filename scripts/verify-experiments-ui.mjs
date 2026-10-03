@@ -168,8 +168,8 @@ try {
     'Environment distinguishes configuration from discovery',
   );
   await page.getByRole('button', { name: '关闭弹窗' }).click();
-  await page.getByRole('button', { name: '变更', exact: true }).click();
-  await page.getByRole('alert').filter({ hasText: 'Git' }).waitFor();
+  await page.getByRole('button', { name: 'Git', exact: true }).click();
+  await page.getByText('Git 管理仅在桌面应用可用').waitFor();
   check(true, 'Browser Git unavailable state is explicit');
   await page.getByRole('button', { name: '代码', exact: true }).click();
   for (const width of [1440, 1000, 800, 600, 390]) {

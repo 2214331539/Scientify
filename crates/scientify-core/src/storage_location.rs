@@ -15,6 +15,38 @@ use std::{
 
 const CONFIG: &str = "scientify-storage.json";
 
+fn reject_linked_worktrees(container: &Path) -> Result<(), String> {
+    let mut pending = vec![container.join("workspace/projects")];
+    while let Some(path) = pending.pop() {
+        if !path.exists() {
+            continue;
+        }
+        crate::research::reject_links(&path)?;
+        let marker = path.join(".git");
+        if marker.is_file()
+            || (marker.join("worktrees").is_dir()
+                && fs::read_dir(marker.join("worktrees"))
+                    .map_err(err)?
+                    .next()
+                    .is_some())
+        {
+            return Err("托管代码目录包含 Git worktree 登记，当前不能直接迁移应用数据。请先使用 Git 移除关联 worktree，或将主仓库迁至外部代码目录。原数据保持原位。".into());
+        }
+        for entry in fs::read_dir(&path).map_err(err)? {
+            let entry = entry.map_err(err)?;
+            if entry.file_type().map_err(err)?.is_dir()
+                && !matches!(
+                    entry.file_name().to_str(),
+                    Some(".git" | ".venv" | "node_modules" | "target" | "__pycache__")
+                )
+            {
+                pending.push(entry.path());
+            }
+        }
+    }
+    Ok(())
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Location {
@@ -408,6 +440,7 @@ impl Locator {
         }
         let target = normalized(target)?;
         let active = normalized(active)?;
+        reject_linked_worktrees(&active)?;
         let installation = fs::canonicalize(&self.installation).map_err(err)?;
         if target.starts_with(&active)
             || active.starts_with(&target)
@@ -447,6 +480,11 @@ impl Locator {
         let migrating = location.pending.is_some()
             || (first && self.previous_roaming.join("workspace").exists());
         if migrating {
+            reject_linked_worktrees(if first {
+                &self.previous_roaming
+            } else {
+                &source
+            })?;
             empty(&target)?;
             // Holding Storage's lock rejects a running old application before copying.
             let old_work = if first {
@@ -649,6 +687,22 @@ mod tests {
             b"saved"
         );
         assert!(!original.directory.exists());
+    }
+    #[test]
+    fn relocation_protects_managed_worktree_links_before_changing_the_pointer() {
+        let (dir, locator) = fixture();
+        let original = locator.prepare().unwrap();
+        let repo = original
+            .directory
+            .join("workspace/projects/p1/.git/worktrees/linked");
+        fs::create_dir_all(&repo).unwrap();
+        fs::write(repo.join("gitdir"), "F:/external/.git").unwrap();
+        assert!(locator
+            .schedule(&original.directory, &dir.path().join("new-data"))
+            .unwrap_err()
+            .contains("worktree"));
+        assert!(locator.location().unwrap().pending.is_none());
+        assert!(repo.join("gitdir").exists());
     }
     #[test]
     fn rejects_live_source_and_nonempty_target_without_deleting_data() {

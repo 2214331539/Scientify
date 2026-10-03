@@ -19,6 +19,7 @@ export interface ImportedPdf {
 export interface GitChange {
   path: string;
   status: string;
+  oldPath?: string;
 }
 export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini';
 export interface AIConnection {
@@ -35,13 +36,14 @@ export interface AIRequest extends AIConnection {
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
 }
 export interface ResearchBackend {
-  listFiles(projectId: string): Promise<ResearchFile[]>;
-  readFile(projectId: string, path: string): Promise<FileContent>;
+  listFiles(projectId: string, workspaceRoot?: string): Promise<ResearchFile[]>;
+  readFile(projectId: string, path: string, workspaceRoot?: string): Promise<FileContent>;
   writeFile(
     projectId: string,
     path: string,
     content: string,
     expectedVersion: string | null,
+    workspaceRoot?: string,
   ): Promise<FileContent>;
   importPdf(): Promise<ImportedPdf | null>;
   readPdf(assetId: string): Promise<Uint8Array>;
@@ -53,10 +55,12 @@ export interface ResearchBackend {
 }
 
 export const nativeResearch: ResearchBackend = {
-  listFiles: (projectId) => invoke('research_list_files', { projectId }),
-  readFile: (projectId, path) => invoke('research_read_file', { projectId, path }),
-  writeFile: (projectId, path, content, expectedVersion) =>
-    invoke('research_write_file', { projectId, path, content, expectedVersion }),
+  listFiles: (projectId, workspaceRoot) =>
+    invoke('research_list_files', { projectId, workspaceRoot }),
+  readFile: (projectId, path, workspaceRoot) =>
+    invoke('research_read_file', { projectId, path, workspaceRoot }),
+  writeFile: (projectId, path, content, expectedVersion, workspaceRoot) =>
+    invoke('research_write_file', { projectId, path, content, expectedVersion, workspaceRoot }),
   importPdf: () => invoke('research_import_pdf'),
   readPdf: async (assetId) =>
     new Uint8Array(await invoke<ArrayBuffer>('research_read_pdf', { assetId })),

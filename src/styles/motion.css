@@ -67,42 +67,42 @@ dialog[open]::backdrop {
 .sf-tree-row[aria-expanded='true'] .sf-tree-disclosure svg {
   transform: rotate(90deg);
 }
-/* Workspace navigation replaces a view inside a stable shell. Do not animate the
-   entire content tree: remounting a PDF/editor from opacity 0 creates a visible
-   flash and makes rapid navigation feel like a layout jump. Local controls and
-   overlays retain their short Apple-style transitions below. */
+.sf-disclosure {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  border-radius: var(--sf-radius);
+  cursor: pointer;
+  list-style: none;
+  transition:
+    color var(--sf-motion-feedback) var(--sf-ease-standard),
+    background-color var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-disclosure::-webkit-details-marker {
+  display: none;
+}
+.sf-disclosure:hover {
+  background: var(--sf-surface-hover);
+  color: var(--sf-text-primary);
+}
+.sf-disclosure > svg,
+.sf-ai-context-excerpt summary > svg {
+  flex-shrink: 0;
+  transition: transform var(--sf-motion-content) var(--sf-ease-enter);
+}
+details[open] > .sf-disclosure > svg {
+  transform: rotate(90deg);
+}
+/* Navigation updates immediately. Only committed chrome gets a short fade;
+   editors, PDF canvases and terminals are never captured in a document snapshot. */
 .research-shell:not(.launcher-shell) .workspace-content > * {
   animation: none;
 }
 
-/* Chromium's View Transition API gives navigation a single, stable crossfade.
-   It is progressive: older WebView2 versions render the committed page directly. */
-@supports (view-transition-name: none) {
-  .research-shell:not(.launcher-shell) .workspace-content {
-    view-transition-name: workspace-content;
-  }
-  ::view-transition-old(workspace-content),
-  ::view-transition-new(workspace-content) {
-    animation-duration: var(--sf-motion-content);
-    animation-timing-function: var(--sf-ease-apple);
-    animation-fill-mode: both;
-  }
-  ::view-transition-old(workspace-content) {
-    animation-name: sf-view-transition-out;
-  }
-  ::view-transition-new(workspace-content) {
-    animation-name: sf-view-transition-in;
-  }
-}
-@keyframes sf-view-transition-out {
-  to {
-    opacity: 0.94;
-  }
-}
-@keyframes sf-view-transition-in {
-  from {
-    opacity: 0.94;
-  }
+.sf-experiment-card-grid,
+.sf-experiment-table-scroll {
+  animation: sf-fade-in var(--sf-motion-content) var(--sf-ease-enter);
 }
 .launcher-canvas > .project-shelf,
 .launcher-canvas > .launcher-project-list {

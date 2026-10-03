@@ -203,12 +203,14 @@ export function RunWorkspace({
 
 export function RunForm({
   project,
+  experimentId,
   store,
   initial,
   onClose,
   onSaved,
 }: {
   project: Project;
+  experimentId?: string;
   store: WorkspaceStore;
   initial?: Run;
   onClose: () => void;
@@ -281,6 +283,7 @@ export function RunForm({
         ...fields,
         id,
         project: project.id,
+        ...(experimentId ? { experimentId } : {}),
         name: fields.name.trim(),
         metrics: values,
         updatedAt: new Date().toISOString(),

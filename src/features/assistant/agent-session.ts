@@ -73,7 +73,12 @@ export class AgentSession {
   handle: ThreadHandle | null = null;
   constructor(
     private readonly agent: AgentBackend,
-    readonly binding: { projectId: string; domain: AgentDomain; conversationId: string },
+    readonly binding: {
+      projectId: string;
+      domain: AgentDomain;
+      conversationId: string;
+      workspaceRoot?: string;
+    },
     private readonly connection: AgentConnection,
     private readonly onUpdate: (snapshot: AgentSessionSnapshot) => void = () => {},
   ) {}
@@ -97,7 +102,10 @@ export class AgentSession {
         this.binding.projectId,
         this.binding.domain,
         this.connection,
-        { conversationId: this.binding.conversationId },
+        {
+          conversationId: this.binding.conversationId,
+          ...(this.binding.workspaceRoot ? { workspaceRoot: this.binding.workspaceRoot } : {}),
+        },
       );
       if (!this.handle.threadId) throw new Error(t('Agent 返回了空线程标识。'));
       this.set({

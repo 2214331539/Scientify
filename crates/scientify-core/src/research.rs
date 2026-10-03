@@ -252,6 +252,7 @@ impl ResearchFiles {
                         | "target"
                         | "dist"
                         | ".venv"
+                        | ".conda"
                         | "__pycache__"
                         | ".scientify"
                 ) {
@@ -263,6 +264,11 @@ impl ResearchFiles {
                 }
                 let meta = fs::symlink_metadata(&path).map_err(io_error)?;
                 if !meta.is_dir() && !meta.is_file() {
+                    continue;
+                }
+                if meta.is_dir()
+                    && (path.join("pyvenv.cfg").is_file() || path.join("conda-meta").is_dir())
+                {
                     continue;
                 }
                 if entries.len() >= MAX_ENTRIES {

@@ -29,6 +29,7 @@ export interface DomainBinding {
 }
 
 export interface ThreadHandle {
+  experimentId?: string | null;
   threadId: string;
   conversationId: string;
   domain: AgentDomain;
@@ -97,6 +98,7 @@ export const APPROVAL_METHODS = [
   'item/commandExecution/requestApproval',
   'item/fileChange/requestApproval',
   'item/permissions/requestApproval',
+  'scientify/git/requestApproval',
 ] as const;
 
 export type ApprovalMethod = (typeof APPROVAL_METHODS)[number];
@@ -138,7 +140,7 @@ export interface AgentBackend {
     projectId: string,
     domain: AgentDomain,
     connection: AgentConnection,
-    options: { conversationId: string },
+    options: { conversationId: string; workspaceRoot?: string },
   ): Promise<ThreadHandle>;
   /** Start Codex's explicit Windows sandbox installer/elevation flow. */
   setupSandbox?(

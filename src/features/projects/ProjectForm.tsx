@@ -27,7 +27,7 @@ export function ProjectForm({
     question: project?.question ?? '',
     field: project?.field ?? '',
     space: project?.space ?? space,
-    path: project?.path ?? '',
+    path: project?.path || project?.repo || '',
     repo: project?.repo ?? '',
     color: project?.color ?? projectCoverColors[data.projects.length % projectCoverColors.length],
   }));
@@ -145,35 +145,10 @@ export function ProjectForm({
             <Button
               type="button"
               disabled={busy || fileEditsPending || !draft.path}
-              onClick={() => field('path', '')}
-            >
-              {t('清除')}
-            </Button>
-          </div>
-        </label>
-        <label>
-          {t('Git 仓库目录')}
-          <div className="input-action">
-            <Input
-              disabled={busy}
-              readOnly
-              value={draft.repo}
-              placeholder={t('可单独关联 Git 仓库')}
-            />
-            <Button
-              type="button"
-              disabled={busy || fileEditsPending}
-              onClick={async () => {
-                const path = await store.getState().chooseDirectory();
-                if (path) field('repo', path);
+              onClick={() => {
+                setDraft((value) => ({ ...value, path: '', repo: '' }));
+                setDirty(true);
               }}
-            >
-              {t('选择仓库')}
-            </Button>
-            <Button
-              type="button"
-              disabled={busy || fileEditsPending || !draft.repo}
-              onClick={() => field('repo', '')}
             >
               {t('清除')}
             </Button>

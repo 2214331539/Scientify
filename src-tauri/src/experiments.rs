@@ -17,7 +17,13 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::{Manager, State};
+pub(crate) mod catalog;
+#[cfg(test)]
+mod development_tests;
+pub(crate) mod python;
 pub(crate) mod runner;
+pub(crate) mod terminal;
+pub(crate) mod trust;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -28,11 +34,27 @@ pub struct Configuration {
     pub args: Vec<String>,
     pub cwd: String,
 }
+pub(crate) struct RunEnvironment {
+    pub trusted: bool,
+    pub variables: BTreeMap<String, String>,
+    pub interpreter: Option<python::Interpreter>,
+}
+#[derive(Default)]
+pub(crate) struct RunOptions {
+    pub source: Option<RunSource>,
+    pub sink: Option<EventSink>,
+    pub experiment_id: Option<String>,
+    pub environment: Option<RunEnvironment>,
+}
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Run {
     pub id: String,
     pub project: String,
+    #[serde(default)]
+    pub experiment_id: Option<String>,
+    #[serde(default)]
+    pub environment: Option<python::Interpreter>,
     pub name: String,
     pub status: String,
     pub started_at: u64,
@@ -49,6 +71,10 @@ pub struct Run {
     pub source: Option<RunSource>,
     #[serde(default = "legacy_permission")]
     pub permission: String,
+    #[serde(default)]
+    pub workspace_root: String,
+    #[serde(default)]
+    pub branch: Option<String>,
 }
 fn legacy_permission() -> String {
     "legacy-current-user".into()
@@ -223,9 +249,17 @@ impl ExperimentState {
             };
             let before = find(old);
             let after = find(new);
+            let keeps_experiment = match (old, new) {
+                (Some(old), Some(new)) => {
+                    catalog::keeps_binding(old, new, run.experiment_id.as_deref())
+                }
+                _ => false,
+            };
             if before.is_none()
                 || after.is_none()
                 || before.as_ref().map(|p| &p["path"]) != after.as_ref().map(|p| &p["path"])
+                || before.as_ref().map(|p| &p["repo"]) != after.as_ref().map(|p| &p["repo"])
+                || !keeps_experiment
             {
                 return Err("实验仍在运行，请停止后再删除项目、更换目录或恢复数据。".into());
             }
@@ -240,6 +274,7 @@ impl ExperimentState {
             .cloned()
             .ok_or_else(|| "运行记录不存在。".into())
     }
+    #[cfg(test)]
     pub(crate) fn start(
         &self,
         project: String,
@@ -248,6 +283,43 @@ impl ExperimentState {
         source: Option<RunSource>,
         sink: Option<EventSink>,
     ) -> Result<Run, String> {
+        self.start_owned(project, root, config, source, sink, None)
+    }
+    #[cfg(test)]
+    pub(crate) fn start_owned(
+        &self,
+        project: String,
+        root: PathBuf,
+        config: Configuration,
+        source: Option<RunSource>,
+        sink: Option<EventSink>,
+        experiment_id: Option<String>,
+    ) -> Result<Run, String> {
+        self.start_with_mode(
+            project,
+            root,
+            config,
+            RunOptions {
+                source,
+                sink,
+                experiment_id,
+                environment: None,
+            },
+        )
+    }
+    pub(crate) fn start_with_mode(
+        &self,
+        project: String,
+        root: PathBuf,
+        config: Configuration,
+        options: RunOptions,
+    ) -> Result<Run, String> {
+        let RunOptions {
+            source,
+            sink,
+            experiment_id,
+            environment,
+        } = options;
         if config.name.trim().is_empty()
             || config.name.len() > 200
             || config.args.len() > 128
@@ -288,17 +360,32 @@ impl ExperimentState {
             return Err("最多同时运行 8 个实验，请等待或停止已有任务。".into());
         }
         let id = uuid::Uuid::new_v4().to_string();
+        let lease = crate::code::Lease::run(&root)?;
         let directory = self.directory.join(&id);
         scientify_core::research::reject_links(&directory)?;
-        let git_changes = research::git_status(&root)
+        let repository = crate::git::repository_root(&root)
+            .ok()
+            .filter(|repo| {
+                !self
+                    .directory
+                    .parent()
+                    .is_some_and(|data| root.starts_with(data))
+                    || *repo == root
+            })
+            .unwrap_or_else(|| root.clone());
+        let git_changes = research::git_status(&repository)
             .unwrap_or_default()
             .into_iter()
             .map(|c| format!("{} {}", c.status, c.path))
             .collect();
-        let git_commit = research::git_head(&root).ok();
+        let git_commit = research::git_head(&repository).ok();
         let run = Run {
             id: id.clone(),
             project,
+            experiment_id,
+            environment: environment
+                .as_ref()
+                .and_then(|info| info.interpreter.clone()),
             name: config.name.clone(),
             status: "running".into(),
             started_at: now(),
@@ -312,7 +399,18 @@ impl ExperimentState {
             git_changes,
             error: None,
             source,
-            permission: "workspace-write".into(),
+            permission: if environment.as_ref().is_some_and(|info| info.trusted) {
+                "trusted-current-user"
+            } else {
+                "workspace-write"
+            }
+            .into(),
+            workspace_root: root.display().to_string(),
+            branch: if repository.join(".git").exists() {
+                crate::git::inspect(&repository).ok().and_then(|s| s.branch)
+            } else {
+                None
+            },
         };
         fs::create_dir_all(directory.join("artifacts")).map_err(|e| e.to_string())?;
         let private = directory.join("artifacts/.scientify");
@@ -333,15 +431,15 @@ impl ExperimentState {
             .ok_or("数据目录无效。")?
             .join("agent/code");
         let mut command = vec![process_path(&executable).display().to_string()];
-        command.extend(config.args);
+        command.extend(config.args.clone());
         let artifacts = process_path(&directory.join("artifacts"));
         #[cfg(not(windows))]
-        let params = serde_json::json!({"command":command,"processId":id,"cwd":process_path(&cwd),
+        let mut params = serde_json::json!({"command":command,"processId":id,"cwd":process_path(&cwd),
             "streamStdoutStderr":true,"disableTimeout":true,"disableOutputCap":true,
             "env":{"PYTHONUNBUFFERED":"1","SCIENTIFY_RUN_DIR":artifacts},
             "sandboxPolicy":execution::policy(&process_path(&root),Some(&artifacts))});
         #[cfg(windows)]
-        let params = {
+        let mut params = {
             let request = private.join("request.json");
             fs::write(
                 &request,
@@ -372,13 +470,47 @@ impl ExperimentState {
                 "env":{"PYTHONUNBUFFERED":"1","SCIENTIFY_RUN_DIR":artifacts,"SCIENTIFY_FIXTURE_RUNNER":request},
                 "sandboxPolicy":execution::policy(&process_path(&root),Some(&artifacts))})
         };
+        if let Some(environment) = &environment {
+            for (key, value) in &environment.variables {
+                params["env"][key] = serde_json::json!(value);
+            }
+            if !environment.trusted {
+                let temporary = private.join("tmp");
+                fs::create_dir_all(&temporary).map_err(|e| e.to_string())?;
+                for key in ["TEMP", "TMP", "TMPDIR"] {
+                    params["env"][key] = serde_json::json!(process_path(&temporary));
+                }
+            }
+        }
         persist(&directory, &run)?;
         entries.insert(id.clone(), entry.clone());
         thread::spawn(move || {
+            let _lease = lease;
             let mut limit_hit = false;
             let result = (|| {
                 if entry.cancel.load(Ordering::SeqCst) {
                     return Err("启动前已取消。".into());
+                }
+                if let Some(environment) = environment.filter(|info| info.trusted) {
+                    let mut env = environment.variables;
+                    env.insert("SCIENTIFY_RUN_DIR".into(), artifacts.display().to_string());
+                    let result = crate::local_process::run_logged(
+                        &executable,
+                        &config.args,
+                        &cwd,
+                        &env,
+                        &log_path,
+                        &entry.cancel,
+                        || {
+                            if let Some(sink) = &sink {
+                                sink(serde_json::json!({"runId":id}));
+                            }
+                        },
+                    );
+                    if let Err(error) = &result {
+                        crate::local_process::append_error(&log_path, error);
+                    }
+                    return result.map(|code| serde_json::json!({"exitCode":code}));
                 }
                 let mut session = execution::session(&home, &root)?;
                 if entry.cancel.load(Ordering::SeqCst) {
@@ -503,6 +635,19 @@ impl ExperimentState {
                     .collect()
             })
     }
+    pub(crate) fn uses_environment(&self, prefix: &str) -> bool {
+        self.entries.lock().is_ok_and(|entries| {
+            entries.values().any(|entry| {
+                entry.run.lock().is_ok_and(|run| {
+                    run.status == "running"
+                        && run
+                            .environment
+                            .as_ref()
+                            .is_some_and(|info| python::same_environment(&info.prefix, prefix))
+                })
+            })
+        })
+    }
 }
 impl Drop for ExperimentState {
     fn drop(&mut self) {
@@ -523,24 +668,55 @@ impl Drop for ExperimentState {
 }
 #[tauri::command]
 pub async fn experiment_start<R: tauri::Runtime>(
+    view: tauri::Webview<R>,
     app: tauri::AppHandle<R>,
     state: State<'_, AppState>,
     project_id: String,
     configuration: Configuration,
+    workspace_root: Option<String>,
 ) -> Result<Run, String> {
+    crate::library::trusted(&view)?;
     let storage = state.storage.clone();
     let files = state.files.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let root = research::project_root(&storage, &files, &project_id)?;
+        let root = crate::git::resolve(&storage, &files, &project_id, workspace_root.as_deref())?;
         let copy = app.clone();
-        app.state::<ExperimentState>().start(
+        let experiment = catalog::owner(&storage, &files, &project_id, &root)?;
+        trust::require(&storage, &root)?;
+        let binding = storage.load()?.and_then(|data| {
+            data["experiments"]
+                .as_array()
+                .and_then(|items| {
+                    items
+                        .iter()
+                        .find(|e| e["id"].as_str() == experiment.as_deref())
+                })
+                .cloned()
+        });
+        let mut configuration = configuration;
+        let interpreter = python::execution_interpreter(
+            &storage,
+            &root,
+            binding.as_ref(),
+            &mut configuration.executable,
+        )?;
+        let env = python::environment(&storage, interpreter.as_ref())?;
+        app.state::<ExperimentState>().start_with_mode(
             project_id,
             root,
             configuration,
-            None,
-            Some(Arc::new(move |value| {
-                let _ = tauri::Emitter::emit(&copy, "experiment-event", value);
-            })),
+            RunOptions {
+                source: None,
+                sink: Some(Arc::new(move |value| {
+                    let _ = tauri::Emitter::emit(&copy, "experiment-event", value);
+                })),
+                experiment_id: experiment,
+                environment: Some(RunEnvironment {
+                    trusted: true,
+                    variables: env,
+                    interpreter,
+                }),
+            },
         )
     })
     .await
@@ -839,6 +1015,8 @@ mod tests {
         let run = Run {
             id: id.clone(),
             project: "p1".into(),
+            experiment_id: None,
+            environment: None,
             name: "test".into(),
             status: "running".into(),
             started_at: now(),
@@ -859,6 +1037,8 @@ mod tests {
             error: None,
             source: None,
             permission: "workspace-write".into(),
+            workspace_root: String::new(),
+            branch: None,
         };
         persist(&temp.path().join(&id), &run).unwrap();
         let state = ExperimentState::new(temp.path().into());

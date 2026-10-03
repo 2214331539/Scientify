@@ -11,7 +11,7 @@ pub fn now() -> String {
 
 pub fn empty() -> Value {
     json!({"schema":3,"revision":0,"updatedAt":now(),"teams":[],"projects":[],"papers":[],
-        "records":[],"runs":[],"tasks":[],"sessions":[],"subscriptions":[],"trash":[],
+        "records":[],"experiments":[],"runs":[],"tasks":[],"sessions":[],"subscriptions":[],"trash":[],
         "recent":[],"activity":[],"settings":{"theme":"system","name":"",
         "model":{"endpoint":"http://127.0.0.1:11434","model":""}},
         "navigation":{"tabs":["home"],"active":"home","expanded":[],"panel":null}})
@@ -57,8 +57,10 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
     if !data.is_object() {
         return Err("工作区格式无效。".into());
     }
+    normalize_experiments(&mut data)?;
     for key in [
         "projects",
+        "experiments",
         "papers",
         "records",
         "runs",
@@ -81,13 +83,54 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         .iter()
         .filter_map(|p| p["id"].as_str())
         .collect();
-    for key in ["records", "runs", "tasks", "sessions"] {
+    for key in ["experiments", "records", "runs", "tasks", "sessions"] {
         for item in array(&data, key)? {
             if !item["project"].as_str().is_some_and(|id| {
                 project_ids.contains(id)
                     || (id == "__inbox__" && matches!(key, "records" | "sessions"))
             }) {
                 return Err("部分记录的所属项目不存在。".into());
+            }
+        }
+    }
+    let mut default_projects = HashSet::new();
+    for experiment in array(&data, "experiments")? {
+        if !experiment["name"]
+            .as_str()
+            .is_some_and(|s| !s.trim().is_empty() && s.len() <= 200)
+            || !experiment["purpose"].is_string()
+            || !experiment["root"].is_string()
+            || !matches!(
+                experiment["source"].as_str(),
+                Some("project" | "existing" | "empty")
+            )
+            || (experiment["source"] != "project" && experiment["root"].as_str() == Some(""))
+            || !experiment["createdAt"].is_string()
+            || !experiment["updatedAt"].is_string()
+        {
+            return Err("实验信息或代码目录无效。".into());
+        }
+        if experiment["source"] == "project"
+            && (experiment["root"] != ""
+                || !default_projects.insert(experiment["project"].as_str().unwrap()))
+        {
+            return Err("项目只能有一个继承项目目录的默认实验。".into());
+        }
+        if let Some(python) = experiment.get("python").filter(|v| !v.is_null()) {
+            if !python.is_object()
+                || ["executable", "prefix", "version", "manager"]
+                    .iter()
+                    .any(|field| {
+                        !python[*field].as_str().is_some_and(|value| {
+                            !value.is_empty() && value.len() <= 4096 && !value.contains('\0')
+                        })
+                    })
+                || !matches!(
+                    python["manager"].as_str(),
+                    Some("system" | "venv" | "conda")
+                )
+            {
+                return Err("Python 环境绑定无效。".into());
             }
         }
     }
@@ -262,6 +305,50 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         }
     }
     Ok(data)
+}
+
+fn normalize_experiments(data: &mut Value) -> Result<(), String> {
+    if data.get("experiments").is_none_or(Value::is_null) {
+        data["experiments"] = json!([]);
+    }
+    array(data, "experiments")?;
+    let projects = array(data, "projects")?.clone();
+    for project in &projects {
+        if project["experimentsInitialized"] == true {
+            continue;
+        }
+        let id = project["id"].as_str().ok_or("项目标识无效。")?;
+        if !data["experiments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["project"] == id)
+        {
+            if data["experiments"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|e| e["id"] == id)
+            {
+                return Err("默认实验标识冲突。".into());
+            }
+            data["experiments"].as_array_mut().unwrap().push(json!({
+                "id":id,"project":id,"name":"默认实验","purpose":"","root":"","source":"project",
+                "createdAt":project["createdAt"],
+                "updatedAt":project.get("updatedAt").filter(|v| v.is_string()).unwrap_or(&project["createdAt"]),
+                "runConfigurations":project.get("runConfigurations").cloned().unwrap_or(json!([]))
+            }));
+            for run in data["runs"].as_array_mut().ok_or("运行数据无效。")? {
+                if run["project"] == id && run.get("experimentId").is_none_or(Value::is_null) {
+                    run["experimentId"] = json!(id);
+                }
+            }
+        }
+    }
+    for project in data["projects"].as_array_mut().unwrap() {
+        project["experimentsInitialized"] = json!(true);
+    }
+    Ok(())
 }
 
 pub fn parse(bytes: &[u8]) -> Result<Value, String> {

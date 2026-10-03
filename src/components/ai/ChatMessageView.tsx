@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { t } from '../../i18n';
+import { usePreferences } from '../../i18n/preferences';
 import { Markdown } from '../../features/notes/Markdown';
 import { Button } from '../primitives';
 
 /** Presentation only: copying never includes hidden research context or changes the conversation. */
-export function ChatMessageView({
+export const ChatMessageView = memo(function ChatMessageView({
   role,
   text,
   streaming = false,
@@ -15,6 +16,7 @@ export function ChatMessageView({
   /** Keep the hot path cheap while the engine is still sending deltas. */
   streaming?: boolean;
 }) {
+  usePreferences();
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const copying = useRef(false);
   const mounted = useRef(true);
@@ -74,4 +76,4 @@ export function ChatMessageView({
       </span>
     </article>
   );
-}
+});

@@ -13,15 +13,6 @@ pub(crate) fn project_root(
     files: &ResearchFiles,
     id: &str,
 ) -> Result<PathBuf, String> {
-    project_root_for(storage, files, id, false)
-}
-
-fn project_root_for(
-    storage: &Storage,
-    files: &ResearchFiles,
-    id: &str,
-    git: bool,
-) -> Result<PathBuf, String> {
     let data = storage.load()?.ok_or("请先保存项目。")?;
     let project = data["projects"]
         .as_array()
@@ -32,11 +23,10 @@ fn project_root_for(
         .filter(|path| !path.trim().is_empty());
     files.project_root(
         id,
-        if git {
-            repository.or_else(|| project["path"].as_str())
-        } else {
-            project["path"].as_str()
-        },
+        project["path"]
+            .as_str()
+            .filter(|path| !path.trim().is_empty())
+            .or(repository),
     )
 }
 
@@ -44,10 +34,16 @@ fn project_root_for(
 pub async fn research_list_files(
     state: State<'_, AppState>,
     project_id: String,
+    workspace_root: Option<String>,
 ) -> Result<Vec<ResearchFile>, String> {
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
-        files.list(&project_root(&storage, &files, &project_id)?)
+        files.list(&crate::git::resolve(
+            &storage,
+            &files,
+            &project_id,
+            workspace_root.as_deref(),
+        )?)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -58,10 +54,14 @@ pub async fn research_read_file(
     state: State<'_, AppState>,
     project_id: String,
     path: String,
+    workspace_root: Option<String>,
 ) -> Result<FileContent, String> {
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
-        files.read(&project_root(&storage, &files, &project_id)?, &path)
+        files.read(
+            &crate::git::resolve(&storage, &files, &project_id, workspace_root.as_deref())?,
+            &path,
+        )
     })
     .await
     .map_err(|e| e.to_string())?
@@ -74,15 +74,13 @@ pub async fn research_write_file(
     path: String,
     content: String,
     expected_version: Option<String>,
+    workspace_root: Option<String>,
 ) -> Result<FileContent, String> {
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
-        files.write(
-            &project_root(&storage, &files, &project_id)?,
-            &path,
-            &content,
-            expected_version.as_deref(),
-        )
+        let root = crate::git::resolve(&storage, &files, &project_id, workspace_root.as_deref())?;
+        let _lease = crate::code::Lease::write(&root)?;
+        files.write(&root, &path, &content, expected_version.as_deref())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -128,6 +126,8 @@ pub async fn research_read_pdf(
 pub(crate) struct GitChange {
     pub(crate) path: String,
     pub(crate) status: String,
+    #[serde(rename = "oldPath", skip_serializing_if = "Option::is_none")]
+    pub(crate) old_path: Option<String>,
 }
 
 fn parse_git(bytes: &[u8]) -> Result<Vec<GitChange>, String> {
@@ -143,13 +143,22 @@ fn parse_git(bytes: &[u8]) -> Result<Vec<GitChange>, String> {
             return Err("Git 状态格式无法识别。".into());
         }
         let status = &item[..2];
+        let old_path = if status.contains(['R', 'C']) {
+            Some(
+                parts
+                    .next()
+                    .filter(|p| !p.is_empty())
+                    .ok_or("Git 重命名来源缺失。")?
+                    .into(),
+            )
+        } else {
+            None
+        };
         changes.push(GitChange {
             path: item[3..].into(),
             status: status.into(),
+            old_path,
         });
-        if status.contains(['R', 'C']) {
-            parts.next();
-        }
         if changes.len() > 10_000 {
             return Err("Git 变更超过 10000 项，请缩小项目范围。".into());
         }
@@ -164,7 +173,8 @@ pub async fn research_git_status(
 ) -> Result<Vec<GitChange>, String> {
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
-        let root = project_root_for(&storage, &files, &project_id, true)?;
+        let root =
+            crate::git::repository_for(&storage, &project_root(&storage, &files, &project_id)?)?;
         git_status(&root)
     })
     .await
@@ -182,7 +192,7 @@ fn git_executable() -> Result<PathBuf, String> {
         .ok_or_else(|| "无法启动 Git，请确认已安装 Git 并加入 PATH。".into())
 }
 
-fn git_command(root: &std::path::Path) -> Result<std::process::Command, String> {
+pub(crate) fn git_command(root: &std::path::Path) -> Result<std::process::Command, String> {
     use std::process::{Command, Stdio};
     let mut command = Command::new(git_executable()?);
     command
@@ -212,19 +222,48 @@ fn git_command(root: &std::path::Path) -> Result<std::process::Command, String> 
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000);
+        command.creation_flags(0x08000000 | 0x00000004);
     }
     Ok(command)
 }
 
 fn bounded_git(
-    mut command: std::process::Command,
+    command: std::process::Command,
 ) -> Result<(std::process::ExitStatus, Vec<u8>), String> {
+    bounded_git_full(command).map(|(status, bytes, _)| (status, bytes))
+}
+pub(crate) fn bounded_git_full(
+    mut command: std::process::Command,
+) -> Result<(std::process::ExitStatus, Vec<u8>, Vec<u8>), String> {
     use std::{io::Read, thread, time::Instant};
+    command.stderr(std::process::Stdio::piped());
     let mut child = command
         .spawn()
         .map_err(|_| "无法启动 Git，请确认已安装 Git 并加入 PATH。")?;
+    #[cfg(windows)]
+    let job = match crate::experiments::runner::job::Job::attach(&child) {
+        Ok(job) => job,
+        Err(error) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(error);
+        }
+    };
     let mut stdout = child.stdout.take().ok_or("Git 输出不可用。")?;
+    let mut stderr = child.stderr.take().ok_or("Git 错误输出不可用。")?;
+    let errors = thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let mut buffer = [0; 8192];
+        loop {
+            let count = stderr.read(&mut buffer).map_err(|e| e.to_string())?;
+            if count == 0 {
+                break;
+            }
+            let remaining = (32 * 1024usize).saturating_sub(bytes.len());
+            bytes.extend_from_slice(&buffer[..count.min(remaining)]);
+        }
+        Ok::<_, String>(bytes)
+    });
     let reader = thread::spawn(move || {
         let mut bytes = Vec::new();
         let mut buffer = [0; 8192];
@@ -251,22 +290,32 @@ fn bounded_git(
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Err(_) => {
+                #[cfg(windows)]
+                let _ = job.terminate();
                 let _ = child.kill();
                 let _ = child.wait();
                 let _ = reader.join();
+                let _ = errors.join();
                 return Err("无法读取 Git 进程状态。".into());
             }
             Ok(None) => (),
         }
         if start.elapsed() > Duration::from_secs(15) {
+            #[cfg(windows)]
+            let _ = job.terminate();
             let _ = child.kill();
             let _ = child.wait();
             let _ = reader.join();
-            return Err("Git 状态查询超时，请在终端检查此仓库。".into());
+            let _ = errors.join();
+            return Err("Git 操作超时，请检查仓库状态后重试。".into());
         }
         thread::sleep(Duration::from_millis(25));
     };
-    Ok((status, reader.join().map_err(|_| "Git 输出读取失败。")??))
+    #[cfg(windows)]
+    let _ = job.terminate();
+    let bytes = reader.join().map_err(|_| "Git 输出读取失败。")?;
+    let error = errors.join().map_err(|_| "Git 错误读取失败。")??;
+    Ok((status, bytes?, error))
 }
 
 pub(crate) fn git_status(root: &std::path::Path) -> Result<Vec<GitChange>, String> {
@@ -317,7 +366,7 @@ pub(crate) fn git_status(root: &std::path::Path) -> Result<Vec<GitChange>, Strin
         "status",
         "--porcelain=v1",
         "-z",
-        "--untracked-files=normal",
+        "--untracked-files=all",
         "--ignore-submodules=all",
     ]);
     let (status, bytes) = bounded_git(command)?;
@@ -344,7 +393,8 @@ pub async fn research_git_diff(
 ) -> Result<String, String> {
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
-        let root = project_root_for(&storage, &files, &project_id, true)?;
+        let root =
+            crate::git::repository_for(&storage, &project_root(&storage, &files, &project_id)?)?;
         let changes = git_status(&root)?;
         if !changes.iter().any(|c| c.path == path) {
             return Err("文件不在当前变更列表中，请刷新。".into());

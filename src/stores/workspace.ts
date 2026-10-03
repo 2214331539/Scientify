@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import { createStore } from 'zustand/vanilla';
-import { emptyWorkspace, type Workspace } from '../domain/workspace';
+import { emptyWorkspace, normalizeExperiments, type Workspace } from '../domain/workspace';
 import { desktop, type WorkspaceBackend, type StorageLocation } from '../platform/desktop';
 
 interface WorkspaceState {
@@ -59,7 +59,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
       try {
         const result = await backend.load();
         set({
-          data: result.workspace ?? emptyWorkspace(),
+          data: normalizeExperiments(result.workspace ?? emptyWorkspace()),
           directory: result.directory,
           legacyAvailable: result.legacyAvailable,
           phase: 'ready',
@@ -77,7 +77,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
       try {
         const result = await backend.load();
         if (!result.workspace) throw new Error(t('工作区尚未载入。'));
-        set({ data: result.workspace, error: null });
+        set({ data: normalizeExperiments(result.workspace), error: null });
         return true;
       } catch (error) {
         set({ error: message(error) });
@@ -98,10 +98,11 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
           const data = get().data!;
           const draft = structuredClone(data);
           edit(draft);
+          normalizeExperiments(draft);
           for (const projectId of Object.values(get().agentTasks)) {
             const before = data.projects.find((project) => project.id === projectId);
             const after = draft.projects.find((project) => project.id === projectId);
-            if (!after || before?.path !== after.path)
+            if (!after || (before?.path || before?.repo || '') !== (after.path || after.repo || ''))
               throw new Error(t('请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。'));
           }
           for (const taskKey of Object.keys(get().agentTasks)) {
@@ -115,7 +116,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
           draft.revision = data.revision + 1;
           draft.updatedAt = new Date().toISOString();
           const saved = await backend.save(draft, data.revision);
-          set({ data: saved, notice: t('已保存到本机') });
+          set({ data: normalizeExperiments(saved), notice: t('已保存到本机') });
           return true;
         } catch (error) {
           set({ error: message(error) });
@@ -141,7 +142,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         const data = await backend[kind]();
         if (!data) return false;
         set({
-          data,
+          data: normalizeExperiments(data),
           phase: 'ready',
           epoch: get().epoch + 1,
           notice:

@@ -21,6 +21,7 @@ export type Conversation = Entity & {
   /** A chat keeps its execution root when the user navigates to another page. */
   agentDomain?: 'literature' | 'code';
   agentCwd?: string;
+  experimentId?: string;
   agentStatus?: 'running' | 'completed' | 'failed' | 'interrupted';
   agentRun?: {
     model: string;

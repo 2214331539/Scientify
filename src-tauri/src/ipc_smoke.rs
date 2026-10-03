@@ -23,6 +23,173 @@ fn runtime_window_icon_uses_high_resolution_frame() {
 }
 
 #[test]
+fn experiment_registration_uses_native_acl_and_enables_only_its_own_projects_root() {
+    let temp = tempfile::tempdir().unwrap();
+    let storage = Arc::new(Storage::open(temp.path().join("data/workspace")).unwrap());
+    let files = Arc::new(scientify_core::research::ResearchFiles::new(storage.directory().to_path_buf()));
+    let mut data = scientify_core::workspace::empty();
+    data["projects"] = json!([{"id":"p1","name":"Research","space":"personal","question":"","createdAt":"now"},{"id":"p2","name":"Other","space":"personal","question":"","createdAt":"now"}]);
+    data["revision"] = json!(1);
+    storage.save(data, 0).unwrap();
+    let app = mock_builder().manage(AppState {storage: storage.clone(), files, legacy: temp.path().join("legacy")})
+        .manage(agent::AgentState::default())
+        .manage(experiments::ExperimentState::new(temp.path().join("runs")))
+        .invoke_handler(tauri::generate_handler![experiments::catalog::experiment_prepare, workspace_save, research::research_read_file, research::research_write_file])
+        .build(tauri::generate_context!()).unwrap();
+    let workspace = tauri::WebviewWindowBuilder::new(&app,"workspace",Default::default()).build().unwrap();
+    let launcher = tauri::WebviewWindowBuilder::new(&app,"main",Default::default()).build().unwrap();
+    let origin = if cfg!(feature="custom-protocol") {"http://tauri.localhost"} else {"http://127.0.0.1:1420"};
+    for (window,url) in [(&launcher,origin),(&workspace,"https://example.com")] {
+        assert!(invoke(window,"experiment_prepare",json!({"projectId":"p1","source":"empty"}),url).is_err());
+    }
+    let prepared: Value = invoke(&workspace,"experiment_prepare",json!({"projectId":"p1","source":"empty"}),origin).unwrap().deserialize().unwrap();
+    let root = prepared["root"].as_str().unwrap();
+    assert!(PathBuf::from(root).starts_with(storage.directory().canonicalize().unwrap().join("projects")));
+    let args = json!({"projectId":"p1","workspaceRoot":root,"path":"train.py","content":"print('isolated')","expectedVersion":null});
+    assert!(invoke(&workspace,"research_write_file",args.clone(),origin).is_err());
+    let mut data = storage.load().unwrap().unwrap();
+    data["experiments"].as_array_mut().unwrap().push(json!({"id":prepared["id"],"project":"p1","name":"Ablation","purpose":"test","source":"empty","root":root,"createdAt":"now","updatedAt":"now"}));
+    data["revision"] = json!(2);
+    invoke(&workspace,"workspace_save",json!({"workspace":data,"expectedRevision":1}),origin).unwrap();
+    invoke(&workspace,"research_write_file",args,origin).unwrap();
+    let read: Value = invoke(&workspace,"research_read_file",json!({"projectId":"p1","workspaceRoot":root,"path":"train.py"}),origin).unwrap().deserialize().unwrap();
+    assert_eq!(read["content"],"print('isolated')");
+    assert!(invoke(&workspace,"research_read_file",json!({"projectId":"p2","workspaceRoot":root,"path":"train.py"}),origin).is_err());
+}
+
+#[test]
+fn git_commands_enforce_acl_and_use_the_selected_registered_worktree() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("source");
+    std::fs::create_dir(&root).unwrap();
+    let root = root.canonicalize().unwrap();
+    let storage = Arc::new(Storage::open(temp.path().join("data")).unwrap());
+    let mut data = scientify_core::workspace::empty();
+    data["projects"] = json!([{"id":"git-project","name":"Git","space":"personal","createdAt":"2026-10-02","question":"fixture","path":root}]);
+    data["revision"] = json!(1);
+    storage.save(data, 0).unwrap();
+    let files = Arc::new(scientify_core::research::ResearchFiles::new(
+        storage.directory().to_path_buf(),
+    ));
+    let app = mock_builder()
+        .manage(AppState {
+            storage,
+            files,
+            legacy: temp.path().join("legacy"),
+        })
+        .invoke_handler(tauri::generate_handler![
+            git::code_git_inspect,
+            git::code_git_action,
+            git::code_git_diff,
+            research::research_read_file,
+            research::research_write_file
+        ])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+        .build()
+        .unwrap();
+    let launcher = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for command in ["code_git_inspect", "code_git_action", "code_git_diff"] {
+        for (window, url) in [(&launcher, origin), (&workspace, "https://example.com")] {
+            assert!(invoke(window, command, json!({}), url)
+                .unwrap_err()
+                .to_string()
+                .contains("not allowed"));
+        }
+    }
+    let initial: Value = invoke(
+        &workspace,
+        "code_git_inspect",
+        json!({"projectId":"git-project"}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    assert_eq!(initial["repository"], false);
+    invoke(
+        &workspace,
+        "code_git_action",
+        json!({"projectId":"git-project","request":{"kind":"init"}}),
+        origin,
+    )
+    .unwrap();
+    for (key, value) in [
+        ("user.name", "Fixture"),
+        ("user.email", "fixture@example.test"),
+    ] {
+        let mut command = research::git_command(&root).unwrap();
+        command.args(["config", key, value]);
+        assert!(research::bounded_git_full(command).unwrap().0.success());
+    }
+    invoke(&workspace, "research_write_file", json!({"projectId":"git-project","path":"train.py","content":"baseline\n","expectedVersion":null}), origin).unwrap();
+    invoke(
+        &workspace,
+        "code_git_action",
+        json!({"projectId":"git-project","request":{"kind":"stage","path":"train.py"}}),
+        origin,
+    )
+    .unwrap();
+    invoke(
+        &workspace,
+        "code_git_action",
+        json!({"projectId":"git-project","request":{"kind":"commit","message":"baseline"}}),
+        origin,
+    )
+    .unwrap();
+    let target = temp.path().join("worktree");
+    invoke(&workspace, "code_git_action", json!({"projectId":"git-project","request":{"kind":"worktree-add","name":"feature/test","target":target}}), origin).unwrap();
+    let tree = target.canonicalize().unwrap();
+    let opened: Value = invoke(
+        &workspace,
+        "code_git_inspect",
+        json!({"projectId":"git-project","workspaceRoot":tree}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    assert_eq!(opened["branch"], "feature/test");
+    let file: Value = invoke(
+        &workspace,
+        "research_read_file",
+        json!({"projectId":"git-project","workspaceRoot":tree,"path":"train.py"}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    invoke(&workspace, "research_write_file", json!({"projectId":"git-project","workspaceRoot":tree,"path":"train.py","content":"worktree only\n","expectedVersion":file["version"]}), origin).unwrap();
+    let base: Value = invoke(
+        &workspace,
+        "research_read_file",
+        json!({"projectId":"git-project","path":"train.py"}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    assert_eq!(base["content"], "baseline\n");
+    assert!(invoke(
+        &workspace,
+        "research_read_file",
+        json!({"projectId":"git-project","workspaceRoot":temp.path(),"path":"train.py"}),
+        origin
+    )
+    .is_err());
+    let _task = code::Lease::agent(&tree).unwrap();
+    assert!(invoke(&workspace, "code_git_action", json!({"projectId":"git-project","workspaceRoot":tree,"request":{"kind":"branch-switch","name":"main"}}), origin).is_err());
+}
+
+#[test]
 fn experiment_commands_use_workspace_only_acl_and_real_processes() {
     let temporary = tempfile::tempdir().unwrap();
     let directory = temporary.path().join("workspace");
@@ -154,7 +321,7 @@ fn experiment_commands_use_workspace_only_acl_and_real_processes() {
     .is_err());
 }
 
-fn invoke(
+pub(crate) fn invoke(
     window: &WebviewWindow<MockRuntime>,
     command: &str,
     body: Value,

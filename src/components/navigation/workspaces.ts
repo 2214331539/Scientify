@@ -17,9 +17,10 @@ export const secondaryViews: Record<WorkspaceId, { id: string; label: string }[]
   ],
   notes: [],
   experiments: [
+    { id: 'manage', label: '实验管理' },
     { id: 'files', label: 'Code' },
+    { id: 'versions', label: 'Git' },
     { id: 'runs', label: 'Runs' },
-    { id: 'versions', label: 'Changes' },
   ],
   writing: [
     { id: 'files', label: 'Manuscript' },

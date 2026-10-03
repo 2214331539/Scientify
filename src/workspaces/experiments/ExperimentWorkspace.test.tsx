@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, useSyncExternalStore } from 'react';
 import { emptyWorkspace, type Project } from '../../domain/workspace';
@@ -18,8 +18,9 @@ import {
   useExecutions,
   type Execution,
 } from './runtime';
-import { numericMetrics } from './ExecutionPanel';
+import { ExecutionPanel, numericMetrics } from './ExecutionPanel';
 import { ChangesWorkspace, splitPatch } from './ChangesWorkspace';
+import { codeContext, selectExperiment } from './code-context';
 vi.mock('../../components/prompts', () => ({ confirmAction: vi.fn(async () => true) }));
 vi.mock('../../editor/CodeEditor', () => ({
   CodeEditor: ({ session }: { session: FileSession }) => {
@@ -44,6 +45,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   executionStore.setState({ runs: [], error: '' });
+  codeContext.setState({ roots: {}, experiments: {} });
 });
 const project: Project = {
   id: 'p1',
@@ -53,6 +55,86 @@ const project: Project = {
   createdAt: '2026-10-01',
 };
 const config = { id: 'c1', name: 'Baseline', executable: 'python', args: ['train.py'], cwd: '.' };
+it('switches experiment configurations and files while preserving the previous draft and chat binding', async () => {
+  const { store, backend } = await setup();
+  await store.getState().update((data) => {
+    data.experiments![0].root = 'F:/fixture/a';
+    data.experiments![0].source = 'existing';
+    data.experiments!.push({
+      ...data.experiments![0],
+      id: 'e2',
+      name: 'Ablation',
+      root: 'F:/fixture/b',
+      runConfigurations: [{ ...config, id: 'c2', name: 'Ablation config' }],
+    });
+    data.sessions.push({
+      id: 'old-chat',
+      project: 'p1',
+      experimentId: 'p1',
+      agentCwd: 'F:/fixture/a',
+    });
+  });
+  selectExperiment('p1', store.getState().data!.experiments![0]);
+  vi.mocked(backend.readFile).mockImplementation(async (_project, path, root) => ({
+    path,
+    content: root === 'F:/fixture/b' ? 'print("B")' : 'print("A")',
+    version: 'v1',
+  }));
+  const onContext = vi.fn();
+  function Harness() {
+    const [view, setView] = useState('files');
+    const [path, setPath] = useState<string | null>('train.py');
+    return (
+      <ExperimentWorkspace
+        project={project}
+        store={store}
+        backend={backend}
+        executions={[]}
+        runtimeError=""
+        view={view}
+        onView={setView}
+        activePath={path}
+        onOpen={setPath}
+        onSelect={() => {}}
+        onContext={onContext}
+        sidebarOpen
+        onSidebarToggle={() => {}}
+        width={220}
+        resize={null}
+      />
+    );
+  }
+  const user = userEvent.setup();
+  render(<Harness />);
+  await waitFor(() =>
+    expect(
+      (screen.getByRole('textbox', { name: '代码编辑' }) as HTMLTextAreaElement).value,
+    ).toContain('"A"'),
+  );
+  await user.type(screen.getByRole('textbox', { name: '代码编辑' }), '# A draft');
+  await user.selectOptions(screen.getByLabelText('当前实验'), 'e2');
+  await user.click(await screen.findByRole('treeitem', { name: 'train.py' }));
+  await waitFor(() =>
+    expect((screen.getByRole('textbox', { name: '代码编辑' }) as HTMLTextAreaElement).value).toBe(
+      'print("B")',
+    ),
+  );
+  expect((screen.getByLabelText('运行配置') as HTMLSelectElement).textContent).toContain(
+    'Ablation config',
+  );
+  expect((screen.getByLabelText('运行配置') as HTMLSelectElement).textContent).not.toContain(
+    'Baseline',
+  );
+  await user.selectOptions(screen.getByLabelText('当前实验'), 'p1');
+  await waitFor(() =>
+    expect(
+      (screen.getByRole('textbox', { name: '代码编辑' }) as HTMLTextAreaElement).value,
+    ).toContain('# A draft'),
+  );
+  expect(getFileSession(backend, 'p1', 'train.py', 'F:/fixture/a').getSnapshot().dirty).toBe(true);
+  expect(store.getState().data?.sessions[0].agentCwd).toBe('F:/fixture/a');
+  expect(store.getState().data?.sessions[0].experimentId).toBe('p1');
+});
 const run: Execution = {
   id: 'r1',
   project: 'p1',
@@ -222,6 +304,22 @@ it('preserves code draft across Runs and blocks execution when saving fails', as
   );
   expect(start).not.toHaveBeenCalled();
   expect(getFileSession(backend, 'p1', 'train.py').getSnapshot().dirty).toBe(true);
+});
+it('late failure stopping an old run cannot replace the newly selected run output', async () => {
+  vi.spyOn(experimentApi, 'log').mockResolvedValue('current output');
+  let reject!: (error: Error) => void;
+  vi.spyOn(experimentApi, 'stop').mockImplementation(
+    () =>
+      new Promise((_resolve, rejectPromise) => {
+        reject = rejectPromise;
+      }),
+  );
+  const view = render(<ExecutionPanel run={{ ...run, status: 'running' }} />);
+  await userEvent.setup().click(screen.getByRole('button', { name: '停止' }));
+  view.rerender(<ExecutionPanel run={{ ...run, id: 'r2', status: 'running' }} />);
+  await act(async () => reject(new Error('old stop failed')));
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect((screen.getByRole('button', { name: '停止' }) as HTMLButtonElement).disabled).toBe(false);
 });
 it('merges annotations without allowing manual overwrite of actual execution status', async () => {
   const { store } = await setup();

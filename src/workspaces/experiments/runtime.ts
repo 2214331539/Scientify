@@ -16,6 +16,8 @@ export type RunConfiguration = {
 export type Execution = {
   id: string;
   project: string;
+  experimentId?: string | null;
+  environment?: import('./development').Interpreter | null;
   name: string;
   status: string;
   startedAt: number;
@@ -29,6 +31,8 @@ export type Execution = {
   gitChanges: string[];
   error: string | null;
   permission?: string;
+  workspaceRoot?: string;
+  branch?: string | null;
   source?: {
     conversationId: string;
     threadId: string;
@@ -40,8 +44,8 @@ export type Execution = {
 export const experimentApi = {
   available: () => isTauri(),
   list: () => invoke<Execution[]>('experiment_list'),
-  start: (projectId: string, configuration: RunConfiguration) =>
-    invoke<Execution>('experiment_start', { projectId, configuration }),
+  start: (projectId: string, configuration: RunConfiguration, workspaceRoot?: string) =>
+    invoke<Execution>('experiment_start', { projectId, configuration, workspaceRoot }),
   stop: (runId: string) => invoke<void>('experiment_stop', { runId }),
   log: (runId: string) => invoke<string>('experiment_log', { runId }),
   artifacts: (runId: string) => invoke<ResearchFile[]>('experiment_artifacts', { runId }),
@@ -151,12 +155,13 @@ export async function startExecution(
   store: WorkspaceStore,
   project: string,
   config: RunConfiguration,
+  workspaceRoot?: string,
 ) {
   generation++;
   const reservation = 'experiment:pending:' + crypto.randomUUID();
   store.getState().setAgentTask(reservation, project);
   try {
-    const run = await experimentApi.start(project, config);
+    const run = await experimentApi.start(project, config, workspaceRoot);
     generation++;
     executionStore.setState((s) => ({ runs: [...s.runs.filter((r) => r.id !== run.id), run] }));
     if (run.status === 'running') store.getState().setAgentTask('experiment:' + run.id, project);

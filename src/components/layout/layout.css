@@ -130,7 +130,7 @@
 }
 .research-shell .brand {
   font-size: 14px;
-  letter-spacing: -0.3px;
+  letter-spacing: 0;
   font-weight: 650;
   gap: 7px;
 }
@@ -153,9 +153,24 @@
   padding: 6px 5px;
 }
 .workspace-rail nav {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+.workspace-rail nav::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 2px;
+  height: 18px;
+  border-radius: 1px;
+  background: var(--sf-accent);
+  transform: translateY(calc(var(--sf-navigation-index, 0) * 42px));
+  transition: transform var(--sf-motion-content) var(--sf-ease-enter);
+  pointer-events: none;
+  z-index: 1;
 }
 .workspace-rail nav button {
   height: 38px;
@@ -177,13 +192,7 @@
   font-weight: 600;
 }
 .workspace-rail nav button[aria-current='page']::before {
-  content: '';
-  position: absolute;
-  left: -5px;
-  top: 9px;
-  bottom: 9px;
-  width: 2px;
-  background: var(--sf-text-secondary);
+  content: none;
 }
 .rail-utilities {
   display: flex;
@@ -435,10 +444,6 @@
   border-radius: 0;
   background: var(--sf-surface-chrome);
   box-shadow: none;
-  transition:
-    background-color var(--sf-motion-layout) var(--sf-ease-apple),
-    border-color var(--sf-motion-layout) var(--sf-ease-apple),
-    box-shadow var(--sf-motion-layout) var(--sf-ease-apple);
   position: relative;
 }
 
@@ -454,17 +459,15 @@
 }
 
 .research-shell:not(.launcher-shell) .workspace-rail nav {
-  gap: 5px;
+  gap: 4px;
 }
 
 .research-shell:not(.launcher-shell) .workspace-rail nav button,
 .research-shell:not(.launcher-shell) .rail-utilities button {
-  border-radius: 6px;
+  border-radius: var(--sf-radius);
   transition:
     color var(--sf-motion-feedback) var(--sf-ease-standard),
-    background-color var(--sf-motion-feedback) var(--sf-ease-standard),
-    transform var(--sf-motion-feedback) var(--sf-ease-apple),
-    box-shadow var(--sf-motion-feedback) var(--sf-ease-standard);
+    background-color var(--sf-motion-feedback) var(--sf-ease-standard);
 }
 
 .research-shell:not(.launcher-shell) .workspace-rail nav button:hover:not(:disabled),
@@ -474,19 +477,12 @@
 
 .research-shell:not(.launcher-shell) .workspace-rail nav button:active:not(:disabled),
 .research-shell:not(.launcher-shell) .rail-utilities button:active:not(:disabled) {
-  transform: scale(0.94);
+  background: var(--sf-surface-selected-hover);
+  transition-duration: 0s;
 }
 
 .research-shell:not(.launcher-shell) .workspace-rail nav button[aria-current='page'] {
   background: var(--sf-surface-selected);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail nav button[aria-current='page']::before {
-  left: 3px;
-  width: 3px;
-  border-radius: 4px;
-  background: var(--sf-accent);
 }
 
 .research-shell:not(.launcher-shell) .workspace-stage {
@@ -516,16 +512,6 @@
   border-radius: 0;
   background: var(--sf-surface-canvas);
   box-shadow: none;
-}
-
-.research-shell:not(.launcher-shell) .workspace-frame,
-.research-shell:not(.launcher-shell) .central-area,
-.research-shell:not(.launcher-shell) .sf-global-dock,
-.research-shell:not(.launcher-shell) .workspace-resources {
-  transition:
-    background-color var(--sf-motion-layout) var(--sf-ease-apple),
-    border-color var(--sf-motion-layout) var(--sf-ease-apple),
-    box-shadow var(--sf-motion-layout) var(--sf-ease-apple);
 }
 
 /* WorkspaceFrame is a child surface of the central frame; keep one visible edge. */
@@ -671,21 +657,20 @@
   transition:
     color var(--sf-motion-feedback) var(--sf-ease-standard),
     background-color var(--sf-motion-feedback) var(--sf-ease-standard),
-    border-color var(--sf-motion-content) var(--sf-ease-apple),
-    transform var(--sf-motion-feedback) var(--sf-ease-apple);
+    border-color var(--sf-motion-content) var(--sf-ease-enter);
 }
 
 .research-shell:not(.launcher-shell) .workspace-commandbar > .icon-button:hover:not(:disabled),
 .research-shell:not(.launcher-shell) .workspace-views button:hover:not(:disabled),
 .research-shell:not(.launcher-shell) .sf-dock-tabs button:hover:not(:disabled) {
   background: var(--sf-surface-hover);
-  border-radius: 8px;
 }
 
 .research-shell:not(.launcher-shell) .workspace-commandbar > .icon-button:active:not(:disabled),
 .research-shell:not(.launcher-shell) .workspace-views button:active:not(:disabled),
 .research-shell:not(.launcher-shell) .sf-dock-tabs button:active:not(:disabled) {
-  transform: scale(0.96);
+  background: var(--sf-surface-selected-hover);
+  transition-duration: 0s;
 }
 
 .research-shell:not(.launcher-shell) .resize-handle {

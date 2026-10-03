@@ -5,12 +5,20 @@
   "permissions": [
     "allow-workspace-window-ready",
     "allow-experiment-start",
+    "allow-experiment-prepare",
+    "allow-experiment-trust",
+    "allow-python-command",
+    "allow-terminal-command",
+    "allow-development-snapshot",
     "allow-experiment-list",
     "allow-experiment-stop",
     "allow-experiment-log",
     "allow-experiment-artifacts",
     "allow-experiment-read-artifact",
-    "allow-research-git-diff"
+    "allow-research-git-diff",
+    "allow-code-git-inspect",
+    "allow-code-git-diff",
+    "allow-code-git-action"
   ],
   "webviews": [
     "workspace"

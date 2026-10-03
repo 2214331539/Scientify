@@ -3,6 +3,7 @@ import type { Workspace, Project } from '../../domain/workspace';
 /** Removing a project only changes workspace records; referenced disk files remain intact. */
 export function deleteProject(data: Workspace, id: string) {
   data.projects = data.projects.filter((project) => project.id !== id);
+  data.experiments = data.experiments?.filter((experiment) => experiment.project !== id);
   data.records = data.records.filter((item) => item.project !== id);
   data.runs = data.runs.filter((item) => item.project !== id);
   data.tasks = data.tasks.filter((item) => item.project !== id);

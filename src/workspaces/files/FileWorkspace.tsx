@@ -13,7 +13,22 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { useStore } from 'zustand';
-import { FileCode2, FilePlus2, FileText, GitBranch, RefreshCw, Save, X } from 'lucide-react';
+import {
+  FileCode2,
+  FilePlus2,
+  FileText,
+  GitBranch,
+  RefreshCw,
+  Save,
+  X,
+  Search,
+  Replace,
+  WrapText,
+  ChevronsDownUp,
+  Undo2,
+  Redo2,
+} from 'lucide-react';
+import { undoDepth, redoDepth } from '@codemirror/commands';
 import type { Project } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
 import type { ResearchBackend, ResearchFile } from '../../platform/research';
@@ -44,6 +59,9 @@ type FileWorkspaceProps = {
   onActivePathChange?: (path: string | null) => void;
   onContext: (context: WorkContext) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  workspaceRoot?: string;
+  createRequest?: number;
+  onCreateHandled?: () => void;
 };
 const fileName = (path: string) => path.split('/').pop() || path;
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -68,7 +86,8 @@ function useRuntime(backend: ResearchBackend) {
 export function FileWorkspace(props: FileWorkspaceProps) {
   const { project, backend, mode, view, onContext, onDirtyChange, onActivePathChange } = props;
   const runtime = useRuntime(backend);
-  const scope = JSON.stringify([project.id, mode]);
+  const workspaceRoot = props.workspaceRoot;
+  const scope = JSON.stringify([project.id, mode, workspaceRoot ?? '']);
   const activeScope = useRef(scope);
   activeScope.current = scope;
   const mounted = useRef(true);
@@ -104,11 +123,18 @@ export function FileWorkspace(props: FileWorkspaceProps) {
     [backend, runtime, scope, onActivePathChange],
   );
   useEffect(() => {
-    if (activePath && !(runtime.tabs.get(scope) ?? []).includes(activePath)) {
-      runtime.tabs.set(scope, [...(runtime.tabs.get(scope) ?? []), activePath]);
-      runtime.active.set(scope, activePath);
-      notifyFileRuntime(backend);
+    if (!activePath) return;
+    const tabs = runtime.tabs.get(scope) ?? [];
+    let changed = false;
+    if (!tabs.includes(activePath)) {
+      runtime.tabs.set(scope, [...tabs, activePath]);
+      changed = true;
     }
+    if (runtime.active.get(scope) !== activePath) {
+      runtime.active.set(scope, activePath);
+      changed = true;
+    }
+    if (changed) notifyFileRuntime(backend);
   }, [activePath, backend, runtime, scope]);
   useEffect(() => {
     onDirtyChangeRef.current?.(dirty);
@@ -118,7 +144,14 @@ export function FileWorkspace(props: FileWorkspaceProps) {
     setShowCreate(false);
     setCreateError('');
     setCreating(false);
-  }, [project.id, mode]);
+  }, [project.id, mode, workspaceRoot]);
+  useEffect(() => {
+    if (!props.createRequest) return;
+    setCreateContent('');
+    setCreateName('');
+    setShowCreate(true);
+    props.onCreateHandled?.();
+  }, [props.createRequest, props.onCreateHandled]);
   useEffect(() => {
     if (view === 'versions' || ['references', 'citations'].includes(view) || !activePath)
       onContextRef.current({
@@ -159,7 +192,13 @@ export function FileWorkspace(props: FileWorkspaceProps) {
     setCreateError('');
     const finishOperation = beginFileOperation(backend);
     try {
-      await backend.writeFile(project.id, path, createContent, null);
+      await backend.writeFile(
+        project.id,
+        path,
+        createContent,
+        null,
+        ...(workspaceRoot ? [workspaceRoot] : []),
+      );
       if (mounted.current && activeScope.current === scope) {
         open(path);
         setShowCreate(false);
@@ -187,7 +226,9 @@ export function FileWorkspace(props: FileWorkspaceProps) {
   if (mode === 'writing' && ['references', 'citations'].includes(view))
     return <ProjectReferences project={project} store={props.store} />;
 
-  const session = activePath ? getFileSession(backend, project.id, activePath) : null;
+  const session = activePath
+    ? getFileSession(backend, project.id, activePath, workspaceRoot)
+    : null;
   return (
     <Panel
       className="sf-file-workspace"
@@ -215,7 +256,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
                 data-extension={path.split('.').pop()?.toLowerCase()}
               />
               <span>{fileName(path)}</span>
-              {getFileSession(backend, project.id, path).getSnapshot().dirty ? (
+              {getFileSession(backend, project.id, path, workspaceRoot).getSnapshot().dirty ? (
                 <span className="sf-file-dirty" aria-label={t('未保存')}>
                   ●
                 </span>
@@ -227,7 +268,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
               className="sf-file-close"
               aria-label={t('关闭 {name}', { name: fileName(path) })}
               onClick={() =>
-                getFileSession(backend, project.id, path).getSnapshot().dirty
+                getFileSession(backend, project.id, path, workspaceRoot).getSnapshot().dirty
                   ? setCloseTarget(path)
                   : close(path)
               }
@@ -281,7 +322,8 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           <span>{t('“{name}” 尚未保存。', { name: fileName(closeTarget) })}</span>
           <Button
             onClick={async () => {
-              if (await getFileSession(backend, project.id, closeTarget).save()) close(closeTarget);
+              if (await getFileSession(backend, project.id, closeTarget, workspaceRoot).save())
+                close(closeTarget);
             }}
           >
             {t('保存并关闭')}
@@ -298,7 +340,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
       ) : null}
       {session ? (
         <FileDocument
-          key={`${project.id}:${activePath}`}
+          key={JSON.stringify([project.id, activePath, workspaceRoot ?? ''])}
           session={session}
           project={project}
           mode={mode}
@@ -347,6 +389,7 @@ function FileDocument({
   const [layout, setLayout] = useState<'source' | 'split' | 'preview'>('split');
   const [wide, setWide] = useState(false);
   const [selection, setSelection] = useState('');
+  const [cursor, setCursor] = useState({ line: 1, column: 1 });
   const [confirmReload, setConfirmReload] = useState(false);
   const [diskContent, setDiskContent] = useState<string | null>(null);
   const [compareError, setCompareError] = useState('');
@@ -361,16 +404,20 @@ function FileDocument({
     void session.load();
   }, [session]);
   useEffect(() => {
+    if (session.pendingEditorCommand) setLayout('source');
+  }, [session, snapshot]);
+  useEffect(() => {
     onContextRef.current({
       projectId: project.id,
       workspace: mode,
       title: fileName(session.path),
       resourceId: session.path,
       path: session.path,
+      workspaceRoot: session.workspaceRoot,
       text: snapshot.content.slice(0, 24000),
       selection,
     });
-  }, [project.id, mode, session.path, snapshot.content, selection]);
+  }, [project.id, mode, session, snapshot.content, selection]);
   useEffect(() => {
     const element = canvas.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
@@ -407,6 +454,56 @@ function FileDocument({
         >
           <RefreshCw size={14} />
         </Button>
+        {mode === 'experiments' && (
+          <>
+            <Button
+              variant="ghost"
+              iconOnly
+              aria-label={t('撤销')}
+              disabled={!session.editorState || !undoDepth(session.editorState)}
+              onClick={() => session.requestEditorCommand({ type: 'undo' })}
+            >
+              <Undo2 size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              iconOnly
+              aria-label={t('重做')}
+              disabled={!session.editorState || !redoDepth(session.editorState)}
+              onClick={() => session.requestEditorCommand({ type: 'redo' })}
+            >
+              <Redo2 size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              iconOnly
+              aria-label={t('查找文件内容')}
+              disabled={!loaded}
+              onClick={() => session.requestEditorCommand({ type: 'find' })}
+            >
+              <Search size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              iconOnly
+              aria-label={t('替换文件内容')}
+              disabled={!loaded}
+              onClick={() => session.requestEditorCommand({ type: 'replace' })}
+            >
+              <Replace size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              iconOnly
+              aria-label={t('自动换行')}
+              aria-pressed={session.editorWrap}
+              disabled={!loaded}
+              onClick={() => session.requestEditorCommand({ type: 'toggleWrap' })}
+            >
+              <WrapText size={14} />
+            </Button>
+          </>
+        )}
         {isMarkdown ? (
           <div className="sf-file-segments" aria-label={t('稿件显示模式')}>
             {(['source', 'split', 'preview'] as const).map((value) => (
@@ -453,7 +550,13 @@ function FileDocument({
                   setCompareError('');
                   try {
                     setDiskContent(
-                      (await session.backend.readFile(project.id, session.path)).content,
+                      (
+                        await session.backend.readFile(
+                          project.id,
+                          session.path,
+                          session.workspaceRoot,
+                        )
+                      ).content,
                     );
                   } catch (error) {
                     setCompareError(errorText(error));
@@ -508,7 +611,11 @@ function FileDocument({
           <>
             {!isMarkdown || actualLayout !== 'preview' ? (
               <Suspense fallback={<div className="sf-file-loading">{t('正在加载编辑器…')}</div>}>
-                <CodeEditor session={session} onSelection={setSelection} />
+                <CodeEditor
+                  session={session}
+                  onSelection={setSelection}
+                  onCursor={(line, column) => setCursor({ line, column })}
+                />
               </Suspense>
             ) : null}
             {isMarkdown && actualLayout !== 'source' ? (
@@ -532,10 +639,16 @@ function FileDocument({
         <span>UTF-8</span>
         <span>{t('{count} 行', { count: snapshot.content.split('\n').length })}</span>
         <span className="sf-file-footer-tip">
-          {t('Ctrl+S 保存 ·')}{' '}
-          {selection
-            ? t('已选 {count} 字符', { count: selection.length })
-            : t('选区可用于 AI 提问或研究笔记')}
+          {mode === 'experiments' ? (
+            t('行 {line}，列 {column}', cursor)
+          ) : (
+            <>
+              {t('Ctrl+S 保存 ·')}{' '}
+              {selection
+                ? t('已选 {count} 字符', { count: selection.length })
+                : t('选区可用于 AI 提问或研究笔记')}
+            </>
+          )}
         </span>
       </div>
     </>
@@ -546,8 +659,11 @@ type TreeNode = { name: string; path: string; directory: boolean; children: Tree
 function createTree(files: ResearchFile[], mode: Mode, search: string): TreeNode[] {
   const root: TreeNode[] = [];
   for (const file of files) {
-    if (file.kind === 'directory') continue;
-    if (mode === 'writing' && !/\.(md|markdown|mdown|tex|bib|sty|cls|txt|csv)$/i.test(file.path))
+    if (
+      mode === 'writing' &&
+      (file.kind === 'directory' ||
+        !/\.(md|markdown|mdown|tex|bib|sty|cls|txt|csv)$/i.test(file.path))
+    )
       continue;
     if (search && !file.path.toLowerCase().includes(search.toLowerCase())) continue;
     const parts = file.path.replace(/\\/g, '/').split('/');
@@ -556,7 +672,12 @@ function createTree(files: ResearchFile[], mode: Mode, search: string): TreeNode
       const path = parts.slice(0, index + 1).join('/');
       let node = current.find((item) => item.path === path);
       if (!node) {
-        node = { name, path, directory: index !== parts.length - 1, children: [] };
+        node = {
+          name,
+          path,
+          directory: file.kind === 'directory' || index !== parts.length - 1,
+          children: [],
+        };
         current.push(node);
       }
       current = node.children;
@@ -577,6 +698,8 @@ export function FileResources({
   view,
   activePath,
   onOpen,
+  workspaceRoot,
+  onCreate,
 }: {
   project: Project;
   backend: ResearchBackend;
@@ -584,6 +707,8 @@ export function FileResources({
   view: string;
   activePath?: string | null;
   onOpen: (path: string) => void;
+  workspaceRoot?: string;
+  onCreate?: () => void;
 }) {
   const [files, setFiles] = useState<ResearchFile[]>([]);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -596,7 +721,7 @@ export function FileResources({
     setPhase('loading');
     setError('');
     backend
-      .listFiles(project.id)
+      .listFiles(project.id, workspaceRoot)
       .then((result) => {
         if (alive) {
           setFiles(result);
@@ -612,7 +737,7 @@ export function FileResources({
     return () => {
       alive = false;
     };
-  }, [backend, project.id, project.path, refresh]);
+  }, [backend, project.id, project.path, refresh, workspaceRoot]);
   useEffect(() => {
     const changed = (event: Event) => {
       if ((event as CustomEvent).detail === project.id) setRefresh((value) => value + 1);
@@ -637,6 +762,23 @@ export function FileResources({
               ? t('论文文件')
               : t('资源管理器')}
         </span>
+        {onCreate && (
+          <Button variant="ghost" iconOnly aria-label={t('新建文件')} onClick={onCreate}>
+            <FilePlus2 size={13} />
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          iconOnly
+          aria-label={t('折叠所有文件夹')}
+          onClick={() =>
+            setCollapsed(
+              new Set(files.filter((file) => file.kind === 'directory').map((file) => file.path)),
+            )
+          }
+        >
+          <ChevronsDownUp size={13} />
+        </Button>
         <Button
           variant="ghost"
           iconOnly
@@ -652,6 +794,21 @@ export function FileResources({
           placeholder={t('筛选文件…')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && search) {
+              const match = files.find(
+                (file) =>
+                  file.kind === 'file' &&
+                  file.path.toLowerCase().includes(search.toLowerCase()) &&
+                  (mode !== 'writing' ||
+                    /\.(md|markdown|mdown|tex|bib|sty|cls|txt|csv)$/i.test(file.path)),
+              );
+              if (match) {
+                event.preventDefault();
+                onOpen(match.path);
+              }
+            }
+          }}
         />
       </div>
       <div className="sf-resource-tree">
@@ -679,8 +836,8 @@ export function FileResources({
           <p>{search ? t('没有匹配的文件') : t('暂无文件')}</p>
         )}
       </div>
-      <div className="sf-resource-root" title={project.path}>
-        {project.path || t('本机项目目录')}
+      <div className="sf-resource-root" title={workspaceRoot || project.path}>
+        {workspaceRoot || project.path || t('本机项目目录')}
       </div>
     </div>
   );

@@ -19,7 +19,7 @@
 .research-home-title-line h1 {
   font-size: 20px;
   font-weight: 600;
-  letter-spacing: -0.35px;
+  letter-spacing: 0;
   overflow-wrap: anywhere;
 }
 .research-home-project > p {

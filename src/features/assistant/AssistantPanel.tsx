@@ -11,6 +11,7 @@ import {
   LoaderCircle,
   Pencil,
   Trash2,
+  ChevronRight,
 } from 'lucide-react';
 import { ContextPanel } from '../../components/ai/ContextPanel';
 import { ApprovalCard } from '../../components/ai/ApprovalCard';
@@ -20,7 +21,8 @@ import '../../components/ai/ai-panel.css';
 import { Button } from '../../components/primitives';
 import { ModelSettingsDialog } from './ModelSettingsDialog';
 import { AssistantRuns } from './AssistantRuns';
-import { getFileRuntime } from '../../editor/sessions';
+import { getFileRuntime, reloadDirectorySessions } from '../../editor/sessions';
+import { codeContext } from '../../workspaces/experiments/code-context';
 import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/Menu';
 import { Modal } from '../../components/Modal';
 import { Panel } from '../../components/layout/Panel';
@@ -76,6 +78,8 @@ export function AssistantPanel({
   credentials = nativeCredentials,
 }: Props) {
   const data = useStore(store, (state) => state.data);
+  const selectedCodeRoot = useStore(codeContext, (state) => state.roots[scope]);
+  const selectedExperimentId = useStore(codeContext, (state) => state.experiments[scope]);
   const model = data?.settings.model;
   const [settings, setSettings] = useState<AISettings>(() => ({
     endpoint: model?.endpoint ?? 'http://127.0.0.1:11434',
@@ -423,9 +427,13 @@ export function AssistantPanel({
     }
     setError('');
     const sendingId = conversation.id;
+    const boundRoot = conversation.agentCwd ?? selectedCodeRoot;
     if (domain === 'code') {
       const drafts = [...getFileRuntime(backend).sessions.values()].filter(
-        (session) => session.projectId === scope && session.getSnapshot().dirty,
+        (session) =>
+          session.projectId === scope &&
+          (session.workspaceRoot ?? '') === (boundRoot ?? '') &&
+          session.getSnapshot().dirty,
       );
       if (drafts.length) {
         busyRef.current = true;
@@ -456,12 +464,24 @@ export function AssistantPanel({
     if (activeConversationId.current !== sendingId) return;
     const snapshot =
       includeContext &&
+      (!context.experimentId ||
+        !conversation.experimentId ||
+        context.experimentId === conversation.experimentId) &&
+      (!context.workspaceRoot || !boundRoot || context.workspaceRoot === boundRoot) &&
       (!domainForWorkspace(context.workspace) || domainForWorkspace(context.workspace) === domain)
         ? freezeContext(context)
         : undefined;
     setPrompt('');
     pinnedToBottom.current = true;
-    const sent = await runtime.send(conversation, domain, agentConnection, text, snapshot);
+    const seed =
+      domain === 'code'
+        ? {
+            ...conversation,
+            ...(boundRoot ? { agentCwd: boundRoot } : {}),
+            experimentId: conversation.experimentId ?? selectedExperimentId,
+          }
+        : conversation;
+    const sent = await runtime.send(seed, domain, agentConnection, text, snapshot);
     if (sent === false) {
       if (activeConversationId.current === sendingId) {
         setError(store.getState().error ?? t('当前输入尚未发送，请在任务结束后重试。'));
@@ -905,7 +925,8 @@ export function AssistantPanel({
         ) : null}
         {operations.length ? (
           <details className="sf-ai-task-details">
-            <summary>
+            <summary className="sf-disclosure">
+              <ChevronRight size={13} aria-hidden="true" />
               {t('执行记录')} · {operations.length}
             </summary>
             {operations.map((op) => (
@@ -928,7 +949,34 @@ export function AssistantPanel({
             key={String(approval.id)}
             event={approval}
             busy={busy}
-            onDecide={(decision) => void activeTask?.session.decide(approval, decision)}
+            onDecide={async (decision) => {
+              if (approval.method === 'scientify/git/requestApproval' && decision === 'accept') {
+                const params = approval.params as {
+                  cwd?: string;
+                  request?: { kind?: string; target?: string };
+                };
+                const target =
+                  params.request?.kind === 'worktree-remove' ? params.request.target : params.cwd;
+                const drafts = [...getFileRuntime(backend).sessions.values()].filter(
+                  (file) =>
+                    file.projectId === scope &&
+                    (!file.workspaceRoot || file.workspaceRoot === target),
+                );
+                if (
+                  drafts.some(
+                    (file) =>
+                      file.getSnapshot().dirty ||
+                      ['loading', 'saving'].includes(file.getSnapshot().phase),
+                  )
+                ) {
+                  setError(t('此目录有未保存或正在读写的文件，请先保存后再批准 Git 操作。'));
+                  return;
+                }
+              }
+              await activeTask?.session.decide(approval, decision);
+              if (approval.method === 'scientify/git/requestApproval')
+                await reloadDirectorySessions(backend, scope, agentState.cwd ?? undefined);
+            }}
           />
         ))}
         {busy && !agentPending ? (

@@ -53,6 +53,7 @@ export class AgentRuntime {
   private wake: ReturnType<typeof setTimeout> | null = null;
   private unlisten: (() => void) | null = null;
   private generation = 0;
+  private polling: Promise<void> | null = null;
   constructor(
     private readonly store: WorkspaceStore,
     private readonly agent: AgentBackend,
@@ -101,7 +102,14 @@ export class AgentRuntime {
           /* Polling remains available. */
         });
   }
-  async poll() {
+  poll(): Promise<void> {
+    if (this.polling) return this.polling;
+    this.polling = this.pollTasks().finally(() => {
+      this.polling = null;
+    });
+    return this.polling;
+  }
+  private async pollTasks() {
     await Promise.allSettled(
       [...this.tasks.values()]
         .filter((task) => !task.starting && hasPendingWork(task.state))
@@ -119,6 +127,7 @@ export class AgentRuntime {
           try {
             await this.agent.release?.(task.projectId, task.domain, task.conversationId);
             this.tasks.delete(keyOf(task.projectId, task.conversationId));
+            this.store.getState().setAgentTask(keyOf(task.projectId, task.conversationId), null);
           } catch {
             task.lastActivity = Date.now();
           } finally {
@@ -157,7 +166,7 @@ export class AgentRuntime {
     });
     task.session = new AgentSession(
       this.agent,
-      { projectId: seed.project, domain, conversationId: seed.id },
+      { projectId: seed.project, domain, conversationId: seed.id, workspaceRoot: seed.agentCwd },
       connection,
       (state) => {
         task.state = state;
@@ -345,7 +354,10 @@ export class AgentRuntime {
         if (index < 0) chat.messages.push(answer);
         else chat.messages[index] = answer;
       }
-      Object.assign(entry, chat, { agentCwd: task.state.cwd ?? chat.agentCwd });
+      Object.assign(entry, chat, {
+        agentCwd: task.state.cwd ?? chat.agentCwd,
+        experimentId: task.session.handle?.experimentId ?? chat.experimentId,
+      });
       if (terminal)
         Object.assign(entry, {
           agentStatus: task.state.outcome ?? 'interrupted',

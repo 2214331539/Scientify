@@ -4,6 +4,7 @@ import { Sidebar } from '../layout/Sidebar';
 import { CircleHelp, Database, FolderOpen, Settings } from 'lucide-react';
 import type { WorkspaceId } from '../../domain/context';
 import { workspaceItems } from './workspaces';
+import type { CSSProperties } from 'react';
 
 export function WorkspaceRail({
   active,
@@ -24,7 +25,17 @@ export function WorkspaceRail({
 }) {
   return (
     <Sidebar className="workspace-rail" aria-label={t('工作区导航')}>
-      <nav aria-label={t('一级导航')}>
+      <nav
+        aria-label={t('一级导航')}
+        style={
+          {
+            '--sf-navigation-index': Math.max(
+              0,
+              workspaceItems.findIndex((item) => item.id === active),
+            ),
+          } as CSSProperties
+        }
+      >
         {inProject ? (
           workspaceItems.map(({ id, label, icon: Icon }) => (
             <Button

@@ -1,30 +1,16 @@
-type ViewTransitionDocument = Document & {
-  startViewTransition?: (update: () => void) => { finished: Promise<void> };
-};
-
-/**
- * Runs a small native view transition when the embedded Chromium supports it.
- * The fallback is immediate so navigation never waits for decorative motion.
- */
-export function runViewTransition(update: () => void) {
-  if (
-    typeof document === 'undefined' ||
-    (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
-  ) {
-    update();
-    return;
-  }
-  const start = (document as ViewTransitionDocument).startViewTransition;
-  if (!start) {
-    update();
-    return;
-  }
-  try {
-    const transition = start.call(document, update);
-    void transition.finished.catch(() => {
-      /* A cancelled transition has no effect on the committed UI state. */
-    });
-  } catch {
-    update();
-  }
+/** Animate committed chrome, without a document snapshot or an input-blocking overlay. */
+export function animateWorkspaceNavigation(surface: HTMLElement | null) {
+  if (!surface || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const style = getComputedStyle(surface);
+  const duration = parseFloat(style.getPropertyValue('--sf-motion-content')) || 160;
+  const easing = style.getPropertyValue('--sf-ease-enter').trim() || 'ease-out';
+  const targets = surface.querySelectorAll<HTMLElement>(
+    '.workspace-commandbar, .sf-panel-header, .research-home-project, .sf-experiment-manager-toolbar, .library-root-toolbar',
+  );
+  const animations = [...targets].flatMap((target) =>
+    typeof target.animate === 'function'
+      ? [target.animate([{ opacity: 0.6 }, { opacity: 1 }], { duration, easing })]
+      : [],
+  );
+  return () => animations.forEach((animation) => animation.cancel());
 }

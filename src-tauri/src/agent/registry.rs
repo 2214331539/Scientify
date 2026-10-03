@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 #[derive(Serialize, Deserialize)]
 pub struct Binding {
+    #[serde(default)]
+    pub experiment_id: Option<String>,
     project_id: String,
     conversation_id: String,
     domain: String,
@@ -14,6 +16,8 @@ pub struct Binding {
     pub started: bool,
     #[serde(default)]
     pub managed_runs: bool,
+    #[serde(default)]
+    pub git_tools: bool,
 }
 fn path(data: &Path, project: &str, conversation: &str) -> Result<PathBuf, String> {
     if !valid_key(project) || !valid_key(conversation) {
@@ -49,16 +53,46 @@ pub fn read(
     }
     Ok(Some(binding))
 }
-pub fn write(data: &Path, handle: &ThreadHandle, started: bool) -> Result<(), String> {
+pub fn bound_root(
+    data: &Path,
+    project: &str,
+    conversation: &str,
+    domain: &str,
+) -> Result<Option<PathBuf>, String> {
+    let path = path(data, project, conversation)?;
+    let bytes = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e.to_string()),
+    };
+    let binding: Binding =
+        serde_json::from_slice(&bytes).map_err(|e| format!("Agent 会话索引损坏：{e}"))?;
+    if binding.project_id != project
+        || binding.conversation_id != conversation
+        || binding.domain != domain
+    {
+        return Err("该会话绑定的项目或领域不匹配。".into());
+    }
+    Ok(Some(binding.root))
+}
+pub fn write(
+    data: &Path,
+    handle: &ThreadHandle,
+    started: bool,
+    managed_runs: bool,
+    git_tools: bool,
+) -> Result<(), String> {
     let target = path(data, &handle.project_id, &handle.conversation_id)?;
     let record = Binding {
+        experiment_id: handle.experiment_id.clone(),
         project_id: handle.project_id.clone(),
         conversation_id: handle.conversation_id.clone(),
         domain: handle.domain.clone(),
         root: PathBuf::from(&handle.cwd),
         thread_id: handle.thread_id.clone(),
         started,
-        managed_runs: handle.domain == "code",
+        managed_runs,
+        git_tools,
     };
     std::fs::create_dir_all(target.parent().unwrap()).map_err(|e| e.to_string())?;
     let temporary = target.with_extension("pending");
@@ -76,6 +110,7 @@ mod tests {
     fn binding_survives_restart_and_rejects_another_root_or_domain() {
         let dir = tempfile::tempdir().unwrap();
         let handle = ThreadHandle {
+            experiment_id: None,
             thread_id: "thread-a".into(),
             conversation_id: "chat-a".into(),
             project_id: "project-a".into(),
@@ -90,7 +125,7 @@ mod tests {
             fresh_thread: false,
             events: vec![],
         };
-        write(dir.path(), &handle, true).unwrap();
+        write(dir.path(), &handle, true, true, true).unwrap();
         assert_eq!(
             read(dir.path(), "project-a", "chat-a", "code", dir.path())
                 .unwrap()
@@ -111,5 +146,28 @@ mod tests {
             .unwrap()
             .is_none());
         assert!(read(dir.path(), "../escape", "chat-a", "code", dir.path()).is_err());
+
+        // A legacy thread keeps the capabilities registered when it was created.
+        write(dir.path(), &handle, true, false, false).unwrap();
+        let legacy = read(dir.path(), "project-a", "chat-a", "code", dir.path())
+            .unwrap()
+            .unwrap();
+        assert!(legacy.started);
+        assert_eq!(legacy.thread_id, "thread-a");
+        assert!(!legacy.managed_runs);
+        assert!(!legacy.git_tools);
+        let target = path(dir.path(), "project-a", "chat-a").unwrap();
+        let mut old: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&target).unwrap()).unwrap();
+        old.as_object_mut().unwrap().remove("managed_runs");
+        old.as_object_mut().unwrap().remove("git_tools");
+        std::fs::write(&target, serde_json::to_vec(&old).unwrap()).unwrap();
+        let legacy = read(dir.path(), "project-a", "chat-a", "code", dir.path())
+            .unwrap()
+            .unwrap();
+        assert!(legacy.started);
+        assert_eq!(legacy.thread_id, "thread-a");
+        assert!(!legacy.managed_runs);
+        assert!(!legacy.git_tools);
     }
 }

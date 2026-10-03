@@ -90,6 +90,44 @@ async function harness() {
 }
 
 describe('local task ownership', () => {
+  it('passes each conversation root independently and resumes its saved binding', async () => {
+    const { store, runtime, agent, complete } = await harness();
+    vi.mocked(agent.startThread).mockImplementation(async (projectId, domain, _, options) => ({
+      threadId: `thread-${options.conversationId}`,
+      conversationId: options.conversationId,
+      projectId,
+      domain,
+      cwd: options.workspaceRoot!,
+      model: 'test-model',
+      modelProvider: 'scientify',
+      instructionSources: [],
+    }));
+    const a = { ...newConversation('p1'), agentCwd: 'F:/repo/main' };
+    const b = { ...newConversation('p1'), agentCwd: 'F:/repo/worktree' };
+    await Promise.all([
+      runtime.send(a, 'code', connection, 'A'),
+      runtime.send(b, 'code', connection, 'B'),
+    ]);
+    expect(agent.startThread).toHaveBeenCalledWith('p1', 'code', connection, {
+      conversationId: a.id,
+      workspaceRoot: a.agentCwd,
+    });
+    expect(agent.startThread).toHaveBeenCalledWith('p1', 'code', connection, {
+      conversationId: b.id,
+      workspaceRoot: b.agentCwd,
+    });
+    complete(a.id, 'A done');
+    complete(b.id, 'B done');
+    await runtime.poll();
+    await vi.waitFor(() => expect(runtime.get('p1', a.id)?.finished).toBe(true));
+    const saved = asConversation(store.getState().data!.sessions.find((s) => s.id === a.id)!);
+    expect(saved.agentCwd).toBe(a.agentCwd);
+    await runtime.resume(saved, connection);
+    expect(agent.startThread).toHaveBeenLastCalledWith('p1', 'code', connection, {
+      conversationId: a.id,
+      workspaceRoot: a.agentCwd,
+    });
+  });
   it('runs two chats in one directory independently; approvals and stopping stay with the selected chat', async () => {
     const { store, agent, runtime, queues, complete } = await harness();
     const a = newConversation('p1'),
@@ -267,7 +305,43 @@ describe('local task ownership', () => {
     );
     expect(agent.startThread).toHaveBeenLastCalledWith('p1', 'code', connection, {
       conversationId: chat.id,
+      workspaceRoot: 'C:/p1/code',
     });
+  });
+  it('clears close protection when idle release overlaps another chat update', async () => {
+    const { store, agent, runtime, complete, queues } = await harness();
+    const a = newConversation('p1'),
+      b = newConversation('p2');
+    await runtime.send(a, 'code', connection, 'A');
+    complete(a.id, 'A 已中止', 'interrupted');
+    await runtime.poll();
+    await vi.waitFor(() => expect(runtime.get('p1', a.id)?.finished).toBe(true));
+    await runtime.send(b, 'code', connection, 'B');
+    runtime.get('p1', a.id)!.lastActivity = Date.now() - 61_000;
+    let released!: () => void;
+    vi.mocked(agent.release!).mockImplementationOnce(
+      () =>
+        new Promise<void>((done) => {
+          released = done;
+        }),
+    );
+    const recycling = runtime.poll();
+    await vi.waitFor(() => expect(released).toBeTypeOf('function'));
+    queues.set(b.id, [
+      {
+        kind: 'notification',
+        method: 'item/agentMessage/delta',
+        params: { threadId: `thread-${b.id}`, turnId: `turn-${b.id}`, delta: 'B 正在输出' },
+      },
+    ]);
+    await runtime.get('p2', b.id)!.session.poll();
+    released();
+    await recycling;
+    expect(runtime.get('p1', a.id)).toBeUndefined();
+    expect(store.getState().agentTasks).toEqual({ [`p2:${b.id}`]: 'p2' });
+    complete(b.id, 'B 完成');
+    await runtime.poll();
+    await vi.waitFor(() => expect(store.getState().agentTasks).toEqual({}));
   });
 });
 

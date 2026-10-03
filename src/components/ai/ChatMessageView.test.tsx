@@ -1,11 +1,21 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { ChatMessageView } from './ChatMessageView';
+import { setPreferences } from '../../i18n/preferences';
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  setPreferences({ language: 'zh-CN' });
+});
+
+it('updates localized controls on a memoized message without rewriting its content', () => {
+  render(<ChatMessageView role="assistant" text="**科研内容保留**" />);
+  act(() => setPreferences({ language: 'en' }));
+  expect(screen.getByRole('article', { name: 'Assistant message' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Copy message' })).toBeTruthy();
+  expect(screen.getByText('科研内容保留').tagName).toBe('STRONG');
 });
 
 it('copies the original Markdown including code via keyboard and reports success', async () => {

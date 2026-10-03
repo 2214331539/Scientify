@@ -10,7 +10,10 @@ mod browser;
 mod credentials;
 mod data_location;
 pub use data_location::migrate_offline as migrate_storage_offline;
+mod code;
 mod experiments;
+mod git;
+mod local_process;
 pub use experiments::runner::run as run_managed_experiment;
 #[cfg(test)]
 mod ipc_smoke;
@@ -57,7 +60,17 @@ async fn workspace_save<R: tauri::Runtime>(
     expected_revision: u64,
 ) -> Result<Value, String> {
     let storage = state.storage.clone();
+    let files = state.files.clone();
     tauri::async_runtime::spawn_blocking(move || {
+        let workspace = scientify_core::workspace::validate(workspace)?;
+        let current = storage.load()?;
+        experiments::catalog::validate_changes(&storage, &files, current.as_ref(), &workspace)?;
+        if let Some(terminal) = app.try_state::<experiments::terminal::TerminalState>() {
+            terminal.protect(current.as_ref(), Some(&workspace))?;
+        }
+        if let Some(python) = app.try_state::<experiments::python::PythonState>() {
+            python.protect(current.as_ref(), Some(&workspace))?;
+        }
         app.state::<agent::AgentState>().protect(
             storage.load()?.as_ref(),
             Some(&workspace),
@@ -81,6 +94,12 @@ async fn workspace_restore(
         app.state::<agent::AgentState>().protect(None, None, None)?;
         app.state::<experiments::ExperimentState>()
             .protect(None, None)?;
+        if let Some(terminal) = app.try_state::<experiments::terminal::TerminalState>() {
+            terminal.protect(None, None)?;
+        }
+        if let Some(python) = app.try_state::<experiments::python::PythonState>() {
+            python.protect(None, None)?;
+        }
         storage.restore()
     })
     .await
@@ -115,6 +134,12 @@ async fn workspace_import(
         app.state::<agent::AgentState>().protect(None, None, None)?;
         app.state::<experiments::ExperimentState>()
             .protect(None, None)?;
+        if let Some(terminal) = app.try_state::<experiments::terminal::TerminalState>() {
+            terminal.protect(None, None)?;
+        }
+        if let Some(python) = app.try_state::<experiments::python::PythonState>() {
+            python.protect(None, None)?;
+        }
         storage.import(read_workspace(&path)?).map(Some)
     })
     .await
@@ -191,6 +216,18 @@ pub fn run() {
         .on_window_event(|window, event| {
             if window.label() == "workspace" && matches!(event, tauri::WindowEvent::Destroyed) {
                 browser::close_owner(window.app_handle(), "workspace");
+                if let Some(terminal) = window
+                    .app_handle()
+                    .try_state::<experiments::terminal::TerminalState>()
+                {
+                    terminal.close_all();
+                }
+                if let Some(python) = window
+                    .app_handle()
+                    .try_state::<experiments::python::PythonState>()
+                {
+                    python.stop_all();
+                }
                 windows::show_projects(window.app_handle());
             }
         })
@@ -215,6 +252,10 @@ pub fn run() {
             app.manage(agent::AgentState::default());
             app.manage(experiments::ExperimentState::new(
                 directory.join("experiments"),
+            ));
+            app.manage(experiments::terminal::TerminalState::default());
+            app.manage(experiments::python::PythonState::new(
+                directory.join("environment-tasks"),
             ));
             app.manage(AppState {
                 files: Arc::new(scientify_core::research::ResearchFiles::new(
@@ -272,7 +313,15 @@ pub fn run() {
             research::research_read_pdf,
             research::research_git_status,
             research::research_git_diff,
+            git::code_git_inspect,
+            git::code_git_diff,
+            git::code_git_action,
             experiments::experiment_start,
+            experiments::catalog::experiment_prepare,
+            experiments::trust::experiment_trust,
+            experiments::python::python_command,
+            experiments::terminal::terminal_command,
+            experiments::terminal::development_snapshot,
             experiments::experiment_list,
             experiments::experiment_stop,
             experiments::experiment_log,

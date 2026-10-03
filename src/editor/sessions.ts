@@ -9,6 +9,9 @@ export type FileSnapshot = {
   phase: 'idle' | 'loading' | 'ready' | 'saving' | 'error';
   error: string | null;
 };
+export type EditorCommand =
+  | { type: 'find' | 'replace' | 'toggleWrap' | 'undo' | 'redo' }
+  | { type: 'reveal'; from: number; to: number };
 
 /** A file owns its buffer; navigation only holds references to this session. */
 export class FileSession {
@@ -24,11 +27,28 @@ export class FileSession {
   private loading: Promise<void> | null = null;
   private editRevision = 0;
   editorState: EditorState | null = null;
+  editorWrap = false;
+  editorScroll = { top: 0, left: 0 };
+  private editorCommand: EditorCommand | null = null;
+  get pendingEditorCommand() {
+    return this.editorCommand;
+  }
+
+  requestEditorCommand(command: EditorCommand) {
+    this.editorCommand = command;
+    this.update({});
+  }
+  takeEditorCommand() {
+    const command = this.editorCommand;
+    this.editorCommand = null;
+    return command;
+  }
 
   constructor(
     readonly backend: ResearchBackend,
     readonly projectId: string,
     readonly path: string,
+    readonly workspaceRoot?: string,
   ) {}
   getSnapshot = () => this.snapshot;
   subscribe = (listener: () => void) => {
@@ -45,7 +65,7 @@ export class FileSession {
       return;
     this.update({ phase: 'loading', error: null });
     this.loading = this.backend
-      .readFile(this.projectId, this.path)
+      .readFile(this.projectId, this.path, ...(this.workspaceRoot ? [this.workspaceRoot] : []))
       .then((file) => {
         this.savedContent = file.content;
         this.update({ content: file.content, version: file.version, dirty: false, phase: 'ready' });
@@ -71,7 +91,13 @@ export class FileSession {
     const { content, version } = this.snapshot;
     this.update({ phase: 'saving', error: null });
     try {
-      const file = await this.backend.writeFile(this.projectId, this.path, content, version);
+      const file = await this.backend.writeFile(
+        this.projectId,
+        this.path,
+        content,
+        version,
+        ...(this.workspaceRoot ? [this.workspaceRoot] : []),
+      );
       this.savedContent = content;
       // Input during an in-flight save remains a newer, unsaved buffer.
       this.update({
@@ -94,7 +120,11 @@ export class FileSession {
     const revisionAtStart = this.editRevision;
     this.update({ phase: 'loading', error: null });
     try {
-      const file = await this.backend.readFile(this.projectId, this.path);
+      const file = await this.backend.readFile(
+        this.projectId,
+        this.path,
+        ...(this.workspaceRoot ? [this.workspaceRoot] : []),
+      );
       if (this.editRevision !== revisionAtStart) {
         this.update({ error: t('读取期间产生了新编辑，已保留当前缓冲，请重新读取。') });
         return false;
@@ -148,16 +178,45 @@ export function notifyFileRuntime(backend: ResearchBackend) {
   runtime.revision += 1;
   runtime.listeners.forEach((listener) => listener());
 }
-export function getFileSession(backend: ResearchBackend, projectId: string, path: string) {
+export function getFileSession(
+  backend: ResearchBackend,
+  projectId: string,
+  path: string,
+  workspaceRoot?: string,
+) {
   const runtime = getFileRuntime(backend);
-  const key = JSON.stringify([projectId, path]);
+  const key = JSON.stringify([projectId, path, workspaceRoot ?? '']);
   let session = runtime.sessions.get(key);
   if (!session) {
-    session = new FileSession(backend, projectId, path);
+    session = new FileSession(backend, projectId, path, workspaceRoot);
     session.subscribe(() => notifyFileRuntime(backend));
     runtime.sessions.set(key, session);
   }
   return session;
+}
+export function directorySessions(
+  backend: ResearchBackend,
+  projectId: string,
+  root?: string,
+  includeUnscoped = false,
+) {
+  return [...getFileRuntime(backend).sessions.values()].filter(
+    (s) =>
+      s.projectId === projectId &&
+      ((s.workspaceRoot ?? '') === (root ?? '') || (includeUnscoped && !s.workspaceRoot)),
+  );
+}
+export async function reloadDirectorySessions(
+  backend: ResearchBackend,
+  projectId: string,
+  root?: string,
+) {
+  await Promise.allSettled(
+    directorySessions(backend, projectId, root)
+      .filter((s) => !s.getSnapshot().dirty)
+      .map((s) => s.reloadDiscardingEdits()),
+  );
+  window.dispatchEvent(new CustomEvent('scientify-project-files-changed', { detail: projectId }));
 }
 export function hasUnsavedFileChanges(backend: ResearchBackend) {
   return [...getFileRuntime(backend).sessions.values()].some(
