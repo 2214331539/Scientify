@@ -17,7 +17,7 @@ Include the affected commit/version, platform, impact, and a minimal reproductio
 - Trusted manual terminals and experiments execute with the local user's permissions, including network and filesystem access. Only run code and dependency commands you trust.
 - AI formal runs use a workspace sandbox. External webpages are separate webviews without application IPC capabilities. These boundaries do not make arbitrary code or downloaded files safe.
 - JSON export excludes PDFs and source files. Unsaved drafts are not guaranteed to survive crashes; back up linked directories separately.
-- Desktop validation currently targets Windows x64. Other platforms, signed distribution, automatic updates, and complete installer recovery are not established support claims.
+- Desktop CI targets Windows x64 and macOS Apple Silicon. The Mac preview is ad-hoc signed and unnotarized; Developer ID distribution, Intel Mac, automatic updates, complete manual-device coverage, and complete installer recovery are not established support claims.
 
 ## Contribution and release requirements
 
