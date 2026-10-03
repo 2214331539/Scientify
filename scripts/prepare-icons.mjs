@@ -44,3 +44,24 @@ if (!existsSync(output) || !readFileSync(output).equals(bytes)) writeFileSync(ou
 console.log(
   `Windows icon ready: ${ordered.map(([size]) => size).join(', ')}px; original PNG frames preserved.`,
 );
+
+// ICNS accepts the same lossless PNG payloads; no image conversion is needed.
+const chunks = [
+  [128, 'ic07'],
+  [256, 'ic08'],
+].map(([size, type]) => {
+  const png = frames.get(size);
+  if (!png) throw new Error(`Missing ${size}px macOS icon frame`);
+  const chunk = Buffer.alloc(8);
+  chunk.write(type, 0, 'ascii');
+  chunk.writeUInt32BE(8 + png.length, 4);
+  return Buffer.concat([chunk, png]);
+});
+const icns = Buffer.alloc(8);
+icns.write('icns', 0, 'ascii');
+icns.writeUInt32BE(8 + chunks.reduce((n, chunk) => n + chunk.length, 0), 4);
+writeFileSync(
+  new URL('../src-tauri/icons/icon.icns', import.meta.url),
+  Buffer.concat([icns, ...chunks]),
+);
+writeFileSync(new URL('../src-tauri/icons/icon.png', import.meta.url), frames.get(256));

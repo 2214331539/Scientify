@@ -12,16 +12,16 @@ use std::process::{Command, Stdio};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
-const TRIPLE: &str = "x86_64-pc-windows-msvc";
+const TRIPLE: &str = env!("SCIENTIFY_TARGET");
 
 /// The bundled engine communicates over stdio. On Windows it must not create
 /// a visible console window every time a user starts an Agent task.
-fn hide_console_window(command: &mut Command) {
+fn hide_console_window(_command: &mut Command) {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
-        command.creation_flags(CREATE_NO_WINDOW);
+        _command.creation_flags(CREATE_NO_WINDOW);
     }
 }
 

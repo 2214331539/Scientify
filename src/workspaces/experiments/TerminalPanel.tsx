@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { listen } from '@tauri-apps/api/event';
@@ -178,9 +179,11 @@ export function TerminalPanel({
       }
     }
   }, [terminals]);
-  const [profile, setProfile] = useState(
-    navigator.platform.toLowerCase().includes('win') ? 'powershell' : 'bash',
-  );
+  const platform = useStore(developmentStore, (state) => state.platform);
+  const [selectedProfile, setProfile] = useState('');
+  const profile =
+    selectedProfile ||
+    (platform === 'macos' ? 'zsh' : platform === 'windows' ? 'powershell' : 'bash');
   const [busy, setBusy] = useState(false);
   const [splitId, setSplitId] = useState('');
   const current = terminals.find((info) => info.id === activeId) ?? terminals.at(-1);
@@ -234,11 +237,12 @@ export function TerminalPanel({
           aria-label={t('终端类型')}
           onChange={(event) => setProfile(event.target.value)}
         >
-          <option value="powershell">PowerShell</option>
+          {platform === 'windows' && <option value="powershell">PowerShell</option>}
           <option value="pwsh">PowerShell 7</option>
-          <option value="cmd">Command Prompt</option>
+          {platform === 'windows' && <option value="cmd">Command Prompt</option>}
           <option value="python">Python REPL</option>
-          {!navigator.platform.toLowerCase().includes('win') && <option value="bash">bash</option>}
+          {platform === 'macos' && <option value="zsh">zsh</option>}
+          {platform !== 'windows' && <option value="bash">bash</option>}
         </Dropdown>
         <Button
           variant="ghost"

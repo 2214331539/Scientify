@@ -166,6 +166,8 @@ fn resolve_program(root: &Path, value: &str) -> Result<PathBuf, String> {
             .find(|p| p.is_file())
             .ok_or("找不到可执行程序，请填写绝对路径或检查 PATH。")?
     };
+    #[cfg(unix)]
+    let p = p.canonicalize().map_err(|e| e.to_string())?;
     scientify_core::research::reject_links(&p)?;
     if !p.is_file() {
         return Err("可执行程序不存在。".into());

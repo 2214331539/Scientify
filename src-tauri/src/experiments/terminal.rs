@@ -34,6 +34,8 @@ struct Controls {
     master: Box<dyn MasterPty + Send>,
     writer: Box<dyn Write + Send>,
     killer: Box<dyn ChildKiller + Send + Sync>,
+    #[cfg(unix)]
+    group: crate::unix_process::Group,
     #[cfg(windows)]
     job: crate::experiments::runner::job::Job,
 }
@@ -46,6 +48,15 @@ impl Terminal {
     fn close(&self) {
         if let Ok(mut controls) = self.controls.lock() {
             if let Some(mut owned) = controls.take() {
+                #[cfg(unix)]
+                {
+                    if let Some(pid) = owned.master.process_group_leader() {
+                        if pid > 1 {
+                            crate::unix_process::Group::new(pid as u32).stop();
+                        }
+                    }
+                    owned.group.stop();
+                }
                 #[cfg(windows)]
                 let _ = owned.job.terminate();
                 let _ = owned.killer.kill();
@@ -208,6 +219,8 @@ impl TerminalState {
                 drained: false,
             }),
             controls: Mutex::new(Some(Controls {
+                #[cfg(unix)]
+                group: crate::unix_process::Group::new(child.process_id().unwrap_or(0)),
                 master: pair.master,
                 writer,
                 killer: child.clone_killer(),
@@ -342,7 +355,9 @@ pub fn development_snapshot<R: tauri::Runtime>(
     python: State<'_, python::PythonState>,
 ) -> Result<Value, String> {
     crate::library::trusted(&view)?;
-    Ok(json!({"terminals": terminals.list()?, "tasks": python.list()?}))
+    Ok(
+        json!({"terminals": terminals.list()?, "tasks": python.list()?, "platform": std::env::consts::OS}),
+    )
 }
 
 #[tauri::command]
@@ -369,6 +384,7 @@ pub async fn terminal_command<R: tauri::Runtime>(
             let interpreter = python::bound(&storage, &root, &experiment)?;
             let env = python::environment(&storage, interpreter.as_ref())?;
             let (program, args, name) = match profile.as_str() {
+                #[cfg(windows)]
                 "powershell" => (
                     python::find_program("powershell")?,
                     vec!["-NoLogo".into(), "-NoProfile".into()],
@@ -379,6 +395,7 @@ pub async fn terminal_command<R: tauri::Runtime>(
                     vec!["-NoLogo".into(), "-NoProfile".into()],
                     "PowerShell 7".into(),
                 ),
+                #[cfg(windows)]
                 "cmd" => (
                     python::find_program("cmd")?,
                     vec!["/D".into()],
@@ -410,6 +427,12 @@ pub async fn terminal_command<R: tauri::Runtime>(
                 }
                 #[cfg(not(windows))]
                 "bash" => (python::find_program("bash")?, vec![], "bash".into()),
+                #[cfg(target_os = "macos")]
+                "zsh" => (
+                    python::find_program("zsh")?,
+                    vec!["-l".into()],
+                    "zsh".into(),
+                ),
                 _ => return Err("不支持的终端类型。".into()),
             };
             let copy = app.clone();

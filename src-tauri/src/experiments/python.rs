@@ -44,33 +44,86 @@ pub(crate) fn find_program(name: &str) -> Result<PathBuf, String> {
     } else {
         vec![name.to_owned()]
     };
-    for directory in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
+    for directory in program_directories() {
         if !directory.is_absolute() || directory.to_string_lossy().contains("WindowsApps") {
             continue;
         }
         for name in &names {
             let file = directory.join(name);
-            if file.is_file() {
+            if executable_file(&file) {
                 return Ok(file);
             }
         }
     }
     Err(format!("找不到 {name}，请检查安装及 PATH。"))
 }
+fn executable_file(path: &Path) -> bool {
+    if !path.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        return path
+            .metadata()
+            .is_ok_and(|m| m.permissions().mode() & 0o111 != 0);
+    }
+    #[cfg(not(unix))]
+    true
+}
+fn program_directories() -> Vec<PathBuf> {
+    #[allow(unused_mut)]
+    let mut paths: Vec<_> =
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).collect();
+    #[cfg(target_os = "macos")]
+    {
+        paths.extend(
+            [
+                "/opt/homebrew/bin",
+                "/usr/local/bin",
+                "/usr/bin",
+                "/bin",
+                "/opt/anaconda3/bin",
+                "/opt/miniconda3/bin",
+                "/opt/homebrew/Caskroom/miniforge/base/bin",
+            ]
+            .map(PathBuf::from),
+        );
+        if let Some(home) = dirs::home_dir() {
+            paths.extend(
+                [
+                    "miniforge3/bin",
+                    "miniconda3/bin",
+                    "anaconda3/bin",
+                    "opt/anaconda3/bin",
+                ]
+                .map(|p| home.join(p)),
+            );
+        }
+    }
+    paths
+}
 fn conda_program() -> Result<PathBuf, String> {
     if let Some(value) = std::env::var_os("CONDA_EXE") {
         let path = PathBuf::from(value);
-        if path.is_absolute() && path.is_file() && path.extension().is_some_and(|e| e == "exe") {
+        if path.is_absolute()
+            && executable_file(&path)
+            && (!cfg!(windows) || path.extension().is_some_and(|e| e == "exe"))
+        {
             return Ok(path);
         }
     }
     if let Ok(path) = find_program("conda") {
         return Ok(path);
     }
-    for dir in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
+    for dir in program_directories() {
         if let Some(parent) = dir.parent() {
-            let path = parent.join("Scripts/conda.exe");
-            if path.is_file() {
+            let path = parent.join(if cfg!(windows) {
+                "Scripts/conda.exe"
+            } else {
+                "bin/conda"
+            });
+            if executable_file(&path) {
                 return Ok(path);
             }
         }

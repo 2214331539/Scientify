@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { targetInfo } from './platform.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(root, 'src-tauri', 'release-resources', 'licenses');
@@ -118,7 +119,7 @@ const cargo = runJson('cargo', [
   '--format-version',
   '1',
   '--filter-platform',
-  'x86_64-pc-windows-msvc',
+  targetInfo().target,
 ]);
 for (const dependency of cargo.packages) {
   if (cargo.workspace_members.includes(dependency.id)) continue;
@@ -144,7 +145,7 @@ const unique = [
 ];
 const text = [
   'Scientify third-party license texts',
-  'Generated from the installed pnpm lockfile dependencies and Cargo metadata for Windows x64.',
+  `Generated from installed pnpm dependencies and Cargo metadata for ${targetInfo().target}.`,
   'Build and development dependencies may be included. Each upstream notice retains its own terms.',
   '',
   ...unique.map((record) =>

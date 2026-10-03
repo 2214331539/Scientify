@@ -1,4 +1,4 @@
-name: Windows release
+name: Desktop release
 
 on:
   push:
@@ -87,7 +87,7 @@ jobs:
 
   publish:
     name: Publish verified release
-    needs: build
+    needs: [build, macos]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -100,13 +100,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: windows-release
+          pattern: '*-release'
+          merge-multiple: true
           path: release
       - name: Verify checksums and publish
         working-directory: release
         shell: bash
         run: |
           set -euo pipefail
+          cat SHA256SUMS_windows_x64.txt SHA256SUMS_macos_arm64.txt > SHA256SUMS.txt
+          cat RELEASE_NOTES_windows_x64.md RELEASE_NOTES_macos_arm64.md > RELEASE_NOTES.md
           sha256sum --check SHA256SUMS.txt
           if gh release view "$RELEASE_TAG" --json isDraft > existing-release.json 2>/dev/null; then
             if [ "$(jq -r .isDraft existing-release.json)" != true ]; then
@@ -119,7 +122,14 @@ jobs:
             gh release create "$RELEASE_TAG" --verify-tag --draft "${flags[@]}" \
               --title "Scientify $RELEASE_TAG" --notes-file RELEASE_NOTES.md
           fi
-          gh release upload "$RELEASE_TAG" ./*.exe SHA256SUMS.txt THIRD_PARTY_LICENSES.txt --clobber
+          gh release upload "$RELEASE_TAG" ./*.exe ./*.dmg SHA256SUMS.txt THIRD_PARTY_LICENSES_*.txt --clobber
           gh release edit "$RELEASE_TAG" --draft=false --prerelease="$PRERELEASE" --latest=false \
             --notes-file RELEASE_NOTES.md
           gh release view "$RELEASE_TAG" --json url,assets
+
+  macos:
+    uses: ./.github/workflows/macos.yml
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
+      release: true
+    secrets: inherit

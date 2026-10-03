@@ -21,6 +21,9 @@ mod library;
 #[cfg(debug_assertions)]
 mod literature_smoke;
 mod research;
+#[cfg(unix)]
+mod unix_process;
+mod webview_profile;
 mod windows;
 
 struct AppState {
@@ -274,9 +277,12 @@ pub fn run() {
                     literature_smoke::seed_ui(app.handle())?;
                 }
             }
-            tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
-                .data_directory(profile)
-                .build()?;
+            webview_profile::window(
+                tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?,
+                profile,
+            )
+            .map_err(std::io::Error::other)?
+            .build()?;
             #[cfg(debug_assertions)]
             if isolated_smoke && std::env::var_os("SCIENTIFY_NATIVE_UI").is_none() {
                 literature_smoke::start(app.handle().clone());

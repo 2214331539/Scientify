@@ -1,23 +1,41 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { zstdDecompressSync } from 'node:zlib';
+import { hostTarget, targetInfo } from './platform.mjs';
+import { createHash } from 'node:crypto';
 
 // Codex is redistributed as an unmodified upstream release artifact. This version
 // is the single source of truth; bump it together with THIRD_PARTY_NOTICES.
 const CODEX_VERSION = process.env.SCIENTIFY_CODEX_VERSION || '0.158.0';
-const TRIPLE = process.env.SCIENTIFY_CODEX_TRIPLE || 'x86_64-pc-windows-msvc';
+const { target: TRIPLE, suffix, platform } = targetInfo();
+if (TRIPLE !== hostTarget())
+  throw new Error(
+    'Agent protocol generation requires a native build host for the selected target.',
+  );
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const target = join(root, 'src-tauri', 'binaries');
-const binary = join(target, `codex-${TRIPLE}.exe`);
-const stamp = join(target, 'codex.version');
+const binary = join(target, `codex-${TRIPLE}${suffix}`);
+const stamp = join(target, `codex-${TRIPLE}.version`);
 const protocolDir = join(root, 'src', 'generated', 'agent-protocol');
 const protocolStamp = join(protocolDir, 'VERSION');
 const tag = `rust-v${CODEX_VERSION}`;
-const asset = `codex-${TRIPLE}.exe`;
+const asset = `codex-${TRIPLE}${suffix}`;
 const release = `https://github.com/openai/codex/releases/download/${tag}`;
+const hashes = JSON.parse(readFileSync(new URL('./agent-assets.json', import.meta.url), 'utf8'))[
+  CODEX_VERSION
+];
+if (!hashes) throw new Error(`No pinned checksums for Agent ${CODEX_VERSION}`);
 
 function stampedVersion(file = stamp) {
   try {
@@ -51,6 +69,9 @@ function download(url, destination) {
   if (result.error) throw new Error(`${command[0]} unavailable: ${result.error.message}`);
   if (result.status !== 0) throw new Error(`${command[0]} exited with status ${result.status}`);
   if (!existsSync(destination)) throw new Error(`${command[0]} produced no file`);
+  const name = new URL(url).pathname.split('/').at(-1);
+  const digest = createHash('sha256').update(readFileSync(destination)).digest('hex');
+  if (hashes[name] !== digest) throw new Error(`Agent checksum mismatch: ${name}`);
 }
 
 /** Node has zstd from 22.15; bsdtar ships with zstd support on Windows 10+. */
@@ -73,7 +94,10 @@ function verify(path) {
   const result = spawnSync(path, ['--version'], { encoding: 'utf8', timeout: 30000 });
   if (result.status !== 0)
     throw new Error(`agent engine did not report a version: ${result.stderr}`);
-  return String(result.stdout).trim().split('\n')[0];
+  const version = String(result.stdout).trim().split('\n')[0];
+  if (!version.endsWith(` ${CODEX_VERSION}`))
+    throw new Error(`Unexpected Agent version: ${version}`);
+  return version;
 }
 
 /**
@@ -92,6 +116,7 @@ function generateProtocol(engine) {
 
 async function main() {
   if (existsSync(binary) && stampedVersion() === CODEX_VERSION) {
+    verify(binary);
     console.log(
       `Agent engine ready: codex ${CODEX_VERSION} (${(statSync(binary).size / 1024 / 1024).toFixed(1)} MB)`,
     );
@@ -110,19 +135,26 @@ async function main() {
   } catch (error) {
     // The raw executable is larger but needs no extractor, so a missing zstd
     // implementation must never block a build.
-    console.warn(`Compressed asset unusable (${error.message}); using the raw executable.`);
-    console.log(`Downloading codex ${CODEX_VERSION} (uncompressed)...`);
-    download(`${release}/${asset}`, binary);
+    console.warn(`Compressed asset unusable (${error.message}); using the fallback archive.`);
+    if (platform === 'darwin') {
+      download(`${release}/${asset}.tar.gz`, archive);
+      const extracted = spawnSync('tar', ['-xzf', archive, '-C', target], { stdio: 'inherit' });
+      if (extracted.status !== 0 || !existsSync(binary))
+        throw new Error('Invalid Darwin Agent archive');
+    } else {
+      download(`${release}/${asset}`, binary);
+    }
     bytes = readFileSync(binary);
   } finally {
     rmSync(archive, { force: true });
   }
   if (bytes.length < 1024 * 1024) throw new Error('downloaded artifact is implausibly small');
   writeFileSync(binary, bytes);
-  writeFileSync(stamp, `${CODEX_VERSION}\n`);
+  if (platform === 'darwin') chmodSync(binary, 0o755);
   console.log(
     `Agent engine ready: ${verify(binary)} (${(bytes.length / 1024 / 1024).toFixed(1)} MB)`,
   );
+  writeFileSync(stamp, `${CODEX_VERSION}\n`);
   mkdirSync(protocolDir, { recursive: true });
   generateProtocol(binary);
 }
