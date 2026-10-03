@@ -235,16 +235,35 @@ impl AgentState {
                         .iter()
                         .any(|item| item["project"] == project_id && item["id"] == conversation)
                 });
-                let experiment = slot.try_lock().ok().and_then(|guard| guard.as_ref().and_then(|entry| entry.handle.experiment_id.clone()))
-                    .or_else(|| current["sessions"].as_array()
-                        .and_then(|items| items.iter().find(|s| s["project"] == project_id && s["id"] == conversation))
-                        .and_then(|s| s["experimentId"].as_str()).map(str::to_owned));
+                let experiment = slot
+                    .try_lock()
+                    .ok()
+                    .and_then(|guard| {
+                        guard
+                            .as_ref()
+                            .and_then(|entry| entry.handle.experiment_id.clone())
+                    })
+                    .or_else(|| {
+                        current["sessions"]
+                            .as_array()
+                            .and_then(|items| {
+                                items
+                                    .iter()
+                                    .find(|s| s["project"] == project_id && s["id"] == conversation)
+                            })
+                            .and_then(|s| s["experimentId"].as_str())
+                            .map(str::to_owned)
+                    });
                 if before.is_some()
                     && after.is_some()
                     && before.as_ref().map(|p| &p["path"]) == after.as_ref().map(|p| &p["path"])
                     && before.as_ref().map(|p| &p["repo"]) == after.as_ref().map(|p| &p["repo"])
                     && keeps_chat
-                    && crate::experiments::catalog::keeps_binding(current, next, experiment.as_deref())
+                    && crate::experiments::catalog::keeps_binding(
+                        current,
+                        next,
+                        experiment.as_deref(),
+                    )
                 {
                     continue;
                 }
@@ -445,9 +464,14 @@ pub async fn agent_start_thread(
         let state = app.state::<AppState>();
         let experiment_id = if domain == "code" {
             crate::experiments::catalog::owner(&state.storage, &state.files, &project_id, &root)?
-        } else { None };
-        if record.as_ref().and_then(|r| r.experiment_id.as_ref())
-            .is_some_and(|id| Some(id) != experiment_id.as_ref()) {
+        } else {
+            None
+        };
+        if record
+            .as_ref()
+            .and_then(|r| r.experiment_id.as_ref())
+            .is_some_and(|id| Some(id) != experiment_id.as_ref())
+        {
             return Err("该会话绑定的实验已移除或更换，请新建会话。".into());
         }
         let connection = connection.as_connection();
@@ -872,7 +896,9 @@ mod tests {
         assert!(state.protect(Some(&current), Some(&renamed), None).is_ok());
         let mut archived = current.clone();
         archived["experiments"][0]["archived"] = json!(true);
-        assert!(state.protect(Some(&current), Some(&archived), None).is_err());
+        assert!(state
+            .protect(Some(&current), Some(&archived), None)
+            .is_err());
         let mut moved = current.clone();
         moved["experiments"][0]["root"] = json!("F:/c");
         assert!(state.protect(Some(&current), Some(&moved), None).is_err());

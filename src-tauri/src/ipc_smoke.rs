@@ -26,35 +26,91 @@ fn runtime_window_icon_uses_high_resolution_frame() {
 fn experiment_registration_uses_native_acl_and_enables_only_its_own_projects_root() {
     let temp = tempfile::tempdir().unwrap();
     let storage = Arc::new(Storage::open(temp.path().join("data/workspace")).unwrap());
-    let files = Arc::new(scientify_core::research::ResearchFiles::new(storage.directory().to_path_buf()));
+    let files = Arc::new(scientify_core::research::ResearchFiles::new(
+        storage.directory().to_path_buf(),
+    ));
     let mut data = scientify_core::workspace::empty();
     data["projects"] = json!([{"id":"p1","name":"Research","space":"personal","question":"","createdAt":"now"},{"id":"p2","name":"Other","space":"personal","question":"","createdAt":"now"}]);
     data["revision"] = json!(1);
     storage.save(data, 0).unwrap();
-    let app = mock_builder().manage(AppState {storage: storage.clone(), files, legacy: temp.path().join("legacy")})
+    let app = mock_builder()
+        .manage(AppState {
+            storage: storage.clone(),
+            files,
+            legacy: temp.path().join("legacy"),
+        })
         .manage(agent::AgentState::default())
         .manage(experiments::ExperimentState::new(temp.path().join("runs")))
-        .invoke_handler(tauri::generate_handler![experiments::catalog::experiment_prepare, workspace_save, research::research_read_file, research::research_write_file])
-        .build(tauri::generate_context!()).unwrap();
-    let workspace = tauri::WebviewWindowBuilder::new(&app,"workspace",Default::default()).build().unwrap();
-    let launcher = tauri::WebviewWindowBuilder::new(&app,"main",Default::default()).build().unwrap();
-    let origin = if cfg!(feature="custom-protocol") {"http://tauri.localhost"} else {"http://127.0.0.1:1420"};
-    for (window,url) in [(&launcher,origin),(&workspace,"https://example.com")] {
-        assert!(invoke(window,"experiment_prepare",json!({"projectId":"p1","source":"empty"}),url).is_err());
+        .invoke_handler(tauri::generate_handler![
+            experiments::catalog::experiment_prepare,
+            workspace_save,
+            research::research_read_file,
+            research::research_write_file
+        ])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+        .build()
+        .unwrap();
+    let launcher = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for (window, url) in [(&launcher, origin), (&workspace, "https://example.com")] {
+        assert!(invoke(
+            window,
+            "experiment_prepare",
+            json!({"projectId":"p1","source":"empty"}),
+            url
+        )
+        .is_err());
     }
-    let prepared: Value = invoke(&workspace,"experiment_prepare",json!({"projectId":"p1","source":"empty"}),origin).unwrap().deserialize().unwrap();
+    let prepared: Value = invoke(
+        &workspace,
+        "experiment_prepare",
+        json!({"projectId":"p1","source":"empty"}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
     let root = prepared["root"].as_str().unwrap();
-    assert!(PathBuf::from(root).starts_with(storage.directory().canonicalize().unwrap().join("projects")));
+    assert!(PathBuf::from(root)
+        .starts_with(storage.directory().canonicalize().unwrap().join("projects")));
     let args = json!({"projectId":"p1","workspaceRoot":root,"path":"train.py","content":"print('isolated')","expectedVersion":null});
-    assert!(invoke(&workspace,"research_write_file",args.clone(),origin).is_err());
+    assert!(invoke(&workspace, "research_write_file", args.clone(), origin).is_err());
     let mut data = storage.load().unwrap().unwrap();
     data["experiments"].as_array_mut().unwrap().push(json!({"id":prepared["id"],"project":"p1","name":"Ablation","purpose":"test","source":"empty","root":root,"createdAt":"now","updatedAt":"now"}));
     data["revision"] = json!(2);
-    invoke(&workspace,"workspace_save",json!({"workspace":data,"expectedRevision":1}),origin).unwrap();
-    invoke(&workspace,"research_write_file",args,origin).unwrap();
-    let read: Value = invoke(&workspace,"research_read_file",json!({"projectId":"p1","workspaceRoot":root,"path":"train.py"}),origin).unwrap().deserialize().unwrap();
-    assert_eq!(read["content"],"print('isolated')");
-    assert!(invoke(&workspace,"research_read_file",json!({"projectId":"p2","workspaceRoot":root,"path":"train.py"}),origin).is_err());
+    invoke(
+        &workspace,
+        "workspace_save",
+        json!({"workspace":data,"expectedRevision":1}),
+        origin,
+    )
+    .unwrap();
+    invoke(&workspace, "research_write_file", args, origin).unwrap();
+    let read: Value = invoke(
+        &workspace,
+        "research_read_file",
+        json!({"projectId":"p1","workspaceRoot":root,"path":"train.py"}),
+        origin,
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    assert_eq!(read["content"], "print('isolated')");
+    assert!(invoke(
+        &workspace,
+        "research_read_file",
+        json!({"projectId":"p2","workspaceRoot":root,"path":"train.py"}),
+        origin
+    )
+    .is_err());
 }
 
 #[test]

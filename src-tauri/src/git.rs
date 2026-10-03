@@ -132,7 +132,9 @@ pub(crate) fn protect_internal_data(storage: &Storage, path: &Path) -> Result<()
         &data
     };
     let projects = data.join("projects");
-    if container.starts_with(path) || (path.starts_with(container) && !(path.starts_with(&projects) && path != projects)) {
+    if container.starts_with(path)
+        || (path.starts_with(container) && !(path.starts_with(&projects) && path != projects))
+    {
         return Err("worktree 不能访问 Scientify 的内部数据、凭据或浏览缓存目录。".into());
     }
     Ok(())
@@ -157,7 +159,9 @@ pub(crate) fn inspect_project(storage: &Storage, root: &Path) -> Result<Snapshot
     if Path::new(&snapshot.root) != root {
         snapshot.root = root.display().to_string();
         snapshot.changes.clear();
-        snapshot.error = Some("所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。".into());
+        snapshot.error = Some(
+            "所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。".into(),
+        );
     }
     Ok(snapshot)
 }
@@ -233,15 +237,22 @@ pub(crate) fn resolve(
                 if root.as_ref().is_ok_and(|root| *root == requested) {
                     return if experiment["archived"] == true {
                         Err("此实验已归档，请恢复后再执行。".into())
-                    } else { Ok(requested) };
+                    } else {
+                        Ok(requested)
+                    };
                 }
             }
         }
         for experiment in data["experiments"].as_array().unwrap() {
             if experiment["project"] == project && experiment["archived"] != true {
-                if let Ok(root) = crate::experiments::catalog::root_of(storage, files, &data, experiment) {
+                if let Ok(root) =
+                    crate::experiments::catalog::root_of(storage, files, &data, experiment)
+                {
                     if let Ok(repo) = repository_for(storage, &root) {
-                        if worktrees(&repo)?.iter().any(|tree| !tree.missing && Path::new(&tree.root) == requested) {
+                        if worktrees(&repo)?
+                            .iter()
+                            .any(|tree| !tree.missing && Path::new(&tree.root) == requested)
+                        {
                             return Ok(requested);
                         }
                     }
@@ -508,9 +519,15 @@ pub(crate) fn project_action(
         let target = canonical(required(&input.target)?)?;
         let data = storage.load()?.ok_or("项目不存在。")?;
         let files = ResearchFiles::new(storage.directory().to_path_buf());
-        if data["experiments"].as_array().is_some_and(|items| items.iter().any(|experiment|
-            crate::experiments::catalog::root_of(storage, &files, &data, experiment).is_ok_and(|root| root == target))) {
-            return Err("此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。".into());
+        if data["experiments"].as_array().is_some_and(|items| {
+            items.iter().any(|experiment| {
+                crate::experiments::catalog::root_of(storage, &files, &data, experiment)
+                    .is_ok_and(|root| root == target)
+            })
+        }) {
+            return Err(
+                "此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。".into(),
+            );
         }
     }
     action_for(root, input, agent)
