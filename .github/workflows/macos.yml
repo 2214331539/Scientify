@@ -2,7 +2,7 @@ name: macOS checks
 
 on:
   push:
-    branches: [main, 'codex/apple-silicon-release']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -17,6 +17,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: macos-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !inputs.release }}
 
 jobs:
   apple-silicon:
