@@ -15,3 +15,8 @@ scientify-storage.json
 .scientify-storage.lock
 .scientify-move-*/
 .test-tools/
+.tmp*/
+.env
+.env.*
+!.env.example
+!.env.*.example

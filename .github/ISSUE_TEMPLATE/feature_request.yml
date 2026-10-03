@@ -1,0 +1,30 @@
+name: Feature proposal / 功能建议
+description: Explain a research task and the problem you need to solve.
+title: '[Feature]: '
+body:
+  - type: textarea
+    id: task
+    attributes:
+      label: Research task / 实际任务
+      description: What are you trying to do, and how do you do it today?
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Current obstacle / 当前障碍
+      description: Describe the specific friction, with an example where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior / 建议行为
+      description: Include a small acceptance example and alternatives considered.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and contribution / 范围与参与方式
+      description: Note platform, data, dependency, or permission implications. Can you help test or implement it?

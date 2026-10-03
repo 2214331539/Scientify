@@ -1,0 +1,39 @@
+name: Bug report / 问题反馈
+description: Report a reproducible problem without private research data.
+title: '[Bug]: '
+body:
+  - type: markdown
+    attributes:
+      value: 'Please search existing issues first. Do not include API keys, private papers, browser profiles, or full application data. For vulnerabilities, follow SECURITY.md.'
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit / 版本或提交
+      placeholder: '0.3.0 / commit SHA'
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment / 环境
+      description: 'Windows version, CPU architecture, desktop or frontend preview; Python/model provider only when relevant.'
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction / 复现步骤
+      description: Use a minimal example with disposable files.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior / 预期与实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized logs or screenshots / 脱敏日志或截图
+      description: Remove credentials, personal paths, and unpublished research content.

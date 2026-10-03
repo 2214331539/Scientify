@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security reporting / 安全报告
+    url: https://github.com/2214331539/Scientify/security/policy
+    about: Read the private-reporting process before sharing security details.
