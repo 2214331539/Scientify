@@ -26,6 +26,8 @@ pub(crate) fn process_path(path: &Path) -> PathBuf {
 
 struct OwnedChild {
     child: Child,
+    #[cfg(unix)]
+    group: crate::unix_process::Group,
     #[cfg(windows)]
     job: crate::experiments::runner::job::Job,
 }
@@ -36,6 +38,12 @@ impl OwnedChild {
             use std::os::windows::process::CommandExt;
             command.creation_flags(0x08000000 | 0x00000004);
         }
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+        }
+        #[allow(unused_mut)]
         let mut child = command.spawn().map_err(|e| e.to_string())?;
         #[cfg(windows)]
         let job = match crate::experiments::runner::job::Job::attach(&child) {
@@ -47,12 +55,16 @@ impl OwnedChild {
             }
         };
         Ok(Self {
+            #[cfg(unix)]
+            group: crate::unix_process::Group::new(child.id()),
             child,
             #[cfg(windows)]
             job,
         })
     }
     fn stop(&mut self) {
+        #[cfg(unix)]
+        self.group.stop();
         #[cfg(windows)]
         let _ = self.job.terminate();
         let _ = self.child.kill();
@@ -160,5 +172,29 @@ pub(crate) fn capture(command: &mut Command, timeout: Duration) -> Result<Vec<u8
 pub(crate) fn append_error(log: &Path, error: &str) {
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(log) {
         let _ = writeln!(file, "\nScientify: {error}");
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    #[test]
+    fn capture_closes_inherited_pipes_and_stops_descendants() {
+        let directory = tempfile::tempdir().unwrap();
+        let marker = directory.path().join("escaped");
+        let mut command = Command::new("/bin/sh");
+        command
+            .args([
+                "-c",
+                "(sleep 1; echo escaped > \"$1\") & echo captured",
+                "sh",
+            ])
+            .arg(&marker);
+        let start = Instant::now();
+        let output = capture(&mut command, Duration::from_secs(3)).unwrap();
+        assert!(String::from_utf8_lossy(&output).contains("captured"));
+        assert!(start.elapsed() < Duration::from_secs(2));
+        thread::sleep(Duration::from_millis(1200));
+        assert!(!marker.exists(), "a descendant survived the owning command");
     }
 }

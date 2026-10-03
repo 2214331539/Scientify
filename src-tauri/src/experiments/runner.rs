@@ -56,7 +56,14 @@ fn execute(request: &Path) -> Result<i32, String> {
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x08000000 | 0x00000004);
     }
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
     let mut child = command.spawn().map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    let mut group = crate::unix_process::Group::new(child.id());
     #[cfg(windows)]
     let _job = match job::Job::attach(&child) {
         Ok(job) => job,
@@ -76,8 +83,8 @@ fn execute(request: &Path) -> Result<i32, String> {
         if directory.join("stop").exists() || !connected {
             #[cfg(windows)]
             _job.terminate()?;
-            #[cfg(not(windows))]
-            let _ = child.kill();
+            #[cfg(unix)]
+            group.stop();
             let _ = child.wait();
             return Ok(1);
         }

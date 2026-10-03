@@ -1,0 +1,8 @@
+{
+  "0.158.0": {
+    "codex-aarch64-apple-darwin.zst": "6b4b7bf8c3e00ec1dc37b0dd6bc9a106e4626520eb64d3a6d3da4b8b185f32c1",
+    "codex-aarch64-apple-darwin.tar.gz": "341c4a08f9ce1935b3007376dc2a3d50a0a89112930e9a474ae61367218f6e8a",
+    "codex-x86_64-pc-windows-msvc.exe.zst": "48fb8ff8e3d0e5764b1362026470515ae8aa0496c7fb13fccd998c602af856a8",
+    "codex-x86_64-pc-windows-msvc.exe": "af02050cc0c95f5aeb714af2c1077e635c58e9896c13c89d75099cf5b96477be"
+  }
+}

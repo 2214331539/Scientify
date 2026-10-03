@@ -1,4 +1,4 @@
-//! Remote WebView2 children have no application capabilities and no application preload.
+//! Remote native webviews have no application capabilities or application preload.
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Mutex};
 use tauri::{
@@ -262,13 +262,13 @@ pub(crate) fn navigate(
         .parent()
         .ok_or("数据目录无效")?
         .join("browser-profile");
-    let builder = configure_browser_proxy(
+    let builder = configure_browser_proxy(crate::webview_profile::browser(
         WebviewBuilder::new(
             &tab.id,
             WebviewUrl::External(tauri::Url::parse("about:blank").unwrap()),
-        )
-        .data_directory(profile),
-    )?
+        ),
+        profile,
+    )?)?
     .on_navigation(move |url| {
         if url.as_str() == "about:blank" {
             return true;
@@ -380,8 +380,97 @@ pub(crate) fn navigate(
     });
     #[cfg(windows)]
     install_native(&view)?;
+    #[cfg(target_os = "macos")]
+    install_macos(&view);
     view.navigate(url).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn install_macos(view: &tauri::Webview) {
+    let app = view.app_handle().clone();
+    let id = view.label().to_owned();
+    // Read WebKit state on its UI thread without replacing Wry's navigation
+    // delegate (which owns permission checks, downloads and popup handling).
+    std::thread::spawn(move || loop {
+        let Some(view) = app.get_webview(&id) else {
+            break;
+        };
+        let app = app.clone();
+        let id = id.clone();
+        if view
+            .with_webview(move |native| unsafe {
+                let webview = &*(native.inner() as *const objc2_web_kit::WKWebView);
+                let title = webview.title().map(|s| s.to_string()).unwrap_or_default();
+                let loading = webview.isLoading();
+                let back = webview.canGoBack();
+                let forward = webview.canGoForward();
+                let changed = app
+                    .state::<BrowserState>()
+                    .0
+                    .lock()
+                    .ok()
+                    .and_then(|tabs| tabs.get(&id).cloned())
+                    .is_some_and(|tab| {
+                        tab.title != title
+                            || tab.loading != loading
+                            || tab.can_back != back
+                            || tab.can_forward != forward
+                    });
+                if changed {
+                    update(&app, &id, |tab| {
+                        tab.title = title;
+                        tab.loading = loading;
+                        tab.can_back = back;
+                        tab.can_forward = forward;
+                    });
+                }
+            })
+            .is_err()
+        {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    });
+}
+
+pub(crate) fn perform_action(view: &tauri::Webview, action: &str) -> Result<(), String> {
+    if action == "reload" {
+        return view.reload().map_err(|e| e.to_string());
+    }
+    if !["back", "forward", "stop"].contains(&action) {
+        return Err("无效的浏览器操作。".into());
+    }
+    let action = action.to_owned();
+    #[cfg(windows)]
+    return view
+        .with_webview(move |native| unsafe {
+            if let Ok(core) = native.controller().CoreWebView2() {
+                let _ = match action.as_str() {
+                    "back" => core.GoBack(),
+                    "forward" => core.GoForward(),
+                    _ => core.Stop(),
+                };
+            }
+        })
+        .map_err(|e| e.to_string());
+    #[cfg(target_os = "macos")]
+    return view
+        .with_webview(move |native| unsafe {
+            let webview = &*(native.inner() as *const objc2_web_kit::WKWebView);
+            match action.as_str() {
+                "back" => {
+                    let _ = webview.goBack();
+                }
+                "forward" => {
+                    let _ = webview.goForward();
+                }
+                _ => webview.stopLoading(),
+            }
+        })
+        .map_err(|e| e.to_string());
+    #[cfg(not(any(windows, target_os = "macos")))]
+    Err(format!("当前平台不支持浏览器操作：{action}"))
 }
 
 #[cfg(windows)]
@@ -713,28 +802,7 @@ pub async fn browser_command(
         Request::Action { id, action } => {
             get(&app, &owner, &id)?;
             let v = app.get_webview(&id).ok_or("网页尚未打开。")?;
-            if action == "reload" {
-                v.reload().map_err(|e| e.to_string())?;
-            } else {
-                #[cfg(windows)]
-                {
-                    if !["back", "forward", "stop"].contains(&action.as_str()) {
-                        return Err("无效的浏览器操作。".into());
-                    }
-                    v.with_webview(move |native| unsafe {
-                        if let Ok(core) = native.controller().CoreWebView2() {
-                            let _ = match action.as_str() {
-                                "back" => core.GoBack(),
-                                "forward" => core.GoForward(),
-                                _ => core.Stop(),
-                            };
-                        }
-                    })
-                    .map_err(|e| e.to_string())?;
-                }
-                #[cfg(not(windows))]
-                return Err("当前浏览器导航仅支持 Windows。".into());
-            }
+            perform_action(&v, &action)?;
             Ok(serde_json::Value::Null)
         }
     }

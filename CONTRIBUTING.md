@@ -12,7 +12,7 @@ Contributions in Chinese or English are welcome. Small fixes can go directly to 
 
 ## 准备开发环境
 
-目前桌面开发以 Windows x64 为基线。安装 Node.js 24 LTS、pnpm 10.11.0、Rust stable、MSVC C++ Build Tools、WebView2，以及测试需要的 Git 和 Python 3。
+桌面构建支持 Windows x64 与 macOS 14+ Apple Silicon。共同依赖为 Node.js 24 LTS、pnpm 10.11.0、Rust stable、Git 和 Python 3。Windows 另需 MSVC C++ Build Tools 与 WebView2；Mac 另需 Xcode Command Line Tools（`xcode-select --install`），使用原生 arm64 Node / Rust。当前不构建 Intel 或 Universal 包。
 
 Fork 仓库，克隆自己的 fork，再添加上游：
 
@@ -45,7 +45,7 @@ pnpm start
 
 分支名使用小写英文和连字符，可加入 Issue 编号。提交与 PR 标题使用 `feat:`、`fix:`、`docs:`、`chore:`、`refactor:` 或 `test:` 前缀。破坏兼容性的改动需显式说明。
 
-合并前必须通过 `Windows checks / windows` 并解决讨论。维护者使用 squash merge，合并后删除任务分支；不直接在 `main` 开发，不强推或删除 `main`。当前单维护者阶段不要求另一位维护者审批，以免阻塞自身 PR；外部贡献仍由维护者审阅。GitHub 服务端保护是否可强制执行取决于仓库可见性和套餐，不能用书面约定代替实际保护。
+合并前必须通过 `Windows checks / windows` 和 `macOS checks / Apple Silicon build and native verification` 并解决讨论。维护者使用 squash merge，合并后删除任务分支；不直接在 `main` 开发，不强推或删除 `main`。当前单维护者阶段不要求另一位维护者审批，以免阻塞自身 PR；外部贡献仍由维护者审阅。GitHub 服务端保护是否可强制执行取决于仓库可见性和套餐，不能用书面约定代替实际保护。
 
 发布流程与故障处理见[版本发布说明](docs/技术方案/版本发布与分支管理.md)。
 
@@ -80,7 +80,7 @@ git diff --check
 
 根据改动选择验证：文档只检查事实和链接；行为变更补能发现回归的测试；原生文件、进程、浏览器及窗口行为还需桌面验证。测试记录说明真实调用和夹具的区别。没有验证的平台或场景应在 PR 中明确标注。
 
-CI 会运行 Windows 构建与回归检查。远程模型的真实效果、安装升级、长任务、窗口交互及数据恢复不能仅靠 CI 声称通过。
+CI 会运行 Windows 与 Apple Silicon 构建和回归检查；Mac 的 DMG 与受控原生浏览器验证在一次性 runner 中运行。远程模型的真实效果、安装升级、长任务、窗口交互及数据恢复不能仅靠 CI 声称通过。
 
 ## 提交 Pull Request
 

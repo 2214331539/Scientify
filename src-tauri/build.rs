@@ -1,4 +1,8 @@
 fn main() {
+    println!(
+        "cargo:rustc-env=SCIENTIFY_TARGET={}",
+        std::env::var("TARGET").unwrap()
+    );
     // Recompile Windows resources when branding changes, even if config is unchanged.
     println!("cargo:rerun-if-changed=icons");
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(

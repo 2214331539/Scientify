@@ -43,6 +43,8 @@ jobs:
         run: pnpm run build
       - name: Type checking
         run: pnpm check
+      - name: Release platform mapping
+        run: node --test scripts/platform.test.mjs
       - name: Frontend tests
         run: pnpm test --maxWorkers=2
       - name: Rust formatting

@@ -81,12 +81,12 @@ fn regular(path: &Path) -> Result<(), String> {
     for ancestor in path.ancestors().filter(|p| !p.as_os_str().is_empty()) {
         match fs::symlink_metadata(ancestor) {
             Ok(meta) => {
-                let mut link = meta.file_type().is_symlink();
+                let link = meta.file_type().is_symlink();
                 #[cfg(windows)]
-                {
+                let link = {
                     use std::os::windows::fs::MetadataExt;
-                    link |= meta.file_attributes() & 0x400 != 0;
-                }
+                    link || meta.file_attributes() & 0x400 != 0
+                };
                 if link {
                     return Err(format!(
                         "数据迁移不支持符号链接或目录联接：{}",

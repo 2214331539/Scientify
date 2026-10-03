@@ -69,7 +69,6 @@ pub async fn open_project_window(
         .join("workspace-ui-profile");
     let builder =
         tauri::WebviewWindowBuilder::new(&app, "workspace", tauri::WebviewUrl::App(route.into()))
-            .data_directory(profile)
             .title("Scientify · Workspace")
             .inner_size(1440.0, 940.0)
             .min_inner_size(1000.0, 680.0)
@@ -79,7 +78,9 @@ pub async fn open_project_window(
             .on_page_load(|_, event| trace(format!("page {:?} {}", event.event(), event.url())))
             .visible(true);
     trace("creating native window");
-    let window = builder.build().map_err(|e| e.to_string())?;
+    let window = crate::webview_profile::window(builder, profile)?
+        .build()
+        .map_err(|e| e.to_string())?;
     trace("native window created");
     // A failed webview boot must not leave Projects indefinitely blocked.
     std::thread::spawn(move || {

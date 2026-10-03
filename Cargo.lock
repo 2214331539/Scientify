@@ -3529,10 +3529,14 @@ dependencies = [
 
 [[package]]
 name = "scientify"
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.2"
 dependencies = [
  "base64 0.22.1",
+ "dirs",
+ "libc",
  "notify",
+ "objc2",
+ "objc2-web-kit",
  "portable-pty",
  "reqwest 0.12.28",
  "rfd",
@@ -3553,7 +3557,7 @@ dependencies = [
 
 [[package]]
 name = "scientify-core"
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.2"
 dependencies = [
  "atomicwrites",
  "chrono",

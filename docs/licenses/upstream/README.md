@@ -16,6 +16,10 @@ review and update this map rather than reuse a notice for a different version.
 - `stackback` is used by the test toolchain only. Its source and npm archive
   contain an MIT declaration but no separate license text. The supplemental
   record identifies this limitation explicitly; it is not a runtime component.
+- The Apple `objc2` family omits notice files from its crate archives. The
+  upstream workspace's `LICENSE.md` is retained verbatim; each exact crate
+  version links to its published source commit. That notice links the license
+  terms and documents the Apple SDK provenance.
 
 The generated report deliberately includes build/test dependencies as well as
 runtime dependencies. It is bundled under `licenses/`, alongside the project,

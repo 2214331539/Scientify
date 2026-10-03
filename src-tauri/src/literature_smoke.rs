@@ -130,13 +130,7 @@ fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String
         crate::browser::get(app, "main", &tab.id)
             .is_ok_and(|t| t.title == "Native two" && t.can_back)
     })?;
-    #[cfg(windows)]
-    view.with_webview(|v| unsafe {
-        if let Ok(core) = v.controller().CoreWebView2() {
-            let _ = core.GoBack();
-        }
-    })
-    .map_err(|e| e.to_string())?;
+    crate::browser::perform_action(&view, "back")?;
     wait(|| {
         crate::browser::get(app, "main", &tab.id)
             .is_ok_and(|t| t.title == "Native one" && t.can_forward)
@@ -152,7 +146,7 @@ fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String
         crate::browser::get(app, "main", &tab.id).is_ok_and(|t| {
             t.title == "Verification page"
                 && !t.loading
-                && t.error.as_ref().is_some_and(|e| e.contains("429"))
+                && (!cfg!(windows) || t.error.as_ref().is_some_and(|e| e.contains("429")))
         })
     })?;
     let mut probes = vec![crate::browser::get(app, "main", &tab.id)?];

@@ -166,6 +166,15 @@ fn resolve_program(root: &Path, value: &str) -> Result<PathBuf, String> {
             .find(|p| p.is_file())
             .ok_or("找不到可执行程序，请填写绝对路径或检查 PATH。")?
     };
+    #[cfg(unix)]
+    {
+        // Validate the resolved tool, but execute its selected path. Python
+        // locates a venv from bin/python; executing its symlink target instead
+        // silently switches the run back to the base interpreter.
+        let target = p.canonicalize().map_err(|e| e.to_string())?;
+        scientify_core::research::reject_links(&target)?;
+    }
+    #[cfg(not(unix))]
     scientify_core::research::reject_links(&p)?;
     if !p.is_file() {
         return Err("可执行程序不存在。".into());
@@ -942,6 +951,62 @@ mod tests {
         }
         assert!(relative("src/train.py").is_ok());
     }
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_sandbox_allows_artifacts_and_denies_external_writes() {
+        let parent = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        // Keep the denial fixture outside OS temporary directories, which the
+        // upstream sandbox may explicitly allow for normal command operation.
+        let fixture = tempfile::tempdir_in(parent).unwrap();
+        let root = fixture.path().join("project");
+        fs::create_dir(&root).unwrap();
+        let outside = fixture.path().join("outside.txt");
+        fs::write(&outside, "unchanged").unwrap();
+        let state = ExperimentState::new(fixture.path().join("runs"));
+        let config = |name: &str, script: &str, extra: Vec<String>| Configuration {
+            id: name.into(),
+            name: name.into(),
+            executable: "/bin/sh".into(),
+            args: [vec!["-c".into(), script.into(), "sh".into()], extra].concat(),
+            cwd: ".".into(),
+        };
+        let bad = state
+            .start(
+                "p1".into(),
+                root.clone(),
+                config(
+                    "blocked",
+                    "printf overwritten > \"$1\"",
+                    vec![outside.display().to_string()],
+                ),
+                None,
+                None,
+            )
+            .unwrap();
+        let good = state.start("p1".into(), root, config("allowed", "printf '{\"loss\":0.2}' > \"$SCIENTIFY_RUN_DIR/metrics.json\"; echo results-written", vec![]), None, None).unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(60);
+        while state.run(&good.id).unwrap().status == "running"
+            || state.run(&bad.id).unwrap().status == "running"
+        {
+            assert!(std::time::Instant::now() < deadline);
+            thread::sleep(Duration::from_millis(50));
+        }
+        assert_eq!(
+            state.run(&good.id).unwrap().status,
+            "completed",
+            "{:?}",
+            read_log(&state, &good.id)
+        );
+        assert_eq!(
+            read_artifact(&state, &good.id, "metrics.json".into())
+                .unwrap()
+                .content,
+            "{\"loss\":0.2}"
+        );
+        assert_eq!(state.run(&bad.id).unwrap().status, "failed");
+        assert_eq!(fs::read_to_string(outside).unwrap(), "unchanged");
+    }
+
     #[cfg(windows)]
     #[test]
     fn sandbox_allows_run_artifacts_and_blocks_external_file_writes() {
