@@ -356,6 +356,21 @@ pub fn run() {
             credentials::secret_load,
             credentials::secret_clear,
         ])
-        .run(context)
-        .expect("Scientify failed to start");
+        .build(context)
+        .expect("Scientify failed to start")
+        .run(move |app, event| {
+            // The native Quit menu must use the same save/task guard as closing
+            // the workspace. Once back at Projects, Quit exits the application.
+            #[cfg(target_os = "macos")]
+            if let (false, tauri::RunEvent::ExitRequested { api, .. }) = (isolated_smoke, event) {
+                if let Some(workspace) = app.get_webview_window("workspace") {
+                    api.prevent_exit();
+                    let _ = workspace.show();
+                    let _ = workspace.set_focus();
+                    let _ = workspace.close();
+                }
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app, event);
+        });
 }

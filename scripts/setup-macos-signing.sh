@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [ -z "${APPLE_CERTIFICATE:-}${SCIENTIFY_SIGNING_IDENTITY:-}${APPLE_API_PRIVATE_KEY:-}" ]; then
+if [ -z "${APPLE_CERTIFICATE:-}${APPLE_CERTIFICATE_PASSWORD:-}${SCIENTIFY_SIGNING_IDENTITY:-}${APPLE_API_ISSUER:-}${APPLE_API_KEY:-}${APPLE_API_PRIVATE_KEY:-}" ]; then
   echo 'MACOS_SIGNING=adhoc' >> "$GITHUB_ENV"
   echo 'No Developer ID credentials configured; this build is an unnotarized preview.'
   exit 0

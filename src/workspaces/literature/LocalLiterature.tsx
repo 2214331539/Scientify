@@ -521,6 +521,7 @@ export function LocalLiterature({
                   aria-label={t('搜索文献')}
                   placeholder={t('搜索文件名和路径')}
                   value={query}
+                  onFocus={(e) => e.currentTarget.select()}
                   onChange={(e) => {
                     setQuery(e.target.value);
                     if (e.target.value) setCollapsed(new Set());
@@ -531,7 +532,9 @@ export function LocalLiterature({
                       e.preventDefault();
                       if (e.key === 'Escape') setQuery('');
                       setSearchOpen(false);
-                      requestAnimationFrame(() => searchTrigger.current?.focus());
+                      requestAnimationFrame(() => {
+                        if (!search.current) searchTrigger.current?.focus();
+                      });
                     }
                   }}
                 />
@@ -558,7 +561,6 @@ export function LocalLiterature({
                     ref={searchTrigger}
                     onClick={() => {
                       setSearchOpen(true);
-                      requestAnimationFrame(() => search.current?.select());
                     }}
                   >
                     <Search />

@@ -11,10 +11,10 @@
 [English](README.en.md) · [快速开始](#快速开始) · [使用文档](docs/产品功能文档/桌面使用说明.md) · [参与贡献](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [问题反馈](https://github.com/2214331539/Scientify/issues)
 
 ![Stage: Alpha](https://img.shields.io/badge/stage-alpha-orange)
-![Desktop: Windows x64](https://img.shields.io/badge/desktop-Windows_x64-blue)
+![Desktop: Windows x64 and macOS arm64](https://img.shields.io/badge/desktop-Windows_x64_%7C_macOS_arm64-blue)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-> **当前是早期开发版本。** Windows x64 安装包通过 [GitHub Releases](https://github.com/2214331539/Scientify/releases) 分发，标记为 Pre-release，尚未进行代码签名。macOS、Linux 和移动端尚未交付。
+> **当前是早期开发版本。** Windows x64 与 macOS Apple Silicon 安装包通过 [GitHub Releases](https://github.com/2214331539/Scientify/releases) 分发，标记为 Pre-release。Windows 尚未签名；Mac 为 ad-hoc 签名、未公证预览版。不提供 Intel Mac、Linux 或移动端安装包。
 
 ## 为什么做 Scientify
 
@@ -35,7 +35,7 @@
 | ------------ | -------------------------------------------------------------------------------------------------- |
 | 管理课题     | 项目书架、搜索、收藏、归档、目录关联，个人与本机团队分类                                           |
 | 阅读文献     | 本地 PDF 目录树、搜索、分页或连续阅读、选文摘录、与 PDF 配对的 Markdown 笔记                       |
-| 浏览网页     | Windows 原生网页标签、地址与关键词输入、前进后退、下载到文献目录                                   |
+| 浏览网页     | Windows / macOS 原生网页标签、地址与关键词输入、前进后退、下载到文献目录                                   |
 | 整理研究笔记 | 项目笔记、快速笔记、自动保存与来源返回                                                             |
 | 开展实验     | 代码编辑、Python 解释器与 venv/已有 Conda 管理、交互终端、本地运行、日志、停止、产物及基础指标比较 |
 | 管理代码版本 | Git diff、暂存、提交、本地分支、历史、stash 和 worktree                                            |
@@ -48,16 +48,23 @@
 
 ### 下载安装
 
-在 [Releases](https://github.com/2214331539/Scientify/releases) 打开最新的预发布版本，下载 `Scientify_<版本>_windows_x64_setup.exe`，运行安装后打开 Scientify。普通使用无需安装 Node.js 或 Rust。
+在 [Releases](https://github.com/2214331539/Scientify/releases) 打开最新的预发布版本，按设备选择安装包。普通使用无需安装 Node.js 或 Rust。
+
+| 平台 | 文件 | 安装方式 |
+| --- | --- | --- |
+| Windows 10 / 11 x64 | `Scientify_<版本>_windows_x64_setup.exe` | 运行安装器 |
+| macOS 14+ Apple Silicon（M 系列） | `Scientify_<版本>_macos_arm64.dmg` | 打开 DMG，将 Scientify 拖入 Applications |
+
+Mac 首次打开可能被系统阻止。确认下载来源后，在系统设置 → 隐私与安全性中使用“仍要打开”；无需关闭 Gatekeeper。可用 `shasum -a 256 <安装包>` 对照发布页校验值。
 
 - 适用于 Windows 10 / 11 x64；缺少 WebView2 时安装器需要联网安装运行时。
 - Python 与 Git 按需自行安装。阅读论文与笔记无需模型密钥；AI 使用自己的模型服务配置。
 - 当前安装包未签名，Windows 可能显示“未知发布者”。发布页附 `SHA256SUMS.txt`，可使用 `Get-FileHash <安装包路径> -Algorithm SHA256` 核对完整性。
 - 更新前关闭应用并备份 `ScientifyData` 和关联的外部目录，再运行新安装包。第一版暂不提供自动更新。
 
-### 从源码运行 Windows 桌面版
+### 从源码运行桌面版
 
-需要 Windows x64、[Node.js 24 LTS](https://nodejs.org/)、pnpm 10.11.0、Rust stable，以及 [Tauri Windows 前置依赖](https://v2.tauri.app/start/prerequisites/#windows)中的 MSVC C++ Build Tools 和 WebView2 Runtime。
+共同依赖为 [Node.js 24 LTS](https://nodejs.org/)、pnpm 10.11.0、Rust stable。Windows x64 还需 [MSVC C++ Build Tools 和 WebView2](https://v2.tauri.app/start/prerequisites/#windows)；Apple Silicon Mac 需要 macOS 14+ 与 [Xcode Command Line Tools](https://v2.tauri.app/start/prerequisites/#macos)（`xcode-select --install`）。使用原生 arm64 的 Node / Rust，不通过 Rosetta 构建。
 
 ```powershell
 git clone https://github.com/2214331539/Scientify.git
@@ -76,14 +83,16 @@ pnpm start
 pnpm tauri build --no-bundle
 ```
 
-构建后运行 `Scientify-MVP.cmd`。该脚本从仓库构建目录选择最新程序，本身不是安装包。Windows NSIS 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles nsis -- --locked`，产物位于 `target/release/bundle/nsis/`。自动发布和分支约定见[版本发布说明](docs/技术方案/版本发布与分支管理.md)，签名与自动更新仍在[路线图](ROADMAP.md)中。
+Windows 构建后运行 `Scientify-MVP.cmd`。该脚本从仓库构建目录选择最新程序，本身不是安装包。Windows NSIS 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles nsis -- --locked`，产物位于 `target/release/bundle/nsis/`。自动发布和分支约定见[版本发布说明](docs/技术方案/版本发布与分支管理.md)，签名与自动更新仍在[路线图](ROADMAP.md)中。
+
+Mac 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles app,dmg -- --locked`，产物位于 `target/release/bundle/dmg/`。本机无证书时使用 ad-hoc 签名。
 
 `pnpm dev` 用于前端浏览器预览，使用独立数据。它不具备桌面文件访问、真实终端、实验执行和内嵌浏览器能力，不能当作完整 Web 版。
 
 ## 数据与 AI
 
 - PDF、相邻论文笔记和代码保留在本地目录。应用元数据、项目研究笔记和运行记录由本地数据目录管理。
-- 正式构建默认在安装目录附近使用 `ScientifyData/`；安装位置需要可写，设置中可以安排数据迁移。开发构建使用独立的 `.tauri-data/`。
+- Windows 正式构建默认在可写安装目录附近使用 `ScientifyData/`；Mac 默认使用 `~/Library/Application Support/com.scientify.desktop/ScientifyData/`。设置中可以安排数据迁移。开发构建使用独立的 `.tauri-data/`。
 - **JSON 导出不包含 PDF 和源码。** 完整备份需要复制应用数据和外部关联目录；详细步骤见[数据说明](docs/产品功能文档/桌面使用说明.md#数据与文件)。
 - 使用远程模型时，选定材料或 Agent 读取的内容可能发送给所配置的服务商，费用遵循该服务商规则。本地优先不等于所有功能离线运行。
 - 当前模型密钥保存在本机未加密的凭据文件中。不要分享整个数据目录、浏览器资料或带密钥的日志；该限制与报告方式见[安全说明](SECURITY.md)。
@@ -96,7 +105,7 @@ pnpm tauri build --no-bundle
 - 暂无 Notebook 单元执行、断点调试、远程 GPU 调度，以及完整 Git 远程与冲突解决界面。
 - LaTeX 可以编辑，尚未集成编译。记录运行条件不等于完整冻结所有依赖或保证可复现。
 - 文件草稿不保证崩溃恢复；终端进程不会在应用重启后恢复。
-- Windows 之外的平台需要原生适配与实机验证，见[跨平台路线](docs/技术方案/跨平台适配路线.md)。
+- Mac 预览版使用 WKWebView；网站兼容性、最低系统版本与完整人工科研流程仍需实机反馈。Intel、Linux 暂不支持，见[跨平台实现与验证范围](docs/技术方案/跨平台适配路线.md)。
 
 ## 参与开发
 
@@ -122,7 +131,7 @@ cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
-当前[Windows CI](.github/workflows/ci.yml)执行构建与回归检查；CI 通过不代替桌面实机和安装包验收。文档修改只需检查事实与链接。协作决策与维护职责见[治理规则](GOVERNANCE.md)。
+当前 [Windows CI](.github/workflows/ci.yml) 与 [Apple Silicon CI](.github/workflows/macos.yml) 执行各自构建与回归检查；Mac CI 还验证受控原生浏览器和 DMG。CI 通过不代替完整人工验收。文档修改只需检查事实与链接。协作决策与维护职责见[治理规则](GOVERNANCE.md)。
 
 ## 文档与许可
 

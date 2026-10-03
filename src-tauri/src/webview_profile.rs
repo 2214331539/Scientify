@@ -33,9 +33,13 @@ pub fn window<'a, R: Runtime, M: Manager<R>>(
     profile: PathBuf,
 ) -> Result<WebviewWindowBuilder<'a, R, M>, String> {
     #[cfg(target_os = "macos")]
-    return Ok(builder.data_store_identifier(identifier(&profile)?));
+    {
+        Ok(builder.data_store_identifier(identifier(&profile)?))
+    }
     #[cfg(not(target_os = "macos"))]
-    Ok(builder.data_directory(profile))
+    {
+        Ok(builder.data_directory(profile))
+    }
 }
 
 pub fn browser<R: Runtime>(
@@ -43,9 +47,13 @@ pub fn browser<R: Runtime>(
     profile: PathBuf,
 ) -> Result<WebviewBuilder<R>, String> {
     #[cfg(target_os = "macos")]
-    return Ok(builder.data_store_identifier(identifier(&profile)?));
+    {
+        Ok(builder.data_store_identifier(identifier(&profile)?))
+    }
     #[cfg(not(target_os = "macos"))]
-    Ok(builder.data_directory(profile))
+    {
+        Ok(builder.data_directory(profile))
+    }
 }
 
 #[cfg(all(test, target_os = "macos"))]
