@@ -1,0 +1,125 @@
+name: Windows release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag on main (for example v0.3.0-alpha.1)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and verify Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    outputs:
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Verify tag, versions and main ancestry
+        id: version
+        run: |
+          git fetch origin main --tags
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot fetch main and tags.' }
+          node scripts/check-release.mjs $env:RELEASE_TAG
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare assets, licenses and frontend
+        run: pnpm run build
+      - name: Type checking
+        run: pnpm check
+      - name: Frontend tests
+        run: pnpm test --maxWorkers=2
+      - name: Rust formatting
+        run: cargo fmt --all --check
+      - name: Rust tests
+        run: cargo test --workspace --locked -- --test-threads=1
+      - name: Rust lint
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Build NSIS installer
+        run: node node_modules/@tauri-apps/cli/tauri.js build --bundles nsis --ci -- --locked
+      - name: Prepare release assets
+        run: node scripts/stage-release.mjs
+      - name: Verify install, reinstall and data-preserving uninstall
+        run: |
+          $installer = @(Get-ChildItem .release/*.exe)
+          if ($installer.Count -ne 1) { throw 'Expected one installer.' }
+          ./scripts/verify-installer.ps1 -Installer $installer[0].FullName
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: .release/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish verified release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      PRERELEASE: ${{ needs.build.outputs.prerelease }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: release
+      - name: Verify checksums and publish
+        working-directory: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum --check SHA256SUMS.txt
+          if gh release view "$RELEASE_TAG" --json isDraft > existing-release.json 2>/dev/null; then
+            if [ "$(jq -r .isDraft existing-release.json)" != true ]; then
+              echo 'This release is already published. Create a new version instead of replacing assets.' >&2
+              exit 1
+            fi
+          else
+            flags=()
+            if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" --verify-tag --draft "${flags[@]}" \
+              --title "Scientify $RELEASE_TAG" --notes-file RELEASE_NOTES.md
+          fi
+          gh release upload "$RELEASE_TAG" ./*.exe SHA256SUMS.txt THIRD_PARTY_LICENSES.txt --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease="$PRERELEASE" --latest=false \
+            --notes-file RELEASE_NOTES.md
+          gh release view "$RELEASE_TAG" --json url,assets

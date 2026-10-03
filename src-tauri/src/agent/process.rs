@@ -33,6 +33,9 @@ pub type EventSink = Arc<dyn Fn(serde_json::Value) + Send + Sync + 'static>;
 fn spawn_engine(command: &mut Command, home: &Path) -> Result<Child, String> {
     let temp = home.join("runtime-temp");
     std::fs::create_dir_all(&temp).map_err(|e| e.to_string())?;
+    // Windows short aliases and long paths must resolve to the same sandbox
+    // root. Pass an existing, canonical directory to the upstream engine.
+    let temp = crate::local_process::process_path(&temp.canonicalize().map_err(|e| e.to_string())?);
     command
         .env("TEMP", &temp)
         .env("TMP", &temp)
@@ -282,11 +285,11 @@ impl EngineSession {
             .args(args)
             // Analytics stay off: the engine defaults app-server analytics to
             // disabled and we simply never opt in.
-            .env("CODEX_HOME", codex_home)
+            .env("CODEX_HOME", super::execution::canonical_path(codex_home))
             // The API key travels here rather than in config.toml, so it never
             // reaches disk.
             .envs(extra_env.iter().map(|(key, value)| (key, value)))
-            .current_dir(root)
+            .current_dir(super::execution::canonical_path(root))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());

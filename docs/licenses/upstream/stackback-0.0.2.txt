@@ -1,0 +1,11 @@
+stackback 0.0.2 — development/test dependency, not included in the application runtime.
+
+The upstream v0.0.2 package.json declares:
+  "author": "Roman Shtylman <shtylman@gmail.com>"
+  "license": "MIT"
+
+Source: https://github.com/shtylman/node-stackback/tree/2963095372abf7b75ba55f01cef08ab1e62c2ff4
+
+Neither the npm archive nor the upstream version contains a separate license
+text. This record preserves the upstream declaration; it does not invent a
+copyright notice. Standard MIT terms: https://opensource.org/license/mit
