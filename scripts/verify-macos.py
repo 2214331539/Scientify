@@ -50,7 +50,10 @@ if args.bundle:
     installed.mkdir(exist_ok=True)
     app = installed / 'Scientify.app'
     run('hdiutil', 'verify', str(disks[0]))
-    run('hdiutil', 'attach', str(disks[0]), '-nobrowse', '-readonly', '-mountpoint', str(mount))
+    # Tauri embeds this repository's Apache-2.0 license in the DMG. hdiutil
+    # requires acceptance on stdin even in a non-interactive CI session.
+    run('hdiutil', 'attach', str(disks[0]), '-nobrowse', '-readonly', '-mountpoint', str(mount),
+        input='Y\n')
     try:
         run('ditto', str(mount / 'Scientify.app'), str(app))
     finally:
