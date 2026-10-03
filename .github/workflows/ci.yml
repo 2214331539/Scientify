@@ -35,6 +35,8 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Prepare assets and build frontend
@@ -46,6 +48,6 @@ jobs:
       - name: Rust formatting
         run: cargo fmt --all --check
       - name: Rust tests
-        run: cargo test --workspace --locked
+        run: cargo test --workspace --locked -- --test-threads=1
       - name: Rust lint
         run: cargo clippy --workspace --all-targets --locked -- -D warnings

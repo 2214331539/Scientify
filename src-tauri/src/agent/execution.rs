@@ -9,10 +9,14 @@ use std::{
 
 pub const WINDOWS_SANDBOX_OVERRIDE: &str = "windows.sandbox=\"unelevated\"";
 
+pub(crate) fn canonical_path(path: &Path) -> PathBuf {
+    crate::local_process::process_path(&path.canonicalize().unwrap_or_else(|_| path.to_path_buf()))
+}
+
 pub fn policy(root: &Path, artifacts: Option<&Path>) -> Value {
-    let mut roots = vec![root.to_path_buf()];
+    let mut roots = vec![canonical_path(root)];
     if let Some(path) = artifacts {
-        roots.push(path.to_path_buf());
+        roots.push(canonical_path(path));
     }
     json!({"type":"workspaceWrite", "writableRoots":roots,
         "networkAccess":false,"excludeTmpdirEnvVar":false,"excludeSlashTmp":false})

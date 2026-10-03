@@ -110,10 +110,10 @@ impl QuietChild {
             return Err(io::Error::last_os_error());
         }
         let result = (|| {
-            let mut desktop_name = wide(OsStr::new(&format!(
-                "WinSta0\\{}",
-                String::from_utf16_lossy(&name[..name.len() - 1])
-            )));
+            // CreateDesktopW uses this process's window station. A CI runner
+            // or service may not belong to WinSta0; a relative desktop name
+            // keeps the child in the same station as the desktop we created.
+            let mut desktop_name = name.clone();
             let mut argv = quote(command.get_program());
             for arg in command.get_args() {
                 argv.push(b' ' as u16);
@@ -334,7 +334,17 @@ mod tests {
             .unwrap()
             .read_to_string(&mut output)
             .unwrap();
-        assert!(status.success(), "helper failed: {status:?}");
+        let mut errors = String::new();
+        child
+            .stderr
+            .take()
+            .unwrap()
+            .read_to_string(&mut errors)
+            .unwrap();
+        assert!(
+            status.success(),
+            "helper failed: {status:?}; stderr: {errors}; stdout: {output}"
+        );
         assert!(output.contains("child-done"));
         assert!(
             output.contains(&marker),

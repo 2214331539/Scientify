@@ -143,17 +143,7 @@ fn confined(root: &Path, value: &str) -> Result<PathBuf, String> {
     Ok(p)
 }
 fn process_path(path: &Path) -> PathBuf {
-    #[cfg(windows)]
-    {
-        let text = path.to_string_lossy();
-        if let Some(value) = text.strip_prefix(r"\\?\UNC\") {
-            return PathBuf::from(format!(r"\\{value}"));
-        }
-        if let Some(value) = text.strip_prefix(r"\\?\") {
-            return PathBuf::from(value);
-        }
-    }
-    path.to_path_buf()
+    execution::canonical_path(path)
 }
 fn resolve_program(root: &Path, value: &str) -> Result<PathBuf, String> {
     if value.trim().is_empty() || value.contains('\0') {
@@ -955,8 +945,31 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn sandbox_allows_run_artifacts_and_blocks_external_file_writes() {
-        let temp = tempfile::tempdir().unwrap();
-        let root = temp.path().join("project");
+        use std::os::windows::ffi::{OsStrExt, OsStringExt};
+        use windows::{core::PCWSTR, Win32::Storage::FileSystem::GetShortPathNameW};
+        let temp = tempfile::Builder::new()
+            .prefix("Scientify sandbox long directory ")
+            .tempdir()
+            .unwrap();
+        // GitHub's Windows runner uses an 8.3 alias in its temp path. Exercise
+        // the same alias here: allowed outputs must work without permitting
+        // writes outside the workspace. Volumes with 8.3 disabled return the
+        // original path and still run the complete boundary check.
+        let long_path: Vec<u16> = temp
+            .path()
+            .as_os_str()
+            .encode_wide()
+            .chain(Some(0))
+            .collect();
+        let mut short_path = vec![0u16; 32768];
+        let length = unsafe { GetShortPathNameW(PCWSTR(long_path.as_ptr()), Some(&mut short_path)) }
+            as usize;
+        assert!(
+            length > 0 && length < short_path.len(),
+            "Cannot resolve temporary path alias"
+        );
+        let temp_root = PathBuf::from(std::ffi::OsString::from_wide(&short_path[..length]));
+        let root = temp_root.join("project");
         fs::create_dir(&root).unwrap();
         // OS temporary directories can be writable under workspace-write.
         // Check a disposable file outside those platform exceptions.
@@ -964,7 +977,7 @@ mod tests {
             tempfile::tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap()).unwrap();
         let outside = external.path().join("outside.txt");
         fs::write(&outside, "unchanged").unwrap();
-        let state = ExperimentState::new(temp.path().join("experiments"));
+        let state = ExperimentState::new(temp_root.join("experiments"));
         let executable = std::env::var("SystemRoot").unwrap()
             + "/System32/WindowsPowerShell/v1.0/powershell.exe";
         let config = |name: &str, script: String| Configuration {
