@@ -2,7 +2,7 @@ name: macOS checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'codex/apple-silicon-release']
   pull_request:
     branches: [main]
   workflow_dispatch:

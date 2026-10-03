@@ -460,10 +460,10 @@ pub(crate) fn perform_action(view: &tauri::Webview, action: &str) -> Result<(), 
             let webview = &*(native.inner() as *const objc2_web_kit::WKWebView);
             match action.as_str() {
                 "back" => {
-                    webview.goBack();
+                    let _ = webview.goBack();
                 }
                 "forward" => {
-                    webview.goForward();
+                    let _ = webview.goForward();
                 }
                 _ => webview.stopLoading(),
             }
