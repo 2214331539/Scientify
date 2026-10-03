@@ -5,7 +5,6 @@ import json
 import os
 import pathlib
 import plistlib
-import shutil
 import subprocess
 import time
 
@@ -26,9 +25,15 @@ if args.native:
     env = dict(os.environ, SCIENTIFY_NATIVE_SMOKE='1',
                SCIENTIFY_DATA_DIR=str(root / 'native/workspace'),
                SCIENTIFY_NATIVE_REPORT=str(report))
-    with (root / 'native.log').open('w') as log:
-        subprocess.run([str(pathlib.Path(args.native).resolve())], env=env,
-                       stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+    try:
+        with (root / 'native.log').open('w') as log:
+            subprocess.run([str(pathlib.Path(args.native).resolve())], env=env,
+                           stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        print((root / 'native.log').read_text(errors='replace')[-20000:])
+        if report.exists():
+            print(report.read_text())
+        raise
     result = json.loads(report.read_text())
     if not result['passed']:
         raise SystemExit(result)

@@ -167,7 +167,14 @@ fn resolve_program(root: &Path, value: &str) -> Result<PathBuf, String> {
             .ok_or("找不到可执行程序，请填写绝对路径或检查 PATH。")?
     };
     #[cfg(unix)]
-    let p = p.canonicalize().map_err(|e| e.to_string())?;
+    {
+        // Validate the resolved tool, but execute its selected path. Python
+        // locates a venv from bin/python; executing its symlink target instead
+        // silently switches the run back to the base interpreter.
+        let target = p.canonicalize().map_err(|e| e.to_string())?;
+        scientify_core::research::reject_links(&target)?;
+    }
+    #[cfg(not(unix))]
     scientify_core::research::reject_links(&p)?;
     if !p.is_file() {
         return Err("可执行程序不存在。".into());
