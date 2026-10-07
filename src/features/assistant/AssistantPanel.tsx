@@ -103,6 +103,7 @@ export function AssistantPanel({
     anchor: MenuAnchor;
   } | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
 
   const [apiKey, setApiKey] = useState('');
@@ -135,7 +136,20 @@ export function AssistantPanel({
   const [newDomain, setNewDomain] = useState<AgentDomain | null>(null);
   const domain =
     conversation.agentDomain ?? newDomain ?? domainForWorkspace(context.workspace) ?? 'code';
-  const [prompt, setPrompt] = useState('');
+  const [prompt, updatePrompt] = useState('');
+  const drafts = useRef(new Map<string, string>());
+  const draftChats = useRef(new Map<string, Conversation>());
+  const [, refreshDrafts] = useState(0);
+  function setPrompt(value: string) {
+    drafts.current.set(activeConversationId.current, value);
+    updatePrompt(value);
+  }
+  function restorePrompt(id: string, text: string) {
+    const restored = [text, drafts.current.get(id)].filter(Boolean).join('\n\n');
+    drafts.current.set(id, restored);
+    if (activeConversationId.current === id) updatePrompt(restored);
+    refreshDrafts((revision) => revision + 1);
+  }
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [includeContext, setIncludeContext] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -150,10 +164,17 @@ export function AssistantPanel({
     provider: settings.provider,
     ...(apiKey ? { apiKey } : {}),
   };
-  const history = (data?.sessions ?? []).filter((item) => item.project === scope);
+  const savedHistory = (data?.sessions ?? []).filter((item) => item.project === scope);
+  const history = [
+    ...savedHistory,
+    ...[...draftChats.current.values()].filter(
+      (chat) => !savedHistory.some((saved) => saved.id === chat.id),
+    ),
+  ];
   const key = `assistant:${scope}`;
-  const dirty = !!prompt.trim() || unsaved;
-  const conversationActionsDisabled = dirty || !!retry || busy || settingsBusy;
+  const dirty =
+    !!prompt.trim() || [...drafts.current.values()].some((draft) => !!draft.trim()) || unsaved;
+  const conversationActionsDisabled = unsaved || !!retry || busy || settingsBusy;
   const backgroundTasks = [...runtime.tasks.values()].filter(
     (task) =>
       (runtime.pending(task) || task.saveError) &&
@@ -260,6 +281,15 @@ export function AssistantPanel({
     const pane = messagesRef.current;
     if (pane && pinnedToBottom.current) pane.scrollTop = pane.scrollHeight;
   }, [conversation.messages.length, conversation.id, agentState.agentText, agentPending, busy]);
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined' || !transcriptRef.current) return;
+    const observer = new ResizeObserver(() => {
+      const pane = messagesRef.current;
+      if (pane && pinnedToBottom.current) pane.scrollTop = pane.scrollHeight;
+    });
+    observer.observe(transcriptRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   async function saveSettings(value = settingsDraft, keyValue = draftKey) {
     if (settingsBusy || busyRef.current) return;
@@ -326,7 +356,6 @@ export function AssistantPanel({
         setRetry(value);
         return;
       }
-      setPrompt('');
       const answer = await backend.askAI({
         endpoint: settings.endpoint,
         provider: settings.provider,
@@ -370,13 +399,16 @@ export function AssistantPanel({
       if (target) {
         target.title = title;
         target.updatedAt = updatedAt;
-      }
+      } else workspace.sessions.push({ ...asConversation(item), title, updatedAt });
     });
     if (!saved) {
       setError(store.getState().error || t('对话重命名失败，请重试。'));
       return;
     }
-    if (conversation.id === id) setConversation((current) => ({ ...current, title, updatedAt }));
+    const draft = draftChats.current.get(id);
+    if (draft) draftChats.current.set(id, { ...draft, title, updatedAt });
+    if (activeConversationId.current === id)
+      setConversation((current) => ({ ...current, title, updatedAt }));
   }
 
   async function deleteConversation(id: string) {
@@ -401,8 +433,13 @@ export function AssistantPanel({
       setError(store.getState().error || t('对话删除失败，请重试。'));
       return;
     }
+    drafts.current.delete(id);
+    draftChats.current.delete(id);
     if (conversation.id !== id) return;
-    setConversation(newConversation(scope));
+    const next = newConversation(scope);
+    activeConversationId.current = next.id;
+    setConversation(next);
+    setPrompt('');
     setError('');
   }
 
@@ -483,9 +520,9 @@ export function AssistantPanel({
         : conversation;
     const sent = await runtime.send(seed, domain, agentConnection, text, snapshot);
     if (sent === false) {
+      restorePrompt(sendingId, text);
       if (activeConversationId.current === sendingId) {
         setError(store.getState().error ?? t('当前输入尚未发送，请在任务结束后重试。'));
-        setPrompt(text);
       }
     }
   }
@@ -537,16 +574,24 @@ export function AssistantPanel({
     };
     setConversation(next);
     setUnsaved(true);
+    setPrompt('');
     await runRequest(next);
   }
 
   function selectConversation(id: string) {
-    if (dirty || retry || busy) return;
+    if (unsaved || retry || busy || settingsBusy) return;
     pinnedToBottom.current = true;
     const existing = store
       .getState()
       .data?.sessions.find((item) => item.id === id && item.project === scope);
-    setConversation(existing ? asConversation(existing) : newConversation(scope));
+    drafts.current.set(conversation.id, prompt);
+    draftChats.current.set(conversation.id, conversation);
+    const next = existing
+      ? asConversation(existing)
+      : (draftChats.current.get(id) ?? newConversation(scope));
+    activeConversationId.current = next.id;
+    setConversation(next);
+    setPrompt(drafts.current.get(next.id) ?? '');
     setNewDomain(null);
     setError('');
   }
@@ -580,6 +625,18 @@ export function AssistantPanel({
     setError('');
     if (!(await session.interrupt())) setError(session.state.error ?? t('中止任务失败，请重试。'));
   }
+  async function steerAgent() {
+    const text = prompt.trim();
+    if (!activeTask || !text || activeTask.steering) return;
+    const id = conversation.id;
+    setPrompt('');
+    if (!(await runtime.steer(activeTask, text))) {
+      restorePrompt(id, text);
+      if (activeConversationId.current === id) {
+        setError(activeTask.session.state.error ?? t('补充指令未发送，请重试。'));
+      }
+    }
+  }
 
   return (
     <Panel
@@ -610,7 +667,7 @@ export function AssistantPanel({
           size="sm"
           iconOnly
           aria-label={t('新建 AI 对话')}
-          tooltip={dirty ? t('先发送或清空草稿，并保存对话') : t('新建 AI 对话')}
+          tooltip={t('新建 AI 对话')}
           disabled={conversationActionsDisabled}
           onClick={() => selectConversation('')}
         >
@@ -878,113 +935,119 @@ export function AssistantPanel({
           pinnedToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 48;
         }}
       >
-        <AssistantRuns key={conversation.id} projectId={scope} conversationId={conversation.id} />
-        {!conversation.messages.length ? (
-          <div className="sf-ai-conversation-empty">
-            {t('提问，或直接描述要在当前工作区完成的任务')}
-          </div>
-        ) : (
-          conversation.messages.map((message) => (
-            <ChatMessageView key={message.id} role={message.role} text={message.text} />
-          ))
-        )}
-        {agentState.agentText &&
-        !conversation.messages.some((message) => message.id === activeTask?.answerId) ? (
-          <ChatMessageView role="assistant" text={agentState.agentText} streaming={agentPending} />
-        ) : null}
-        {agentPending && !agentState.approvals.length ? (
-          <div className="sf-ai-progress sf-ai-agent-progress" role="status">
-            <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
-            <span>
-              {agentState.phase === 'stopping'
-                ? t('正在中止…')
-                : activeTask?.starting
-                  ? t('正在连接 Agent…')
-                  : t('Agent 正在工作…')}
-            </span>
-          </div>
-        ) : null}
-        {agentState.sandbox === 'readOnly' ? (
-          <div className="sf-agent-sandbox-notice" role="status">
-            <span>
-              {t(
-                '当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。',
-              )}
-            </span>
-            {agent.setupSandbox ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={sandboxBusy || busy || agentPending || !!activeTask?.saving}
-                onClick={() => void setupWindowsSandbox()}
-              >
-                {sandboxBusy ? t('正在配置…') : t('配置 Windows 沙箱')}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-        {operations.length ? (
-          <details className="sf-ai-task-details">
-            <summary className="sf-disclosure">
-              <ChevronRight size={13} aria-hidden="true" />
-              {t('执行记录')} · {operations.length}
-            </summary>
-            {operations.map((op) => (
-              <div key={op.id}>
-                <strong>{op.label}</strong>
-                <span>{t(op.status)}</span>
-                {op.output ? <pre>{op.output}</pre> : null}
-              </div>
-            ))}
-          </details>
-        ) : null}
-        {agentState.unsupportedRequests.length ? (
-          <div role="alert" className="sf-aux-error">
-            {t('此任务需要当前界面尚未支持的交互，请中止后重试。')}
-            <code>{agentState.unsupportedRequests.join(', ')}</code>
-          </div>
-        ) : null}
-        {agentState.approvals.map((approval) => (
-          <ApprovalCard
-            key={String(approval.id)}
-            event={approval}
-            busy={busy}
-            onDecide={async (decision) => {
-              if (approval.method === 'scientify/git/requestApproval' && decision === 'accept') {
-                const params = approval.params as {
-                  cwd?: string;
-                  request?: { kind?: string; target?: string };
-                };
-                const target =
-                  params.request?.kind === 'worktree-remove' ? params.request.target : params.cwd;
-                const drafts = [...getFileRuntime(backend).sessions.values()].filter(
-                  (file) =>
-                    file.projectId === scope &&
-                    (!file.workspaceRoot || file.workspaceRoot === target),
-                );
-                if (
-                  drafts.some(
+        <div className="sf-chat-transcript" ref={transcriptRef}>
+          <AssistantRuns key={conversation.id} projectId={scope} conversationId={conversation.id} />
+          {!conversation.messages.length ? (
+            <div className="sf-ai-conversation-empty">
+              {t('提问，或直接描述要在当前工作区完成的任务')}
+            </div>
+          ) : (
+            conversation.messages.map((message) => (
+              <ChatMessageView key={message.id} role={message.role} text={message.text} />
+            ))
+          )}
+          {agentState.agentText &&
+          !conversation.messages.some((message) => message.id === activeTask?.answerId) ? (
+            <ChatMessageView
+              role="assistant"
+              text={agentState.agentText}
+              streaming={agentPending}
+            />
+          ) : null}
+          {agentPending && !agentState.approvals.length ? (
+            <div className="sf-ai-progress sf-ai-agent-progress" role="status">
+              <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
+              <span>
+                {agentState.phase === 'stopping'
+                  ? t('正在中止…')
+                  : activeTask?.starting
+                    ? t('正在连接 Agent…')
+                    : t('Agent 正在工作…')}
+              </span>
+            </div>
+          ) : null}
+          {agentState.sandbox === 'readOnly' ? (
+            <div className="sf-agent-sandbox-notice" role="status">
+              <span>
+                {t(
+                  '当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。',
+                )}
+              </span>
+              {agent.setupSandbox ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={sandboxBusy || busy || agentPending || !!activeTask?.saving}
+                  onClick={() => void setupWindowsSandbox()}
+                >
+                  {sandboxBusy ? t('正在配置…') : t('配置 Windows 沙箱')}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {operations.length ? (
+            <details className="sf-ai-task-details">
+              <summary className="sf-disclosure">
+                <ChevronRight size={13} aria-hidden="true" />
+                {t('执行记录')} · {operations.length}
+              </summary>
+              {operations.map((op) => (
+                <div key={op.id}>
+                  <strong>{op.label}</strong>
+                  <span>{t(op.status)}</span>
+                  {op.output ? <pre>{op.output}</pre> : null}
+                </div>
+              ))}
+            </details>
+          ) : null}
+          {agentState.unsupportedRequests.length ? (
+            <div role="alert" className="sf-aux-error">
+              {t('此任务需要当前界面尚未支持的交互，请中止后重试。')}
+              <code>{agentState.unsupportedRequests.join(', ')}</code>
+            </div>
+          ) : null}
+          {agentState.approvals.map((approval) => (
+            <ApprovalCard
+              key={String(approval.id)}
+              event={approval}
+              busy={busy}
+              onDecide={async (decision) => {
+                if (approval.method === 'scientify/git/requestApproval' && decision === 'accept') {
+                  const params = approval.params as {
+                    cwd?: string;
+                    request?: { kind?: string; target?: string };
+                  };
+                  const target =
+                    params.request?.kind === 'worktree-remove' ? params.request.target : params.cwd;
+                  const drafts = [...getFileRuntime(backend).sessions.values()].filter(
                     (file) =>
-                      file.getSnapshot().dirty ||
-                      ['loading', 'saving'].includes(file.getSnapshot().phase),
-                  )
-                ) {
-                  setError(t('此目录有未保存或正在读写的文件，请先保存后再批准 Git 操作。'));
-                  return;
+                      file.projectId === scope &&
+                      (!file.workspaceRoot || file.workspaceRoot === target),
+                  );
+                  if (
+                    drafts.some(
+                      (file) =>
+                        file.getSnapshot().dirty ||
+                        ['loading', 'saving'].includes(file.getSnapshot().phase),
+                    )
+                  ) {
+                    setError(t('此目录有未保存或正在读写的文件，请先保存后再批准 Git 操作。'));
+                    return;
+                  }
                 }
-              }
-              await activeTask?.session.decide(approval, decision);
-              if (approval.method === 'scientify/git/requestApproval')
-                await reloadDirectorySessions(backend, scope, agentState.cwd ?? undefined);
-            }}
-          />
-        ))}
-        {busy && !agentPending ? (
-          <div className="sf-ai-progress" role="status">
-            <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
-            {t('正在处理…')}
-          </div>
-        ) : null}
+                await activeTask?.session.decide(approval, decision);
+                if (approval.method === 'scientify/git/requestApproval')
+                  await reloadDirectorySessions(backend, scope, agentState.cwd ?? undefined);
+              }}
+            />
+          ))}
+          {busy && !agentPending ? (
+            <div className="sf-ai-progress" role="status">
+              <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
+              {t('正在处理…')}
+            </div>
+          ) : null}
+        </div>
       </div>
       {needsReconnect ? (
         <div className="sf-agent-sandbox-notice" role="status">
@@ -1062,10 +1125,15 @@ export function AssistantPanel({
           !!retry ||
           !!activeTask?.saving ||
           !!activeTask?.saveError ||
+          !!activeTask?.steering ||
           needsReconnect
         }
         isBusy={busy || agentPending}
         canInterrupt={agentPending && !!agentState.turnId && agentState.phase !== 'stopping'}
+        canSteer={
+          !!agent.steer && !!agentState.turnId && ['running', 'waiting'].includes(agentState.phase)
+        }
+        onSteer={() => void steerAgent()}
         model={settings.model}
         endpoint={settings.endpoint}
         includeContext={includeContext}

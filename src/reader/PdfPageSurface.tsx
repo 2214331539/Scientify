@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { TextLayer, type PDFDocumentProxy } from 'pdfjs-dist';
+import { AnnotationLayer, AnnotationType, TextLayer, type PDFDocumentProxy } from 'pdfjs-dist';
+import { pdfLinkLabel, type ReaderLinkService } from './pdf-links';
 import { t } from '../i18n';
 
 /** Keep geometry while releasing canvases and text layers far from the viewport. */
@@ -10,6 +11,7 @@ export function PdfPageSurface({
   zoom,
   visible,
   title,
+  linkService,
   onReady,
   onError,
   onSelection,
@@ -20,12 +22,14 @@ export function PdfPageSurface({
   zoom: number;
   visible: boolean;
   title: string;
+  linkService: ReaderLinkService;
   onReady(page: number, text: string): void;
   onError(message: string): void;
   onSelection(page: number, text: string, selection: string): void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null),
-    textLayer = useRef<HTMLDivElement>(null);
+    textLayer = useRef<HTMLDivElement>(null),
+    annotationLayer = useRef<HTMLDivElement>(null);
   const [base, setBase] = useState({ width: 600, height: 800 });
   const [loading, setLoading] = useState(true);
   const callbacks = useRef({ onReady, onError, onSelection });
@@ -38,11 +42,12 @@ export function PdfPageSurface({
     let renderTask:
       ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']> | undefined;
     let layer: TextLayer | undefined;
+    let links: AnnotationLayer | undefined;
     setLoading(true);
     void document
       .getPage(page)
       .then(async (pdfPage) => {
-        if (stale || !canvas.current || !textLayer.current) return;
+        if (stale || !canvas.current || !textLayer.current || !annotationLayer.current) return;
         const original = pdfPage.getViewport({ scale: 1 });
         setBase({ width: original.width, height: original.height });
         const scale = Math.max(0.25, Math.min(3, width / original.width)) * zoom;
@@ -54,13 +59,17 @@ export function PdfPageSurface({
         node.style.width = `${viewport.width}px`;
         node.style.height = `${viewport.height}px`;
         textLayer.current.replaceChildren();
+        annotationLayer.current.replaceChildren();
         renderTask = pdfPage.render({
           canvas: node,
           viewport,
           transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
         });
         void renderTask.promise.catch(() => undefined);
-        const content = await pdfPage.getTextContent();
+        const [content, annotations] = await Promise.all([
+          pdfPage.getTextContent(),
+          pdfPage.getAnnotations({ intent: 'display' }),
+        ]);
         if (stale) return;
         text.current = content.items
           .map((item) => ('str' in item ? item.str : ''))
@@ -71,10 +80,51 @@ export function PdfPageSurface({
           container: textLayer.current!,
           viewport,
         });
-        await Promise.all([renderTask.promise, layer.render()]);
+        const linkViewport = viewport.clone({ dontFlip: true });
+        links = new AnnotationLayer({
+          div: annotationLayer.current!,
+          page: pdfPage,
+          viewport: linkViewport,
+          linkService,
+          accessibilityManager: null,
+          annotationCanvasMap: null,
+          annotationEditorUIManager: null,
+          structTreeLayer: null,
+          commentManager: null,
+          annotationStorage: null,
+        });
+        await Promise.all([
+          renderTask.promise,
+          layer.render(),
+          links.render({
+            viewport: linkViewport,
+            div: annotationLayer.current!,
+            page: pdfPage,
+            linkService,
+            annotations: annotations.filter(
+              (annotation) =>
+                annotation.annotationType === AnnotationType.LINK &&
+                (annotation.url ||
+                  annotation.dest ||
+                  ['NextPage', 'PrevPage', 'FirstPage', 'LastPage'].includes(annotation.action)),
+            ),
+            renderForms: false,
+            enableScripting: false,
+          }),
+        ]);
         if (!stale) {
+          for (const link of annotationLayer.current!.querySelectorAll('a'))
+            link.setAttribute('aria-label', pdfLinkLabel(link));
           setLoading(false);
           callbacks.current.onReady(page, text.current);
+          linkService.eventBus.dispatch('textlayerrendered', {
+            pageNumber: page,
+            source: {
+              textLayer: {
+                div: { focus: () => textLayer.current?.focus({ preventScroll: true }) },
+              },
+            },
+          });
         }
       })
       .catch((error) => {
@@ -87,8 +137,9 @@ export function PdfPageSurface({
       stale = true;
       renderTask?.cancel();
       layer?.cancel();
+      links?.destroy();
     };
-  }, [document, page, width, zoom, visible]);
+  }, [document, page, width, zoom, visible, linkService]);
   function select() {
     const selected = window.getSelection();
     if (!selected || !textLayer.current?.contains(selected.anchorNode)) return;
@@ -115,7 +166,14 @@ export function PdfPageSurface({
             </span>
           )}
           <canvas ref={canvas} aria-label={t('{title} 第 {page} 页', { title, page })} />
-          <div className="textLayer" ref={textLayer} onMouseUp={select} onKeyUp={select} />
+          <div
+            className="textLayer"
+            ref={textLayer}
+            tabIndex={-1}
+            onMouseUp={select}
+            onKeyUp={select}
+          />
+          <div className="annotationLayer" ref={annotationLayer} />
         </>
       )}
     </div>

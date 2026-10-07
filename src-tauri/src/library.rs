@@ -41,7 +41,7 @@ fn project(state: &AppState, id: &str) -> Result<(), String> {
         Err("项目不存在。".into())
     }
 }
-pub fn watch(app: &tauri::AppHandle, project_id: &str) -> Result<(), String> {
+pub fn watch<R: tauri::Runtime>(app: &tauri::AppHandle<R>, project_id: &str) -> Result<(), String> {
     let state = app.state::<LibraryState>();
     let mut watchers = state.watchers.lock().map_err(|e| e.to_string())?;
     watchers.remove(project_id);
@@ -94,9 +94,9 @@ pub async fn library_choose(
     Ok(result)
 }
 #[tauri::command]
-pub async fn library_command(
-    app: tauri::AppHandle,
-    view: tauri::Webview,
+pub async fn library_command<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    view: tauri::Webview<R>,
     state: State<'_, AppState>,
     project_id: String,
     operation: Operation,
@@ -105,9 +105,19 @@ pub async fn library_command(
     project(&state, &project_id)?;
     let service = app.state::<LibraryState>().service.clone();
     let id = project_id.clone();
-    let result = tauri::async_runtime::spawn_blocking(move || service.operate(&id, operation))
-        .await
-        .map_err(|e| e.to_string())??;
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let _lease = if matches!(&operation, Operation::Scan | Operation::Open { .. }) {
+            None
+        } else {
+            service
+                .root(&id)?
+                .map(|root| crate::code::Lease::mutation(&root))
+                .transpose()?
+        };
+        service.operate(&id, operation)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     if !app
         .state::<LibraryState>()
         .watchers
@@ -162,9 +172,9 @@ pub async fn library_read_file(
         .map_err(|e| e.to_string())?
 }
 #[tauri::command]
-pub async fn library_note(
-    app: tauri::AppHandle,
-    view: tauri::Webview,
+pub async fn library_note<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    view: tauri::Webview<R>,
     project_id: String,
     id: String,
     content: Option<String>,
@@ -174,13 +184,17 @@ pub async fn library_note(
     trusted(&view)?;
     let service = app.state::<LibraryState>().service.clone();
     tauri::async_runtime::spawn_blocking(move || match content {
-        Some(content) => service.save_note(
-            &project_id,
-            &id,
-            &content,
-            revision.as_deref(),
-            copy.as_deref(),
-        ),
+        Some(content) => {
+            let root = service.root(&project_id)?.ok_or("请先打开文献文件夹。")?;
+            let _lease = crate::code::Lease::write(&root)?;
+            service.save_note(
+                &project_id,
+                &id,
+                &content,
+                revision.as_deref(),
+                copy.as_deref(),
+            )
+        }
         None => service.note(&project_id, &id),
     })
     .await
@@ -255,6 +269,10 @@ pub async fn library_import_bytes(
     let bytes = bytes.clone();
     let service = app.state::<LibraryState>().service.clone();
     tauri::async_runtime::spawn_blocking(move || {
+        let root = service
+            .root(&destination.project_id)?
+            .ok_or("请先打开文献文件夹。")?;
+        let _lease = crate::code::Lease::write(&root)?;
         service.import_bytes(
             &destination.project_id,
             &destination.folder,
@@ -264,110 +282,4 @@ pub async fn library_import_bytes(
     })
     .await
     .map_err(|error| error.to_string())?
-}
-
-#[tauri::command]
-pub async fn library_import(
-    app: tauri::AppHandle,
-    view: tauri::Webview,
-    state: State<'_, AppState>,
-    project_id: String,
-    migrate: bool,
-) -> Result<Option<Scan>, String> {
-    trusted(&view)?;
-    project(&state, &project_id)?;
-    let service = app.state::<LibraryState>().service.clone();
-    let data = state.storage.load()?.ok_or("工作区未载入")?;
-    let assets = state.storage.directory().join("assets/pdf");
-    let a = app.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let files = if migrate {
-            data["papers"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .filter(|p| {
-                    p["projects"]
-                        .as_array()
-                        .is_some_and(|ps| ps.iter().any(|v| v.as_str() == Some(&project_id)))
-                })
-                .filter_map(|p| {
-                    let asset = p["assetId"].as_str()?;
-                    let uuid = uuid::Uuid::parse_str(asset).ok()?;
-                    let source = assets.join(format!("{uuid}.pdf"));
-                    let title = p["title"].as_str().unwrap_or("paper");
-                    let safe: String = title
-                        .chars()
-                        .map(|c| {
-                            if c.is_control() || "<>:\"/\\|?*".contains(c) {
-                                '_'
-                            } else {
-                                c
-                            }
-                        })
-                        .take(100)
-                        .collect();
-                    let mut note = [
-                        p["note"].as_str().unwrap_or(""),
-                        p["abstract"].as_str().unwrap_or(""),
-                    ]
-                    .join("\n\n");
-                    if let Some(quotes) = p["quotes"].as_array() {
-                        for q in quotes {
-                            if let Some(text) = q["text"].as_str() {
-                                note.push_str(&format!(
-                                    "\n\n> {}\n\n[Page {}](scientify-page:{})\n",
-                                    text.replace('\n', "\n> "),
-                                    q["page"],
-                                    q["page"]
-                                ));
-                            }
-                        }
-                    }
-                    if let Some(records) = data["records"].as_array() {
-                        for record in records.iter().filter(|r| {
-                            r["project"].as_str() == Some(&project_id)
-                                && r["sources"].as_array().is_some_and(|sources| {
-                                    sources.iter().any(|source| source["resourceId"] == p["id"])
-                                })
-                        }) {
-                            note.push_str(&format!(
-                                "\n\n## {}\n\n{}",
-                                record["title"].as_str().unwrap_or("Note"),
-                                record["body"].as_str().unwrap_or("")
-                            ));
-                        }
-                    }
-                    Some((
-                        source,
-                        format!("paper-{}.pdf", safe.trim().trim_end_matches('.')),
-                        Some(note),
-                    ))
-                })
-                .collect()
-        } else {
-            let Some(selected) = a
-                .dialog()
-                .file()
-                .add_filter("PDF", &["pdf"])
-                .blocking_pick_files()
-            else {
-                return Ok(None);
-            };
-            let mut files = vec![];
-            for file in selected {
-                let path = file.into_path().map_err(|e| e.to_string())?;
-                let name = path
-                    .file_name()
-                    .ok_or("无效文件名")?
-                    .to_string_lossy()
-                    .into_owned();
-                files.push((path, name, None));
-            }
-            files
-        };
-        service.import_files(&project_id, &files).map(Some)
-    })
-    .await
-    .map_err(|e| e.to_string())?
 }

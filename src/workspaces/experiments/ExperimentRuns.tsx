@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { ArrowLeft, Columns3, Pencil, Plus, RotateCcw } from 'lucide-react';
 import { Button, Dropdown, Input } from '../../components/primitives';
+import { useActiveView } from '../../components/workspace/ViewTransition';
 import type { Entity, Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { WorkContext } from '../../domain/context';
@@ -39,6 +40,7 @@ export function ExperimentRuns({
   onContext(context: WorkContext): void;
   onRerun(run: Execution): void;
 }) {
+  const viewActive = useActiveView();
   const records = useStore(store, (s) => s.data?.runs);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
@@ -89,7 +91,7 @@ export function ExperimentRuns({
     text(selected?.conclusion),
   ].join('\n\n');
   useEffect(() => {
-    if (selected)
+    if (viewActive && selected)
       onContext({
         projectId: project.id,
         workspace: 'experiments',
@@ -99,7 +101,16 @@ export function ExperimentRuns({
         workspaceRoot: execution?.workspaceRoot,
         text: contextText,
       });
-  }, [project.id, selected?.id, selected?.name, contextText, onContext]);
+  }, [
+    project.id,
+    selected?.id,
+    selected?.name,
+    contextText,
+    onContext,
+    viewActive,
+    experimentId,
+    execution?.workspaceRoot,
+  ]);
   async function importMetrics(metrics: { name: string; value: number }[]) {
     if (!selected) return;
     if (

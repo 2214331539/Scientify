@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace, type Workspace } from '../domain/workspace';
 import { createNote } from '../features/notes/model';
@@ -8,6 +8,46 @@ import type { WorkspaceBackend } from '../platform/desktop';
 import type { ResearchBackend } from '../platform/research';
 import { createWorkspaceStore } from '../stores/workspace';
 import { App } from './App';
+
+vi.mock('../platform/library', async (original) => {
+  const actual = await original<typeof import('../platform/library')>();
+  return {
+    ...actual,
+    nativeLibrary: {
+      ...actual.nativeLibrary,
+      command: async (project: string) => ({
+        root: `F:/isolated/${project}`,
+        warnings: [],
+        papers: [],
+        entries: [
+          {
+            path: `${project}.md`,
+            name: project === 'p1' ? 'Tool retrieval paper.md' : 'Protein representation paper.md',
+            directory: false,
+            pdf: false,
+            note: false,
+            size: 64,
+            paperId: null,
+          },
+        ],
+      }),
+      readFile: async (project: string, path: string) => ({
+        path,
+        version: 'v1',
+        content:
+          project === 'p1'
+            ? 'Project A evidence about lifelong retrieval.'
+            : 'Project B evidence about molecular structure.',
+      }),
+      changed: async () => () => {},
+    },
+  };
+});
+vi.mock('../platform/browser-pane', () => ({
+  browserCommand: async () => [],
+  browserEvents: async () => () => {},
+  browserLayout: async () => {},
+}));
 
 beforeAll(() => {
   window.matchMedia = vi
@@ -117,25 +157,23 @@ function fixture({ failSaves = false } = {}) {
 }
 
 function rail() {
-  return within(screen.getByRole('navigation', { name: '一级导航' }));
+  return within(screen.getByLabelText('一级导航', { selector: 'nav' }));
 }
 
 async function selectProject(user: ReturnType<typeof userEvent.setup>, name: string) {
-  if (screen.queryByRole('region', { name: '项目管理' })) {
+  if (screen.queryByLabelText('项目管理', { selector: 'section' })) {
     await user.click(screen.getByRole('button', { name }));
     return;
   }
-  await user.click(screen.getByRole('button', { name: '切换项目' }));
-  await user.click(
-    within(screen.getByRole('dialog', { name: '项目切换' })).getByRole('button', { name }),
-  );
+  await user.click(screen.getByLabelText('切换项目'));
+  await user.click(within(screen.getByLabelText('项目切换')).getByRole('button', { name }));
 }
 
 it('provides the five primary workspace destinations and starts with AI closed', async () => {
   const { store, backend } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={backend} />);
-  await screen.findByRole('heading', { name: 'ToolHCL' });
+  await screen.findByRole('navigation', { name: '一级导航' });
 
   expect(
     rail()
@@ -183,27 +221,29 @@ it('updates assistant context with the active material and isolates project conv
   const { store, backend } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={backend} />);
-  await screen.findByRole('heading', { name: 'ToolHCL' });
-  await user.click(screen.getByRole('button', { name: 'AI 助手' }));
+  await screen.findByRole('navigation', { name: '一级导航' });
+  await user.click(screen.getByLabelText('AI 助手', { selector: 'button' }));
   let assistant = within(screen.getByRole('region', { name: 'AI 助手内容' }));
   await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
   expect(assistant.getByText('ToolHCL')).toBeTruthy();
   expect(assistant.getByText(t('Overview'))).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
+  await user.click(screen.getByLabelText('关闭弹窗'));
 
   await user.click(rail().getByRole('button', { name: t('Literature') }));
   await user.click(
-    within(
-      screen.getByRole('complementary', { name: t('{label} 资源', { label: t('Literature') }) }),
-    ).getByRole('treeitem', {
-      name: 'Tool retrieval paper',
-    }),
+    within(await screen.findByRole('complementary', { name: t('本地文献目录') })).getByRole(
+      'treeitem',
+      {
+        name: 'Tool retrieval paper.md',
+      },
+    ),
   );
   await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
   expect(assistant.getByText(t('Literature'))).toBeTruthy();
-  expect(assistant.getByText('Tool retrieval paper')).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
-  await user.type(assistant.getByRole('textbox', { name: '向 AI 提问' }), 'Question for project A');
+  expect(assistant.getByText('p1.md')).toBeTruthy();
+  await user.click(screen.getByLabelText('关闭弹窗'));
+  await user.click(assistant.getByRole('textbox', { name: '向 AI 提问' }));
+  await user.paste('Question for project A');
   await user.click(assistant.getByRole('button', { name: '发送' }));
   await assistant.findByText('Isolated answer 1');
   await waitFor(() => expect(store.getState().dirty).toBe(false));
@@ -215,20 +255,22 @@ it('updates assistant context with the active material and isolates project conv
   expect(assistant.getByText(t('Overview'))).toBeTruthy();
   expect(assistant.queryByText('Question for project A')).toBeNull();
   expect(assistant.queryByText('Isolated answer 1')).toBeNull();
-  expect(assistant.queryByText('Tool retrieval paper')).toBeNull();
-  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
+  expect(assistant.queryByText('p1.md')).toBeNull();
+  await user.click(screen.getByLabelText('关闭弹窗'));
   await user.click(rail().getByRole('button', { name: t('Literature') }));
   await user.click(
-    within(
-      screen.getByRole('complementary', { name: t('{label} 资源', { label: t('Literature') }) }),
-    ).getByRole('treeitem', {
-      name: 'Protein representation paper',
-    }),
+    within(await screen.findByRole('complementary', { name: t('本地文献目录') })).getByRole(
+      'treeitem',
+      {
+        name: 'Protein representation paper.md',
+      },
+    ),
   );
   await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
-  expect(assistant.getByText('Protein representation paper')).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
-  await user.type(assistant.getByRole('textbox', { name: '向 AI 提问' }), 'Question for project B');
+  expect(assistant.getByText('p2.md')).toBeTruthy();
+  await user.click(screen.getByLabelText('关闭弹窗'));
+  await user.click(assistant.getByRole('textbox', { name: '向 AI 提问' }));
+  await user.paste('Question for project B');
   await user.click(assistant.getByRole('button', { name: '发送' }));
   await assistant.findByText('Isolated answer 2');
   const requests = vi.mocked(backend.askAI).mock.calls;
@@ -251,7 +293,7 @@ it('keeps one unsaved note editor through side, central, hidden and project tran
   const { store, backend } = fixture({ failSaves: true });
   const user = userEvent.setup();
   const view = render(<App store={store} backend={backend} />);
-  await screen.findByRole('heading', { name: 'ToolHCL' });
+  await screen.findByRole('navigation', { name: '一级导航' });
   await user.click(screen.getByRole('button', { name: '研究笔记' }));
   await user.click(
     within(screen.getByRole('region', { name: '研究笔记内容' })).getByRole('button', {
@@ -310,7 +352,87 @@ it('keeps one unsaved note editor through side, central, hidden and project tran
 it('does not expose a standalone Files destination in the primary navigation', async () => {
   const { store, backend } = fixture();
   render(<App store={store} backend={backend} />);
-  await screen.findByRole('heading', { name: 'ToolHCL' });
+  await screen.findByRole('navigation', { name: '一级导航' });
   expect(rail().queryByRole('button', { name: t('Files') })).toBeNull();
   expect(backend.listFiles).not.toHaveBeenCalled();
+});
+
+it('keeps the same note editor during interrupted central fades and restores the side panel after settling', async () => {
+  const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'animate');
+  const jobs: { finish(): void; cancel(): void }[] = [];
+  Object.defineProperty(HTMLElement.prototype, 'animate', {
+    configurable: true,
+    value: vi.fn(() => {
+      let finish!: () => void;
+      let cancel!: () => void;
+      const finished = new Promise<void>((resolve, reject) => {
+        finish = resolve;
+        cancel = () => reject(new Error('cancelled'));
+      });
+      jobs.push({ finish, cancel });
+      return { finished, cancel } as unknown as Animation;
+    }),
+  });
+  const { store, backend } = fixture();
+  try {
+    await act(async () => {
+      render(<App store={store} backend={backend} />);
+    });
+    fireEvent.click(screen.getByLabelText('研究笔记', { selector: 'button' }));
+    fireEvent.click(screen.getByRole('button', { name: /A research note/ }));
+    const editor = (await screen.findByLabelText('笔记正文')) as HTMLTextAreaElement;
+    fireEvent.change(editor, { target: { value: 'unsaved fade draft' } });
+    editor.setSelectionRange(2, 9);
+    editor.scrollTop = 30;
+    const notes = editor.closest('.sf-dock-notes') as HTMLElement;
+    fireEvent.click(rail().getByRole('button', { name: t('Notes') }));
+    expect(jobs.length).toBeGreaterThan(0);
+    fireEvent.click(rail().getByRole('button', { name: t('Overview') }));
+    expect(notes.classList.contains('notes-workspace-surface')).toBe(true);
+    expect(notes.getAttribute('aria-hidden')).toBe('true');
+    fireEvent.click(rail().getByRole('button', { name: t('Notes') }));
+    await act(async () => jobs.forEach((job) => job.finish()));
+    expect(notes.hidden).toBe(false);
+    expect(within(screen.getByRole('main')).getByLabelText('笔记正文')).toBe(editor);
+    fireEvent.click(rail().getByRole('button', { name: t('Overview') }));
+    await act(async () => jobs.forEach((job) => job.finish()));
+    expect(notes.classList.contains('notes-workspace-surface')).toBe(false);
+    expect(notes.hidden).toBe(false);
+    expect(
+      within(screen.getByRole('complementary', { name: '全局辅助工具' })).getByLabelText(
+        '笔记正文',
+      ),
+    ).toBe(editor);
+    expect(editor.value).toBe('unsaved fade draft');
+    expect([editor.selectionStart, editor.selectionEnd, editor.scrollTop]).toEqual([2, 9, 30]);
+  } finally {
+    cleanup();
+    if (previous) Object.defineProperty(HTMLElement.prototype, 'animate', previous);
+    else delete (HTMLElement.prototype as Partial<HTMLElement>).animate;
+  }
+});
+
+it('keeps unavailable workspaces as placeholders without loading files or disabling the assistant', async () => {
+  const { store, backend } = fixture();
+  const user = userEvent.setup();
+  render(<App store={store} backend={backend} />);
+  await screen.findByRole('region', { name: t('Overview') });
+  expect(screen.getByText(t('开发中'))).toBeTruthy();
+  await user.click(rail().getByRole('button', { name: t('Paper') }));
+  const paper = within(screen.getByRole('region', { name: t('LaTeX 论文撰写') }));
+  expect(paper.getByText(t('敬请期待'))).toBeTruthy();
+  expect(screen.queryByRole('button', { name: t('Manuscript') })).toBeNull();
+  expect(backend.listFiles).not.toHaveBeenCalled();
+  expect(backend.readFile).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'AI 助手' }));
+  const draft = screen.getByRole('textbox', { name: '向 AI 提问' });
+  await user.type(draft, 'Keep my question');
+  await user.click(rail().getByRole('button', { name: t('Literature') }));
+  await user.click(screen.getByRole('button', { name: t('Subscriptions') }));
+  expect(
+    within(screen.getByRole('region', { name: t('文献订阅') })).getByText(t('开发中')),
+  ).toBeTruthy();
+  expect(screen.getByRole('textbox', { name: '向 AI 提问' })).toBe(draft);
+  expect((draft as HTMLTextAreaElement).value).toBe('Keep my question');
+  expect(backend.askAI).not.toHaveBeenCalled();
 });

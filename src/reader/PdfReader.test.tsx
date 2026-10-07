@@ -1,30 +1,60 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import type { ResearchBackend } from '../platform/research';
 import PdfReader from './PdfReader';
 
-vi.mock('pdfjs-dist', () => ({
-  GlobalWorkerOptions: { workerSrc: '' },
-  getDocument: () => ({
-    promise: Promise.resolve({
-      numPages: 2,
-      getPage: async () => ({
-        getViewport: ({ scale }: { scale: number }) => ({
-          width: 600 * scale,
-          height: 800 * scale,
-        }),
-        render: () => ({ promise: Promise.resolve(), cancel: () => {} }),
-        getTextContent: async () => ({ items: [{ str: 'Research text' }] }),
-      }),
-    }),
-    destroy: async () => {},
-  }),
-  TextLayer: class {
-    render = async () => {};
-    cancel = () => {};
-  },
+const links = vi.hoisted(() => ({
+  annotations: new Map<number, Record<string, unknown>[]>(),
+  getDestination: vi.fn(async () => [{ num: 3, gen: 0 }, { name: 'XYZ' }, 120, 300, null]),
+  getPageIndex: vi.fn(async () => 1),
 }));
+
+vi.mock('pdfjs-dist', async (importOriginal) => {
+  vi.stubGlobal('DOMMatrix', class {});
+  const actual = await importOriginal<typeof import('pdfjs-dist')>();
+  function viewport(scale: number) {
+    return {
+      width: 600 * scale,
+      height: 800 * scale,
+      viewBox: [0, 0, 600, 800],
+      rotation: 0,
+      rawDims: { pageX: 0, pageY: 0, pageWidth: 600, pageHeight: 800 },
+      clone: () => viewport(scale),
+      convertToViewportPoint: (x: number, y: number) => [x * scale, (800 - y) * scale],
+    };
+  }
+  return {
+    ...actual,
+    GlobalWorkerOptions: { workerSrc: '' },
+    getDocument: () => ({
+      promise: Promise.resolve({
+        numPages: 2,
+        pagesMapper: { pagesNumber: 2 },
+        getDestination: links.getDestination,
+        getPageIndex: links.getPageIndex,
+        cachedPageNumber: () => null,
+        getPage: async (page: number) => ({
+          view: [0, 0, 600, 800],
+          getViewport: ({ scale }: { scale: number }) => viewport(scale),
+          getAnnotations: async () => links.annotations.get(page) ?? [],
+          render: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+          getTextContent: async () => ({ items: [{ str: 'Research text' }] }),
+        }),
+      }),
+      destroy: async () => {},
+    }),
+    TextLayer: class {
+      render = async () => {};
+      cancel = () => {};
+    },
+  };
+});
+beforeEach(() => {
+  links.annotations.clear();
+  links.getDestination.mockClear();
+  links.getPageIndex.mockClear();
+});
 beforeAll(() => {
   vi.stubGlobal(
     'IntersectionObserver',
@@ -46,6 +76,17 @@ afterEach(() => {
   localStorage.clear();
 });
 afterAll(() => vi.unstubAllGlobals());
+
+function annotation(id: string, target: Record<string, unknown>) {
+  return {
+    id,
+    annotationType: 2,
+    rotation: 0,
+    rect: [20, 700, 160, 720],
+    borderStyle: { width: 0, style: 1, dashArray: [] },
+    ...target,
+  };
+}
 
 function setup() {
   const backend: ResearchBackend = {
@@ -150,4 +191,87 @@ it('scrolls across pages, switches mode at the current page and follows source l
   );
   expect(backend.readPdf).toHaveBeenCalledTimes(1);
   expect(localStorage.getItem('scientify.reader.mode')).toBe('continuous');
+});
+
+it('renders web links with PDF.js and opens them without navigating the application', async () => {
+  links.annotations.set(1, [annotation('web', { url: 'https://doi.org/10.1234/example' })]);
+  const open = vi.spyOn(window, 'open').mockReturnValue(null);
+  const { reader } = setup();
+  render(reader);
+  const link = await screen.findByRole('link', { name: 'https://doi.org/10.1234/example' });
+  expect(link.closest('.annotationLayer')).not.toBeNull();
+  expect(link.closest('section')?.style.left).toBe(`${(100 * 20) / 600}%`);
+  const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+  fireEvent(link, event);
+  expect(event.defaultPrevented).toBe(true);
+  expect(open).toHaveBeenCalledWith(
+    'https://doi.org/10.1234/example',
+    '_blank',
+    'noopener,noreferrer',
+  );
+  open.mockRestore();
+});
+
+it.each(['paged', 'continuous'])(
+  'follows named document links to the referenced location in %s mode',
+  async (mode) => {
+    links.annotations.set(1, [annotation('internal', { dest: 'References' })]);
+    const { reader, backend } = setup();
+    const user = userEvent.setup();
+    const host = render(reader);
+    await screen.findByRole('link', { name: '跳转至文档位置' });
+    if (mode === 'continuous') {
+      await user.click(screen.getByRole('button', { name: '切换为连续滚动' }));
+      Object.defineProperty(host.container.querySelector('[data-pdf-page="2"]'), 'offsetTop', {
+        value: 844,
+      });
+    }
+    await user.click(await screen.findByRole('link', { name: '跳转至文档位置' }));
+    await waitFor(() =>
+      expect((screen.getByRole('spinbutton', { name: '页码' }) as HTMLInputElement).value).toBe(
+        '2',
+      ),
+    );
+    await waitFor(() =>
+      expect(host.container.querySelector('.pdf-scroll')?.scrollTop).toBe(
+        mode === 'continuous' ? 1344 : 500,
+      ),
+    );
+    expect(links.getDestination).toHaveBeenCalledWith('References');
+    expect(links.getPageIndex).toHaveBeenCalledWith({ num: 3, gen: 0 });
+    expect(backend.readPdf).toHaveBeenCalledTimes(1);
+  },
+);
+
+it('follows same-page links and keeps subsequent manual scroll positions', async () => {
+  links.annotations.set(1, [
+    annotation('same-page', { dest: [0, { name: 'XYZ' }, null, 400, null] }),
+  ]);
+  const { reader, context } = setup();
+  const user = userEvent.setup();
+  const host = render(reader);
+  await user.click(await screen.findByRole('link', { name: '跳转至文档位置' }));
+  const scroll = host.container.querySelector('.pdf-scroll')!;
+  await waitFor(() => expect(scroll.scrollTop).toBe(400));
+  fireEvent.scroll(scroll, { target: { scrollTop: 123, scrollLeft: 0 } });
+  host.unmount();
+  context.mockClear();
+  const next = render(reader);
+  await waitFor(() => expect(context.mock.lastCall?.[0].text).toBe('Research text'));
+  expect(next.container.querySelector('.pdf-scroll')?.scrollTop).toBe(123);
+});
+
+it('keeps unsupported URI and PDF script actions from leaving the reader', async () => {
+  links.annotations.set(1, [
+    annotation('script-url', { url: 'javascript:alert(1)' }),
+    annotation('local-file', { url: 'file:///C:/test.exe' }),
+    annotation('script-action', { actions: { Action: ['app.alert("test")'] } }),
+  ]);
+  const { reader, context } = setup();
+  const open = vi.spyOn(window, 'open').mockReturnValue(null);
+  const host = render(reader);
+  await waitFor(() => expect(context.mock.lastCall?.[0].text).toBe('Research text'));
+  expect(host.container.querySelectorAll('.annotationLayer a[href]')).toHaveLength(0);
+  expect(open).not.toHaveBeenCalled();
+  open.mockRestore();
 });

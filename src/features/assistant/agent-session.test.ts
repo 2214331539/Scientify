@@ -38,6 +38,32 @@ function backend(overrides: Partial<AgentBackend> = {}): AgentBackend {
 }
 
 describe('approval queue', () => {
+  it('steers only the active turn and preserves running state when guidance fails', async () => {
+    const steer = vi.fn(async () => ({ turnId: 'turn1' }));
+    const agent = backend({ steer });
+    const session = new AgentSession(
+      agent,
+      { projectId: 'p1', domain: 'code', conversationId: 'chat' },
+      connection,
+    );
+    expect(await session.steer('too early')).toBe(false);
+    await session.open();
+    await session.send('start');
+    expect(await session.steer('use Python')).toBe(true);
+    expect(steer).toHaveBeenCalledWith({
+      projectId: 'p1',
+      domain: 'code',
+      conversationId: 'chat',
+      threadId: 't1',
+      expectedTurnId: 'turn1',
+      text: 'use Python',
+    });
+    steer.mockRejectedValueOnce(new Error('turn already finished'));
+    expect(await session.steer('follow up')).toBe(false);
+    expect(session.state.phase).toBe('running');
+    expect(session.state.error).toBe('turn already finished');
+    expect(agent.startTurn).toHaveBeenCalledTimes(1);
+  });
   it('ignores notifications and repeats of a request already shown', () => {
     const first = mergeApprovals([], [notification, approval('a1')]);
     expect(first.map((entry) => entry.id)).toEqual(['a1']);

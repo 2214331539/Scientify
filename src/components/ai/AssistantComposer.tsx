@@ -1,5 +1,5 @@
 import { t } from '../../i18n';
-import { ArrowUp, ChevronUp, LoaderCircle, Paperclip, Square } from 'lucide-react';
+import { ArrowUp, ChevronUp, CornerDownLeft, LoaderCircle, Paperclip, Square } from 'lucide-react';
 import type { Ref, MouseEvent } from 'react';
 import { Button, Textarea } from '../primitives';
 
@@ -8,6 +8,8 @@ interface Props {
   disabled: boolean;
   isBusy: boolean;
   canInterrupt: boolean;
+  canSteer?: boolean;
+  onSteer?: () => void;
   model: string;
   endpoint: string;
   includeContext: boolean;
@@ -26,6 +28,8 @@ export function AssistantComposer({
   disabled,
   isBusy,
   canInterrupt,
+  canSteer = false,
+  onSteer,
   model,
   endpoint,
   includeContext,
@@ -44,7 +48,7 @@ export function AssistantComposer({
       onSubmit={(event) => {
         event.preventDefault();
         if (isBusy) {
-          if (canInterrupt) onInterrupt();
+          if (canSteer && !disabled && prompt.trim()) onSteer?.();
         } else onSend();
       }}
     >
@@ -54,7 +58,6 @@ export function AssistantComposer({
         maxLength={12000}
         rows={2}
         value={prompt}
-        disabled={disabled || isBusy}
         placeholder={t('Ask about this project...')}
         onChange={(event) => onPromptChange(event.target.value)}
         onKeyDown={(event) => {
@@ -62,7 +65,7 @@ export function AssistantComposer({
           if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             if (isBusy) {
-              if (canInterrupt) onInterrupt();
+              if (canSteer && !disabled && prompt.trim()) onSteer?.();
             } else onSend();
           }
         }}
@@ -96,6 +99,19 @@ export function AssistantComposer({
           <ChevronUp size={12} />
         </Button>
         <span className="sf-spacer" />
+        {isBusy && prompt.trim() && canSteer ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            type="submit"
+            aria-label={t('补充指令')}
+            tooltip={t('补充指令')}
+            disabled={disabled}
+          >
+            <CornerDownLeft size={15} />
+          </Button>
+        ) : null}
         <Button
           variant="primary"
           size="sm"

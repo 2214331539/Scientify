@@ -34,6 +34,43 @@
 .sf-dock-layout.has-notes-workspace[data-side-open='true'] {
   grid-template-columns: minmax(0, 1fr) calc(var(--dock-width) + 1px);
 }
+.research-shell .sf-dock-layout.sf-workspace-layout {
+  flex: 1;
+  width: auto;
+  grid-template-columns: minmax(0, 1fr) 0px;
+  background: var(--sf-surface-canvas);
+}
+.research-shell .sf-dock-layout.sf-workspace-layout[data-side-open='true'] {
+  grid-template-columns: minmax(0, 1fr) calc(var(--dock-width) + 1px);
+}
+.sf-dock-main {
+  grid-area: 1 / 1 / 3 / 2;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.sf-workspace-layout > .sf-dock-notes,
+.sf-workspace-layout > .sf-dock-assistant {
+  grid-area: 2 / 2;
+}
+.sf-workspace-layout.has-notes-workspace > .sf-dock-notes {
+  grid-area: 1 / 1 / 3 / 2;
+  opacity: 1;
+  visibility: visible;
+  transition: none;
+}
+.sf-workspace-layout > .sf-dock-resize {
+  left: auto;
+  right: calc(var(--dock-width) - 5px);
+}
+.sf-workspace-layout > .sf-dock-layer[hidden] {
+  display: none !important;
+}
+.sf-workspace-layout .sf-dock-session {
+  flex: 1;
+  min-height: 0;
+}
 .sf-dock-shared-header {
   grid-area: 1 / -2;
 }
@@ -48,13 +85,13 @@
   visibility: hidden;
   pointer-events: none;
   transition:
-    opacity var(--sf-motion-content) var(--sf-ease-standard),
-    visibility 0s linear var(--sf-motion-content);
+    opacity var(--sf-motion-panel) var(--sf-ease-standard),
+    visibility 0s linear var(--sf-motion-panel);
 }
 .research-shell:not(.launcher-shell) .sf-dock-layout > .sf-dock-layer {
   transition:
-    opacity var(--sf-motion-content) var(--sf-ease-standard),
-    visibility 0s linear var(--sf-motion-content);
+    opacity var(--sf-motion-panel) var(--sf-ease-standard),
+    visibility 0s linear var(--sf-motion-panel);
 }
 .sf-dock-layer[data-active='true'] {
   opacity: 1;
@@ -67,17 +104,31 @@
   transition-delay: 0s;
 }
 .has-notes-workspace > .sf-dock-notes {
-  grid-column: 1;
+  grid-area: 1 / 1 / 3 / 2;
 }
 .sf-dock-resize {
   position: absolute;
   inset: 0 auto 0 0;
   z-index: 3;
   display: flex;
+  width: 10px;
+  cursor: col-resize;
+}
+.sf-dock-resize > .resize-handle {
+  width: 10px;
+  height: 100%;
+  background: transparent;
+}
+.sf-dock-resize > .resize-handle::after {
+  inset: 0 4px;
+  background: var(--sf-border-subtle);
+}
+.sf-dock-resize > .resize-handle:is(:hover, :focus-visible, [data-resizing='true'])::after {
+  background: var(--sf-accent);
 }
 .has-notes-workspace > .sf-dock-resize {
   left: auto;
-  right: calc(var(--dock-width) - 3px);
+  right: calc(var(--dock-width) - 5px);
 }
 .sf-dock-layout .sf-dock-tabs {
   position: relative;
@@ -91,7 +142,7 @@
   width: 50%;
   height: 2px;
   background: var(--sf-text-secondary);
-  transition: transform var(--sf-motion-overlay) var(--sf-ease-apple);
+  transition: transform var(--sf-motion-selection) var(--sf-ease-apple);
 }
 .sf-dock-layout[data-tool='notes'] .sf-dock-tab-indicator {
   transform: translateX(100%);
@@ -101,7 +152,30 @@
   border-bottom-color: transparent;
 }
 @media (max-width: 900px) {
-  .research-shell .sf-dock-layout.auxiliary-surface:not([hidden]) {
+  .research-shell .sf-dock-layout.sf-workspace-layout[data-side-open='true'] {
+    grid-template-columns: minmax(0, 1fr) 0px;
+  }
+  .sf-workspace-layout > .sf-dock-resize {
+    display: none;
+  }
+  .research-shell .sf-workspace-layout > :is(.sf-dock-shared-header, .sf-dock-assistant),
+  .research-shell .sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
+    position: absolute;
+    right: 0;
+    width: min(360px, calc(100% - 40px));
+    z-index: 12;
+    background: var(--sf-surface-canvas);
+    box-shadow: var(--sf-shadow-popover);
+  }
+  .sf-workspace-layout > .sf-dock-shared-header {
+    top: 0;
+  }
+  .sf-workspace-layout > .sf-dock-assistant,
+  .sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
+    inset-block: var(--dock-header-height) 0;
+    height: auto;
+  }
+  .research-shell .sf-dock-layout.auxiliary-surface:not(.sf-workspace-layout):not([hidden]) {
     position: absolute;
     inset: 0 0 0 auto;
     z-index: 12;

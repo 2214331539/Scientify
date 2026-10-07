@@ -4164,5 +4164,15 @@
   "实验详情": ["实验详情", "Experiment details"],
   "未配置 Python": ["未配置 Python", "Python not configured"],
   "{count} 个活动任务": ["{count} 个活动任务", "{count} active tasks"],
-  "暂无活动任务": ["暂无活动任务", "No active tasks"]
+  "暂无活动任务": ["暂无活动任务", "No active tasks"],
+  "开发中": ["开发中", "In development"],
+  "敬请期待": ["敬请期待", "Coming soon"],
+  "LaTeX 论文撰写": ["LaTeX 论文撰写", "LaTeX writing"],
+  "跳转至文档位置": ["跳转至文档位置", "Go to document location"],
+  "补充指令": ["补充指令", "Send guidance"],
+  "补充指令未发送，请重试。": ["补充指令未发送，请重试。", "Guidance was not sent. Try again."],
+  "Agent 返回的 turn 标识不匹配。": ["Agent 返回的 turn 标识不匹配。", "The Agent returned a mismatched turn ID."],
+  "不能将文件夹移动到自身或子目录中。": ["不能将文件夹移动到自身或子目录中。", "A folder cannot be moved into itself or a child folder."],
+  "目标文件已存在：{path}": ["目标文件已存在：{path}", "Destination already exists: {path}"],
+  "已完成 {count} 个文件操作。{error}": ["已完成 {count} 个文件操作。{error}", "Completed {count} file operations. {error}"]
 }

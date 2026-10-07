@@ -155,6 +155,14 @@ export interface AgentBackend {
     threadId: string;
     text: string;
   }): Promise<TurnHandle>;
+  steer?(request: {
+    projectId: string;
+    domain: AgentDomain;
+    conversationId: string;
+    threadId: string;
+    expectedTurnId: string;
+    text: string;
+  }): Promise<{ turnId: string }>;
   interrupt?(request: {
     projectId: string;
     domain: AgentDomain;
@@ -208,6 +216,7 @@ export const nativeAgent: AgentBackend = {
     command('agent_windows_sandbox_setup', { projectId, domain, connection }),
   startTurn: ({ projectId, domain, conversationId, threadId, text }) =>
     command('agent_start_turn', { projectId, domain, conversationId, threadId, text }),
+  steer: (request) => command('agent_steer', { ...request }),
   interrupt: ({ projectId, domain, conversationId, threadId, turnId }) =>
     command('agent_interrupt', { projectId, domain, conversationId, threadId, turnId }),
   events: (projectId, domain, conversationId, threadId) =>

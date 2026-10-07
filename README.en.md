@@ -17,7 +17,7 @@ Read papers, keep notes, edit and run Python experiments, and revisit the parame
 - Edit code, select Python interpreters, manage venv or existing Conda environments, and use interactive terminals.
 - Run local experiments without a model key; inspect logs, outputs, execution conditions, and basic metric comparisons.
 - Review Git changes and manage staging, commits, local branches, stashes, and worktrees.
-- Edit Markdown, LaTeX, and BibTeX files; preview Markdown.
+- Edit and preview Markdown in the literature and code workspaces.
 - Connect your model provider and use project-bound Agent sessions with approval and interruption controls.
 
 Start with a small task: **create a project → connect papers and code → take a reading note → run a Python script → inspect its results.**
@@ -65,10 +65,10 @@ Trusted manual terminals and runs execute with your local user permissions. AI f
 
 ## Current limits
 
-- Team spaces are local organization, without accounts, online collaboration, or synchronization.
+- Team collaboration, the project overview, LaTeX writing, and literature subscriptions currently show an in-development placeholder. Personal projects, literature, code, AI, and notes remain available; existing files and team data are retained.
 - Paper recommendations, subscriptions, OCR, PDF annotations, and a full-text research corpus are not implemented.
 - Notebook kernels, Python debugging, remote GPU scheduling, and complete Git remote/conflict workflows are not included.
-- LaTeX compilation is not integrated. Recording execution conditions does not guarantee a fully reproducible environment.
+- Recording execution conditions does not guarantee a fully reproducible environment.
 - Unsaved file drafts are not guaranteed to survive crashes; terminal processes are not restored after restart.
 - macOS and Linux need native adaptation and validation. See the [cross-platform plan](docs/技术方案/跨平台适配路线.md).
 

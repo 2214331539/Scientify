@@ -38,6 +38,7 @@
     "allow-agent-start-thread",
     "allow-agent-windows-sandbox-setup",
     "allow-agent-start-turn",
+    "allow-agent-steer",
     "allow-agent-interrupt",
     "allow-agent-events",
     "allow-agent-release",
@@ -52,12 +53,8 @@
     "allow-library-read-file",
     "allow-library-note",
     "allow-library-external",
-    "allow-library-import",
     "allow-library-import-bytes",
     "allow-browser-command"
   ],
-  "webviews": [
-    "main",
-    "workspace"
-  ]
+  "webviews": ["main", "workspace"]
 }

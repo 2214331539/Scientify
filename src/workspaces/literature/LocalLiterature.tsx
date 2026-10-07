@@ -18,9 +18,7 @@ import {
   FolderPlus,
   Search,
   RefreshCw,
-  Import,
   MoreHorizontal,
-  Globe,
   NotebookPen,
   FileText,
   X,
@@ -32,6 +30,8 @@ import { DocumentTabs } from '../../components/workspace/DocumentTabs';
 import { ResizeHandle } from '../../shell/ResizeHandle';
 import { Modal } from '../../components/Modal';
 import { t, translateError } from '../../i18n';
+import { FeaturePlaceholder } from '../../components/workspace/FeaturePlaceholder';
+import { useActiveView } from '../../components/workspace/ViewTransition';
 import {
   nativeLibrary,
   noteFiles,
@@ -94,7 +94,6 @@ export function LocalLiterature({
   width,
   resize,
   onContext,
-  onLegacy,
   requestedPaper,
 }: {
   project: Project;
@@ -106,10 +105,9 @@ export function LocalLiterature({
   width: number;
   resize?: ReactNode;
   onContext: (context: WorkContext) => void;
-  onLegacy: () => void;
   requestedPaper?: string | null;
 }) {
-  const data = useStore(store, (s) => s.data);
+  const viewActive = useActiveView();
   const workspaceBusy = useStore(store, (s) => s.busy);
   const [scan, setScan] = useState<LibraryScan>({
     root: null,
@@ -123,7 +121,8 @@ export function LocalLiterature({
     [showNotes, setShowNotes] = useState(false),
     [collapsed, setCollapsed] = useState(new Set<string>());
   const [selected, setSelected] = useState(''),
-    [clipboard, setClipboard] = useState<{ path: string; copy: boolean } | null>(null),
+    [selectedPaths, setSelectedPaths] = useState(new Set<string>()),
+    [clipboard, setClipboard] = useState<{ paths: string[]; copy: boolean } | null>(null),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -138,12 +137,13 @@ export function LocalLiterature({
     host = useRef<HTMLDivElement>(null),
     alive = useRef(true),
     generation = useRef(0),
-    drag = useRef('');
+    drag = useRef<string[]>([]);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const currentSession = useRef(session);
   currentSession.current = session;
   const actionPending = useRef(false);
   useEffect(() => {
+    if (!viewActive) return;
     const preventFileNavigation = (event: DragEvent) => {
       if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
     };
@@ -153,9 +153,9 @@ export function LocalLiterature({
       window.removeEventListener('dragover', preventFileNavigation);
       window.removeEventListener('drop', preventFileNavigation);
     };
-  }, []);
+  }, [viewActive]);
   const changed = useRef(onContext);
-  changed.current = onContext;
+  changed.current = viewActive ? onContext : () => {};
   const panelId = useId(),
     notePanel = useId();
   const active = session.tabs.find((t) => t.id === session.active),
@@ -216,6 +216,7 @@ export function LocalLiterature({
     saveLocalSession(project.id, session);
   }, [project.id, session]);
   useEffect(() => {
+    if (!viewActive) return;
     if (active?.kind !== 'web') void browserLayout({ op: 'hideAll' }).catch(() => {});
     setSelection(undefined);
     changed.current({
@@ -225,7 +226,7 @@ export function LocalLiterature({
       resourceId: active?.paperId ?? active?.path,
       ...(active?.kind === 'text' && active.path ? { path: active.path } : {}),
     });
-  }, [active?.id, active?.kind, project.id]);
+  }, [active?.id, active?.kind, project.id, viewActive]);
   useEffect(() => {
     const listener = browserEvents('browser-created', (tab) => {
       if (tab.projectId !== project.id) return;
@@ -264,15 +265,17 @@ export function LocalLiterature({
     };
   }, [project.id]);
   async function run(action: () => Promise<void>) {
-    if (actionPending.current) return;
+    if (actionPending.current) return false;
     actionPending.current = true;
     setBusy(true);
     setError('');
     const finish = beginFileOperation(backend);
     try {
       await action();
+      return true;
     } catch (e) {
       if (alive.current) setError(asError(e));
+      return false;
     } finally {
       finish();
       actionPending.current = false;
@@ -298,7 +301,7 @@ export function LocalLiterature({
     });
   }
   async function mutate(operation: LibraryOperation) {
-    await run(async () => {
+    return run(async () => {
       protect();
       const next = await library.command(project.id, operation);
       setScan(next);
@@ -312,9 +315,10 @@ export function LocalLiterature({
         }
         notifyFileRuntime(files);
         setSelected('');
+        setSelectedPaths(new Set());
         setClipboard((value) =>
-          value && (value.path === operation.path || value.path.startsWith(`${operation.path}/`))
-            ? null
+          value
+            ? { ...value, paths: value.paths.filter((path) => !isBelowPath(path, operation.path)) }
             : value,
         );
         setSession((previous) => {
@@ -339,7 +343,9 @@ export function LocalLiterature({
       }
       if (operation.op === 'transfer' && !operation.copy) {
         setSelected(operation.destination);
-        setClipboard((value) => (value?.path === operation.path ? null : value));
+        setSelectedPaths(new Set([operation.destination]));
+        setClipboard(null);
+        remapTabs(operation.path, operation.destination);
       }
     });
   }
@@ -352,6 +358,9 @@ export function LocalLiterature({
         for (const tab of session.tabs)
           if (tab.kind === 'web') await browserCommand({ op: 'close', id: tab.id });
         setSession({ ...emptyLocalSession(), root: next.root });
+        setSelected('');
+        setSelectedPaths(new Set());
+        setClipboard(null);
         setScan(next);
       }
     });
@@ -422,6 +431,101 @@ export function LocalLiterature({
   const target = menu?.path ?? selected;
   const targetEntry = scan.entries.find((e) => e.path === target);
   const targetFolder = targetEntry?.directory ? target : parent(target);
+  function remapTabs(source: string, destination: string) {
+    setSession((previous) => ({
+      ...previous,
+      tabs: previous.tabs.map((tab) =>
+        tab.kind === 'text' && tab.path && isBelowPath(tab.path, source)
+          ? {
+              ...tab,
+              path: destination + tab.path.slice(source.length),
+              title: filename(destination + tab.path.slice(source.length)),
+            }
+          : tab,
+      ),
+    }));
+  }
+  function transferPaths(paths: Iterable<string>) {
+    const existing = [...new Set(paths)].filter((path) =>
+      scan.entries.some((entry) => entry.path === path),
+    );
+    return existing.filter(
+      (path) =>
+        !existing.some((other) => other !== path && isBelowPath(path, other)) &&
+        !scan.papers.some((paper) => paper.notePath === path && existing.includes(paper.path)) &&
+        !scan.entries.some(
+          (entry) =>
+            entry.pdf &&
+            existing.includes(entry.path) &&
+            entry.path.replace(/\.pdf$/i, '.notes.md').toLowerCase() === path.toLowerCase(),
+        ),
+    );
+  }
+  function selectedBundle(path: string) {
+    return transferPaths(selectedPaths.has(path) ? selectedPaths : [path]);
+  }
+  async function transferMany(paths: string[], folder: string, copy: boolean) {
+    await run(async () => {
+      protect();
+      const operations = transferPaths(paths)
+        .map((path) => ({
+          op: 'transfer' as const,
+          path,
+          destination: pasteDestination(path, folder, copy),
+          copy,
+        }))
+        .filter((operation) => operation.copy || operation.path !== operation.destination);
+      const destinations = new Set<string>();
+      for (const operation of operations) {
+        if (isBelowPath(folder, operation.path))
+          throw new Error(t('不能将文件夹移动到自身或子目录中。'));
+        const pairedNotes = scan.entries
+          .filter((entry) => entry.pdf && isBelowPath(entry.path, operation.path))
+          .map((entry) =>
+            (operation.destination + entry.path.slice(operation.path.length)).replace(
+              /\.pdf$/i,
+              '.notes.md',
+            ),
+          );
+        for (const destination of [operation.destination, ...pairedNotes]) {
+          const normalized = destination.toLowerCase();
+          if (
+            destinations.has(normalized) ||
+            scan.entries.some((entry) => entry.path.toLowerCase() === normalized)
+          )
+            throw new Error(t('目标文件已存在：{path}', { path: destination }));
+          destinations.add(normalized);
+        }
+      }
+      const completed: string[] = [];
+      try {
+        for (const operation of operations) {
+          const next = await library.command(project.id, operation);
+          setScan(next);
+          completed.push(operation.destination);
+          if (!copy) remapTabs(operation.path, operation.destination);
+        }
+        if (!copy) setClipboard(null);
+      } catch (reason) {
+        throw new Error(
+          t('已完成 {count} 个文件操作。{error}', {
+            count: completed.length,
+            error: asError(reason),
+          }),
+        );
+      } finally {
+        if (completed.length) {
+          setSelected(completed.at(-1)!);
+          setSelectedPaths(
+            new Set([
+              ...completed,
+              ...operations.slice(completed.length).map((operation) => operation.path),
+            ]),
+          );
+        }
+      }
+    });
+  }
   function pasteDestination(source: string, folder: string, copy: boolean) {
     const wanted = join(folder, filename(source));
     if (!copy || wanted !== source) return wanted;
@@ -447,6 +551,7 @@ export function LocalLiterature({
   async function showMenu(path: string, x: number, y: number) {
     await browserLayout({ op: 'hideAll' }).catch(() => {});
     setSelected(path);
+    if (!selectedPaths.has(path)) setSelectedPaths(new Set(path ? [path] : []));
     setMenu({
       path,
       x: Math.min(x, window.innerWidth - 215),
@@ -500,16 +605,7 @@ export function LocalLiterature({
           </Button>
         </nav>
         {view === 'subscriptions' ? (
-          <div className="subscription-placeholder">
-            <Button onClick={() => void newWeb()}>
-              <Globe />
-              {t('打开浏览器')}
-            </Button>
-            <h3>{t('消息推荐')}</h3>
-            <p>{t('尚未启用')}</p>
-            <h3>{t('个人信息源')}</h3>
-            <p>{t('尚未启用')}</p>
-          </div>
+          <FeaturePlaceholder feature="subscriptions" compact />
         ) : (
           <div className="library-directory">
             <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
@@ -596,21 +692,36 @@ export function LocalLiterature({
                 void showMenu(pathFrom(e.target), e.clientX, e.clientY);
               }}
               onDragStart={(e) => {
-                drag.current = pathFrom(e.target);
-                e.dataTransfer.setData('text/plain', drag.current);
+                if (busy || !scan.root) {
+                  e.preventDefault();
+                  return;
+                }
+                const path = pathFrom(e.target);
+                drag.current = selectedBundle(path);
+                if (!selectedPaths.has(path)) setSelectedPaths(new Set([path]));
+                e.dataTransfer.effectAllowed = 'copyMove';
+                e.dataTransfer.setData('text/plain', drag.current.join('\n'));
+                e.dataTransfer.setData(
+                  'application/x-scientify-library',
+                  JSON.stringify(drag.current),
+                );
               }}
               onDragEnd={() => {
-                drag.current = '';
+                drag.current = [];
                 setDropTarget(null);
               }}
               onDragOver={(e) => {
-                if (drag.current || e.dataTransfer.types.includes('Files')) {
+                if (drag.current.length || e.dataTransfer.types.includes('Files')) {
                   e.preventDefault();
                   const path = pathFrom(e.target);
                   const target = scan.entries.find((entry) => entry.path === path);
                   setDropTarget(target?.directory ? path : parent(path));
                   e.dataTransfer.dropEffect =
-                    busy || !scan.root ? 'none' : drag.current && !e.ctrlKey ? 'move' : 'copy';
+                    busy || !scan.root
+                      ? 'none'
+                      : drag.current.length && !e.ctrlKey
+                        ? 'move'
+                        : 'copy';
                 }
               }}
               onDragLeave={(e) => {
@@ -622,17 +733,9 @@ export function LocalLiterature({
                 const dest = pathFrom(e.target);
                 const entry = scan.entries.find((v) => v.path === dest);
                 const folder = entry?.directory ? dest : parent(dest);
-                if (drag.current) {
-                  void mutate({
-                    op: 'transfer',
-                    path: drag.current,
-                    destination: join(
-                      entry?.directory ? dest : parent(dest),
-                      filename(drag.current),
-                    ),
-                    copy: e.ctrlKey,
-                  });
-                  drag.current = '';
+                if (drag.current.length) {
+                  void transferMany(drag.current, folder, !!(e.ctrlKey || e.metaKey));
+                  drag.current = [];
                 } else if (e.dataTransfer.types.includes('Files')) {
                   const files = Array.from(e.dataTransfer.files);
                   const hasDirectory = Array.from(e.dataTransfer.items).some(
@@ -678,14 +781,12 @@ export function LocalLiterature({
                   const focusEntry = scan.entries.find((entry) => entry.path === focusPath);
                   const pasteFolder = focusEntry?.directory ? focusPath : parent(focusPath);
                   if (e.key.toLowerCase() === 'v' && clipboard)
-                    void mutate({
-                      op: 'transfer',
-                      path: clipboard.path,
-                      destination: pasteDestination(clipboard.path, pasteFolder, clipboard.copy),
-                      copy: clipboard.copy,
-                    });
+                    void transferMany(clipboard.paths, pasteFolder, clipboard.copy);
                   else if (focusPath)
-                    setClipboard({ path: focusPath, copy: e.key.toLowerCase() === 'c' });
+                    setClipboard({
+                      paths: selectedBundle(focusPath),
+                      copy: e.key.toLowerCase() === 'c',
+                    });
                 }
                 if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
                   e.preventDefault();
@@ -698,6 +799,11 @@ export function LocalLiterature({
                 label={t('项目文献')}
                 items={tree}
                 selectedId={selected}
+                selectedIds={selectedPaths}
+                onSelectionChange={(paths, active) => {
+                  setSelectedPaths(paths);
+                  setSelected(active);
+                }}
                 dropTargetId={dropTarget}
                 collapsed={collapsed}
                 onToggle={(id) => {
@@ -761,35 +867,10 @@ export function LocalLiterature({
                 ))}
             </div>
             <div className="library-bottom">
-              <Button
-                variant="ghost"
-                iconOnly
-                aria-label={t('刷新')}
-                onClick={() => void refresh()}
-              >
-                <RefreshCw />
-              </Button>
               <span role={importProgress ? 'status' : undefined}>
                 {importProgress || `${scan.entries.filter((e) => e.pdf).length} PDF`}
               </span>
               <span className="spacer" />
-              <Button
-                variant="ghost"
-                iconOnly
-                aria-label={t('导入 PDF')}
-                disabled={!scan.root || busy}
-                onClick={() =>
-                  void run(async () => {
-                    const s = await library.import(project.id, false);
-                    if (s) setScan(s);
-                  })
-                }
-              >
-                <Import />
-              </Button>
-              <Button variant="ghost" onClick={onLegacy}>
-                {t('旧资料')}
-              </Button>
             </div>
           </div>
         )}
@@ -894,12 +975,7 @@ export function LocalLiterature({
                     compact
                     onContext={(value) => {
                       setSelection(value);
-                      changed.current({
-                        projectId: project.id,
-                        workspace: 'literature',
-                        title: filename(paper.path),
-                        resourceId: paper.id,
-                      });
+                      changed.current(value);
                     }}
                     onTool={() =>
                       setSession((s) => ({
@@ -1004,7 +1080,7 @@ export function LocalLiterature({
             <Button
               role="menuitem"
               onClick={async () => {
-                setClipboard({ path: target, copy: false });
+                setClipboard({ paths: selectedBundle(target), copy: false });
                 setMenu(null);
               }}
             >
@@ -1013,7 +1089,7 @@ export function LocalLiterature({
             <Button
               role="menuitem"
               onClick={async () => {
-                setClipboard({ path: target, copy: true });
+                setClipboard({ paths: selectedBundle(target), copy: true });
                 setMenu(null);
               }}
             >
@@ -1028,13 +1104,7 @@ export function LocalLiterature({
           role="menuitem"
           disabled={!clipboard || !scan.root}
           onClick={async () => {
-            if (clipboard)
-              void mutate({
-                op: 'transfer',
-                path: clipboard.path,
-                destination: pasteDestination(clipboard.path, targetFolder, clipboard.copy),
-                copy: clipboard.copy,
-              });
+            if (clipboard) void transferMany(clipboard.paths, targetFolder, clipboard.copy);
             setMenu(null);
           }}
         >
@@ -1105,25 +1175,6 @@ export function LocalLiterature({
         </Button>
         <Button
           role="menuitem"
-          disabled={!scan.root || !data?.papers.length}
-          onClick={async () => {
-            setMenu(null);
-            if (
-              await confirmAction(
-                t('复制当前项目旧附件和笔记，保留原记录；重复迁移会产生副本。继续？'),
-              )
-            )
-              void run(async () => {
-                protect();
-                const s = await library.import(project.id, true);
-                if (s) setScan(s);
-              });
-          }}
-        >
-          {t('迁移旧文献')}
-        </Button>
-        <Button
-          role="menuitem"
           disabled={!scan.root}
           onClick={async () => {
             setMenu(null);
@@ -1135,6 +1186,9 @@ export function LocalLiterature({
                 for (const tab of currentSession.current.tabs)
                   if (tab.kind === 'web') await browserCommand({ op: 'close', id: tab.id });
                 setSession(emptyLocalSession());
+                setSelected('');
+                setSelectedPaths(new Set());
+                setClipboard(null);
               });
           }}
         >
@@ -1155,18 +1209,16 @@ export function LocalLiterature({
             className="form-grid"
             onSubmit={(e) => {
               e.preventDefault();
-              void run(async () => {
-                protect();
-                const path =
-                  dialog.kind === 'rename' ? join(parent(dialog.path), dialog.value) : dialog.value;
-                const operation: LibraryOperation =
-                  dialog.kind === 'mkdir'
-                    ? { op: 'mkdir', path }
-                    : dialog.kind === 'relink'
-                      ? { op: 'relink', id: dialog.path, path }
-                      : { op: 'transfer', path: dialog.path, destination: path, copy: false };
-                setScan(await library.command(project.id, operation));
-                setDialog(null);
+              const path =
+                dialog.kind === 'rename' ? join(parent(dialog.path), dialog.value) : dialog.value;
+              const operation: LibraryOperation =
+                dialog.kind === 'mkdir'
+                  ? { op: 'mkdir', path }
+                  : dialog.kind === 'relink'
+                    ? { op: 'relink', id: dialog.path, path }
+                    : { op: 'transfer', path: dialog.path, destination: path, copy: false };
+              void mutate(operation).then((success) => {
+                if (success && alive.current) setDialog(null);
               });
             }}
           >
@@ -1204,10 +1256,12 @@ function LocalTextFile({
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const generation = useRef(0);
   const onContextRef = useRef(onContext);
   onContextRef.current = onContext;
   const markdown = /\.(md|markdown|mdown)$/i.test(path);
   const load = useCallback(async () => {
+    const ticket = ++generation.current;
     if (!library.readFile) {
       setError(t('当前版本不支持在文献区读取此文件。'));
       setLoading(false);
@@ -1217,17 +1271,22 @@ function LocalTextFile({
     setError('');
     try {
       const file = await library.readFile(project, path);
+      if (ticket !== generation.current) return;
       setContent(file.content);
       onContextRef.current(file.content.slice(0, 24000));
     } catch (reason) {
+      if (ticket !== generation.current) return;
       setError(asError(reason));
       setContent(null);
     } finally {
-      setLoading(false);
+      if (ticket === generation.current) setLoading(false);
     }
   }, [library, path, project]);
   useEffect(() => {
     void load();
+    return () => {
+      ++generation.current;
+    };
   }, [load]);
   return (
     <div className="local-text-file">

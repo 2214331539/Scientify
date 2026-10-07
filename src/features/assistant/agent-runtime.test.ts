@@ -55,6 +55,7 @@ async function harness() {
     })),
     events: vi.fn(async (_project, _domain, id) => drain(id)),
     interrupt: vi.fn(async () => {}),
+    steer: vi.fn(async (request) => ({ turnId: request.expectedTurnId })),
     respond: vi.fn(async () => {}),
     release: vi.fn(async () => {}),
   };
@@ -90,6 +91,56 @@ async function harness() {
 }
 
 describe('local task ownership', () => {
+  it('protects a completed task until an in-flight steering request settles', async () => {
+    const { store, runtime, agent, complete } = await harness();
+    const chat = newConversation('p1');
+    await runtime.send(chat, 'code', connection, 'Start');
+    const task = runtime.get('p1', chat.id)!;
+    let accept!: () => void;
+    vi.mocked(agent.steer!).mockImplementationOnce(
+      (request) =>
+        new Promise((resolve) => {
+          accept = () => resolve({ turnId: request.expectedTurnId });
+        }),
+    );
+    const steering = runtime.steer(task, 'Use Python');
+    complete(chat.id, 'Final answer');
+    await runtime.poll();
+    expect(task.state.phase).toBe('idle');
+    expect(runtime.pending(task)).toBe(true);
+    expect(store.getState().agentTasks).toEqual({ [`p1:${chat.id}`]: 'p1' });
+    await expect(runtime.deleteConversation('p1', chat.id)).rejects.toThrow();
+    expect(await runtime.send(chat, 'code', connection, 'Next task')).toBe(false);
+    accept();
+    expect(await steering).toBe(true);
+    await vi.waitFor(() => expect(runtime.pending(task)).toBe(false));
+    expect(asConversation(store.getState().data!.sessions[0]).messages.map((m) => m.text)).toEqual([
+      'Start',
+      'Use Python',
+      'Final answer',
+    ]);
+  });
+  it('saves accepted guidance once, even if completion races with a failed save', async () => {
+    const { store, runtime, agent, save, complete } = await harness();
+    const chat = newConversation('p1');
+    await runtime.send(chat, 'code', connection, 'Start');
+    const task = runtime.get('p1', chat.id)!;
+    vi.mocked(agent.steer!).mockImplementationOnce(async (request) => {
+      complete(chat.id, 'Final answer');
+      await task.session.poll();
+      save.mockRejectedValueOnce(new Error('disk full'));
+      return { turnId: request.expectedTurnId };
+    });
+    expect(await runtime.steer(task, 'Use Python')).toBe(true);
+    expect(task.saveError).toBe('disk full');
+    await runtime.retrySave(task);
+    expect(
+      asConversation(store.getState().data!.sessions[0]).messages.map((message) => message.text),
+    ).toEqual(['Start', 'Use Python', 'Final answer']);
+    expect(agent.steer).toHaveBeenCalledTimes(1);
+    expect(agent.startTurn).toHaveBeenCalledTimes(1);
+    expect(task.finished).toBe(true);
+  });
   it('passes each conversation root independently and resumes its saved binding', async () => {
     const { store, runtime, agent, complete } = await harness();
     vi.mocked(agent.startThread).mockImplementation(async (projectId, domain, _, options) => ({

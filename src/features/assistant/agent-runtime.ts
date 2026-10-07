@@ -19,6 +19,7 @@ export interface AgentTask {
   session: AgentSession;
   starting: boolean;
   saving: boolean;
+  steering: boolean;
   saveError: string | null;
   answerId: string | null;
   lastActivity: number;
@@ -80,7 +81,7 @@ export class AgentRuntime {
     return this.tasks.get(keyOf(project, id));
   }
   pending(task: AgentTask) {
-    return task.starting || task.saving || hasPendingWork(task.state);
+    return task.starting || task.saving || task.steering || hasPendingWork(task.state);
   }
   private ensureMonitor() {
     if (this.timer) return;
@@ -156,6 +157,7 @@ export class AgentRuntime {
       state: { ...initialAgentSession },
       starting: true,
       saving: false,
+      steering: false,
       saveError: null,
       answerId: null,
       lastActivity: Date.now(),
@@ -303,6 +305,29 @@ export class AgentRuntime {
     this.emit();
     return true;
   }
+  /** Append guidance to the current turn without changing its workspace binding. */
+  async steer(task: AgentTask, text: string) {
+    if (task.starting || task.saving || task.steering || task.saveError || !text.trim())
+      return false;
+    task.steering = true;
+    this.emit();
+    try {
+      if (!(await task.session.steer(text))) return false;
+      task.recovered.push({
+        id: crypto.randomUUID(),
+        role: 'user',
+        text,
+        createdAt: new Date().toISOString(),
+      });
+      // Once accepted, retry only persistence, never the steering request.
+      await this.persist(task, !!task.state.outcome);
+      return true;
+    } finally {
+      task.steering = false;
+      if (task.state.outcome) void this.finish(task);
+      this.emit();
+    }
+  }
   /** Recover history / reconnect an already running native task without sending a prompt. */
   async resume(seed: Conversation, connection: AgentConnection) {
     if (!seed.agentDomain) return;
@@ -386,7 +411,7 @@ export class AgentRuntime {
     return saved;
   }
   private async finish(task: AgentTask) {
-    if (task.saving || task.saveError || task.finished) return;
+    if (task.saving || task.steering || task.saveError || task.finished) return;
     await this.persist(task, true);
   }
   async retrySave(task: AgentTask) {

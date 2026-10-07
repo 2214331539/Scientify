@@ -2,17 +2,14 @@
 @keyframes sf-overlay-enter {
   from {
     opacity: 0;
-    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 @keyframes sf-overlay-exit {
   to {
     opacity: 0;
-    transform: translateY(2px);
   }
 }
 @keyframes sf-fade-in {
@@ -26,21 +23,17 @@
 @keyframes sf-panel-enter {
   from {
     opacity: 0;
-    transform: translateX(8px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
   }
 }
 @keyframes sf-content-enter {
   from {
     opacity: 0;
-    transform: translateY(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 dialog[open] {
@@ -94,19 +87,9 @@ dialog[open]::backdrop {
 details[open] > .sf-disclosure > svg {
   transform: rotate(90deg);
 }
-/* Navigation updates immediately. Only committed chrome gets a short fade;
-   editors, PDF canvases and terminals are never captured in a document snapshot. */
+/* Retained view layers own navigation; child surfaces must not replay entry fades. */
 .research-shell:not(.launcher-shell) .workspace-content > * {
   animation: none;
-}
-
-.sf-experiment-card-grid,
-.sf-experiment-table-scroll {
-  animation: sf-fade-in var(--sf-motion-content) var(--sf-ease-enter);
-}
-.launcher-canvas > .project-shelf,
-.launcher-canvas > .launcher-project-list {
-  animation: sf-fade-in var(--sf-motion-content) var(--sf-ease-enter);
 }
 
 /* Customizable native select retains form, keyboard and accessibility semantics.
@@ -136,21 +119,17 @@ details[open] > .sf-disclosure > svg {
     color: var(--sf-text-primary);
     box-shadow: var(--sf-shadow-popover);
     opacity: 0;
-    transform: translateY(-4px);
     transition:
       opacity var(--sf-motion-overlay) var(--sf-ease-enter),
-      transform var(--sf-motion-overlay) var(--sf-ease-enter),
       display var(--sf-motion-overlay) allow-discrete,
       overlay var(--sf-motion-overlay) allow-discrete;
   }
   .sf-dropdown:open::picker(select) {
     opacity: 1;
-    transform: translateY(0);
   }
   @starting-style {
     .sf-dropdown:open::picker(select) {
       opacity: 0;
-      transform: translateY(-4px);
     }
   }
   .sf-dropdown option {

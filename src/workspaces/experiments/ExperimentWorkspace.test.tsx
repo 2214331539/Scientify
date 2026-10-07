@@ -9,6 +9,7 @@ import type { FileSession } from '../../editor/sessions';
 import { getFileSession } from '../../editor/sessions';
 import { ExperimentWorkspace, ConfigurationForm } from './ExperimentWorkspace';
 import { ExperimentRuns } from './ExperimentRuns';
+import { ViewTransition } from '../../components/workspace/ViewTransition';
 import {
   configurationsOf,
   executionStore,
@@ -179,6 +180,44 @@ async function setup() {
   };
   return { store, backend, persistence };
 }
+it('keeps hidden run updates from replacing the active AI material and refreshes context on return', async () => {
+  const { store } = await setup();
+  await store.getState().update((data) => {
+    data.runs.push({ id: 'r1', project: project.id, name: 'Result', conclusion: 'Initial' });
+  });
+  const onContext = vi.fn();
+  const content = (viewKey: string) => (
+    <ViewTransition viewKey={viewKey}>
+      {viewKey === 'runs' ? (
+        <ExperimentRuns
+          project={project}
+          store={store}
+          executions={[]}
+          selectedId="r1"
+          onSelect={() => {}}
+          onContext={onContext}
+          onRerun={() => {}}
+        />
+      ) : (
+        <span>Code</span>
+      )}
+    </ViewTransition>
+  );
+  const view = render(content('runs'));
+  expect(onContext).toHaveBeenLastCalledWith(expect.objectContaining({ resourceId: 'r1' }));
+  view.rerender(content('code'));
+  onContext.mockClear();
+  await act(async () => {
+    await store.getState().update((data) => {
+      data.runs[0].conclusion = 'Background result';
+    });
+  });
+  expect(onContext).not.toHaveBeenCalled();
+  view.rerender(content('runs'));
+  expect(onContext).toHaveBeenLastCalledWith(
+    expect.objectContaining({ text: expect.stringContaining('Background result') }),
+  );
+});
 it('preserves existing runs and tasks when the native list response is invalid', async () => {
   const { store } = await setup();
   executionStore.setState({ runs: [run], error: '' });

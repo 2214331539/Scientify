@@ -72,41 +72,24 @@ it('switches project views, filters records and provides a static profile with o
   expect(localStorage.getItem('scientify.projects.view')).toBe('list');
 });
 
-it('creates and edits a team, assigns projects and moves them safely when deleting the team', async () => {
-  const { user, store } = fixture();
-  await screen.findByText('暂无项目');
+it('shows a collaboration placeholder and preserves existing teams and projects without writes', async () => {
+  const data = emptyWorkspace();
+  data.teams.push({ id: 'team', name: 'Vision lab', color: '#657b71' });
+  data.projects.push(project('Personal research'), project('Team research', 'team'));
+  const { user, store, save } = fixture(data);
+  await screen.findByRole('button', { name: 'Personal research' });
   await user.click(screen.getByRole('button', { name: '团队协作空间' }));
-  await user.click(screen.getAllByRole('button', { name: '创建团队空间' })[0]);
-  await user.type(screen.getByLabelText('团队名称'), 'Vision lab');
-  await user.click(screen.getByRole('button', { name: '保存团队' }));
-  await waitFor(() => expect(store.getState().data?.teams).toHaveLength(1));
-  expect(screen.queryByRole('searchbox', { name: '搜索团队' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: /Vision lab.*0 个项目/ }));
-  await user.click(screen.getByRole('button', { name: '新建项目' }));
-  expect((screen.getByLabelText('所属空间') as HTMLSelectElement).value).toBe(
-    store.getState().data?.teams[0].id,
-  );
-  await user.type(screen.getByLabelText('项目名称'), 'Team research');
-  await user.click(screen.getByRole('button', { name: '保存项目' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  fireEvent.contextMenu(screen.getByRole('button', { name: /Vision lab.*1 个项目/ }));
-  await user.click(await screen.findByRole('menuitem', { name: '重命名 / 编辑' }));
-  await user.clear(screen.getByLabelText('团队名称'));
-  await user.type(screen.getByLabelText('团队名称'), 'Research lab');
-  await user.click(screen.getByRole('button', { name: '保存团队' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  await user.click(
-    within(screen.getByRole('navigation', { name: '空间导航' })).getByRole('button', {
-      name: '团队协作空间',
-    }),
-  );
-  fireEvent.contextMenu(screen.getByRole('button', { name: /Research lab.*1 个项目/ }));
-  await user.click(await screen.findByRole('menuitem', { name: '删除团队空间' }));
-  await user.click(screen.getByRole('button', { name: '确认删除' }));
-  await waitFor(() => expect(store.getState().data?.teams).toHaveLength(0));
-  expect(store.getState().data?.projects[0].space).toBe('personal');
+  const placeholder = within(screen.getByRole('region', { name: '团队协作空间' }));
+  expect(placeholder.getByText('开发中')).toBeTruthy();
+  expect(placeholder.getByText('敬请期待')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: '创建团队空间' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '新建项目' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Vision lab/ })).toBeNull();
+  expect(store.getState().data?.teams).toEqual(data.teams);
+  expect(store.getState().data?.projects).toEqual(data.projects);
+  expect(save).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: '个人空间' }));
-  expect(await screen.findByRole('button', { name: 'Team research' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Personal research' })).toBeTruthy();
 });
 
 it('keeps the project when deletion fails and only removes records after a successful retry', async () => {

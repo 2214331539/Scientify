@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useDeferredValue, useEffect, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { t } from '../../i18n';
 import { usePreferences } from '../../i18n/preferences';
@@ -17,6 +17,7 @@ export const ChatMessageView = memo(function ChatMessageView({
   streaming?: boolean;
 }) {
   usePreferences();
+  const displayedText = useDeferredValue(text);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const copying = useRef(false);
   const mounted = useRef(true);
@@ -53,11 +54,7 @@ export const ChatMessageView = memo(function ChatMessageView({
       aria-label={role === 'user' ? t('用户消息') : t('助手消息')}
       data-copy-state={copyState}
     >
-      {streaming ? (
-        <div className="sf-chat-streaming-text">{text}</div>
-      ) : (
-        <Markdown>{text}</Markdown>
-      )}
+      <Markdown>{streaming ? displayedText : text}</Markdown>
       <div className="sf-message-actions">
         <Button
           variant="ghost"

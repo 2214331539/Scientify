@@ -118,6 +118,39 @@ it('preserves sent context after navigation and copies either message without hi
   expect(stored?.context).toEqual([expect.objectContaining({ title: '论文一' })]);
 });
 
+it('preserves a new draft typed while the previous question is being saved', async () => {
+  const data = emptyWorkspace();
+  data.settings.model.model = 'test-model';
+  let completeSave!: () => void;
+  const save = vi.fn(async (value: Workspace) => value);
+  save.mockImplementationOnce(
+    (value) =>
+      new Promise((resolve) => {
+        completeSave = () => resolve(value);
+      }),
+  );
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save,
+  } as unknown as WorkspaceBackend);
+  await store.getState().load();
+  const askAI = vi.fn(async () => 'Saved answer');
+  const backend = { askAI } as unknown as ResearchBackend;
+  const user = userEvent.setup();
+  render(<AssistantPanel store={store} backend={backend} scope="p1" context={context} />);
+  const input = screen.getByLabelText('向 AI 提问') as HTMLTextAreaElement;
+  await user.type(input, 'First question');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+  await waitFor(() => expect(completeSave).toBeTypeOf('function'));
+  expect(input.value).toBe('');
+  expect(input.disabled).toBe(false);
+  await user.type(input, 'Next question');
+  await act(async () => completeSave());
+  await screen.findByText('Saved answer');
+  expect(input.value).toBe('Next question');
+  expect(askAI).toHaveBeenCalledTimes(1);
+});
+
 it('reports service failures explicitly and keeps the saved question available for retry', async () => {
   const data = emptyWorkspace();
   data.settings.model.model = 'test-model';
@@ -600,6 +633,7 @@ it('creates parallel chats, keeps the first binding after navigation, and saves 
     events: vi.fn(async (_p, _d, id) => events.get(id)?.splice(0) ?? []),
     respond: vi.fn(async () => {}),
     interrupt: vi.fn(async () => {}),
+    steer: vi.fn(async (request) => ({ turnId: request.expectedTurnId })),
     release: vi.fn(async () => {}),
   };
   const runtime = getAgentRuntime(store, agent);
@@ -612,7 +646,11 @@ it('creates parallel chats, keeps the first binding after navigation, and saves 
     await waitFor(() => expect(agent.startTurn).toHaveBeenCalledTimes(1));
     const first = vi.mocked(agent.startTurn).mock.calls[0][0];
     expect(first.domain).toBe('literature');
+    const input = screen.getByLabelText('向 AI 提问') as HTMLTextAreaElement;
+    expect(input.disabled).toBe(false);
+    await user.type(input, 'A 的后续草稿');
     await user.click(screen.getByRole('button', { name: '新建 AI 对话' }));
+    expect(input.value).toBe('');
     await user.click(screen.getByRole('button', { name: '对话选项' }));
     await user.click(screen.getByRole('menuitemradio', { name: '实验代码任务' }));
     await user.type(screen.getByLabelText('向 AI 提问'), '任务 B');
@@ -622,6 +660,20 @@ it('creates parallel chats, keeps the first binding after navigation, and saves 
     expect(second.conversationId).not.toBe(first.conversationId);
     expect(second.domain).toBe('code');
     await user.click(screen.getByRole('button', { name: /任务 A/ }));
+    expect(input.value).toBe('A 的后续草稿');
+    await user.clear(input);
+    await user.type(input, '保持原目录');
+    await user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(agent.steer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          conversationId: first.conversationId,
+          expectedTurnId: 'turn-' + first.conversationId,
+          text: '保持原目录',
+        }),
+      ),
+    );
+    expect(agent.interrupt).not.toHaveBeenCalled();
     view.rerender(<AssistantPanel {...props} context={{ ...context, workspace: 'experiments' }} />);
     expect(screen.queryByRole('combobox', { name: '执行工作区' })).toBeNull();
     expect(view.container.querySelector('.sf-ai-binding')).toBeNull();

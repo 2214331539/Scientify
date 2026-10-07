@@ -2,6 +2,7 @@ import { t, translateError } from '../../i18n';
 import { Button, Input } from '../../components/primitives';
 import { Panel } from '../../components/layout/Panel';
 import { TreeView, type TreeItem } from '../../components/workspace/TreeView';
+import { useActiveView } from '../../components/workspace/ViewTransition';
 import {
   lazy,
   Suspense,
@@ -84,6 +85,7 @@ function useRuntime(backend: ResearchBackend) {
 }
 
 export function FileWorkspace(props: FileWorkspaceProps) {
+  const viewActive = useActiveView();
   const { project, backend, mode, view, onContext, onDirtyChange, onActivePathChange } = props;
   const runtime = useRuntime(backend);
   const workspaceRoot = props.workspaceRoot;
@@ -153,6 +155,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
     props.onCreateHandled?.();
   }, [props.createRequest, props.onCreateHandled]);
   useEffect(() => {
+    if (!viewActive) return;
     if (view === 'versions' || ['references', 'citations'].includes(view) || !activePath)
       onContextRef.current({
         projectId: project.id,
@@ -168,7 +171,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
                   ? t('Files')
                   : t('Code'),
       });
-  }, [activePath, project.id, mode, view]);
+  }, [activePath, project.id, mode, view, viewActive]);
 
   function close(path: string) {
     const next = (runtime.tabs.get(scope) ?? []).filter((item) => item !== path);
@@ -385,6 +388,7 @@ function FileDocument({
   onContext: (value: WorkContext) => void;
   onCreate: (content?: string) => void;
 }) {
+  const viewActive = useActiveView();
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [layout, setLayout] = useState<'source' | 'split' | 'preview'>('split');
   const [wide, setWide] = useState(false);
@@ -407,6 +411,7 @@ function FileDocument({
     if (session.pendingEditorCommand) setLayout('source');
   }, [session, snapshot]);
   useEffect(() => {
+    if (!viewActive) return;
     onContextRef.current({
       projectId: project.id,
       workspace: mode,
@@ -417,7 +422,7 @@ function FileDocument({
       text: snapshot.content.slice(0, 24000),
       selection,
     });
-  }, [project.id, mode, session, snapshot.content, selection]);
+  }, [project.id, mode, session, snapshot.content, selection, viewActive]);
   useEffect(() => {
     const element = canvas.current;
     if (!element || typeof ResizeObserver === 'undefined') return;

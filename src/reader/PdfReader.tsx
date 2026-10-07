@@ -1,6 +1,6 @@
 import { t, translateError } from '../i18n';
 import { Button, Input } from '../components/primitives';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,6 +18,7 @@ import 'pdfjs-dist/web/pdf_viewer.css';
 import type { ResearchBackend } from '../platform/research';
 import type { WorkContext } from '../domain/context';
 import { PdfPageSurface } from './PdfPageSurface';
+import { destinationOffset, ReaderLinkService, type PdfLinkTarget } from './pdf-links';
 import './reader.css';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
@@ -83,6 +84,7 @@ export default function PdfReader({
   const texts = useRef(new Map<number, string>());
   const position = useRef(initial),
     pendingScroll = useRef<ReadingPosition | null>(initial);
+  const navigationTicket = useRef(0);
   const current = useRef({ page, mode });
   current.current = { page, mode };
   position.current = { ...position.current, page, zoom, mode };
@@ -104,13 +106,53 @@ export default function PdfReader({
     [pageOffset],
   );
   function navigate(number: number) {
+    ++navigationTicket.current;
     if (!document || number < 1 || number > document.numPages || !Number.isInteger(number)) return;
     pendingScroll.current = { ...position.current, page: number, top: 0, left: 0 };
     position.current = { ...pendingScroll.current };
     setPage(number);
     requestAnimationFrame(() => restore(true));
   }
+  async function followLink({ pageNumber, destArray }: PdfLinkTarget) {
+    const ticket = ++navigationTicket.current;
+    if (
+      !document ||
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > document.numPages
+    )
+      return;
+    try {
+      const pdfPage = await document.getPage(pageNumber);
+      if (ticket !== navigationTicket.current) return;
+      const original = pdfPage.getViewport({ scale: 1 });
+      const scale = Math.max(0.25, Math.min(3, width / original.width)) * zoom;
+      const offset = destinationOffset(pdfPage.getViewport({ scale }), destArray);
+      pendingScroll.current = { ...position.current, page: pageNumber, ...offset };
+      position.current = { ...pendingScroll.current };
+      setPage(pageNumber);
+      requestAnimationFrame(() => restore(texts.current.has(pageNumber)));
+    } catch (reason) {
+      if (ticket === navigationTicket.current)
+        setError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }
+  const linkCallbacks = useRef({ followLink });
+  linkCallbacks.current = { followLink };
+  const linkService = useMemo(
+    () =>
+      document
+        ? new ReaderLinkService(document, {
+            page: () => current.current.page,
+            navigate: (target) => void linkCallbacks.current.followLink(target),
+            error: setError,
+          })
+        : null,
+    [document],
+  );
+  useEffect(() => () => linkService?.setDocument(null), [linkService]);
   function toggleMode() {
+    ++navigationTicket.current;
     const next: ReadingMode = mode === 'paged' ? 'continuous' : 'paged';
     pendingScroll.current = { ...position.current, mode: next };
     setMode(next);
@@ -121,6 +163,7 @@ export default function PdfReader({
     }
   }
   function changeZoom(next: number) {
+    ++navigationTicket.current;
     if (next === zoom) return;
     pendingScroll.current = { ...position.current };
     setZoom(next);
@@ -196,6 +239,7 @@ export default function PdfReader({
       });
     return () => {
       stale = true;
+      ++navigationTicket.current;
       void task?.destroy();
     };
   }, [assetId, backend]);
@@ -390,6 +434,7 @@ export default function PdfReader({
               width={width}
               zoom={zoom}
               title={title}
+              linkService={linkService!}
               visible={mode === 'paged' || visible.has(number) || number === page}
               onReady={ready}
               onError={setError}

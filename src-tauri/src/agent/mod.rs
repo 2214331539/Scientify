@@ -690,6 +690,37 @@ pub async fn agent_start_turn(
     })).await
 }
 #[tauri::command]
+pub async fn agent_steer<R: tauri::Runtime>(
+    view: tauri::Webview<R>,
+    project_id: String,
+    domain: String,
+    conversation_id: String,
+    thread_id: String,
+    expected_turn_id: String,
+    text: String,
+) -> Result<Value, String> {
+    super::library::trusted(&view)?;
+    let app = view.app_handle().clone();
+    blocking(move || {
+        with_entry(&app, &project_id, &domain, &conversation_id, |entry| {
+            entry.validate(&thread_id)?;
+            if text.trim().is_empty() || text.len() > 100_000 {
+                return Err("任务内容无效或过长。".into());
+            }
+            if entry.active_turn.as_deref() != Some(expected_turn_id.as_str()) {
+                return Err("此任务已结束或 turn 标识不匹配。".into());
+            }
+            entry.session.call(
+                "turn/steer",
+                json!({"threadId":thread_id,"expectedTurnId":expected_turn_id,
+                    "input":[{"type":"text","text":text,"text_elements":[]}]}),
+                HANDSHAKE_BUDGET,
+            )
+        })
+    })
+    .await
+}
+#[tauri::command]
 pub async fn agent_events(
     app: tauri::AppHandle,
     view: tauri::Webview,

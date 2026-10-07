@@ -364,7 +364,7 @@
   background: var(--sf-status-warning);
 }
 @media (max-width: 900px) {
-  .auxiliary-surface:not([hidden]) {
+  .auxiliary-surface:not(.sf-workspace-layout):not([hidden]) {
     position: absolute;
     right: 0;
     top: 0;

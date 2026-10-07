@@ -1,13 +1,49 @@
 .local-library {
   height: 100%;
   min-height: 0;
+  min-width: 0;
   display: flex;
+  flex-direction: row;
   overflow: hidden;
 }
 .local-library > .literature-sidebar {
   display: grid;
   grid-template-rows: 36px minmax(0, 1fr);
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: var(--literature-sidebar-width, 240px);
+  width: var(--literature-sidebar-width, 240px);
+  min-width: 0;
+  min-height: 0;
+  background: var(--sf-surface-chrome);
   overflow: hidden;
+}
+.literature-sidebar-views {
+  display: flex;
+  height: 36px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+}
+.literature-sidebar-views .sf-button {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 12px;
+  padding-inline: 4px;
+}
+.literature-sidebar-views .sf-button[aria-current='page'] {
+  border-bottom-color: var(--sf-text-secondary);
+  color: var(--sf-text-primary);
+  background: var(--sf-surface-canvas);
+}
+.literature-blank {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  color: var(--sf-text-muted);
+  font-size: 12px;
 }
 .library-directory {
   display: flex;
@@ -193,19 +229,6 @@
 .missing-paper-row > .sf-button[aria-label='移除失联记录'] {
   flex: 0 0 auto;
 }
-.subscription-placeholder {
-  padding: 16px 10px;
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  color: var(--sf-text-muted);
-  font-size: 12px;
-}
-.subscription-placeholder h3 {
-  font-size: 12px;
-  color: var(--sf-text-primary);
-  margin-top: 10px;
-}
 .browser-pane {
   display: flex;
   flex-direction: column;
@@ -296,14 +319,4 @@
   border-top: 1px solid var(--sf-border-subtle);
   color: var(--sf-text-muted);
   font-size: 11px;
-}
-.legacy-literature-view {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-}
-.legacy-literature-view > .literature-studio {
-  flex: 1;
-  min-height: 0;
 }

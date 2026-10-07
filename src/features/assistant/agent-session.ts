@@ -301,6 +301,24 @@ export class AgentSession {
       return false;
     }
   }
+  async steer(text: string): Promise<boolean> {
+    const { threadId, turnId, phase } = this.snapshot;
+    if (!threadId || !turnId || !this.agent.steer || !['running', 'waiting'].includes(phase))
+      return false;
+    try {
+      const accepted = await this.agent.steer({
+        ...this.binding,
+        threadId,
+        expectedTurnId: turnId,
+        text,
+      });
+      if (accepted.turnId !== turnId) throw new Error(t('Agent 返回的 turn 标识不匹配。'));
+      return true;
+    } catch (reason) {
+      this.set({ error: this.failure(reason) });
+      return false;
+    }
+  }
   async decide(approval: ApprovalRequest, decision: ApprovalDecision): Promise<boolean> {
     const key = String(approval.id);
     if (this.deciding.has(key) || !this.snapshot.approvals.some((e) => String(e.id) === key))

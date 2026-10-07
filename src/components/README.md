@@ -27,9 +27,10 @@ components/
     WorkspaceFrame.tsx 二级视图、资源区与中央呈现
     Section.tsx       标题、操作、内容的平面分组
     ResourceList.tsx  对象集合与 ResourceRow
-    ActivityList.tsx  按日期与动作呈现研究活动
-    TreeView.tsx      层级资源、展开状态、键盘导航
+    TreeView.tsx      层级资源、展开状态、键盘导航；可选受控多选，Ctrl/Cmd 切换、Shift 可见区间
     DocumentTabs.tsx 文献标签栏，受控选择/关闭/新增及键盘导航
+    FeaturePlaceholder.tsx 未开放功能的统一占位，名称/图标目录、双语与紧凑侧栏模式
+    ViewTransition.tsx 保留视图的原位交叉淡化；useActiveView 限制隐藏页前台事件
   ai/
     ContextPanel.tsx  按需在弹窗查看当前项目、文件、选区及可用意图
     AssistantComposer.tsx 简洁输入、材料入口、模型胶囊与发送
@@ -74,3 +75,5 @@ components/
 4. 运行类型检查、相关行为测试及生产构建；交互变化才新增行为测试。
 
 共享动效使用 `styles/motion.css` 与 token。项目和文献菜单统一用 Menu；业务确认/文本输入调用 `prompts.tsx`，脏表单交由 Modal 确认。新页面不使用 window.confirm / prompt。
+
+2026-10-03：团队协作、项目内概览、LaTeX 论文与订阅入口统一挂载 FeaturePlaceholder，不挂载对应业务页面。2026-10-05：用户已选定 D 柔和，共享 ViewTransition 接入页面和列表模式切换；参数唯一来源为 `platform/motion.ts`，`applyAppearance` 安装为 CSS 变量。新增页面不另写动画时长；窗口/原生网页、草稿与保存保护仍由原有所有者管理。验证与范围见 [动效方案与统一管理](../../docs/UI-UX/05-动效方案与统一管理.md)。

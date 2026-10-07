@@ -133,10 +133,17 @@ it('retains an unsaved note while switching language and keeps status values sta
       name: 'Literature',
     }),
   );
-  const filter = screen.getByRole('combobox', { name: 'Filter reading status' });
-  await user.selectOptions(filter, '未读');
-  expect((filter as HTMLSelectElement).value).toBe('未读');
-  expect(within(filter).getByRole('option', { name: 'Unread' })).toBeTruthy();
+  expect(screen.getByRole('complementary', { name: 'Local literature directory' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'New folder' })).toBeTruthy();
+  expect(store.getState().data?.papers[0].status).toBe('未读');
+  await user.click(
+    within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', {
+      name: 'Notes',
+    }),
+  );
+  expect((screen.getByRole('textbox', { name: 'Note content' }) as HTMLTextAreaElement).value).toBe(
+    '原始材料 new draft',
+  );
 });
 
 it('receives a preference change from another window and restores it on mount', async () => {

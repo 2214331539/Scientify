@@ -23,6 +23,105 @@ fn runtime_window_icon_uses_high_resolution_frame() {
 }
 
 #[test]
+fn literature_mutations_share_directory_leases_with_agent_tasks() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("papers");
+    std::fs::create_dir(&root).unwrap();
+    let storage = Arc::new(Storage::open(temp.path().join("data")).unwrap());
+    let mut data = scientify_core::workspace::empty();
+    data["projects"] = json!([{"id":"papers-project","name":"Papers","space":"personal","createdAt":"now","question":""}]);
+    data["revision"] = json!(1);
+    storage.save(data, 0).unwrap();
+    let library = library::LibraryState::new(storage.directory().to_path_buf());
+    library.service.mount("papers-project", &root).unwrap();
+    std::fs::write(root.join("a.pdf"), b"%PDF-1.4 test").unwrap();
+    let binding = library.service.open("papers-project", "a.pdf").unwrap();
+    let app = mock_builder()
+        .manage(AppState {
+            files: Arc::new(scientify_core::research::ResearchFiles::new(
+                storage.directory().to_path_buf(),
+            )),
+            storage,
+            legacy: temp.path().join("legacy"),
+        })
+        .manage(library)
+        .invoke_handler(tauri::generate_handler![
+            library::library_command,
+            library::library_note
+        ])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+        .build()
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    let task = code::Lease::agent(&root).unwrap();
+    invoke(
+        &window,
+        "library_command",
+        json!({"projectId":"papers-project","operation":{"op":"scan"}}),
+        origin,
+    )
+    .unwrap();
+    for operation in [
+        json!({"op":"mkdir","path":"blocked"}),
+        json!({"op":"detach"}),
+    ] {
+        let error = invoke(
+            &window,
+            "library_command",
+            json!({"projectId":"papers-project","operation":operation}),
+            origin,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("活动任务"), "{error}");
+    }
+    assert!(!root.join("blocked").exists());
+    assert!(app
+        .state::<library::LibraryState>()
+        .service
+        .root("papers-project")
+        .unwrap()
+        .is_some());
+    drop(task);
+    invoke(
+        &window,
+        "library_command",
+        json!({"projectId":"papers-project","operation":{"op":"mkdir","path":"allowed"}}),
+        origin,
+    )
+    .unwrap();
+    assert!(root.join("allowed").is_dir());
+    let mutation = code::Lease::mutation(&root).unwrap();
+    let note_request = json!({"projectId":"papers-project","id":binding.id,"content":"saved note"});
+    let error = invoke(&window, "library_note", note_request.clone(), origin)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("活动任务"), "{error}");
+    assert!(!root.join("a.notes.md").exists());
+    invoke(
+        &window,
+        "library_note",
+        json!({"projectId":"papers-project","id":binding.id}),
+        origin,
+    )
+    .unwrap();
+    drop(mutation);
+    let task = code::Lease::agent(&root).unwrap();
+    invoke(&window, "library_note", note_request, origin).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(root.join("a.notes.md")).unwrap(),
+        "saved note"
+    );
+    drop(task);
+}
+
+#[test]
 fn experiment_registration_uses_native_acl_and_enables_only_its_own_projects_root() {
     let temp = tempfile::tempdir().unwrap();
     let storage = Arc::new(Storage::open(temp.path().join("data/workspace")).unwrap());
@@ -637,6 +736,39 @@ fn agent_release_uses_generated_acl_for_both_local_views() {
             label != "browser-untrusted"
         );
         assert!(invoke(&window, "agent_release", body, "https://untrusted.example").is_err());
+    }
+}
+
+#[test]
+fn agent_steer_uses_generated_acl_and_parses_the_expected_turn_id() {
+    let app = mock_builder()
+        .manage(agent::AgentState::default())
+        .invoke_handler(tauri::generate_handler![agent::agent_steer])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for label in ["main", "workspace", "browser-untrusted"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        let body = json!({"projectId":"p1","conversationId":"c1","domain":"code",
+            "threadId":"thread1","expectedTurnId":"turn1","text":"guidance"});
+        let error = invoke(&window, "agent_steer", body.clone(), origin)
+            .unwrap_err()
+            .to_string();
+        if label != "browser-untrusted" {
+            assert!(
+                error.contains("该会话尚未启动"),
+                "RPC must reach the command, not fail ACL or field parsing: {error}"
+            );
+        } else {
+            assert!(!error.contains("该会话尚未启动"));
+        }
+        assert!(invoke(&window, "agent_steer", body, "https://untrusted.example").is_err());
     }
 }
 

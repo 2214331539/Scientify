@@ -41,7 +41,6 @@ export interface LibraryBackend {
     copy?: string,
   ): Promise<LibraryNote>;
   external(projectId: string, path: string, open: boolean): Promise<void>;
-  import(projectId: string, migrate: boolean): Promise<LibraryScan | null>;
   importFile(projectId: string, folder: string, file: File): Promise<LibraryScan>;
   changed(callback: (projectId: string, error?: string) => void): Promise<() => void>;
 }
@@ -61,7 +60,6 @@ export const nativeLibrary: LibraryBackend = {
   saveNote: (projectId, id, content, revision, copy) =>
     localCommand('library_note', { projectId, id, content, revision, copy: copy ?? null }),
   external: (projectId, path, open) => localCommand('library_external', { projectId, path, open }),
-  import: (projectId, migrate) => localCommand('library_import', { projectId, migrate }),
   importFile: async (projectId, folder, file) => {
     if (file.size > 150 * 1024 * 1024) throw new Error('文件名无效或文件超过 150 MiB。');
     if (!isTauri()) throw new Error('请在桌面应用中使用本地文献目录和内嵌浏览器。');

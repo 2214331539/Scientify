@@ -1,21 +1,13 @@
 import { t, locale, translateError } from '../../i18n';
 import { Button, Input, Badge } from '../../components/primitives';
 import { WindowControls } from '../../components/layout/WindowControls';
+import { FeaturePlaceholder } from '../../components/workspace/FeaturePlaceholder';
+import { ViewTransition } from '../../components/workspace/ViewTransition';
 import { Modal } from '../../components/Modal';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useStore } from 'zustand';
-import {
-  Plus,
-  Search,
-  LayoutGrid,
-  List,
-  FolderClosed,
-  ChevronRight,
-  Pencil,
-  Star,
-  MoreHorizontal,
-} from 'lucide-react';
-import { selectProjects, type Project, type Team } from '../../domain/workspace';
+import { Plus, Search, LayoutGrid, List, FolderClosed, Star, MoreHorizontal } from 'lucide-react';
+import { selectProjects, type Project } from '../../domain/workspace';
 import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/Menu';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { coverColor, coverInk, deleteProject } from './model';
@@ -47,16 +39,12 @@ export function ProjectLibrary({
   onOpen,
   onNew,
   onEdit,
-  onNewTeam,
-  onEditTeam,
 }: {
   store: WorkspaceStore;
   space: string;
   onOpen(id: string): void;
   onNew(): void;
   onEdit(project: Project): void;
-  onNewTeam(): void;
-  onEditTeam(team: Team): void;
 }) {
   const data = useStore(store, (s) => s.data)!;
   const busy = useStore(store, (s) => s.busy),
@@ -76,7 +64,6 @@ export function ProjectLibrary({
     setQuery('');
     setContext(null);
   }, [space]);
-  const team = data.teams.find((entry) => entry.id === space);
   const projects = selectProjects(data, space, query);
   const selectView = (next: 'grid' | 'list') => {
     setView(next);
@@ -143,6 +130,16 @@ export function ProjectLibrary({
       }
     },
   });
+  if (space !== 'personal')
+    return (
+      <section className="launcher-library" aria-label={t('项目管理')}>
+        <header className="launcher-topbar" data-tauri-drag-region>
+          <span className="spacer" />
+          <WindowControls />
+        </header>
+        <FeaturePlaceholder feature="collaboration" />
+      </section>
+    );
   return (
     <section className="launcher-library" aria-label={t('项目管理')}>
       <header className="launcher-topbar" data-tauri-drag-region>
@@ -185,24 +182,7 @@ export function ProjectLibrary({
       </header>
       <div className="launcher-browser-controls">
         <div className="launcher-breadcrumb">
-          {team && (
-            <>
-              <span>{t('团队协作空间')}</span>
-              <ChevronRight />
-            </>
-          )}
-          <span>{space === '__teams__' ? t('团队协作空间') : (team?.name ?? t('个人空间'))}</span>
-          {team && (
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t('编辑团队')}
-              onClick={() => onEditTeam(team)}
-              disabled={busy}
-            >
-              <Pencil />
-            </Button>
-          )}
+          <span>{t('个人空间')}</span>
         </div>
       </div>
       <div className="launcher-canvas">
@@ -222,111 +202,103 @@ export function ProjectLibrary({
             )}
           </div>
         )}
-        {view === 'grid' ? (
-          <div className="project-shelf" aria-label={t('项目网格')}>
-            {projects.map((project) => {
-              const color = coverColor(project);
-              return (
-                <article
-                  {...contextEvents(project)}
-                  className="project-book"
-                  key={project.id}
-                  style={
-                    {
-                      '--project-cover': color,
-                      '--project-cover-ink': coverInk(color),
-                    } as CSSProperties
-                  }
-                >
-                  <div className="project-book-binding">
-                    <Button
-                      variant="ghost"
-                      className="project-cover"
-                      aria-label={project.name}
-                      onClick={() => onOpen(project.id)}
-                      disabled={busy}
-                    >
-                      <span className="project-cover-type">{project.field || t('研究项目')}</span>
-                      <strong>{project.name}</strong>
-                    </Button>
-                    {project.archived && (
-                      <Badge className="project-cover-status">{t('已归档')}</Badge>
-                    )}
-                    {project.favorite && (
-                      <Star className="project-cover-star" aria-label={t('已收藏')} />
-                    )}
-                    {actions(project)}
-                  </div>
-                  <time
-                    className="project-updated"
-                    dateTime={project.updatedAt || project.createdAt}
+        <ViewTransition viewKey={view} className="sf-view-stack--flow">
+          {view === 'grid' ? (
+            <div className="project-shelf" aria-label={t('项目网格')}>
+              {projects.map((project) => {
+                const color = coverColor(project);
+                return (
+                  <article
+                    {...contextEvents(project)}
+                    className="project-book"
+                    key={project.id}
+                    style={
+                      {
+                        '--project-cover': color,
+                        '--project-cover-ink': coverInk(color),
+                      } as CSSProperties
+                    }
                   >
-                    {updated(project)}
-                  </time>
-                </article>
-              );
-            })}
-            <Button
-              variant="ghost"
-              className="project-new-book"
-              onClick={space === '__teams__' ? onNewTeam : onNew}
-              disabled={busy}
-            >
-              <Plus />
-              <span>{t(space === '__teams__' ? '创建团队空间' : '新建项目')}</span>
-            </Button>
-          </div>
-        ) : (
-          <div className="launcher-project-list">
-            <table className="data-table" aria-label={t('项目列表')}>
-              <thead>
-                <tr>
-                  <th>{t('项目名称')}</th>
-                  <th>{t('研究方向')}</th>
-                  <th>{t('最近更新')}</th>
-                  <th>
-                    <span className="sr-only">{t('项目操作')}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((project) => (
-                  <tr key={project.id} {...contextEvents(project)}>
-                    <td>
+                    <div className="project-book-binding">
                       <Button
                         variant="ghost"
-                        className="launcher-project-open"
+                        className="project-cover"
                         aria-label={project.name}
-                        disabled={busy}
                         onClick={() => onOpen(project.id)}
+                        disabled={busy}
                       >
-                        <FolderClosed />
-                        <span>
-                          <strong>
-                            {project.name} {project.archived && <Badge>{t('已归档')}</Badge>}
-                          </strong>
-                          {project.question && <small>{project.question}</small>}
-                        </span>
+                        <span className="project-cover-type">{project.field || t('研究项目')}</span>
+                        <strong>{project.name}</strong>
                       </Button>
-                    </td>
-                    <td>{project.field || '—'}</td>
-                    <td>{updated(project)}</td>
-                    <td>{actions(project)}</td>
+                      {project.archived && (
+                        <Badge className="project-cover-status">{t('已归档')}</Badge>
+                      )}
+                      {project.favorite && (
+                        <Star className="project-cover-star" aria-label={t('已收藏')} />
+                      )}
+                      {actions(project)}
+                    </div>
+                    <time
+                      className="project-updated"
+                      dateTime={project.updatedAt || project.createdAt}
+                    >
+                      {updated(project)}
+                    </time>
+                  </article>
+                );
+              })}
+              <Button variant="ghost" className="project-new-book" onClick={onNew} disabled={busy}>
+                <Plus />
+                <span>{t('新建项目')}</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="launcher-project-list">
+              <table className="data-table" aria-label={t('项目列表')}>
+                <thead>
+                  <tr>
+                    <th>{t('项目名称')}</th>
+                    <th>{t('研究方向')}</th>
+                    <th>{t('最近更新')}</th>
+                    <th>
+                      <span className="sr-only">{t('项目操作')}</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <Button
-              variant="ghost"
-              className="launcher-new-row"
-              disabled={busy}
-              onClick={space === '__teams__' ? onNewTeam : onNew}
-            >
-              <Plus />
-              {t(space === '__teams__' ? '创建团队空间' : '新建项目')}
-            </Button>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {projects.map((project) => (
+                    <tr key={project.id} {...contextEvents(project)}>
+                      <td>
+                        <Button
+                          variant="ghost"
+                          className="launcher-project-open"
+                          aria-label={project.name}
+                          disabled={busy}
+                          onClick={() => onOpen(project.id)}
+                        >
+                          <FolderClosed />
+                          <span>
+                            <strong>
+                              {project.name} {project.archived && <Badge>{t('已归档')}</Badge>}
+                            </strong>
+                            {project.question && <small>{project.question}</small>}
+                          </span>
+                        </Button>
+                      </td>
+                      <td>{project.field || '—'}</td>
+                      <td>{updated(project)}</td>
+                      <td>{actions(project)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Button variant="ghost" className="launcher-new-row" disabled={busy} onClick={onNew}>
+                <Plus />
+                {t('新建项目')}
+              </Button>
+            </div>
+          )}
+        </ViewTransition>
       </div>
       <Menu
         anchor={context?.anchor ?? null}

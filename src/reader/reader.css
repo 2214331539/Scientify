@@ -39,6 +39,19 @@
   text-size-adjust: none;
   forced-color-adjust: none;
 }
+.pdf-page .annotationLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pdf-page .annotationLayer .linkAnnotation > a {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.pdf-page .annotationLayer .linkAnnotation > a:is(:hover, :focus-visible) {
+  outline: 1px solid var(--sf-accent);
+  background: color-mix(in srgb, var(--sf-accent) 12%, transparent);
+}
 .pdf-loading {
   position: absolute;
   top: 8px;
