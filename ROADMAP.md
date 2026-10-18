@@ -17,7 +17,7 @@
 - 有清晰复现条件的文件、编辑会话和执行状态修复。
 - [macOS / Linux 原生适配](docs/技术方案/跨平台适配路线.md)，按能力逐步验证。
 
-具体任务先在 [Issues](https://github.com/2214331539/Scientify/issues) 讨论并记录验收条件。路线图中的项目不代表已有负责人或实现承诺。
+具体任务先在 [Issues](https://github.com/Tsingyu-x-THU/Scientify-Desktop/issues) 讨论并记录验收条件。路线图中的项目不代表已有负责人或实现承诺。
 
 ## 后续评估
 

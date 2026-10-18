@@ -4,9 +4,9 @@
 
 Read papers, keep notes, edit and run Python experiments, and revisit the parameters, logs, and outputs of each run in one desktop workspace.
 
-[简体中文](README.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) · [Issues](https://github.com/2214331539/Scientify/issues) · [License](LICENSE)
+[简体中文](README.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) · [Issues](https://github.com/Tsingyu-x-THU/Scientify-Desktop/issues) · [License](LICENSE)
 
-> **Early alpha; Windows x64 is the only validated desktop platform.** Installers are distributed as unsigned pre-releases on [GitHub Releases](https://github.com/2214331539/Scientify/releases). macOS, Linux, and mobile applications are not available yet.
+> **Early alpha; Windows x64 is the only validated desktop platform.** Portable builds are distributed as unsigned pre-releases on [GitHub Releases](https://github.com/Tsingyu-x-THU/Scientify-Desktop/releases). macOS, Linux, and mobile applications are not available yet.
 
 ## What you can do
 
@@ -24,17 +24,17 @@ Start with a small task: **create a project → connect papers and code → take
 
 ## Download
 
-Open [Releases](https://github.com/2214331539/Scientify/releases) and download `Scientify_<version>_windows_x64_setup.exe` from the newest pre-release. Node.js and Rust are not needed to use the installed app. Windows 10 / 11 x64 is required; the installer downloads WebView2 if it is missing. Install Python and Git separately when using their respective features.
+Open [Releases](https://github.com/Tsingyu-x-THU/Scientify-Desktop/releases), download the Windows x64 portable ZIP from the newest pre-release, and extract both files into one folder. Run `scientify.exe`; the bundled Agent requires `codex.exe` beside it. Node.js and Rust are not needed. Windows 10 / 11 x64 is required. Install Python and Git separately when using their respective features.
 
-The alpha installer is not code-signed and Windows may display an unknown-publisher warning. Compare `Get-FileHash <installer> -Algorithm SHA256` with the release's `SHA256SUMS.txt` to verify integrity. Before updating, close Scientify and back up `ScientifyData` and externally linked folders. Automatic updates are not available yet.
+The alpha executable is not code-signed and Windows may display an unknown-publisher warning. Compare `Get-FileHash <archive> -Algorithm SHA256` with the hash in the release notes. Before updating, close Scientify and back up `ScientifyData` and externally linked folders. Automatic updates are not available yet.
 
 ## Run from source
 
 On Windows x64, install Node.js 24 LTS, pnpm 10.11.0, stable Rust, and the [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/#windows), including MSVC C++ Build Tools and WebView2.
 
 ```powershell
-git clone https://github.com/2214331539/Scientify.git
-cd Scientify
+git clone https://github.com/Tsingyu-x-THU/Scientify-Desktop.git
+cd Scientify-Desktop
 corepack enable
 corepack prepare pnpm@10.11.0 --activate
 pnpm install --frozen-lockfile

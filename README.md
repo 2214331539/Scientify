@@ -8,13 +8,13 @@
 
 面向计算型研究者的本地科研工具。在同一个项目里阅读论文、记录思考、编辑和运行 Python 实验，并可配置地在本地使用AI辅助。
 
-[English](README.en.md) · [快速开始](#快速开始) · [使用文档](docs/产品功能文档/桌面使用说明.md) · [参与贡献](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [问题反馈](https://github.com/2214331539/Scientify/issues)
+[English](README.en.md) · [快速开始](#快速开始) · [使用文档](docs/产品功能文档/桌面使用说明.md) · [参与贡献](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [问题反馈](https://github.com/Tsingyu-x-THU/Scientify-Desktop/issues)
 
 ![Stage: Alpha](https://img.shields.io/badge/stage-alpha-orange)
 ![Desktop: Windows x64](https://img.shields.io/badge/desktop-Windows_x64-blue)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-> **当前是早期开发版本。** Windows x64 安装包通过 [GitHub Releases](https://github.com/2214331539/Scientify/releases) 分发，标记为 Pre-release，尚未进行代码签名。macOS、Linux 和移动端尚未交付。
+> **当前是早期开发版本。** Windows x64 便携程序通过 [GitHub Releases](https://github.com/Tsingyu-x-THU/Scientify-Desktop/releases) 分发，标记为 Pre-release，尚未进行代码签名。macOS、Linux 和移动端尚未交付。
 
 ## 为什么做 Scientify
 
@@ -48,20 +48,20 @@
 
 ### 下载安装
 
-在 [Releases](https://github.com/2214331539/Scientify/releases) 打开最新的预发布版本，下载 `Scientify_<版本>_windows_x64_setup.exe`，运行安装后打开 Scientify。普通使用无需安装 Node.js 或 Rust。
+在 [Releases](https://github.com/Tsingyu-x-THU/Scientify-Desktop/releases) 打开最新的预发布版本，下载 Windows x64 便携压缩包并解压到同一文件夹，运行 `scientify.exe`。内置 Agent 依赖同目录的 `codex.exe`。普通使用无需安装 Node.js 或 Rust。
 
-- 适用于 Windows 10 / 11 x64；缺少 WebView2 时安装器需要联网安装运行时。
+- 适用于 Windows 10 / 11 x64；缺少 WebView2 时系统需要联网安装运行时。
 - Python 与 Git 按需自行安装。阅读论文与笔记无需模型密钥；AI 使用自己的模型服务配置。
-- 当前安装包未签名，Windows 可能显示“未知发布者”。发布页附 `SHA256SUMS.txt`，可使用 `Get-FileHash <安装包路径> -Algorithm SHA256` 核对完整性。
-- 更新前关闭应用并备份 `ScientifyData` 和关联的外部目录，再运行新安装包。第一版暂不提供自动更新。
+- 当前程序未签名，Windows 可能显示“未知发布者”。发布说明附 SHA-256，可使用 `Get-FileHash <压缩包路径> -Algorithm SHA256` 核对完整性。
+- 更新前关闭应用并备份 `ScientifyData` 和关联的外部目录，再运行新版本。第一版暂不提供自动更新。
 
 ### 从源码运行 Windows 桌面版
 
 需要 Windows x64、[Node.js 24 LTS](https://nodejs.org/)、pnpm 10.11.0、Rust stable，以及 [Tauri Windows 前置依赖](https://v2.tauri.app/start/prerequisites/#windows)中的 MSVC C++ Build Tools 和 WebView2 Runtime。
 
 ```powershell
-git clone https://github.com/2214331539/Scientify.git
-cd Scientify
+git clone https://github.com/Tsingyu-x-THU/Scientify-Desktop.git
+cd Scientify-Desktop
 corepack enable
 corepack prepare pnpm@10.11.0 --activate
 pnpm install --frozen-lockfile

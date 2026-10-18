@@ -4,7 +4,7 @@ Scientify is an early-alpha desktop application. Security reports in Chinese or 
 
 ## Report a vulnerability privately
 
-If GitHub private vulnerability reporting is available, use [Report a vulnerability](https://github.com/2214331539/Scientify/security/advisories/new). Availability depends on repository settings; this document does not enable that feature.
+If GitHub private vulnerability reporting is available, use [Report a vulnerability](https://github.com/Tsingyu-x-THU/Scientify-Desktop/security/advisories/new). Availability depends on repository settings; this document does not enable that feature.
 
 If that entry is unavailable, open an issue containing only a request for a private contact channel, addressed to [@2214331539](https://github.com/2214331539). Do not include exploit details, credentials, private paths, browser sessions, or research material in a public issue. There is currently no dedicated security mailbox or guaranteed response time.
 

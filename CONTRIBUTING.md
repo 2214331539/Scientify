@@ -6,7 +6,7 @@ Contributions in Chinese or English are welcome. Small fixes can go directly to 
 
 ## 选择一个任务
 
-先搜索 [Issues](https://github.com/2214331539/Scientify/issues)，避免重复报告。提交新需求时描述实际任务、当前障碍和期望结果。小修复可直接发 PR；新页面、架构、数据迁移或权限变更先讨论范围，避免完成大量工作后无法合入。
+先搜索 [Issues](https://github.com/Tsingyu-x-THU/Scientify-Desktop/issues)，避免重复报告。提交新需求时描述实际任务、当前障碍和期望结果。小修复可直接发 PR；新页面、架构、数据迁移或权限变更先讨论范围，避免完成大量工作后无法合入。
 
 适合首次贡献的工作包括：改进文档、补充翻译、修复已复现的焦点与键盘问题、完善错误提示，以及补充有意义的回归验证。任务未被认领时，可以说明准备采取的方案，不需要等待分配权限。
 
@@ -17,9 +17,9 @@ Contributions in Chinese or English are welcome. Small fixes can go directly to 
 Fork 仓库，克隆自己的 fork，再添加上游：
 
 ```powershell
-git clone https://github.com/YOUR-USERNAME/Scientify.git
-cd Scientify
-git remote add upstream https://github.com/2214331539/Scientify.git
+git clone https://github.com/YOUR-USERNAME/Scientify-Desktop.git
+cd Scientify-Desktop
+git remote add upstream https://github.com/Tsingyu-x-THU/Scientify-Desktop.git
 git switch -c fix/describe-the-change
 corepack enable
 corepack prepare pnpm@10.11.0 --activate
