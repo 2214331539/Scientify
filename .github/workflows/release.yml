@@ -18,8 +18,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate release tag format
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      valid: ${{ steps.tag.outputs.valid }}
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - name: Check SemVer tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping release: use an exact version tag such as v0.3.0-alpha.1."
+          fi
+
   build:
     name: Build and verify Windows installer
+    needs: validate
+    if: needs.validate.outputs.valid == 'true'
     runs-on: windows-latest
     timeout-minutes: 60
     defaults:
