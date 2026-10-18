@@ -137,7 +137,6 @@ function fixture({ failSaves = false } = {}) {
     listModels: async () => [],
     testModel: async () => {},
     askAI: vi.fn(async () => `Isolated answer ${++answers}`),
-    fetchArxiv: vi.fn(async () => ''),
   };
   // Exercise migration from the previous UI session, including an open assistant.
   localStorage.setItem(
@@ -224,7 +223,8 @@ it('updates assistant context with the active material and isolates project conv
   await screen.findByRole('navigation', { name: '一级导航' });
   await user.click(screen.getByLabelText('AI 助手', { selector: 'button' }));
   let assistant = within(screen.getByRole('region', { name: 'AI 助手内容' }));
-  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
+  await user.click(assistant.getByRole('button', { name: '对话选项' }));
+  await user.click(screen.getByRole('menuitem', { name: '查看当前材料' }));
   expect(assistant.getByText('ToolHCL')).toBeTruthy();
   expect(assistant.getByText(t('Overview'))).toBeTruthy();
   await user.click(screen.getByLabelText('关闭弹窗'));
@@ -238,7 +238,8 @@ it('updates assistant context with the active material and isolates project conv
       },
     ),
   );
-  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
+  await user.click(assistant.getByRole('button', { name: '对话选项' }));
+  await user.click(screen.getByRole('menuitem', { name: '查看当前材料' }));
   expect(assistant.getByText(t('Literature'))).toBeTruthy();
   expect(assistant.getByText('p1.md')).toBeTruthy();
   await user.click(screen.getByLabelText('关闭弹窗'));
@@ -250,7 +251,8 @@ it('updates assistant context with the active material and isolates project conv
 
   await selectProject(user, 'Protein Study');
   assistant = within(screen.getByRole('region', { name: 'AI 助手内容' }));
-  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
+  await user.click(assistant.getByRole('button', { name: '对话选项' }));
+  await user.click(screen.getByRole('menuitem', { name: '查看当前材料' }));
   expect(assistant.getByText('Protein Study')).toBeTruthy();
   expect(assistant.getByText(t('Overview'))).toBeTruthy();
   expect(assistant.queryByText('Question for project A')).toBeNull();
@@ -266,7 +268,8 @@ it('updates assistant context with the active material and isolates project conv
       },
     ),
   );
-  await user.click(assistant.getByRole('button', { name: '查看当前材料' }));
+  await user.click(assistant.getByRole('button', { name: '对话选项' }));
+  await user.click(screen.getByRole('menuitem', { name: '查看当前材料' }));
   expect(assistant.getByText('p2.md')).toBeTruthy();
   await user.click(screen.getByLabelText('关闭弹窗'));
   await user.click(assistant.getByRole('textbox', { name: '向 AI 提问' }));

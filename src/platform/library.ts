@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { ResearchBackend } from './research';
+import type { FileBackend } from './research';
 
 export type LibraryPaper = { id: string; path: string; notePath: string; fingerprint: string };
 export type LibraryEntry = {
@@ -79,16 +79,12 @@ export const nativeLibrary: LibraryBackend = {
       : Promise.resolve(() => {}),
 };
 
-const adapters = new WeakMap<LibraryBackend, ResearchBackend>();
+const adapters = new WeakMap<LibraryBackend, FileBackend>();
 /** Reuse the proven file buffer/conflict runtime for adjacent paper notes. */
-export function noteFiles(library: LibraryBackend): ResearchBackend {
+export function noteFiles(library: LibraryBackend): FileBackend {
   let adapter = adapters.get(library);
   if (adapter) return adapter;
-  const unsupported = async () => {
-    throw new Error('该操作不适用于论文笔记。');
-  };
   adapter = {
-    listFiles: async () => [],
     readFile: async (project, id) => {
       const note = await library.note(project, id);
       return { path: id, content: note.content, version: note.revision ?? 'missing' };
@@ -102,13 +98,6 @@ export function noteFiles(library: LibraryBackend): ResearchBackend {
       );
       return { path: id, content: note.content, version: note.revision ?? 'missing' };
     },
-    importPdf: unsupported,
-    readPdf: unsupported,
-    gitStatus: unsupported,
-    askAI: unsupported,
-    listModels: unsupported,
-    testModel: unsupported,
-    fetchArxiv: unsupported,
   };
   adapters.set(library, adapter);
   return adapter;

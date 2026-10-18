@@ -15,6 +15,32 @@ fn fixture() -> Value {
 }
 
 #[test]
+fn model_profiles_and_detached_chat_snapshots_are_validated_without_secrets() {
+    let mut data = fixture();
+    let settings =
+        json!({"endpoint":"https://example.com/v1","provider":"openai","model":"test-model"});
+    let mut profile = settings.clone();
+    profile["id"] = json!("profile-a");
+    profile["name"] = json!("Service A");
+    data["settings"]["modelProfiles"] = json!([profile.clone()]);
+    data["settings"]["defaultModelProfileId"] = json!("profile-a");
+    data["sessions"] = json!([{"id":"chat-a","project":"p1","title":"Chat A","updatedAt":"now","messages":[],"context":[],"modelSelection":{"profileId":"removed-profile","settings":settings}}]);
+    let valid = validate(data.clone()).unwrap();
+    assert_eq!(
+        valid["sessions"][0]["modelSelection"]["profileId"],
+        "removed-profile"
+    );
+    data["sessions"][0]["modelSelection"]["settings"]["apiKey"] = json!("do-not-persist");
+    assert!(validate(data.clone()).is_err());
+    data["sessions"][0]["modelSelection"]["settings"]
+        .as_object_mut()
+        .unwrap()
+        .remove("apiKey");
+    data["settings"]["modelProfiles"] = json!([profile.clone(), profile]);
+    assert!(validate(data).is_err());
+}
+
+#[test]
 fn personal_inbox_only_accepts_notes_and_conversations() {
     let mut data = fixture();
     data["records"][0]["project"] = json!("__inbox__");

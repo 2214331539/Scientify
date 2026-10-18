@@ -34,16 +34,3 @@
   font-weight: 500;
   color: var(--sf-text-primary);
 }
-.sf-feature-placeholder--compact {
-  flex: 1;
-  height: auto;
-  background: transparent;
-}
-.sf-feature-placeholder--compact .sf-feature-placeholder-body {
-  justify-content: flex-start;
-  padding: 40px 16px;
-}
-.sf-feature-placeholder--compact .sf-feature-placeholder-icon {
-  width: 26px;
-  height: 26px;
-}

@@ -1,23 +1,70 @@
 {
   "pngFilesChecked": 71,
-  "icoFilesChecked": 4,
-  "icoFrameSizes": [
-    16,
-    20,
-    24,
-    32,
-    40,
-    48,
-    64,
-    128,
-    256
-  ],
-  "alpha": true,
-  "masterBounds": {
-    "left": 195,
-    "top": 243,
-    "width": 863,
-    "height": 786
+  "icoFilesChecked": 6,
+  "icoFrameSizes": {
+    "desktop/scientify.ico": [
+      256,
+      128,
+      64,
+      48,
+      40,
+      32,
+      24,
+      20,
+      16
+    ],
+    "desktop/scientify-dark.ico": [
+      256,
+      128,
+      64,
+      48,
+      40,
+      32,
+      24,
+      20,
+      16
+    ],
+    "desktop/scientify-light.ico": [
+      256,
+      128,
+      64,
+      48,
+      40,
+      32,
+      24,
+      20,
+      16
+    ],
+    "taskbar/scientify-light.ico": [
+      256,
+      128,
+      64,
+      48,
+      40,
+      32,
+      24,
+      20,
+      16
+    ],
+    "taskbar/scientify-dark.ico": [
+      256,
+      128,
+      64,
+      48,
+      40,
+      32,
+      24,
+      20,
+      16
+    ],
+    "web/favicon.ico": [
+      48,
+      32,
+      16
+    ]
   },
+  "rgba": true,
+  "largestIcoFrameFirst": true,
+  "offCentre": [],
   "status": "passed"
 }

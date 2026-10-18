@@ -1,29 +1,18 @@
 import { t, translateError } from '../../i18n';
 import { isTauri } from '@tauri-apps/api/core';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
-import {
-  Plus,
-  Settings2,
-  ChevronDown,
-  MoreHorizontal,
-  Paperclip,
-  LoaderCircle,
-  Pencil,
-  Trash2,
-  ChevronRight,
-} from 'lucide-react';
+import { Settings2, Paperclip } from 'lucide-react';
 import { ContextPanel } from '../../components/ai/ContextPanel';
-import { ApprovalCard } from '../../components/ai/ApprovalCard';
-import { AssistantComposer } from '../../components/ai/AssistantComposer';
-import { ChatMessageView } from '../../components/ai/ChatMessageView';
+import { AssistantComposer, type ComposerCommand } from '../../components/ai/AssistantComposer';
 import '../../components/ai/ai-panel.css';
 import { Button } from '../../components/primitives';
 import { ModelSettingsDialog } from './ModelSettingsDialog';
-import { AssistantRuns } from './AssistantRuns';
+import { AssistantConversations, type AssistantMenu } from './AssistantConversations';
+import { AssistantTranscript } from './AssistantTranscript';
 import { getFileRuntime, reloadDirectorySessions } from '../../editor/sessions';
 import { codeContext } from '../../workspaces/experiments/code-context';
-import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/Menu';
+import { Menu } from '../../components/primitives/Menu';
 import { Modal } from '../../components/Modal';
 import { Panel } from '../../components/layout/Panel';
 import { confirmAction, requestText } from '../../components/prompts';
@@ -35,6 +24,11 @@ import {
   type AgentBackend,
   type AgentConnection,
   type AgentDomain,
+  type ApprovalDecision,
+  type ApprovalRequest,
+  type AgentSkillListing,
+  type AgentSkillRef,
+  type PermissionMode,
 } from '../../platform/agent';
 import type { AIProtocol, ResearchBackend } from '../../platform/research';
 import {
@@ -43,8 +37,11 @@ import {
   type CredentialBackend,
 } from '../../platform/credentials';
 import type { WorkspaceStore } from '../../stores/workspace';
+import type { ModelProfile } from '../../domain/workspace';
 import { hasPendingWork, initialAgentSession } from './agent-session';
 import { getAgentRuntime } from './agent-runtime';
+import { getChatRuntime } from './chat-runtime';
+import { readAttachment } from './attachments';
 import {
   asConversation,
   freezeContext,
@@ -81,35 +78,40 @@ export function AssistantPanel({
   const selectedCodeRoot = useStore(codeContext, (state) => state.roots[scope]);
   const selectedExperimentId = useStore(codeContext, (state) => state.experiments[scope]);
   const model = data?.settings.model;
-  const [settings, setSettings] = useState<AISettings>(() => ({
+  const defaultSettings: AISettings = {
     endpoint: model?.endpoint ?? 'http://127.0.0.1:11434',
     model: model?.model ?? '',
     provider: model?.provider ?? 'ollama',
     serviceId: model?.serviceId,
     modelCatalog: model?.modelCatalog,
-  }));
+    verification: model?.verification,
+  };
+  const profiles = data?.settings.modelProfiles ?? [];
+  const defaultSelection = {
+    profileId: data?.settings.defaultModelProfileId ?? 'legacy',
+    settings:
+      profiles.find((profile) => profile.id === data?.settings.defaultModelProfileId) ??
+      defaultSettings,
+  };
+  const [settings, setSettings] = useState<AISettings>(defaultSelection.settings);
+  const [editingProfileId, setEditingProfileId] = useState(defaultSelection.profileId);
+  const [profileName, setProfileName] = useState('');
+  const profileRecall = useRef(0);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(settings);
   const [draftKey, setDraftKey] = useState('');
   const [settingsError, setSettingsError] = useState('');
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [showContext, setShowContext] = useState(false);
-  const [menu, setMenu] = useState<{
-    kind: 'sessions' | 'tools' | 'models';
-    anchor: MenuAnchor;
-  } | null>(null);
-  const [sessionAction, setSessionAction] = useState<{
-    id: string;
-    anchor: MenuAnchor;
-  } | null>(null);
-  const messagesRef = useRef<HTMLDivElement>(null);
-  const transcriptRef = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<AssistantMenu | null>(null);
   const pinnedToBottom = useRef(true);
 
-  const [apiKey, setApiKey] = useState('');
-  // True while `apiKey` is the key read back from this machine rather than one
-  // typed in this session, so the settings dialog can say so.
-  const [keyStored, setKeyStored] = useState(false);
+  const [credential, setCredential] = useState({ slot: '', key: '', stored: false });
+  const selectedSlot = credentialSlot(settings.provider, settings.endpoint);
+  // A key belongs to its endpoint even during an asynchronous session switch.
+  const apiKey = credential.slot === selectedSlot ? credential.key : '';
+  const keyStored = credential.slot === selectedSlot && credential.stored;
+  const credentialsReady = credential.slot === selectedSlot || settings.provider === 'ollama';
   // Keys read back once per provider endpoint; a second open of the dialog must
   // not wait on the disk again.
   const keyCache = useRef(new Map<string, string>());
@@ -118,7 +120,8 @@ export function AssistantPanel({
     const recent = data?.sessions
       .filter((item) => item.project === scope)
       .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
-    return recent ? asConversation(recent) : newConversation(scope);
+    const chat = recent ? asConversation(recent) : newConversation(scope);
+    return { ...chat, modelSelection: chat.modelSelection ?? structuredClone(defaultSelection) };
   });
   const activeConversationId = useRef(localConversation.id);
   activeConversationId.current = localConversation.id;
@@ -126,23 +129,87 @@ export function AssistantPanel({
   const savedConversation = data?.sessions.find(
     (item) => item.project === scope && item.id === localConversation.id,
   );
-  const conversation =
-    savedConversation && !unsaved ? asConversation(savedConversation) : localConversation;
+  const chatRuntime = getChatRuntime(store, backend);
+  useSyncExternalStore(chatRuntime.subscribe, chatRuntime.getSnapshot);
+  const chatTask = chatRuntime.get(scope, localConversation.id);
+  const conversation = useMemo(() => {
+    if (chatTask?.saveError && !chatTask.questionSaved) return chatTask.seed;
+    const chat =
+      savedConversation && !unsaved ? asConversation(savedConversation) : localConversation;
+    return { ...chat, modelSelection: chat.modelSelection ?? localConversation.modelSelection };
+  }, [savedConversation, unsaved, localConversation, chatTask?.saveError, chatTask?.questionSaved]);
   const runtime = getAgentRuntime(store, agent);
   useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
   const activeTask = runtime.get(scope, conversation.id);
+  const chatPending = !!chatTask?.pending;
   const agentState = activeTask?.state ?? initialAgentSession;
   const agentPending = !!activeTask && (activeTask.starting || hasPendingWork(agentState));
   const [newDomain, setNewDomain] = useState<AgentDomain | null>(null);
   const domain =
     conversation.agentDomain ?? newDomain ?? domainForWorkspace(context.workspace) ?? 'code';
   const [prompt, updatePrompt] = useState('');
+  const [attachments, updateAttachments] = useState<NonNullable<ChatMessage['attachments']>>([]);
+  const [selectedSkills, setSelectedSkills] = useState<AgentSkillRef[]>([]);
+  const [permissionSaving, setPermissionSaving] = useState(false);
+  const savingPermission = useRef(false);
+  const skillCache = useRef(new Map<string, Promise<AgentSkillListing>>());
+  const [skillListings, setSkillListings] = useState<
+    Record<string, { loading: boolean; listing: AgentSkillListing }>
+  >({});
+  const attachmentValues = useRef(attachments);
+  const pendingAttachments = useRef(0);
+  function setAttachments(
+    value: typeof attachments | ((current: typeof attachments) => typeof attachments),
+  ) {
+    // Reserve against the latest input, including drops before React renders.
+    const next = typeof value === 'function' ? value(attachmentValues.current) : value;
+    attachmentValues.current = next;
+    updateAttachments(next);
+  }
+  const [attachmentReads, setAttachmentReads] = useState(0);
+  const [preparingContexts, setPreparingContexts] = useState<string[]>([]);
+  const preparing = useRef(new Set<string>());
+  const preparingContext = preparingContexts.includes(conversation.id);
+  const attachmentTicket = useRef(0);
+  useEffect(
+    () => () => {
+      ++attachmentTicket.current;
+    },
+    [],
+  );
   const drafts = useRef(new Map<string, string>());
   const draftChats = useRef(new Map<string, Conversation>());
   const [, refreshDrafts] = useState(0);
   function setPrompt(value: string) {
     drafts.current.set(activeConversationId.current, value);
     updatePrompt(value);
+  }
+  function attachImages(files: File[]) {
+    if (files.length + attachmentValues.current.length + pendingAttachments.current > 4) {
+      setError(t('每条消息最多附带 4 个文件。'));
+      return;
+    }
+    const conversationId = activeConversationId.current;
+    const ticket = attachmentTicket.current;
+    setError('');
+    pendingAttachments.current += files.length;
+    setAttachmentReads((count) => count + 1);
+    void Promise.all(files.map(readAttachment))
+      .then((next) => {
+        if (ticket !== attachmentTicket.current || conversationId !== activeConversationId.current)
+          return;
+        setAttachments((current) => [...current, ...next]);
+      })
+      .catch((reason) => {
+        if (ticket === attachmentTicket.current && conversationId === activeConversationId.current)
+          setError(safeError(reason));
+      })
+      .finally(() => {
+        if (ticket === attachmentTicket.current) {
+          pendingAttachments.current -= files.length;
+          setAttachmentReads((count) => count - 1);
+        }
+      });
   }
   function restorePrompt(id: string, text: string) {
     const restored = [text, drafts.current.get(id)].filter(Boolean).join('\n\n');
@@ -154,7 +221,7 @@ export function AssistantPanel({
   const [includeContext, setIncludeContext] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [retry, setRetry] = useState<Conversation | null>(null);
+  const retry = chatTask?.error && !chatTask.saveError && !chatPending ? chatTask.seed : null;
   const busyRef = useRef(false);
   const [sandboxBusy, setSandboxBusy] = useState(false);
   const agentProject = context.projectId;
@@ -173,74 +240,53 @@ export function AssistantPanel({
   ];
   const key = `assistant:${scope}`;
   const dirty =
-    !!prompt.trim() || [...drafts.current.values()].some((draft) => !!draft.trim()) || unsaved;
-  const conversationActionsDisabled = unsaved || !!retry || busy || settingsBusy;
-  const backgroundTasks = [...runtime.tasks.values()].filter(
-    (task) =>
-      (runtime.pending(task) || task.saveError) &&
-      task.projectId === scope &&
-      task.conversationId !== conversation.id,
-  );
+    !!prompt.trim() ||
+    !!attachments?.length ||
+    !!selectedSkills.length ||
+    attachmentReads > 0 ||
+    [...drafts.current.values()].some((draft) => !!draft.trim()) ||
+    unsaved;
+  const conversationActionsDisabled =
+    unsaved ||
+    busy ||
+    settingsBusy ||
+    permissionSaving ||
+    !!attachments?.length ||
+    !!selectedSkills.length ||
+    attachmentReads > 0;
   const needsReconnect = conversation.agentStatus === 'running' && !activeTask;
-  const operations = activeTask?.state.operations ?? conversation.agentRun?.operations ?? [];
+  const permission = conversation.agentPermission ?? 'ask';
+  const permissionDisabled =
+    busy ||
+    settingsBusy ||
+    permissionSaving ||
+    preparingContext ||
+    sandboxBusy ||
+    agentPending ||
+    chatPending ||
+    !!activeTask?.saving ||
+    !!activeTask?.saveError ||
+    !!chatTask?.saving ||
+    !!chatTask?.saveError ||
+    unsaved ||
+    needsReconnect;
+  const skillsAvailable =
+    !!agent.skills &&
+    !!agentProject &&
+    (agent !== nativeAgent || isTauri()) &&
+    engineSupports(settings.provider) &&
+    !(settings.verification?.model === settings.model && !settings.verification.agent);
+  const skillRoot = conversation.agentCwd ?? (domain === 'code' ? selectedCodeRoot : undefined);
+  const skillKey = JSON.stringify([scope, conversation.id, domain, skillRoot]);
+  const skillListing = skillListings[skillKey];
+  const selection = conversation.modelSelection;
   useEffect(() => {
-    if (!model) return;
-    setSettings({
-      endpoint: model.endpoint,
-      model: model.model,
-      provider: model.provider ?? 'ollama',
-      serviceId: model.serviceId,
-      modelCatalog: model.modelCatalog,
-    });
-  }, [model?.endpoint, model?.model, model?.provider, model?.serviceId, model?.modelCatalog]);
+    if (selection) setSettings(selection.settings);
+  }, [selection]);
   useEffect(() => {
     store.getState().setDirtySource(key, dirty);
     onDirtyChange?.(dirty);
   }, [store, key, dirty, onDirtyChange]);
-  /**
-   * Read the key filed for one provider endpoint. A failure is not fatal: the
-   * panel then behaves as it did before, with a key for this session only.
-   */
-  const recallKey = useCallback(
-    async (provider: AIProtocol, endpoint: string) => {
-      const slot = credentialSlot(provider, endpoint);
-      const remembered = keyCache.current.get(slot);
-      if (remembered !== undefined) return remembered;
-      let stored: string | null = null;
-      try {
-        stored = await credentials.load({ provider, endpoint: endpoint.trim() });
-      } catch {
-        stored = null;
-      }
-      if (stored) keyCache.current.set(slot, stored);
-      return stored ?? '';
-    },
-    [credentials],
-  );
-  /** Write or forget the key of one endpoint. A failure only costs a retype. */
-  const fileKey = useCallback(
-    async (provider: AIProtocol, endpoint: string, stored: string) => {
-      try {
-        if (stored) await credentials.save({ provider, endpoint }, stored);
-        else await credentials.clear({ provider, endpoint });
-      } catch {
-        // A key that cannot be filed stays usable until the app closes.
-      }
-    },
-    [credentials],
-  );
-  // A saved key has to survive a restart, so fill the field from this machine
-  // instead of asking for it again.
-  useEffect(() => {
-    const ticket = ++keyTicket.current;
-    void recallKey(settings.provider, settings.endpoint).then((stored) => {
-      if (ticket !== keyTicket.current) return;
-      setApiKey(stored);
-      setKeyStored(!!stored);
-    });
-  }, [recallKey, settings.provider, settings.endpoint]);
-  useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
-
   const safeError = useCallback(
     (reason: unknown) => {
       const message = reason instanceof Error ? reason.message : String(reason);
@@ -248,25 +294,123 @@ export function AssistantPanel({
     },
     [apiKey],
   );
+  const loadSkills = useCallback(
+    (refresh = false) => {
+      if (!skillsAvailable || !agent.skills) return;
+      const previous = skillCache.current.get(skillKey);
+      if (previous && !refresh) return;
+      setSkillListings((current) => ({
+        ...current,
+        [skillKey]: { loading: true, listing: { skills: [], errors: [] } },
+      }));
+      const request = agent.skills({
+        projectId: scope,
+        domain,
+        conversationId: conversation.id,
+        workspaceRoot: skillRoot,
+      });
+      skillCache.current.set(skillKey, request);
+      void request
+        .then((listing) => {
+          if (skillCache.current.get(skillKey) === request)
+            setSkillListings((current) => ({
+              ...current,
+              [skillKey]: { loading: false, listing },
+            }));
+        })
+        .catch((reason) => {
+          if (skillCache.current.get(skillKey) === request) {
+            setSkillListings((current) => ({
+              ...current,
+              [skillKey]: { loading: false, listing: { skills: [], errors: [safeError(reason)] } },
+            }));
+          }
+        });
+    },
+    [skillsAvailable, agent, skillKey, scope, domain, conversation.id, skillRoot, safeError],
+  );
+  const recallKey = useCallback(
+    async (provider: AIProtocol, endpoint: string) => {
+      const slot = credentialSlot(provider, endpoint);
+      const remembered = keyCache.current.get(slot);
+      if (remembered !== undefined) return remembered;
+      if (credentials === nativeCredentials && !isTauri()) return '';
+      const stored = (await credentials.load({ provider, endpoint: endpoint.trim() })) ?? '';
+      keyCache.current.set(slot, stored);
+      return stored;
+    },
+    [credentials],
+  );
+  // A saved key has to survive a restart, so fill the field from this machine
+  // instead of asking for it again.
+  useEffect(() => {
+    const ticket = ++keyTicket.current;
+    void recallKey(settings.provider, settings.endpoint)
+      .then((stored) => {
+        if (ticket === keyTicket.current)
+          setCredential({ slot: selectedSlot, key: stored, stored: !!stored });
+      })
+      .catch((reason) => {
+        if (ticket !== keyTicket.current) return;
+        setCredential({ slot: selectedSlot, key: '', stored: false });
+        setError(safeError(reason));
+      });
+    return () => {
+      ++keyTicket.current;
+    };
+  }, [recallKey, settings.provider, settings.endpoint, selectedSlot, safeError]);
+  useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
 
   function openSettings() {
+    ++profileRecall.current;
     setMenu(null);
     setSettingsDraft(settings);
+    setEditingProfileId(conversation.modelSelection?.profileId ?? 'legacy');
+    setProfileName(
+      profiles.find((profile) => profile.id === conversation.modelSelection?.profileId)?.name ??
+        settings.serviceId ??
+        t('模型配置'),
+    );
     setDraftKey(apiKey);
     setSettingsError('');
     setShowSettings(true);
   }
-  function openMenu(kind: 'sessions' | 'tools' | 'models', trigger: HTMLButtonElement) {
+  function openMenu(kind: AssistantMenu['kind'], trigger: HTMLButtonElement) {
     const r = trigger.getBoundingClientRect();
+    const upward = kind === 'models' || kind === 'permissions';
     setMenu({
       kind,
       anchor: {
         x: r.left,
-        y: kind === 'models' ? r.top - 6 : r.bottom + 4,
-        placement: kind === 'models' ? 'top' : 'bottom',
+        y: upward ? r.top - 6 : r.bottom + 4,
+        placement: upward ? 'top' : 'bottom',
         trigger,
       },
     });
+  }
+  async function choosePermission(value: PermissionMode) {
+    if (permissionDisabled || savingPermission.current) return;
+    setMenu(null);
+    if (value === permission) return;
+    const id = conversation.id;
+    savingPermission.current = true;
+    setPermissionSaving(true);
+    setError('');
+    try {
+      const saved = await store.getState().update((data) => {
+        let entry = data.sessions.find((item) => item.id === id && item.project === scope);
+        if (!entry) {
+          entry = structuredClone(conversation);
+          data.sessions.push(entry);
+        }
+        entry.agentPermission = value;
+      });
+      if (!saved && activeConversationId.current === id)
+        setError(store.getState().error ?? t('权限保存失败，请重试。'));
+    } finally {
+      savingPermission.current = false;
+      setPermissionSaving(false);
+    }
   }
   const recentModels = Array.isArray(model?.recentModels)
     ? model.recentModels.filter((value): value is string => typeof value === 'string').slice(0, 12)
@@ -274,33 +418,54 @@ export function AssistantPanel({
   const models = [
     ...new Set([
       settings.model,
-      ...(model?.endpoint === settings.endpoint ? (model?.modelCatalog ?? recentModels) : []),
+      ...(settings.modelCatalog ?? (model?.endpoint === settings.endpoint ? recentModels : [])),
     ]),
   ].filter(Boolean);
-  useEffect(() => {
-    const pane = messagesRef.current;
-    if (pane && pinnedToBottom.current) pane.scrollTop = pane.scrollHeight;
-  }, [conversation.messages.length, conversation.id, agentState.agentText, agentPending, busy]);
-  useEffect(() => {
-    if (typeof ResizeObserver === 'undefined' || !transcriptRef.current) return;
-    const observer = new ResizeObserver(() => {
-      const pane = messagesRef.current;
-      if (pane && pinnedToBottom.current) pane.scrollTop = pane.scrollHeight;
-    });
-    observer.observe(transcriptRef.current);
-    return () => observer.disconnect();
-  }, []);
-
   async function saveSettings(value = settingsDraft, keyValue = draftKey) {
-    if (settingsBusy || busyRef.current) return;
+    if (
+      settingsBusy ||
+      busyRef.current ||
+      agentPending ||
+      chatPending ||
+      activeTask?.saving ||
+      chatTask?.saving
+    )
+      return;
     value = { ...value, endpoint: value.endpoint.trim(), model: value.model.trim() };
     if (!value.endpoint || !value.model) {
       setSettingsError(t('请先填写模型名称与服务地址。'));
       return;
     }
     setSettingsBusy(true);
+    const profile: ModelProfile = {
+      ...value,
+      id: editingProfileId,
+      name: (profileName.trim() || value.serviceId || value.model).slice(0, 80),
+    };
+    // Put the key in the existing machine-only slot before persisting the selection.
+    try {
+      if (keyValue.trim())
+        await credentials.save(
+          { provider: value.provider, endpoint: value.endpoint },
+          keyValue.trim(),
+        );
+      else if (value.provider !== 'ollama') throw new Error(t('请填写 API 密钥。'));
+      else await credentials.clear({ provider: value.provider, endpoint: value.endpoint });
+    } catch (reason) {
+      if (credentials !== nativeCredentials || isTauri()) {
+        setSettingsBusy(false);
+        setSettingsError(safeError(reason));
+        return;
+      }
+    }
     const result = await store.getState().update((workspace) => {
       const previous = workspace.settings.model;
+      const previousSelection = {
+        profileId: workspace.settings.defaultModelProfileId ?? 'legacy',
+        settings: { ...previous, provider: previous.provider ?? 'ollama' },
+      };
+      for (const chat of workspace.sessions)
+        chat.modelSelection ??= structuredClone(previousSelection);
       const sameService =
         previous.endpoint === value.endpoint && (previous.provider ?? 'ollama') === value.provider;
       const remembered = sameService
@@ -318,6 +483,15 @@ export function AssistantPanel({
           .filter(Boolean)
           .slice(0, 12),
       };
+      workspace.settings.modelProfiles ??= [];
+      const index = workspace.settings.modelProfiles.findIndex((item) => item.id === profile.id);
+      if (index < 0) workspace.settings.modelProfiles.push(profile);
+      else workspace.settings.modelProfiles[index] = profile;
+      workspace.settings.defaultModelProfileId = profile.id;
+      const chat = workspace.sessions.find(
+        (item) => item.id === conversation.id && item.project === scope,
+      );
+      if (chat) chat.modelSelection = { profileId: profile.id, settings: value };
     });
     setSettingsBusy(false);
     if (result) {
@@ -325,16 +499,44 @@ export function AssistantPanel({
       const slot = credentialSlot(value.provider, value.endpoint);
       // Remember before the effect above runs, so the panel cannot restore the
       // previous key for this endpoint.
-      if (stored) keyCache.current.set(slot, stored);
-      else keyCache.current.delete(slot);
-      void fileKey(value.provider, value.endpoint, stored);
+      keyCache.current.set(slot, stored);
       setSettings(value);
-      setApiKey(keyValue);
-      setKeyStored(!!stored);
+      setConversation((chat) => ({
+        ...chat,
+        modelSelection: { profileId: profile.id, settings: value },
+      }));
+      setCredential({ slot, key: stored, stored: !!stored });
       setShowSettings(false);
       setError('');
     } else if (showSettings) setSettingsError(store.getState().error ?? t('模型配置保存失败'));
     else setError(store.getState().error ?? t('模型配置保存失败'));
+  }
+
+  async function chooseModel(profileId: string, value: AISettings) {
+    if (agentPending || chatPending || settingsBusy || activeTask?.saving || chatTask?.saving)
+      return;
+    const next = {
+      ...conversation,
+      modelSelection: { profileId, settings: structuredClone(value) },
+    };
+    if (savedConversation && !(await persistConversation(store, next))) {
+      setError(store.getState().error ?? t('模型配置保存失败'));
+      return;
+    }
+    setConversation(next);
+    setSettings(value);
+  }
+
+  async function deleteProfile(id: string) {
+    if (!(await confirmAction(t('删除此连接配置？已有会话保留原配置。')))) return;
+    const saved = await store.getState().update((workspace) => {
+      workspace.settings.modelProfiles = (workspace.settings.modelProfiles ?? []).filter(
+        (profile) => profile.id !== id,
+      );
+      if (workspace.settings.defaultModelProfileId === id)
+        delete workspace.settings.defaultModelProfileId;
+    });
+    if (!saved) setSettingsError(store.getState().error ?? t('模型配置保存失败'));
   }
 
   async function saveConversation(value = conversation) {
@@ -346,43 +548,21 @@ export function AssistantPanel({
   }
 
   async function runRequest(value: Conversation) {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
     setError('');
-    setRetry(null);
-    try {
-      if (!(await saveConversation(value))) {
-        setRetry(value);
-        return;
-      }
-      const answer = await backend.askAI({
-        endpoint: settings.endpoint,
-        provider: settings.provider,
-        model: settings.model,
-        ...(apiKey ? { apiKey } : {}),
-        messages: requestMessages(value),
-      });
-      if (!answer.trim()) throw new Error(t('模型没有返回文本，请检查模型配置后重试。'));
-      const message: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text: answer,
-        createdAt: new Date().toISOString(),
-      };
-      const next = {
-        ...value,
-        messages: [...value.messages, message],
-        updatedAt: new Date().toISOString(),
-      };
-      setConversation(next);
-      await saveConversation(next);
-    } catch (reason) {
-      setError(safeError(reason));
-      setRetry(value);
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
+    const sent = await chatRuntime.send(value, {
+      endpoint: settings.endpoint,
+      provider: settings.provider,
+      model: settings.model,
+      ...(apiKey ? { apiKey } : {}),
+      messages: requestMessages(value),
+    });
+    if (activeConversationId.current === value.id) {
+      setUnsaved(!sent && !!chatRuntime.get(scope, value.id)?.saveError);
+      if (!sent)
+        setError(
+          chatRuntime.get(scope, value.id)?.saveError ??
+            t('当前输入尚未发送，请在任务结束后重试。'),
+        );
     }
   }
 
@@ -416,6 +596,11 @@ export function AssistantPanel({
     const item = history.find((entry) => entry.id === id);
     if (!item) return;
     const targetTask = runtime.get(scope, id);
+    const targetChat = chatRuntime.get(scope, id);
+    if (targetChat && (targetChat.pending || targetChat.saving || targetChat.saveError)) {
+      setError(t('请先中止并等待此会话任务结束。'));
+      return;
+    }
     if (targetTask && (runtime.pending(targetTask) || targetTask.saveError)) {
       setError(t('请先中止并等待此会话任务结束。'));
       return;
@@ -434,9 +619,10 @@ export function AssistantPanel({
       return;
     }
     drafts.current.delete(id);
+    chatRuntime.forget(scope, id);
     draftChats.current.delete(id);
     if (conversation.id !== id) return;
-    const next = newConversation(scope);
+    const next = { ...newConversation(scope), modelSelection: structuredClone(defaultSelection) };
     activeConversationId.current = next.id;
     setConversation(next);
     setPrompt('');
@@ -464,7 +650,7 @@ export function AssistantPanel({
     }
     setError('');
     const sendingId = conversation.id;
-    const boundRoot = conversation.agentCwd ?? selectedCodeRoot;
+    const boundRoot = conversation.agentCwd ?? (domain === 'code' ? selectedCodeRoot : undefined);
     if (domain === 'code') {
       const drafts = [...getFileRuntime(backend).sessions.values()].filter(
         (session) =>
@@ -499,40 +685,100 @@ export function AssistantPanel({
       }
     }
     if (activeConversationId.current !== sendingId) return;
-    const snapshot =
-      includeContext &&
-      (!context.experimentId ||
-        !conversation.experimentId ||
-        context.experimentId === conversation.experimentId) &&
-      (!context.workspaceRoot || !boundRoot || context.workspaceRoot === boundRoot) &&
-      (!domainForWorkspace(context.workspace) || domainForWorkspace(context.workspace) === domain)
-        ? freezeContext(context)
-        : undefined;
-    setPrompt('');
+    const submittedAttachments = attachments ?? [];
+    const submittedSkills = selectedSkills;
+    const snapshot = await captureContext(boundRoot);
+    if (activeConversationId.current !== sendingId) return;
+    const cleared = drafts.current.get(sendingId)?.trim() === text;
+    if (cleared) setPrompt('');
     pinnedToBottom.current = true;
-    const seed =
-      domain === 'code'
-        ? {
-            ...conversation,
-            ...(boundRoot ? { agentCwd: boundRoot } : {}),
-            experimentId: conversation.experimentId ?? selectedExperimentId,
-          }
-        : conversation;
-    const sent = await runtime.send(seed, domain, agentConnection, text, snapshot);
+    const root = snapshot?.workspaceRoot ?? boundRoot;
+    const seed = {
+      ...conversation,
+      ...(root ? { agentCwd: root } : {}),
+      ...(domain === 'code'
+        ? { experimentId: conversation.experimentId ?? selectedExperimentId }
+        : {}),
+    };
+    const sent = await runtime.send(
+      seed,
+      domain,
+      agentConnection,
+      text,
+      snapshot,
+      submittedAttachments,
+      submittedSkills,
+    );
     if (sent === false) {
-      restorePrompt(sendingId, text);
+      if (cleared) restorePrompt(sendingId, text);
       if (activeConversationId.current === sendingId) {
         setError(store.getState().error ?? t('当前输入尚未发送，请在任务结束后重试。'));
       }
+    } else if (activeConversationId.current === sendingId) {
+      setAttachments((current) => current?.filter((item) => !submittedAttachments.includes(item)));
+      setSelectedSkills((current) => current.filter((item) => !submittedSkills.includes(item)));
     }
   }
 
+  async function captureContext(boundRoot?: string) {
+    if (!includeContext) return undefined;
+    const matches = context.browser
+      ? context.projectId === scope
+      : (!context.experimentId ||
+          !conversation.experimentId ||
+          context.experimentId === conversation.experimentId) &&
+        (!context.workspaceRoot || !boundRoot || context.workspaceRoot === boundRoot) &&
+        (!domainForWorkspace(context.workspace) ||
+          domainForWorkspace(context.workspace) === domain);
+    const visible = matches ? freezeContext(context) : undefined;
+    if (!agent.context || !agentProject || (agent === nativeAgent && !isTauri())) return visible;
+    const discovered = await agent.context({
+      projectId: scope,
+      domain,
+      conversationId: conversation.id,
+      workspaceRoot: boundRoot,
+      ...(visible ? { path: visible.path, resourceId: visible.resourceId } : {}),
+    });
+    return {
+      ...(visible ??
+        freezeContext({
+          workspace: domain === 'code' ? 'experiments' : 'literature',
+          title: t('当前会话工作区'),
+          projectId: scope,
+        })),
+      workspaceRoot: discovered.root,
+      materials: discovered.materials,
+      warnings: discovered.warnings,
+    };
+  }
+
   async function send() {
+    const sendingId = conversation.id;
+    if (preparing.current.has(sendingId)) return;
+    preparing.current.add(sendingId);
+    setPreparingContexts([...preparing.current]);
+    try {
+      await submitMessage();
+    } catch (reason) {
+      if (activeConversationId.current === sendingId) setError(safeError(reason));
+    } finally {
+      preparing.current.delete(sendingId);
+      setPreparingContexts([...preparing.current]);
+    }
+  }
+
+  async function submitMessage() {
     if (
-      !prompt.trim() ||
+      (!prompt.trim() && !attachments?.length) ||
       busyRef.current ||
       settingsBusy ||
+      savingPermission.current ||
+      attachmentReads > 0 ||
+      !credentialsReady ||
       agentPending ||
+      chatPending ||
+      chatTask?.saving ||
+      chatTask?.saveError ||
       activeTask?.saving ||
       activeTask?.saveError ||
       needsReconnect
@@ -543,11 +789,25 @@ export function AssistantPanel({
     // OpenAI-shaped protocol. Users should describe the outcome; they should
     // not have to choose a transport mode before every request.
     const harnessAvailable = agent !== nativeAgent || isTauri();
-    if (harnessAvailable && agentProject && domain && engineSupports(settings.provider)) {
+    if (
+      harnessAvailable &&
+      agentProject &&
+      domain &&
+      engineSupports(settings.provider) &&
+      !(settings.verification?.model === settings.model && !settings.verification.agent)
+    ) {
       await sendToAgent();
       return;
     }
-    if (unsaved || retry) return;
+    if (unsaved) return;
+    if (selectedSkills.length) {
+      setError(t('技能需要内置 Agent 执行，当前连接仅支持聊天。请更换连接或移除技能。'));
+      return;
+    }
+    if (settings.verification?.model === settings.model && !settings.verification.chat) {
+      setError(t('此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。'));
+      return;
+    }
     if (
       !settings.model.trim() ||
       !settings.endpoint.trim() ||
@@ -556,42 +816,62 @@ export function AssistantPanel({
       openSettings();
       return;
     }
-    const snapshot = includeContext ? freezeContext(context) : undefined;
+    const sendingId = conversation.id;
+    const submittedAttachments = attachments ?? [];
+    const snapshot = await captureContext(
+      conversation.agentCwd ?? (domain === 'code' ? selectedCodeRoot : undefined),
+    );
+    if (activeConversationId.current !== sendingId) return;
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
       text: prompt.trim(),
       createdAt: new Date().toISOString(),
       ...(snapshot ? { context: snapshot } : {}),
+      ...(attachments?.length ? { attachments: structuredClone(attachments) } : {}),
     };
     pinnedToBottom.current = true;
     const next: Conversation = {
       ...conversation,
-      title: conversation.messages.length ? conversation.title : prompt.trim().slice(0, 36),
+      ...(snapshot?.workspaceRoot ? { agentCwd: snapshot.workspaceRoot, agentDomain: domain } : {}),
+      title: conversation.messages.length
+        ? conversation.title
+        : prompt.trim().slice(0, 36) || submittedAttachments[0]?.name || t('新对话'),
       messages: [...conversation.messages, message],
       context: [...conversation.context, ...(snapshot ? [snapshot] : [])],
       updatedAt: new Date().toISOString(),
     };
     setConversation(next);
-    setUnsaved(true);
-    setPrompt('');
+    if (drafts.current.get(sendingId)?.trim() === message.text) setPrompt('');
+    setAttachments((current) => current?.filter((item) => !submittedAttachments.includes(item)));
     await runRequest(next);
   }
 
-  function selectConversation(id: string) {
-    if (unsaved || retry || busy || settingsBusy) return;
+  function selectConversation(
+    id: string,
+    currentPrompt = prompt,
+    binding?: Pick<Conversation, 'agentDomain' | 'agentCwd' | 'modelSelection'>,
+  ) {
+    if (conversationActionsDisabled) return;
     pinnedToBottom.current = true;
     const existing = store
       .getState()
       .data?.sessions.find((item) => item.id === id && item.project === scope);
-    drafts.current.set(conversation.id, prompt);
+    drafts.current.set(conversation.id, currentPrompt);
     draftChats.current.set(conversation.id, conversation);
     const next = existing
       ? asConversation(existing)
-      : (draftChats.current.get(id) ?? newConversation(scope));
+      : (draftChats.current.get(id) ?? {
+          ...newConversation(scope),
+          modelSelection: structuredClone(defaultSelection),
+          ...binding,
+        });
+    next.modelSelection ??= structuredClone(defaultSelection);
     activeConversationId.current = next.id;
     setConversation(next);
     setPrompt(drafts.current.get(next.id) ?? '');
+    setAttachments([]);
+    setSelectedSkills([]);
     setNewDomain(null);
     setError('');
   }
@@ -619,7 +899,38 @@ export function AssistantPanel({
     }
   }
 
+  async function decideApproval(approval: ApprovalRequest, decision: ApprovalDecision) {
+    if (approval.method === 'scientify/git/requestApproval' && decision === 'accept') {
+      const params = approval.params as {
+        cwd?: string;
+        request?: { kind?: string; target?: string };
+      };
+      const target =
+        params.request?.kind === 'worktree-remove' ? params.request.target : params.cwd;
+      const drafts = [...getFileRuntime(backend).sessions.values()].filter(
+        (file) =>
+          file.projectId === scope && (!file.workspaceRoot || file.workspaceRoot === target),
+      );
+      if (
+        drafts.some(
+          (file) =>
+            file.getSnapshot().dirty || ['loading', 'saving'].includes(file.getSnapshot().phase),
+        )
+      ) {
+        setError(t('此目录有未保存或正在读写的文件，请先保存后再批准 Git 操作。'));
+        return;
+      }
+    }
+    await activeTask?.session.decide(approval, decision);
+    if (approval.method === 'scientify/git/requestApproval')
+      await reloadDirectorySessions(backend, scope, agentState.cwd ?? undefined);
+  }
+
   async function interruptAgent() {
+    if (chatTask?.pending) {
+      await chatRuntime.cancel(chatTask);
+      return;
+    }
     const session = activeTask?.session;
     if (!session) return;
     setError('');
@@ -637,6 +948,11 @@ export function AssistantPanel({
       }
     }
   }
+  function runCommand(command: ComposerCommand) {
+    if (command === 'context') setShowContext(true);
+    else if (command === 'new') selectConversation('', '');
+    else if (command === 'stop') void interruptAgent();
+  }
 
   return (
     <Panel
@@ -644,147 +960,64 @@ export function AssistantPanel({
       role="region"
       aria-label={t('AI 助手内容')}
     >
-      <div className="sf-ai-session-header">
-        <Button
-          variant="ghost"
-          className="sf-ai-session-title"
-          aria-label={t('当前 AI 对话')}
-          aria-haspopup="menu"
-          aria-expanded={menu?.kind === 'sessions'}
-          disabled={conversationActionsDisabled}
-          title={conversation.title}
-          onClick={(event) => openMenu('sessions', event.currentTarget)}
-        >
-          <span>
-            {conversation.messages.length || conversation.title !== t('新对话')
-              ? conversation.title
-              : t('新对话')}
-          </span>
-          <ChevronDown size={12} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          aria-label={t('新建 AI 对话')}
-          tooltip={t('新建 AI 对话')}
-          disabled={conversationActionsDisabled}
-          onClick={() => selectConversation('')}
-        >
-          <Plus size={15} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          aria-label={t('对话选项')}
-          aria-haspopup="menu"
-          aria-expanded={menu?.kind === 'tools'}
-          onClick={(event) => openMenu('tools', event.currentTarget)}
-        >
-          <MoreHorizontal size={16} />
-        </Button>
-      </div>
-      {backgroundTasks.length ? (
-        <div className="sf-ai-background-tasks" aria-label={t('后台任务')}>
-          {backgroundTasks.map((task) => (
-            <Button
-              key={task.conversationId}
-              variant="ghost"
-              size="sm"
-              onClick={() => selectConversation(task.conversationId)}
-            >
-              <LoaderCircle className="sf-ai-spinner" size={12} />
-              <span>
-                {String(
-                  history.find((item) => item.id === task.conversationId)?.title ?? t('历史对话'),
-                )}
-              </span>
-              <span>
-                {task.saveError
-                  ? t('待保存')
-                  : task.state.phase === 'waiting'
-                    ? t('等待审批')
-                    : task.state.phase === 'stopping'
-                      ? t('正在中止…')
-                      : t('运行中')}
-              </span>
-            </Button>
-          ))}
-        </div>
-      ) : null}
+      <AssistantConversations
+        scope={scope}
+        conversation={conversation}
+        history={history}
+        runtime={runtime}
+        chatRuntime={chatRuntime}
+        disabled={conversationActionsDisabled}
+        menu={menu}
+        onOpenMenu={openMenu}
+        onCloseMenu={() => setMenu(null)}
+        onSelect={selectConversation}
+        onRename={renameConversation}
+        onDelete={deleteConversation}
+      />
       <Menu
-        anchor={menu?.anchor ?? null}
+        anchor={menu && menu.kind !== 'sessions' ? menu.anchor : null}
         label={
-          menu?.kind === 'sessions'
-            ? t('历史对话')
-            : menu?.kind === 'models'
-              ? t('选择模型')
+          menu?.kind === 'models'
+            ? t('选择模型')
+            : menu?.kind === 'permissions'
+              ? t('执行权限')
               : t('对话选项')
         }
         onClose={() => setMenu(null)}
       >
-        {menu?.kind === 'sessions' ? (
+        {menu?.kind === 'permissions' ? (
           <>
-            <Button
-              role="menuitem"
-              variant="ghost"
-              onClick={() => {
-                selectConversation('');
-                setMenu(null);
-              }}
-            >
-              <Plus size={14} />
-              {t('新建 AI 对话')}
-            </Button>
-            <div className="sf-ai-session-list">
-              {[...history]
-                .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
-                .map((item) => (
-                  <Button
-                    key={item.id}
-                    role="menuitemradio"
-                    aria-checked={item.id === conversation.id}
-                    variant="ghost"
-                    onContextMenu={(event) => {
-                      if (conversationActionsDisabled) return;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setMenu(null);
-                      setSessionAction({ id: item.id, anchor: menuAnchor(event) });
-                    }}
-                    onKeyDown={(event) => {
-                      if (
-                        (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) &&
-                        !conversationActionsDisabled
-                      ) {
-                        event.preventDefault();
-                        setMenu(null);
-                        setSessionAction({ id: item.id, anchor: menuAnchor(event) });
-                      }
-                    }}
-                    onClick={() => {
-                      selectConversation(item.id);
-                      setMenu(null);
-                    }}
-                  >
-                    <span className="sf-ai-session-name">
-                      {String(item.title || t('历史对话'))}
-                    </span>
-                    {runtime.get(scope, item.id) &&
-                    runtime.pending(runtime.get(scope, item.id)!) ? (
-                      <LoaderCircle
-                        className="sf-ai-spinner"
-                        size={12}
-                        aria-label={t('任务进行中')}
-                      />
-                    ) : null}
-                  </Button>
-                ))}
+            <div className="sf-ai-permission-note">
+              {t('仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。')}
             </div>
+            {(['ask', 'full'] as const).map((value) => (
+              <Button
+                key={value}
+                role="menuitemradio"
+                aria-checked={permission === value}
+                variant="ghost"
+                disabled={permissionDisabled}
+                className="sf-ai-permission-option"
+                onClick={() => void choosePermission(value)}
+              >
+                <strong>{value === 'ask' ? t('询问') : t('完全允许')}</strong>
+                <span>
+                  {value === 'ask'
+                    ? t('在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。')
+                    : t('取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。')}
+                </span>
+              </Button>
+            ))}
           </>
         ) : menu?.kind === 'models' ? (
           <>
+            {settings.verification?.model === settings.model ? (
+              <div className="sf-ai-model-verification" role="status">
+                {settings.verification.agent
+                  ? t('Agent 工具验证通过')
+                  : t('仅聊天，Agent 未通过验证')}
+              </div>
+            ) : null}
             {models.map((name) => (
               <Button
                 key={name}
@@ -794,12 +1027,35 @@ export function AssistantPanel({
                 disabled={settingsBusy || busy}
                 onClick={() => {
                   setMenu(null);
-                  void saveSettings({ ...settings, model: name }, apiKey);
+                  void chooseModel(conversation.modelSelection?.profileId ?? 'legacy', {
+                    ...settings,
+                    model: name,
+                    verification:
+                      settings.verification?.model === name ? settings.verification : undefined,
+                  });
                 }}
               >
                 <span className="sf-ai-model-option">{name}</span>
               </Button>
             ))}
+            {profiles
+              .filter((profile) => profile.id !== conversation.modelSelection?.profileId)
+              .map((profile) => (
+                <Button
+                  key={profile.id}
+                  role="menuitemradio"
+                  aria-checked={false}
+                  variant="ghost"
+                  onClick={() => {
+                    setMenu(null);
+                    void chooseModel(profile.id, profile);
+                  }}
+                >
+                  <span className="sf-ai-model-option">
+                    {profile.name} · {profile.model}
+                  </span>
+                </Button>
+              ))}
             <Button role="menuitem" variant="ghost" onClick={openSettings}>
               <Settings2 size={14} />
               {t('配置其他模型')}
@@ -842,42 +1098,6 @@ export function AssistantPanel({
           </>
         )}
       </Menu>
-      <Menu
-        anchor={sessionAction?.anchor ?? null}
-        label={t('对话操作')}
-        onClose={() => setSessionAction(null)}
-      >
-        {sessionAction ? (
-          <>
-            <Button
-              variant="ghost"
-              role="menuitem"
-              disabled={conversationActionsDisabled}
-              onClick={() => void renameConversation(sessionAction.id)}
-            >
-              <Pencil size={14} />
-              {t('重命名对话')}
-            </Button>
-            <div role="separator" className="sf-menu-separator" />
-            <Button
-              variant="ghost"
-              role="menuitem"
-              className="sf-menu-danger"
-              disabled={
-                conversationActionsDisabled ||
-                !!(
-                  runtime.get(scope, sessionAction.id) &&
-                  runtime.pending(runtime.get(scope, sessionAction.id)!)
-                )
-              }
-              onClick={() => void deleteConversation(sessionAction.id)}
-            >
-              <Trash2 size={14} />
-              {t('删除对话')}
-            </Button>
-          </>
-        ) : null}
-      </Menu>
       {showContext && (
         <Modal
           title={t('当前材料')}
@@ -888,6 +1108,9 @@ export function AssistantPanel({
             context={context}
             projectName={data?.projects.find((project) => project.id === scope)?.name}
             includeContext={includeContext}
+            lastContext={
+              [...conversation.messages].reverse().find((message) => message.context)?.context
+            }
             onIncludeContextChange={setIncludeContext}
             actionDisabledReason={
               busy || unsaved || retry
@@ -908,147 +1131,59 @@ export function AssistantPanel({
       {showSettings && (
         <ModelSettingsDialog
           backend={backend}
-          credentials={credentials}
+          loadKey={(value) => recallKey(value.provider, value.endpoint)}
           value={settingsDraft}
+          profiles={profiles}
+          profileId={editingProfileId}
+          profileName={profileName}
+          onNameChange={setProfileName}
+          onProfileChange={async (profile) => {
+            const ticket = ++profileRecall.current;
+            const next = profile ?? { ...defaultSettings, model: '', modelCatalog: undefined };
+            setEditingProfileId(profile?.id ?? crypto.randomUUID());
+            setProfileName(profile?.name ?? t('新连接'));
+            setSettingsDraft(next);
+            setDraftKey('');
+            try {
+              const stored = await recallKey(next.provider, next.endpoint);
+              if (ticket === profileRecall.current) setDraftKey(stored);
+            } catch (reason) {
+              if (ticket === profileRecall.current) setSettingsError(safeError(reason));
+            }
+          }}
+          onDeleteProfile={deleteProfile}
           apiKey={draftKey}
           keyStored={keyStored}
           error={settingsError}
           saving={settingsBusy}
-          requestBusy={busy}
+          requestBusy={busy || agentPending || chatPending}
           onChange={(value) => {
             setSettingsDraft(value);
             setSettingsError('');
           }}
-          onKeyChange={setDraftKey}
+          onKeyChange={(value) => {
+            profileRecall.current++;
+            setDraftKey(value);
+          }}
           onSave={saveSettings}
-          onClose={() => setShowSettings(false)}
+          onClose={() => {
+            ++profileRecall.current;
+            setShowSettings(false);
+          }}
         />
       )}
-      <div
-        ref={messagesRef}
-        className="sf-chat-messages sf-aux-scroll"
-        role="log"
-        aria-label={t('对话消息')}
-        aria-live="polite"
-        onScroll={(event) => {
-          const pane = event.currentTarget;
-          pinnedToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 48;
-        }}
-      >
-        <div className="sf-chat-transcript" ref={transcriptRef}>
-          <AssistantRuns key={conversation.id} projectId={scope} conversationId={conversation.id} />
-          {!conversation.messages.length ? (
-            <div className="sf-ai-conversation-empty">
-              {t('提问，或直接描述要在当前工作区完成的任务')}
-            </div>
-          ) : (
-            conversation.messages.map((message) => (
-              <ChatMessageView key={message.id} role={message.role} text={message.text} />
-            ))
-          )}
-          {agentState.agentText &&
-          !conversation.messages.some((message) => message.id === activeTask?.answerId) ? (
-            <ChatMessageView
-              role="assistant"
-              text={agentState.agentText}
-              streaming={agentPending}
-            />
-          ) : null}
-          {agentPending && !agentState.approvals.length ? (
-            <div className="sf-ai-progress sf-ai-agent-progress" role="status">
-              <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
-              <span>
-                {agentState.phase === 'stopping'
-                  ? t('正在中止…')
-                  : activeTask?.starting
-                    ? t('正在连接 Agent…')
-                    : t('Agent 正在工作…')}
-              </span>
-            </div>
-          ) : null}
-          {agentState.sandbox === 'readOnly' ? (
-            <div className="sf-agent-sandbox-notice" role="status">
-              <span>
-                {t(
-                  '当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。',
-                )}
-              </span>
-              {agent.setupSandbox ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={sandboxBusy || busy || agentPending || !!activeTask?.saving}
-                  onClick={() => void setupWindowsSandbox()}
-                >
-                  {sandboxBusy ? t('正在配置…') : t('配置 Windows 沙箱')}
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-          {operations.length ? (
-            <details className="sf-ai-task-details">
-              <summary className="sf-disclosure">
-                <ChevronRight size={13} aria-hidden="true" />
-                {t('执行记录')} · {operations.length}
-              </summary>
-              {operations.map((op) => (
-                <div key={op.id}>
-                  <strong>{op.label}</strong>
-                  <span>{t(op.status)}</span>
-                  {op.output ? <pre>{op.output}</pre> : null}
-                </div>
-              ))}
-            </details>
-          ) : null}
-          {agentState.unsupportedRequests.length ? (
-            <div role="alert" className="sf-aux-error">
-              {t('此任务需要当前界面尚未支持的交互，请中止后重试。')}
-              <code>{agentState.unsupportedRequests.join(', ')}</code>
-            </div>
-          ) : null}
-          {agentState.approvals.map((approval) => (
-            <ApprovalCard
-              key={String(approval.id)}
-              event={approval}
-              busy={busy}
-              onDecide={async (decision) => {
-                if (approval.method === 'scientify/git/requestApproval' && decision === 'accept') {
-                  const params = approval.params as {
-                    cwd?: string;
-                    request?: { kind?: string; target?: string };
-                  };
-                  const target =
-                    params.request?.kind === 'worktree-remove' ? params.request.target : params.cwd;
-                  const drafts = [...getFileRuntime(backend).sessions.values()].filter(
-                    (file) =>
-                      file.projectId === scope &&
-                      (!file.workspaceRoot || file.workspaceRoot === target),
-                  );
-                  if (
-                    drafts.some(
-                      (file) =>
-                        file.getSnapshot().dirty ||
-                        ['loading', 'saving'].includes(file.getSnapshot().phase),
-                    )
-                  ) {
-                    setError(t('此目录有未保存或正在读写的文件，请先保存后再批准 Git 操作。'));
-                    return;
-                  }
-                }
-                await activeTask?.session.decide(approval, decision);
-                if (approval.method === 'scientify/git/requestApproval')
-                  await reloadDirectorySessions(backend, scope, agentState.cwd ?? undefined);
-              }}
-            />
-          ))}
-          {busy && !agentPending ? (
-            <div className="sf-ai-progress" role="status">
-              <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
-              {t('正在处理…')}
-            </div>
-          ) : null}
-        </div>
-      </div>
+      <AssistantTranscript
+        scope={scope}
+        conversation={conversation}
+        activeTask={activeTask}
+        chatTask={chatTask}
+        agentPending={agentPending}
+        busy={busy}
+        sandboxBusy={sandboxBusy}
+        pinnedToBottom={pinnedToBottom}
+        onSetupSandbox={agent.setupSandbox ? () => void setupWindowsSandbox() : undefined}
+        onDecide={decideApproval}
+      />
       {needsReconnect ? (
         <div className="sf-agent-sandbox-notice" role="status">
           <span>{t('上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。')}</span>
@@ -1061,20 +1196,82 @@ export function AssistantPanel({
           </Button>
         </div>
       ) : null}
+      {conversation.chatRun?.status === 'running' && !chatTask ? (
+        <div className="sf-agent-sandbox-notice" role="status">
+          {t('上次回答连接已断开，可以继续提问。')}
+        </div>
+      ) : null}
+      {activeTask?.session.handle?.browserTools === false ? (
+        <div className="sf-agent-sandbox-notice" role="status">
+          {t('此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。')}
+        </div>
+      ) : null}
+      {activeTask?.session.handle?.paperTools === false && domain === 'literature' ? (
+        <div className="sf-agent-sandbox-notice" role="status">
+          {t('此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。')}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={conversationActionsDisabled}
+            onClick={() =>
+              selectConversation('', prompt, {
+                agentDomain: 'literature',
+                agentCwd: conversation.agentCwd ?? activeTask.session.handle?.cwd,
+                modelSelection: conversation.modelSelection,
+              })
+            }
+          >
+            {t('新建会话')}
+          </Button>
+        </div>
+      ) : null}
+      {agentProject &&
+      settings.verification?.model === settings.model &&
+      !settings.verification.agent ? (
+        <div className="sf-agent-sandbox-notice" role="status">
+          <span>{t('当前连接仅支持聊天，无法修改本地文件。')}</span>
+          <Button variant="ghost" size="sm" onClick={openSettings}>
+            {t('模型设置')}
+          </Button>
+        </div>
+      ) : null}
       {activeTask?.saving ? (
         <div className="sf-ai-task-status" role="status">
           {t('正在保存结果…')}
         </div>
       ) : null}
+      {preparingContext && !agentPending && !chatPending ? (
+        <div className="sf-ai-task-status" role="status">
+          {t('正在准备材料…')}
+        </div>
+      ) : null}
       {error ||
+      chatTask?.error ||
+      chatTask?.saveError ||
       agentState.error ||
       activeTask?.saveError ||
       (!activeTask && conversation.agentRun?.error) ? (
         <div className="sf-aux-error" role="alert">
           {translateError(
-            activeTask?.saveError || error || agentState.error || conversation.agentRun?.error,
+            chatTask?.saveError ||
+              chatTask?.error ||
+              activeTask?.saveError ||
+              error ||
+              agentState.error ||
+              conversation.agentRun?.error,
           )}
           <div>
+            {chatTask?.saveError ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  if (await chatRuntime.retrySave(chatTask)) setUnsaved(false);
+                }}
+              >
+                {t('重试保存对话')}
+              </Button>
+            ) : null}
             {activeTask?.saveError ? (
               <Button variant="ghost" size="sm" onClick={() => void runtime.retrySave(activeTask)}>
                 {t('重试保存对话')}
@@ -1106,7 +1303,7 @@ export function AssistantPanel({
                 size="sm"
                 disabled={busy}
                 onClick={() => {
-                  setRetry(null);
+                  chatRuntime.forget(scope, conversation.id);
                   setError('');
                 }}
               >
@@ -1121,29 +1318,62 @@ export function AssistantPanel({
         prompt={prompt}
         disabled={
           settingsBusy ||
+          permissionSaving ||
+          (preparingContext && !agentPending && !chatPending) ||
+          attachmentReads > 0 ||
+          !credentialsReady ||
           unsaved ||
-          !!retry ||
+          !!chatTask?.saving ||
+          !!chatTask?.saveError ||
           !!activeTask?.saving ||
           !!activeTask?.saveError ||
           !!activeTask?.steering ||
           needsReconnect
         }
-        isBusy={busy || agentPending}
-        canInterrupt={agentPending && !!agentState.turnId && agentState.phase !== 'stopping'}
+        isBusy={busy || agentPending || chatPending}
+        canInterrupt={
+          (agentPending && !!agentState.turnId && agentState.phase !== 'stopping') ||
+          (chatPending && !!backend.streamAI && !chatTask.stopping)
+        }
         canSteer={
           !!agent.steer && !!agentState.turnId && ['running', 'waiting'].includes(agentState.phase)
         }
         onSteer={() => void steerAgent()}
         model={settings.model}
         endpoint={settings.endpoint}
-        includeContext={includeContext}
         onPromptChange={setPrompt}
+        attachments={attachments ?? []}
+        onAttach={attachImages}
+        onRemoveAttachment={(index) =>
+          setAttachments((current) => (current ?? []).filter((_, item) => item !== index))
+        }
         onSend={() => void send()}
         onInterrupt={() => void interruptAgent()}
-        contextLabel={context.path || context.title || t('当前材料')}
         modelMenuOpen={menu?.kind === 'models'}
-        onContext={() => setShowContext(true)}
         onModelMenu={(event) => openMenu('models', event.currentTarget)}
+        permission={permission}
+        permissionDisabled={permissionDisabled}
+        permissionMenuOpen={menu?.kind === 'permissions'}
+        onPermissionMenu={(trigger) => openMenu('permissions', trigger)}
+        onCommand={runCommand}
+        canNewConversation={!conversationActionsDisabled}
+        skillsAvailable={skillsAvailable}
+        skills={skillListing?.listing.skills ?? []}
+        skillsLoading={skillListing?.loading ?? false}
+        skillsErrors={skillListing?.listing.errors ?? []}
+        onSkillsOpen={loadSkills}
+        onSkillsRefresh={() => loadSkills(true)}
+        selectedSkills={selectedSkills}
+        onSelectSkill={(skill) =>
+          setSelectedSkills((current) =>
+            current.length < 4 && !current.some((item) => item.path === skill.path)
+              ? [...current, skill]
+              : current,
+          )
+        }
+        onRemoveSkill={(index) =>
+          setSelectedSkills((current) => current.filter((_, item) => item !== index))
+        }
       />
     </Panel>
   );

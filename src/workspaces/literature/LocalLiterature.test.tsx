@@ -146,7 +146,6 @@ async function fixture(requestedPaper?: string) {
     listModels: async () => [],
     testModel: async () => {},
     askAI: async () => '',
-    fetchArxiv: async () => '',
   };
   const onContext = vi.fn();
   function Host() {
@@ -492,7 +491,7 @@ it('keeps failed note saves visible and blocks closing the note', async () => {
     'existing note draft',
   );
 });
-it('opens a real context menu and shows explicit subscription placeholders without fetching', async () => {
+it('opens a real context menu and restores the embedded browser subscription entry', async () => {
   const { Host, user, library } = await fixture();
   render(<Host />);
   const entry = await screen.findByRole('treeitem', { name: 'a.pdf' });
@@ -502,7 +501,7 @@ it('opens a real context menu and shows explicit subscription placeholders witho
   await user.click(screen.getByRole('button', { name: '订阅' }));
   expect(screen.getByText('开发中')).toBeTruthy();
   expect(screen.getByText('敬请期待')).toBeTruthy();
-  expect(screen.queryByRole('button', { name: '打开浏览器' })).toBeNull();
+  expect(screen.getByRole('button', { name: '打开浏览器' })).toBeTruthy();
   expect(library.command).toHaveBeenCalledWith(expect.any(String), { op: 'scan' });
 });
 it('keeps pairing behavior independent from titles and retains note buffers after leaving a view', async () => {

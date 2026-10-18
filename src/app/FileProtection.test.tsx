@@ -129,7 +129,6 @@ function setup() {
     listModels: async () => [],
     testModel: async () => {},
     askAI: async () => '',
-    fetchArxiv: async () => '',
   };
   localStorage.setItem(
     'scientify.ui.v1',

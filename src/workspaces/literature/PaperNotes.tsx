@@ -1,8 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { BookOpen, Link2, Save } from 'lucide-react';
-import { Button, Textarea } from '../../components/primitives';
+import { Link2, Save } from 'lucide-react';
+import { Button } from '../../components/primitives';
 import { confirmAction, requestText } from '../../components/prompts';
-import { Markdown } from '../../features/notes/Markdown';
+import { MarkdownLiveEditor } from '../../features/notes/MarkdownLiveEditor';
 import { paperNote } from './local-session';
 import type { LibraryBackend, LibraryPaper } from '../../platform/library';
 import type { WorkContext } from '../../domain/context';
@@ -25,7 +25,6 @@ export function PaperNotes({
 }) {
   const session = paperNote(library, project, id);
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
-  const [preview, setPreview] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
     if (session.getSnapshot().phase === 'ready' && !session.getSnapshot().dirty)
@@ -38,15 +37,6 @@ export function PaperNotes({
         <span className="truncate" title={paper?.path}>
           {paper?.path ?? t('原论文已移除')}
         </span>
-        <Button
-          variant="ghost"
-          iconOnly
-          aria-label={t('预览 Markdown')}
-          aria-pressed={preview}
-          onClick={() => setPreview(!preview)}
-        >
-          <BookOpen />
-        </Button>
         <Button
           variant="ghost"
           iconOnly
@@ -90,25 +80,17 @@ export function PaperNotes({
       )}
       {(state.phase === 'loading' && state.version === null) || state.phase === 'idle' ? (
         <div className="empty-state">{t('正在读取…')}</div>
-      ) : preview ? (
-        <div className="paper-note-preview">
-          <Markdown onPage={onPage}>{state.content}</Markdown>
-        </div>
       ) : (
-        <Textarea
-          aria-label={t('论文笔记正文')}
-          className="paper-note-textarea"
-          value={state.content}
-          disabled={state.phase === 'error'}
-          spellCheck={false}
-          onChange={(e) => session.edit(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-              e.preventDefault();
-              void session.save();
-            }
-          }}
-        />
+        <div className="paper-note-workbench">
+          <MarkdownLiveEditor
+            ariaLabel={t('论文笔记正文')}
+            value={state.content}
+            disabled={state.phase === 'error'}
+            onChange={(value) => session.edit(value)}
+            onSave={() => void session.save()}
+            onPage={onPage}
+          />
+        </div>
       )}
       <div className="paper-note-footer">
         <span>

@@ -6,6 +6,58 @@ import { createWorkspaceStore } from '../stores/workspace';
 import type { WorkspaceBackend } from '../platform/desktop';
 import { App } from './App';
 
+it('retains a dock wider than 760px and adapts its bounds when the window shrinks', async () => {
+  vi.stubGlobal('innerWidth', 1920);
+  try {
+    const initial = emptyWorkspace();
+    initial.projects.push({
+      id: 'wide-dock',
+      name: 'Wide dock',
+      question: '',
+      space: 'personal',
+      createdAt: '2026-10-07',
+    });
+    localStorage.setItem(
+      'scientify.ui.v2',
+      JSON.stringify({
+        version: 2,
+        projectId: 'wide-dock',
+        space: 'personal',
+        locations: {},
+        dock: 'notes',
+        dockOpen: true,
+        leftWidth: 240,
+        rightWidth: 1000,
+      }),
+    );
+    const adapter: WorkspaceBackend = {
+      load: async () => ({ workspace: initial, directory: 'test/data', legacyAvailable: false }),
+      save: async (value) => value,
+      restore: async () => initial,
+      migrateLegacy: async () => initial,
+      importWorkspace: async () => null,
+      exportWorkspace: async () => true,
+      chooseDirectory: async () => null,
+    };
+    render(<App store={createWorkspaceStore(adapter)} />);
+    const handle = await screen.findByRole('separator', { name: '调整辅助栏宽度' });
+    expect(handle.getAttribute('aria-valuenow')).toBe('1000');
+    expect(Number(handle.getAttribute('aria-valuemax'))).toBeGreaterThan(1000);
+    handle.focus();
+    await userEvent.setup().keyboard('{ArrowLeft}');
+    expect(handle.getAttribute('aria-valuenow')).toBe('1016');
+    vi.stubGlobal('innerWidth', 1024);
+    act(() => window.dispatchEvent(new Event('resize')));
+    expect(Number(handle.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(656);
+    expect(Number(handle.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(
+      Number(handle.getAttribute('aria-valuemax')),
+    );
+    expect(screen.getByRole('complementary', { name: '全局辅助工具' })).toBeTruthy();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 beforeAll(() => {
   window.matchMedia = vi
     .fn()

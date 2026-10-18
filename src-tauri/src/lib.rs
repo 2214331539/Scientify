@@ -213,7 +213,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(browser::BrowserState::default())
+        .manage(agent::papers::PaperState::default())
         .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                window
+                    .app_handle()
+                    .state::<agent::papers::PaperState>()
+                    .close_owner(window.label());
+            }
             if window.label() == "workspace" && matches!(event, tauri::WindowEvent::Destroyed) {
                 browser::close_owner(window.app_handle(), "workspace");
                 if let Some(terminal) = window
@@ -243,6 +250,9 @@ pub fn run() {
                 std::io::Error::other(error)
             })?;
             let profile = location.container.join("ui-profile");
+            if let Err(error) = agent::scratch::Scratch::cleanup_expired(&location.container) {
+                eprintln!("Scientify 过期临时目录清理失败：{error}");
+            }
             app.manage(location);
             let legacy = app
                 .path()
@@ -250,6 +260,7 @@ pub fn run() {
                 .join("scientify-desktop-sample/workspace");
             app.manage(library::LibraryState::new(directory.clone()));
             app.manage(agent::AgentState::default());
+            app.manage(ai::stream::ChatState::default());
             app.manage(experiments::ExperimentState::new(
                 directory.join("experiments"),
             ));
@@ -329,10 +340,18 @@ pub fn run() {
             ai::research_ask_ai,
             ai::research_list_models,
             ai::research_test_model,
-            research::research_fetch_arxiv,
+            ai::verification::research_verify_model,
+            ai::stream::research_chat_stream,
+            ai::stream::research_chat_cancel,
             agent::agent_status,
             agent::agent_handshake,
             agent::agent_domains,
+            agent::materials::agent_context,
+            agent::skills::agent_skills,
+            agent::papers::agent_paper_ready,
+            agent::papers::agent_paper_stop,
+            agent::papers::agent_paper_source,
+            agent::papers::agent_paper_complete,
             agent::agent_start_thread,
             agent::agent_windows_sandbox_setup,
             agent::agent_start_turn,

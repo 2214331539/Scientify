@@ -42,12 +42,12 @@ import {
   notifyFileRuntime,
   type FileSession,
 } from '../../editor/sessions';
+import MarkdownPreview from './MarkdownPreview';
 import './files.css';
 
 const CodeEditor = lazy(() =>
   import('../../editor/CodeEditor').then((module) => ({ default: module.CodeEditor })),
 );
-const MarkdownPreview = lazy(() => import('./MarkdownPreview'));
 
 type Mode = 'experiments' | 'writing' | 'files';
 type FileWorkspaceProps = {
@@ -368,7 +368,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
             <FilePlus2 size={15} />
             {t('新建文件')}
           </Button>
-          <span>{project.path}</span>
+          <span>{workspaceRoot || project.path}</span>
         </div>
       )}
     </Panel>
@@ -624,9 +624,7 @@ function FileDocument({
               </Suspense>
             ) : null}
             {isMarkdown && actualLayout !== 'source' ? (
-              <Suspense fallback={<div className="sf-file-loading">{t('正在加载预览…')}</div>}>
-                <MarkdownPreview content={deferredText} />
-              </Suspense>
+              <MarkdownPreview content={deferredText} />
             ) : null}
           </>
         )}

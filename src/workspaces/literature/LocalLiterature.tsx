@@ -16,6 +16,7 @@ import { useStore } from 'zustand';
 import {
   FolderOpen,
   FolderPlus,
+  Globe,
   Search,
   RefreshCw,
   MoreHorizontal,
@@ -30,7 +31,6 @@ import { DocumentTabs } from '../../components/workspace/DocumentTabs';
 import { ResizeHandle } from '../../shell/ResizeHandle';
 import { Modal } from '../../components/Modal';
 import { t, translateError } from '../../i18n';
-import { FeaturePlaceholder } from '../../components/workspace/FeaturePlaceholder';
 import { useActiveView } from '../../components/workspace/ViewTransition';
 import {
   nativeLibrary,
@@ -64,15 +64,15 @@ import {
 } from './local-session';
 import { PaperNotes } from './PaperNotes';
 import { BrowserPane } from './BrowserPane';
+import TextMarkdownPreview from '../files/MarkdownPreview';
 import '../files/files.css';
 import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
-import type { ResearchBackend } from '../../platform/research';
+import type { PdfBackend, ResearchBackend } from '../../platform/research';
 import type { WorkContext } from '../../domain/context';
 import './local-literature.css';
 
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
-const TextMarkdownPreview = lazy(() => import('../files/MarkdownPreview'));
 const parent = (path: string) => path.split('/').slice(0, -1).join('/');
 const filename = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 const join = (folder: string, name: string) => (folder ? `${folder}/${name}` : name);
@@ -95,6 +95,7 @@ export function LocalLiterature({
   resize,
   onContext,
   requestedPaper,
+  requestedBrowser,
 }: {
   project: Project;
   store: WorkspaceStore;
@@ -106,6 +107,7 @@ export function LocalLiterature({
   resize?: ReactNode;
   onContext: (context: WorkContext) => void;
   requestedPaper?: string | null;
+  requestedBrowser?: string;
 }) {
   const viewActive = useActiveView();
   const workspaceBusy = useStore(store, (s) => s.busy);
@@ -116,6 +118,17 @@ export function LocalLiterature({
     warnings: [],
   });
   const [session, setSession] = useState(() => readLocalSession(project.id));
+  const browserRequest = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (
+      requestedBrowser &&
+      browserRequest.current !== requestedBrowser &&
+      session.tabs.some((tab) => tab.id === requestedBrowser)
+    ) {
+      browserRequest.current = requestedBrowser;
+      setSession((current) => ({ ...current, active: requestedBrowser }));
+    }
+  }, [requestedBrowser, session.tabs]);
   const [query, setQuery] = useState(''),
     [searchOpen, setSearchOpen] = useState(false),
     [showNotes, setShowNotes] = useState(false),
@@ -222,26 +235,43 @@ export function LocalLiterature({
     changed.current({
       projectId: project.id,
       workspace: 'literature',
-      title: active?.kind === 'web' ? t('浏览器新页') : (active?.title ?? t('文献')),
+      title: active?.title || t('文献'),
       resourceId: active?.paperId ?? active?.path,
       ...(active?.kind === 'text' && active.path ? { path: active.path } : {}),
+      ...(active?.kind === 'web' ? { browser: { tabId: active.id, url: active.url ?? '' } } : {}),
     });
-  }, [active?.id, active?.kind, project.id, viewActive]);
+  }, [active?.id, active?.kind, active?.title, active?.url, project.id, viewActive]);
   useEffect(() => {
     const listener = browserEvents('browser-created', (tab) => {
       if (tab.projectId !== project.id) return;
       setSession((s) => ({
         ...s,
         tabs: [
-          ...s.tabs,
+          ...s.tabs.filter((existing) => existing.id !== tab.id),
           { id: tab.id, kind: 'web', title: tab.title || t('浏览器新页'), url: tab.url },
         ],
-        active: tab.id,
+        active: tab.background ? s.active : tab.id,
       }));
     });
     let cancelled = false;
     void browserCommand<BrowserTab[]>({ op: 'snapshot' })
       .then(async (current) => {
+        if (cancelled) return;
+        const discovered = current.filter((tab) => tab.projectId === project.id);
+        setSession((s) => ({
+          ...s,
+          tabs: [
+            ...s.tabs,
+            ...discovered
+              .filter((tab) => !s.tabs.some((old) => old.id === tab.id))
+              .map((tab) => ({
+                id: tab.id,
+                kind: 'web' as const,
+                title: tab.title || t('浏览器新页'),
+                url: tab.url,
+              })),
+          ],
+        }));
         for (const old of currentSession.current.tabs.filter((t) => t.kind === 'web')) {
           if (cancelled || current.some((t) => t.id === old.id)) continue;
           const next = await browserCommand<BrowserTab>({ op: 'open', project_id: project.id });
@@ -398,9 +428,9 @@ export function LocalLiterature({
       };
     });
   }
-  const reader = useMemo<ResearchBackend>(
-    () => ({ ...backend, readPdf: (id) => library.pdf(project.id, id) }),
-    [backend, library, project.id],
+  const reader = useMemo<PdfBackend>(
+    () => ({ readPdf: (id) => library.pdf(project.id, id) }),
+    [library, project.id],
   );
   const visible = scan.entries.filter((e) => showNotes || !e.note);
   const matches = new Set<string>();
@@ -605,7 +635,18 @@ export function LocalLiterature({
           </Button>
         </nav>
         {view === 'subscriptions' ? (
-          <FeaturePlaceholder feature="subscriptions" compact />
+          <div className="subscription-placeholder" role="region" aria-label={t('文献订阅')}>
+            <span className="sr-only">{t('开发中')}</span>
+            <span className="sr-only">{t('敬请期待')}</span>
+            <Button onClick={() => void newWeb()}>
+              <Globe />
+              {t('打开浏览器')}
+            </Button>
+            <h3>{t('消息推荐')}</h3>
+            <p>{t('尚未启用')}</p>
+            <h3>{t('个人信息源')}</h3>
+            <p>{t('尚未启用')}</p>
+          </div>
         ) : (
           <div className="library-directory">
             <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
@@ -1327,9 +1368,7 @@ function LocalTextFile({
         <div className="local-text-state">{t('没有可显示的内容。')}</div>
       ) : markdown ? (
         <div className="local-text-preview">
-          <Suspense fallback={<div className="local-text-state">{t('正在加载预览…')}</div>}>
-            <TextMarkdownPreview content={content} />
-          </Suspense>
+          <TextMarkdownPreview content={content} />
         </div>
       ) : (
         <pre className="local-text-raw">{content}</pre>

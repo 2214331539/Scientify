@@ -257,6 +257,8 @@
   flex-shrink: 0;
 }
 .sf-ai-composer {
+  position: relative;
+  container-type: inline-size;
   flex-shrink: 0;
   margin: 6px 10px 10px;
   padding: 8px;
@@ -265,7 +267,60 @@
   background: var(--sf-surface-canvas);
   transition: border-color var(--sf-motion-feedback) var(--sf-ease-standard);
 }
-.sf-ai-composer:focus-within {
+.sf-chat-message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+.sf-chat-message-attachments img {
+  width: 96px;
+  height: 72px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid var(--sf-border-subtle);
+}
+.sf-chat-message-attachments details {
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.sf-chat-message-attachments pre {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.sf-ai-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px 8px 0;
+}
+.sf-ai-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 180px;
+  padding: 2px 3px 2px 2px;
+  border: 1px solid var(--sf-border-control);
+  border-radius: 4px;
+  color: var(--sf-text-secondary);
+  font-size: 10px;
+}
+.sf-ai-attachment img {
+  width: 26px;
+  height: 26px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+.sf-ai-attachment > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-ai-composer:focus-within,
+.sf-ai-composer[data-dragging] {
   border-color: var(--sf-border-hover);
 }
 .sf-ai-composer .sf-textarea {
@@ -295,8 +350,9 @@
   min-width: 0;
 }
 .sf-ai-composer .sf-ai-model-control {
-  min-width: 0;
-  max-width: calc(100% - 66px);
+  min-width: 40px;
+  flex-shrink: 1;
+  max-width: 48%;
   height: 24px;
   min-height: 24px;
   padding-inline: 8px 6px;
@@ -305,16 +361,129 @@
   background: var(--sf-surface-sunken);
   font-size: 11px;
 }
+.sf-ai-model-control > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-ai-model-control > svg {
+  flex-shrink: 0;
+}
+.sf-ai-composer .sf-ai-permission-control {
+  flex-shrink: 0;
+  max-width: calc(100% - 68px);
+}
+@container (max-width: 320px) {
+  .sf-ai-permission-prefix {
+    display: none;
+  }
+}
+.sf-ai-permission-control[data-permission='full'] {
+  color: var(--sf-accent);
+}
+.sf-ai-permission-note {
+  max-width: 310px;
+  padding: 8px 10px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sf-menu .sf-ai-permission-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: 330px;
+  padding: 9px 10px;
+  white-space: normal;
+  text-align: left;
+}
+.sf-ai-permission-option > span {
+  color: var(--sf-text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.sf-ai-command-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  inset-inline: 0;
+  z-index: 20;
+  border: 1px solid var(--sf-border-control);
+  border-radius: 8px;
+  background: var(--sf-surface-raised);
+  box-shadow: var(--sf-shadow-popover);
+  overflow: hidden;
+  font-size: 12px;
+}
+.sf-ai-command-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  font-weight: 600;
+}
+.sf-ai-command-menu [role='listbox'] {
+  max-height: min(280px, 35vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 4px;
+}
+.sf-ai-command-option {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-ai-command-option[aria-selected='true'] {
+  background: var(--sf-surface-sunken);
+}
+.sf-ai-command-option[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+.sf-ai-command-option > strong {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.sf-ai-command-option > span {
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.sf-ai-command-menu > p {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sf-ai-command-hint {
+  padding: 7px 12px;
+  color: var(--sf-text-muted);
+  font-size: 10px;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.sf-ai-message-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.sf-ai-message-skills > span {
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 4px;
+  padding: 2px 5px;
+}
 .sf-ai-composer-actions > .sf-button-icon {
   width: 24px;
   height: 24px;
   min-height: 24px;
-}
-.sf-ai-composer-actions > .sf-button[aria-pressed='true'] {
-  color: var(--sf-text-primary);
-}
-.sf-ai-composer-actions > .sf-button[aria-pressed='false'] {
-  color: var(--sf-text-muted);
 }
 /* Material inspection opens as a dialog, not as the narrow sidebar strip these
    rules were first written for. Give it room, and let a long path wrap onto a

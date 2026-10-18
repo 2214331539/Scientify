@@ -45,6 +45,12 @@ jobs:
         run: pnpm check
       - name: Frontend tests
         run: pnpm test --maxWorkers=2
+      - name: Install UI test browser
+        run: pnpm exec playwright install chromium
+      - name: Browser integration tests
+        run: pnpm test:ui
+        env:
+          SCIENTIFY_BROWSER_CHANNEL: chromium
       - name: Rust formatting
         run: cargo fmt --all --check
       - name: Rust tests

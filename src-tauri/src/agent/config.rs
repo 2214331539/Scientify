@@ -86,12 +86,9 @@ pub fn prepare(connection: &Connection<'_>) -> Result<(), String> {
 /// config.toml. Sandbox setup remains the only writer of the shared home config.
 pub fn arguments(connection: &Connection<'_>) -> Result<Vec<String>, String> {
     prepare(connection)?;
-    let endpoint = connection.endpoint.trim().trim_end_matches('/');
-    let endpoint = if connection.provider == "ollama" && !endpoint.ends_with("/v1") {
-        format!("{endpoint}/v1")
-    } else {
-        endpoint.to_string()
-    };
+    let endpoint =
+        crate::ai::responses_base(connection.endpoint, connection.provider, connection.api_key)?;
+    let endpoint = endpoint.as_str().trim_end_matches('/');
     let mut args = vec!["app-server".into(), "--listen".into(), "stdio://".into()];
     for value in [
         // Conversation history is the memory boundary. Do not synthesize or
@@ -103,7 +100,7 @@ pub fn arguments(connection: &Connection<'_>) -> Result<Vec<String>, String> {
         format!("model_providers.{PROVIDER_ID}.name=\"Scientify\""),
         format!(
             "model_providers.{PROVIDER_ID}.base_url={}",
-            quoted(&endpoint)
+            quoted(endpoint)
         ),
         format!("model_providers.{PROVIDER_ID}.wire_api=\"responses\""),
         format!("model_providers.{PROVIDER_ID}.requires_openai_auth=false"),

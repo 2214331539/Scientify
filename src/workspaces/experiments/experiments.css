@@ -741,62 +741,6 @@
   vertical-align: top;
   overflow-wrap: anywhere;
 }
-.sf-experiment-changes {
-  display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
-  height: 100%;
-  min-height: 0;
-}
-.sf-experiment-changes aside {
-  background: var(--sf-surface-chrome);
-  border-right: 1px solid var(--sf-border-subtle);
-  overflow: auto;
-}
-.sf-experiment-changes header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  height: 38px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--sf-border-subtle);
-  font-size: 12px;
-}
-.sf-experiment-changes aside > button {
-  display: flex;
-  width: 100%;
-  border-radius: 0;
-  justify-content: flex-start;
-  padding: 9px 12px;
-  font-size: 12px;
-}
-.sf-experiment-changes aside > button[aria-pressed='true'] {
-  background: var(--sf-surface-selected);
-}
-.sf-experiment-changes aside > button > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  text-align: left;
-}
-.sf-experiment-changes aside code {
-  color: var(--sf-status-warning);
-}
-.sf-experiment-changes section {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.sf-experiment-changes section > p {
-  margin: 15px;
-  font-size: 12px;
-}
-.sf-experiment-changes section > header > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .sf-diff-scroll {
   overflow: auto;
   flex: 1;
@@ -949,9 +893,6 @@
   .sf-experiment-runs-body {
     grid-template-columns: minmax(0, 1fr) 285px;
   }
-  .sf-experiment-changes {
-    grid-template-columns: 190px minmax(0, 1fr);
-  }
 }
 @media (max-width: 850px) {
   .workspace-commandbar:has(.sf-experiment-actions) {
@@ -987,9 +928,6 @@
   .sf-experiment-list-toolbar {
     flex-wrap: wrap;
   }
-  .sf-experiment-changes {
-    grid-template-columns: 140px minmax(0, 1fr);
-  }
 }
 @media (max-width: 520px) {
   .sf-experiment-actions {
@@ -1000,9 +938,6 @@
   }
   .sf-experiment-bottom select {
     width: 140px;
-  }
-  .sf-experiment-changes {
-    grid-template-columns: 115px minmax(0, 1fr);
   }
   .sf-execution-definition {
     grid-template-columns: 70px minmax(0, 1fr);

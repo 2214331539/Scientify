@@ -16,10 +16,129 @@ use tauri::{
 };
 
 #[test]
+fn assistant_context_obeys_generated_acl_and_reads_only_the_bound_library_and_note() {
+    let temp = tempfile::tempdir().unwrap();
+    let storage = Arc::new(Storage::open(temp.path().join("data")).unwrap());
+    let root = temp.path().join("papers");
+    std::fs::create_dir(&root).unwrap();
+    std::fs::write(root.join("paper.pdf"), b"%PDF-1.4 fixture").unwrap();
+    let mut data = scientify_core::workspace::empty();
+    data["projects"] = json!([{"id":"papers-project","name":"fixture","space":"personal","question":"","createdAt":""}]);
+    data["revision"] = json!(1);
+    storage.save(data, 0).unwrap();
+    let library = library::LibraryState::new(storage.directory().to_path_buf());
+    library.service.mount("papers-project", &root).unwrap();
+    let binding = library.service.open("papers-project", "paper.pdf").unwrap();
+    library
+        .service
+        .save_note(
+            "papers-project",
+            &binding.id,
+            "linked-note-fixture",
+            None,
+            None,
+        )
+        .unwrap();
+    let app = mock_builder()
+        .manage(AppState {
+            files: Arc::new(scientify_core::research::ResearchFiles::new(
+                storage.directory().to_path_buf(),
+            )),
+            storage,
+            legacy: temp.path().join("legacy"),
+        })
+        .manage(library)
+        .invoke_handler(tauri::generate_handler![agent::materials::agent_context])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for label in ["main", "workspace"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        let body = json!({"request":{"projectId":"papers-project","domain":"literature","conversationId":"chat1","resourceId":binding.id}});
+        let value: Value = invoke(&window, "agent_context", body.clone(), origin)
+            .unwrap()
+            .deserialize()
+            .unwrap();
+        assert!(value["materials"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| m["text"] == "linked-note-fixture"));
+        assert_eq!(
+            value["root"],
+            root.canonicalize().unwrap().display().to_string()
+        );
+        assert!(invoke(&window, "agent_context", body, "https://untrusted.example").is_err());
+        assert!(invoke(&window, "agent_context", json!({"request":{"projectId":"other-project","domain":"literature","conversationId":"chat1"}}), origin).is_err());
+        assert!(invoke(&window, "agent_context", json!({"request":{"projectId":"papers-project","domain":"literature","conversationId":"chat1","workspaceRoot":temp.path()}}), origin).is_err());
+        // A later capture must read disk again, including changes made outside the editor.
+        std::fs::write(root.join(&binding.note_path), "externally-updated-note").unwrap();
+        let fresh: Value = invoke(&window, "agent_context", json!({"request":{"projectId":"papers-project","domain":"literature","conversationId":"chat1","resourceId":binding.id}}), origin).unwrap().deserialize().unwrap();
+        assert!(fresh.to_string().contains("externally-updated-note"));
+        std::fs::write(root.join(&binding.note_path), "linked-note-fixture").unwrap();
+    }
+}
+
+#[test]
 fn runtime_window_icon_uses_high_resolution_frame() {
     let context: tauri::Context<MockRuntime> = tauri::generate_context!();
     let icon = context.default_window_icon().expect("application icon");
     assert_eq!((icon.width(), icon.height()), (256, 256));
+}
+
+#[test]
+fn chat_stream_commands_are_registered_and_remote_pages_cannot_call_them() {
+    let app = mock_builder()
+        .manage(ai::stream::ChatState::default())
+        .invoke_handler(tauri::generate_handler![
+            ai::stream::research_chat_stream,
+            ai::stream::research_chat_cancel,
+            ai::verification::research_verify_model
+        ])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+        .build()
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    let cancel = json!({"requestId":uuid::Uuid::new_v4().to_string()});
+    invoke(&window, "research_chat_cancel", cancel.clone(), origin).unwrap();
+    assert!(invoke(
+        &window,
+        "research_chat_cancel",
+        cancel,
+        "https://example.com"
+    )
+    .is_err());
+    for (command, args) in [
+        (
+            "research_chat_stream",
+            json!({"requestId":"invalid-id","channel":"__CHANNEL__:123","request":{"endpoint":"http://localhost","provider":"openai","model":"fixture","messages":[{"role":"user","content":"test"}]}}),
+        ),
+        (
+            "research_verify_model",
+            json!({"request":{"endpoint":"invalid","provider":"openai","model":"fixture"}}),
+        ),
+    ] {
+        let error = invoke(&window, command, args.clone(), origin)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            !error.contains("not allowed") && !error.contains("Command not found"),
+            "{error}"
+        );
+        assert!(invoke(&window, command, args, "https://example.com").is_err());
+    }
 }
 
 #[test]
@@ -769,6 +888,34 @@ fn agent_steer_uses_generated_acl_and_parses_the_expected_turn_id() {
             assert!(!error.contains("该会话尚未启动"));
         }
         assert!(invoke(&window, "agent_steer", body, "https://untrusted.example").is_err());
+    }
+}
+
+#[test]
+fn agent_skills_uses_generated_acl_and_rejects_untrusted_webviews() {
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![agent::skills::agent_skills])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for label in ["main", "workspace", "browser-untrusted"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        let body = json!({"request":{"projectId":"p1","conversationId":"c1","domain":"invalid"}});
+        let error = invoke(&window, "agent_skills", body.clone(), origin)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            error.contains("未知的 Agent 作用域"),
+            label != "browser-untrusted",
+            "{error}"
+        );
+        assert!(invoke(&window, "agent_skills", body, "https://untrusted.example").is_err());
     }
 }
 

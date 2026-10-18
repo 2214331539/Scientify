@@ -49,6 +49,39 @@ fn strings(items: &[Value], fields: &[&str]) -> Result<(), String> {
     Ok(())
 }
 
+fn model_connection(value: &Value) -> Result<(), String> {
+    if !value.is_object()
+        || !value["endpoint"].as_str().is_some_and(|s| s.len() <= 4096)
+        || !value["model"].as_str().is_some_and(|s| s.len() <= 256)
+        || !matches!(
+            value["provider"].as_str(),
+            Some("ollama" | "openai" | "anthropic" | "gemini")
+        )
+        || value.get("apiKey").is_some()
+        || value.get("api_key").is_some()
+    {
+        return Err("模型连接配置无效，密钥只能保存在本机凭据文件。".into());
+    }
+    if let Some(catalog) = value.get("modelCatalog") {
+        if !catalog.as_array().is_some_and(|a| {
+            a.len() <= 5000 && a.iter().all(|m| m.as_str().is_some_and(|s| s.len() <= 256))
+        }) {
+            return Err("模型列表格式无效。".into());
+        }
+    }
+    if let Some(check) = value.get("verification") {
+        if !check.is_object()
+            || !check["model"].is_string()
+            || !check["checkedAt"].is_string()
+            || !check["chat"].is_boolean()
+            || !check["agent"].is_boolean()
+        {
+            return Err("模型验证记录格式无效。".into());
+        }
+    }
+    Ok(())
+}
+
 /// Normalize schema 3 without discarding fields from features not migrated yet.
 pub fn validate(mut data: Value) -> Result<Value, String> {
     if data["schema"] != 3 {
@@ -242,6 +275,42 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         || !data["settings"]["model"]["model"].is_string()
     {
         return Err("工作区设置格式无效。".into());
+    }
+    if let Some(profiles) = data["settings"].get("modelProfiles") {
+        let profiles = profiles
+            .as_array()
+            .filter(|a| a.len() <= 100)
+            .ok_or("模型连接列表无效或过多。")?;
+        let mut ids = HashSet::new();
+        for profile in profiles {
+            let id = profile["id"]
+                .as_str()
+                .filter(|s| id_valid(s))
+                .ok_or("模型连接标识无效。")?;
+            if !ids.insert(id)
+                || !profile["name"]
+                    .as_str()
+                    .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= 80)
+            {
+                return Err("模型连接名称无效或标识重复。".into());
+            }
+            model_connection(profile)?;
+        }
+    }
+    if data["settings"]
+        .get("defaultModelProfileId")
+        .is_some_and(|v| !v.as_str().is_some_and(id_valid))
+    {
+        return Err("默认模型连接标识无效。".into());
+    }
+    for chat in array(&data, "sessions")? {
+        if let Some(selection) = chat.get("modelSelection") {
+            if !selection["profileId"].as_str().is_some_and(id_valid) {
+                return Err("会话模型选择无效。".into());
+            }
+            // A saved snapshot remains valid even after a profile is removed.
+            model_connection(&selection["settings"])?;
+        }
     }
     if !data["navigation"]["tabs"]
         .as_array()

@@ -27,6 +27,7 @@ const actions = [
 
 interface Props {
   context: WorkContext;
+  lastContext?: WorkContext;
   projectName?: string;
   includeContext: boolean;
   actionDisabledReason?: string;
@@ -37,13 +38,15 @@ interface Props {
 /** Current material is supplied by the workspace; actions only prepare a question. */
 export function ContextPanel({
   context,
+  lastContext,
   projectName,
   includeContext,
   actionDisabledReason,
   onIncludeContextChange,
   onAction,
 }: Props) {
-  const material = context.path || (context.resourceId ? context.title : '');
+  const material =
+    context.browser?.url || context.path || (context.resourceId ? context.title : '');
   const excerpt = context.selection || context.text;
   const hasText = !!excerpt?.trim();
 
@@ -99,6 +102,34 @@ export function ContextPanel({
             <pre>{excerpt.slice(0, 12000)}</pre>
           </details>
         ) : null}
+      </Section>
+      <Section title={t('工作区上下文')}>
+        <p>
+          {t('附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭 Attach 后不自动附带。')}
+        </p>
+        {lastContext ? (
+          <>
+            <p>
+              {t('上次发送的材料')} · {lastContext.title}
+            </p>
+            {(lastContext.materials ?? []).map((material) => (
+              <details key={material.path} className="sf-ai-context-excerpt">
+                <summary>
+                  {material.title} · {material.path}
+                  {material.truncated ? ` · ${t('已截短')}` : ''}
+                </summary>
+                <pre>{material.text}</pre>
+              </details>
+            ))}
+            {(lastContext.warnings ?? []).map((warning) => (
+              <p key={warning} role="status">
+                {warning}
+              </p>
+            ))}
+          </>
+        ) : (
+          <p>{t('发送后可在这里检查实际附带的来源。')}</p>
+        )}
       </Section>
       <Section title={t('Actions')} className="sf-ai-action-section">
         <div className="sf-ai-context-actions">

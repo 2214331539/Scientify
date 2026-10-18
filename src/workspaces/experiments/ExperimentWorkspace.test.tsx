@@ -20,7 +20,7 @@ import {
   type Execution,
 } from './runtime';
 import { ExecutionPanel, numericMetrics } from './ExecutionPanel';
-import { ChangesWorkspace, splitPatch } from './ChangesWorkspace';
+import { splitPatch } from './git-diff';
 import { codeContext, selectExperiment } from './code-context';
 vi.mock('../../components/prompts', () => ({ confirmAction: vi.fn(async () => true) }));
 vi.mock('../../editor/CodeEditor', () => ({
@@ -176,7 +176,6 @@ async function setup() {
     askAI: async () => '',
     listModels: async () => [],
     testModel: async () => {},
-    fetchArxiv: async () => '',
   };
   return { store, backend, persistence };
 }
@@ -246,19 +245,6 @@ it('validates structured configuration and numeric metrics without coercion', ()
   ]);
   expect(() => numericMetrics({ loss: '0.2' })).toThrow();
   expect(() => numericMetrics({ loss: Infinity })).toThrow();
-});
-it('disables code navigation when the Git repository has a different root', async () => {
-  const { backend } = await setup();
-  backend.gitStatus = vi.fn(async () => [{ path: 'train.py', status: 'M' }]);
-  vi.spyOn(experimentApi, 'diff').mockResolvedValue('@@ -1 +1 @@\n-old\n+new\n');
-  const onOpen = vi.fn();
-  render(<ChangesWorkspace projectId="p1" backend={backend} canOpenFile={false} onOpen={onOpen} />);
-  await userEvent.setup().click(await screen.findByRole('button', { name: /train\.py/ }));
-  await waitFor(() => expect(screen.getByRole('table', { name: '文件版本差异' })).toBeTruthy());
-  expect((screen.getByRole('button', { name: '打开文件' }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
-  expect(onOpen).not.toHaveBeenCalled();
 });
 it('pairs real unified hunks with correct independent line numbers', () => {
   const rows = splitPatch(

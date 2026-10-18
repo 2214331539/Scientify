@@ -10,4 +10,7 @@ export type WorkContext = {
   text?: string;
   selection?: string;
   page?: number;
+  browser?: { tabId: string; url: string };
+  materials?: { path: string; title: string; text: string; truncated?: boolean }[];
+  warnings?: string[];
 };

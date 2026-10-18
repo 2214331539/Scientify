@@ -1,5 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import type { WorkspaceId } from '../domain/context';
+import type { WorkContext, WorkspaceId } from '../domain/context';
 import type { AIProtocol } from './research';
 
 /**
@@ -7,6 +7,19 @@ import type { AIProtocol } from './research';
  * directory, so it deliberately does not match navigation entries: Experiments and Paper share the project root.
  */
 export type AgentDomain = 'literature' | 'code';
+export type PermissionMode = 'ask' | 'full';
+export interface AgentSkillRef {
+  name: string;
+  path: string;
+}
+export interface AgentSkill extends AgentSkillRef {
+  description: string;
+  enabled: boolean;
+}
+export interface AgentSkillListing {
+  skills: AgentSkill[];
+  errors: string[];
+}
 
 export interface EngineStatus {
   available: boolean;
@@ -29,6 +42,8 @@ export interface DomainBinding {
 }
 
 export interface ThreadHandle {
+  paperTools?: boolean;
+  browserTools?: boolean;
   experimentId?: string | null;
   threadId: string;
   conversationId: string;
@@ -133,6 +148,24 @@ export function approvalResult(
 }
 
 export interface AgentBackend {
+  skills?(request: {
+    projectId: string;
+    domain: AgentDomain;
+    conversationId: string;
+    workspaceRoot?: string;
+  }): Promise<AgentSkillListing>;
+  context?(request: {
+    projectId: string;
+    domain: AgentDomain;
+    conversationId: string;
+    workspaceRoot?: string;
+    path?: string;
+    resourceId?: string;
+  }): Promise<{
+    root: string;
+    materials: NonNullable<WorkContext['materials']>;
+    warnings: string[];
+  }>;
   status(): Promise<EngineStatus>;
   handshake(): Promise<EngineHandshake>;
   domains(projectId: string): Promise<DomainBinding[]>;
@@ -140,7 +173,7 @@ export interface AgentBackend {
     projectId: string,
     domain: AgentDomain,
     connection: AgentConnection,
-    options: { conversationId: string; workspaceRoot?: string },
+    options: { conversationId: string; workspaceRoot?: string; permission?: PermissionMode },
   ): Promise<ThreadHandle>;
   /** Start Codex's explicit Windows sandbox installer/elevation flow. */
   setupSandbox?(
@@ -154,6 +187,9 @@ export interface AgentBackend {
     conversationId: string;
     threadId: string;
     text: string;
+    images?: { mimeType: string; data: string }[];
+    permission?: PermissionMode;
+    skills?: AgentSkillRef[];
   }): Promise<TurnHandle>;
   steer?(request: {
     projectId: string;
@@ -207,6 +243,8 @@ function command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
 }
 
 export const nativeAgent: AgentBackend = {
+  skills: (request) => command('agent_skills', { request }),
+  context: (request) => command('agent_context', { request }),
   status: () => command('agent_status'),
   handshake: () => command('agent_handshake'),
   domains: (projectId) => command('agent_domains', { projectId }),
@@ -214,8 +252,7 @@ export const nativeAgent: AgentBackend = {
     command('agent_start_thread', { projectId, domain, connection, ...options }),
   setupSandbox: (projectId, domain, connection) =>
     command('agent_windows_sandbox_setup', { projectId, domain, connection }),
-  startTurn: ({ projectId, domain, conversationId, threadId, text }) =>
-    command('agent_start_turn', { projectId, domain, conversationId, threadId, text }),
+  startTurn: (request) => command('agent_start_turn', { ...request }),
   steer: (request) => command('agent_steer', { ...request }),
   interrupt: ({ projectId, domain, conversationId, threadId, turnId }) =>
     command('agent_interrupt', { projectId, domain, conversationId, threadId, turnId }),

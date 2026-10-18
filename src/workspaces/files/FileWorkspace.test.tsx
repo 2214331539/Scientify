@@ -102,7 +102,6 @@ function setup() {
     listModels: async () => [],
     testModel: async () => {},
     askAI: async () => '',
-    fetchArxiv: async () => '',
   };
   return {
     backend,

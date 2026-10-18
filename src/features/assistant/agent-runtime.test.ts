@@ -91,6 +91,57 @@ async function harness() {
 }
 
 describe('local task ownership', () => {
+  it('passes permission and native skills to a single thread, isolates new chats, and allows returning to ask', async () => {
+    const { store, agent, runtime, complete } = await harness();
+    const chat = { ...newConversation('p1'), agentPermission: 'full' as const };
+    const skills = [{ name: 'fixture', path: 'C:/p1/.agents/skills/fixture/SKILL.md' }];
+    await runtime.send(chat, 'code', connection, 'Run skill', undefined, [], skills);
+    expect(vi.mocked(agent.startThread).mock.calls[0][3].permission).toBe('full');
+    expect(vi.mocked(agent.startTurn).mock.calls[0][0]).toMatchObject({
+      permission: 'full',
+      skills,
+    });
+    complete(chat.id, 'done');
+    await runtime.poll();
+    const saved = asConversation(store.getState().data!.sessions[0]);
+    expect(saved.agentPermission).toBe('full');
+    expect(saved.messages[0].skills).toEqual(skills);
+    await runtime.send({ ...saved, agentPermission: 'ask' }, 'code', connection, 'Ask next');
+    expect(vi.mocked(agent.startTurn).mock.calls[1][0]).toMatchObject({
+      conversationId: chat.id,
+      permission: 'ask',
+    });
+    const other = newConversation('p1');
+    await runtime.send(other, 'code', connection, 'Independent');
+    expect(vi.mocked(agent.startTurn).mock.calls[2][0].permission).toBe('ask');
+  });
+  it('sends images and read-only file context through the same native thread and preserves attachments in history', async () => {
+    const { store, agent, runtime, complete } = await harness();
+    const chat = newConversation('p1');
+    const attachments = [
+      { name: 'plot.png', mimeType: 'image/png', data: 'aW1hZ2U=' },
+      { name: 'notes.md', mimeType: 'text/markdown', data: '', text: 'readonly fixture' },
+    ];
+    const snapshot = {
+      workspace: 'experiments' as const,
+      title: 'code',
+      capturedAt: '',
+      materials: [{ path: 'README.md', title: 'README', text: 'project fixture' }],
+    };
+    expect(await runtime.send(chat, 'code', connection, '看图改代码', snapshot, attachments)).toBe(
+      true,
+    );
+    const request = vi.mocked(agent.startTurn).mock.calls[0][0];
+    expect(request.threadId).toBe(`thread-${chat.id}`);
+    expect(request.images).toEqual([{ mimeType: 'image/png', data: 'aW1hZ2U=' }]);
+    expect(request.text).toContain('readonly fixture');
+    expect(request.text).toContain('project fixture');
+    complete(chat.id, 'completed fixture');
+    await runtime.poll();
+    const saved = asConversation(store.getState().data!.sessions[0]);
+    expect(saved.messages[0].attachments).toEqual(attachments);
+    expect(saved.messages[0].context?.materials?.[0].path).toBe('README.md');
+  });
   it('protects a completed task until an in-flight steering request settles', async () => {
     const { store, runtime, agent, complete } = await harness();
     const chat = newConversation('p1');
@@ -162,10 +213,12 @@ describe('local task ownership', () => {
     expect(agent.startThread).toHaveBeenCalledWith('p1', 'code', connection, {
       conversationId: a.id,
       workspaceRoot: a.agentCwd,
+      permission: 'ask',
     });
     expect(agent.startThread).toHaveBeenCalledWith('p1', 'code', connection, {
       conversationId: b.id,
       workspaceRoot: b.agentCwd,
+      permission: 'ask',
     });
     complete(a.id, 'A done');
     complete(b.id, 'B done');
@@ -177,6 +230,7 @@ describe('local task ownership', () => {
     expect(agent.startThread).toHaveBeenLastCalledWith('p1', 'code', connection, {
       conversationId: a.id,
       workspaceRoot: a.agentCwd,
+      permission: 'ask',
     });
   });
   it('runs two chats in one directory independently; approvals and stopping stay with the selected chat', async () => {
@@ -357,6 +411,7 @@ describe('local task ownership', () => {
     expect(agent.startThread).toHaveBeenLastCalledWith('p1', 'code', connection, {
       conversationId: chat.id,
       workspaceRoot: 'C:/p1/code',
+      permission: 'ask',
     });
   });
   it('clears close protection when idle release overlaps another chat update', async () => {

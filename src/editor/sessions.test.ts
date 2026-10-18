@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import type { FileContent, ResearchBackend } from '../platform/research';
+import type { FileContent, FileBackend } from '../platform/research';
 import {
   beginFileOperation,
   FileSession,
@@ -11,21 +11,13 @@ import {
 
 function backend() {
   let disk = { path: 'paper.md', content: '# Original', version: 'v1' };
-  const result: ResearchBackend = {
-    listFiles: async () => [],
+  const result: FileBackend = {
     readFile: vi.fn(async () => ({ ...disk })),
     writeFile: vi.fn(async (_projectId, path, content, expectedVersion) => {
       if (expectedVersion !== disk.version) throw new Error('文件已被外部修改，请比较后重试');
       disk = { path, content, version: 'v2' };
       return { ...disk };
     }),
-    importPdf: async () => null,
-    readPdf: async () => new Uint8Array(),
-    gitStatus: async () => [],
-    listModels: async () => [],
-    testModel: async () => {},
-    askAI: async () => '',
-    fetchArxiv: async () => '',
   };
   return {
     result,

@@ -18,6 +18,10 @@ pub struct Binding {
     pub managed_runs: bool,
     #[serde(default)]
     pub git_tools: bool,
+    #[serde(default)]
+    pub browser_tools: bool,
+    #[serde(default)]
+    pub paper_tools: bool,
 }
 fn path(data: &Path, project: &str, conversation: &str) -> Result<PathBuf, String> {
     if !valid_key(project) || !valid_key(conversation) {
@@ -81,6 +85,7 @@ pub fn write(
     started: bool,
     managed_runs: bool,
     git_tools: bool,
+    browser_tools: bool,
 ) -> Result<(), String> {
     let target = path(data, &handle.project_id, &handle.conversation_id)?;
     let record = Binding {
@@ -93,6 +98,8 @@ pub fn write(
         started,
         managed_runs,
         git_tools,
+        browser_tools,
+        paper_tools: handle.paper_tools,
     };
     std::fs::create_dir_all(target.parent().unwrap()).map_err(|e| e.to_string())?;
     let temporary = target.with_extension("pending");
@@ -110,6 +117,8 @@ mod tests {
     fn binding_survives_restart_and_rejects_another_root_or_domain() {
         let dir = tempfile::tempdir().unwrap();
         let handle = ThreadHandle {
+            paper_tools: false,
+            browser_tools: true,
             experiment_id: None,
             thread_id: "thread-a".into(),
             conversation_id: "chat-a".into(),
@@ -125,7 +134,7 @@ mod tests {
             fresh_thread: false,
             events: vec![],
         };
-        write(dir.path(), &handle, true, true, true).unwrap();
+        write(dir.path(), &handle, true, true, true, true).unwrap();
         assert_eq!(
             read(dir.path(), "project-a", "chat-a", "code", dir.path())
                 .unwrap()
@@ -148,7 +157,7 @@ mod tests {
         assert!(read(dir.path(), "../escape", "chat-a", "code", dir.path()).is_err());
 
         // A legacy thread keeps the capabilities registered when it was created.
-        write(dir.path(), &handle, true, false, false).unwrap();
+        write(dir.path(), &handle, true, false, false, false).unwrap();
         let legacy = read(dir.path(), "project-a", "chat-a", "code", dir.path())
             .unwrap()
             .unwrap();

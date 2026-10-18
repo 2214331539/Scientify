@@ -1,8 +1,8 @@
 import { t, translateError, locale } from '../../i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { ArrowLeft, BookOpen, Check, Link2, Plus, Save, Search } from 'lucide-react';
-import { Button, Input, Textarea } from '../../components/primitives';
+import { ArrowLeft, Check, Link2, Plus, Save, Search } from 'lucide-react';
+import { Button, Input } from '../../components/primitives';
 import { ResourceList, ResourceRow } from '../../components/workspace/ResourceList';
 import { Panel } from '../../components/layout/Panel';
 import type { WorkContext } from '../../domain/context';
@@ -16,7 +16,7 @@ import {
   selectNotes,
   type Note,
 } from './model';
-import { Markdown } from './Markdown';
+import { MarkdownLiveEditor } from './MarkdownLiveEditor';
 
 export interface NotesPanelProps {
   store: WorkspaceStore;
@@ -30,7 +30,6 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   const data = useStore(store, (state) => state.data);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Note | null>(null);
-  const [preview, setPreview] = useState(false);
   const [status, setStatus] = useState<'saved' | 'dirty' | 'saving' | 'error'>('saved');
   const [error, setError] = useState('');
   const latest = useRef<Note | null>(null);
@@ -126,7 +125,6 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     latest.current = next;
     baseline.current = isNew || !next ? '' : noteFingerprint(next);
     setDraft(next);
-    setPreview(false);
     setError('');
     setStatus(isNew ? 'dirty' : 'saved');
     markDirty(isNew);
@@ -189,17 +187,6 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
                       ? t('保存失败，草稿保留')
                       : t('未保存')}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                iconOnly
-                title={preview ? t('编辑笔记') : t('预览 Markdown')}
-                aria-label={preview ? t('编辑笔记') : t('预览 Markdown')}
-                aria-pressed={preview}
-                onClick={() => setPreview(!preview)}
-              >
-                <BookOpen size={14} />
-              </Button>
             </div>
           </div>
           {error ? (
@@ -210,26 +197,15 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
               </Button>
             </div>
           ) : null}
-          {preview ? (
-            <div className="sf-note-preview sf-aux-scroll">
-              <Markdown>{draft.body || t('还没有正文。')}</Markdown>
-            </div>
-          ) : (
-            <Textarea
+          <div className="sf-note-workbench">
+            <MarkdownLiveEditor
               className="sf-note-editor"
-              aria-label={t('笔记正文')}
-              spellCheck={false}
-              placeholder={t('Write a note…')}
+              ariaLabel={t('笔记正文')}
               value={draft.body}
-              onChange={(event) => edit({ ...draft, body: event.target.value })}
-              onKeyDown={(event) => {
-                if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-                  event.preventDefault();
-                  void save();
-                }
-              }}
+              onChange={(value) => edit({ ...draft, body: value })}
+              onSave={() => void save()}
             />
-          )}
+          </div>
           {sources.length ? (
             <details className="sf-note-sources">
               <summary>{t('来源 · {count}', { count: sources.length })}</summary>

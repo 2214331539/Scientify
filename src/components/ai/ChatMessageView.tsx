@@ -4,17 +4,31 @@ import { t } from '../../i18n';
 import { usePreferences } from '../../i18n/preferences';
 import { Markdown } from '../../features/notes/Markdown';
 import { Button } from '../primitives';
+import type { AgentSkillRef } from '../../platform/agent';
+import {
+  contextMaterial,
+  type ChatAttachment,
+  type ContextSnapshot,
+} from '../../features/assistant/model';
 
 /** Presentation only: copying never includes hidden research context or changes the conversation. */
 export const ChatMessageView = memo(function ChatMessageView({
   role,
   text,
   streaming = false,
+  attachments = [],
+  skills = [],
+  context,
+  onOpenLink,
 }: {
   role: 'user' | 'assistant';
   text: string;
   /** Keep the hot path cheap while the engine is still sending deltas. */
   streaming?: boolean;
+  attachments?: ChatAttachment[];
+  skills?: AgentSkillRef[];
+  context?: ContextSnapshot;
+  onOpenLink?: (url: string) => void;
 }) {
   usePreferences();
   const displayedText = useDeferredValue(text);
@@ -54,7 +68,41 @@ export const ChatMessageView = memo(function ChatMessageView({
       aria-label={role === 'user' ? t('用户消息') : t('助手消息')}
       data-copy-state={copyState}
     >
-      <Markdown>{streaming ? displayedText : text}</Markdown>
+      {skills.length ? (
+        <div className="sf-ai-message-skills" aria-label={t('本轮技能')}>
+          {skills.map((skill) => (
+            <span key={skill.path}>{skill.name}</span>
+          ))}
+        </div>
+      ) : null}
+      {attachments.length ? (
+        <div className="sf-chat-message-attachments">
+          {attachments.map((attachment) =>
+            attachment.mimeType.startsWith('image/') ? (
+              <img
+                key={`${attachment.name}-${attachment.data.slice(0, 12)}`}
+                src={`data:${attachment.mimeType};base64,${attachment.data}`}
+                alt={attachment.name}
+              />
+            ) : (
+              <details key={attachment.name}>
+                <summary>
+                  {attachment.name}
+                  {attachment.truncated ? ` · ${t('已截短')}` : ''}
+                </summary>
+                <pre>{attachment.text}</pre>
+              </details>
+            ),
+          )}
+        </div>
+      ) : null}
+      <Markdown onLink={onOpenLink}>{streaming ? displayedText : text}</Markdown>
+      {context && role === 'user' ? (
+        <details className="sf-ai-context-excerpt">
+          <summary>{t('本轮材料来源')}</summary>
+          <pre>{contextMaterial(context)}</pre>
+        </details>
+      ) : null}
       <div className="sf-message-actions">
         <Button
           variant="ghost"

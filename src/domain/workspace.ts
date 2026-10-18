@@ -1,4 +1,19 @@
 export type Entity = { id: string; [key: string]: unknown };
+export type ModelSettings = {
+  endpoint: string;
+  model: string;
+  provider: 'ollama' | 'openai' | 'anthropic' | 'gemini';
+  serviceId?: string;
+  modelCatalog?: string[];
+  verification?: {
+    model: string;
+    checkedAt: string;
+    chat: boolean;
+    agent: boolean;
+    agentError?: string | null;
+  };
+};
+export type ModelProfile = ModelSettings & { id: string; name: string };
 export type Team = Entity & { name: string; color: string; description?: string };
 export type Project = Entity & {
   name: string;
@@ -58,6 +73,8 @@ export type Workspace = {
     [key: string]: unknown;
     theme: string;
     name: string;
+    modelProfiles?: ModelProfile[];
+    defaultModelProfileId?: string;
     model: {
       endpoint: string;
       model: string;
@@ -65,6 +82,7 @@ export type Workspace = {
       serviceId?: string;
       modelCatalog?: string[];
       recentModels?: string[];
+      verification?: ModelSettings['verification'];
     };
   };
   navigation: {

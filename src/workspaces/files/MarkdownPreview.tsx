@@ -1,12 +1,16 @@
 import { t } from '../../i18n';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { mathRemarkPlugins, mathRehypePlugins } from '../../features/notes/math';
+
+const remarkPlugins = [remarkGfm, ...mathRemarkPlugins];
 
 export default function MarkdownPreview({ content }: { content: string }) {
   return (
     <article className="sf-markdown-preview" aria-label={t('Markdown 预览')}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={mathRehypePlugins}
         components={{
           img: ({ alt }) => (
             <span className="sf-markdown-image">

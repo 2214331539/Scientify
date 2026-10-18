@@ -25,7 +25,7 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import { t, translateError } from '../../i18n';
 import { describeError } from './runtime';
 import { clearCodeRoot, selectCodeRoot, type useCodeWorkspace } from './code-context';
-import { splitPatch } from './ChangesWorkspace';
+import { splitPatch } from './git-diff';
 import { beginGitOperation, gitDraftKey, gitDrafts, setGitMessage } from './git-drafts';
 import './git.css';
 

@@ -27,9 +27,7 @@ export function PdfPageSurface({
   onError(message: string): void;
   onSelection(page: number, text: string, selection: string): void;
 }) {
-  const canvas = useRef<HTMLCanvasElement>(null),
-    textLayer = useRef<HTMLDivElement>(null),
-    annotationLayer = useRef<HTMLDivElement>(null);
+  const surface = useRef<HTMLDivElement>(null);
   const [base, setBase] = useState({ width: 600, height: 800 });
   const [loading, setLoading] = useState(true);
   const callbacks = useRef({ onReady, onError, onSelection });
@@ -37,38 +35,48 @@ export function PdfPageSurface({
   const text = useRef('');
   const scale = Math.max(0.25, Math.min(3, width / base.width)) * zoom;
   useEffect(() => {
-    if (!visible) return;
+    const host = surface.current;
+    if (!visible || !host) return;
+    // A render owns its nodes. A cancelled render must never clear or write
+    // into the nodes created by a later zoom, resize or page switch.
+    const dom = host.ownerDocument;
+    const node = dom.createElement('canvas');
+    node.setAttribute('aria-label', t('{title} 第 {page} 页', { title, page }));
+    const textNode = dom.createElement('div');
+    textNode.className = 'textLayer';
+    textNode.tabIndex = -1;
+    const annotationNode = dom.createElement('div');
+    annotationNode.className = 'annotationLayer';
+    host.replaceChildren(node, textNode, annotationNode);
     let stale = false;
     let renderTask:
       ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']> | undefined;
     let layer: TextLayer | undefined;
     let links: AnnotationLayer | undefined;
     setLoading(true);
-    void document
+    const rendering = document
       .getPage(page)
       .then(async (pdfPage) => {
-        if (stale || !canvas.current || !textLayer.current || !annotationLayer.current) return;
+        if (stale) return;
         const original = pdfPage.getViewport({ scale: 1 });
         setBase({ width: original.width, height: original.height });
         const scale = Math.max(0.25, Math.min(3, width / original.width)) * zoom;
         const viewport = pdfPage.getViewport({ scale });
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const node = canvas.current;
         node.width = Math.floor(viewport.width * dpr);
         node.height = Math.floor(viewport.height * dpr);
         node.style.width = `${viewport.width}px`;
         node.style.height = `${viewport.height}px`;
-        textLayer.current.replaceChildren();
-        annotationLayer.current.replaceChildren();
         renderTask = pdfPage.render({
           canvas: node,
           viewport,
           transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
         });
-        void renderTask.promise.catch(() => undefined);
+        // Observe cancellation immediately, including while text is loading.
         const [content, annotations] = await Promise.all([
           pdfPage.getTextContent(),
           pdfPage.getAnnotations({ intent: 'display' }),
+          renderTask.promise,
         ]);
         if (stale) return;
         text.current = content.items
@@ -77,12 +85,12 @@ export function PdfPageSurface({
           .slice(0, 24000);
         layer = new TextLayer({
           textContentSource: content,
-          container: textLayer.current!,
+          container: textNode,
           viewport,
         });
         const linkViewport = viewport.clone({ dontFlip: true });
         links = new AnnotationLayer({
-          div: annotationLayer.current!,
+          div: annotationNode,
           page: pdfPage,
           viewport: linkViewport,
           linkService,
@@ -98,7 +106,7 @@ export function PdfPageSurface({
           layer.render(),
           links.render({
             viewport: linkViewport,
-            div: annotationLayer.current!,
+            div: annotationNode,
             page: pdfPage,
             linkService,
             annotations: annotations.filter(
@@ -113,7 +121,7 @@ export function PdfPageSurface({
           }),
         ]);
         if (!stale) {
-          for (const link of annotationLayer.current!.querySelectorAll('a'))
+          for (const link of annotationNode.querySelectorAll('a'))
             link.setAttribute('aria-label', pdfLinkLabel(link));
           setLoading(false);
           callbacks.current.onReady(page, text.current);
@@ -121,7 +129,7 @@ export function PdfPageSurface({
             pageNumber: page,
             source: {
               textLayer: {
-                div: { focus: () => textLayer.current?.focus({ preventScroll: true }) },
+                div: { focus: () => textNode.focus({ preventScroll: true }) },
               },
             },
           });
@@ -137,12 +145,15 @@ export function PdfPageSurface({
       stale = true;
       renderTask?.cancel();
       layer?.cancel();
-      links?.destroy();
+      // AnnotationLayer has no cancel API. Destroy it after its async render
+      // settles; its detached nodes belong only to this effect.
+      void rendering.then(() => links?.destroy());
     };
   }, [document, page, width, zoom, visible, linkService]);
   function select() {
     const selected = window.getSelection();
-    if (!selected || !textLayer.current?.contains(selected.anchorNode)) return;
+    if (!selected || !surface.current?.querySelector('.textLayer')?.contains(selected.anchorNode))
+      return;
     callbacks.current.onSelection(page, text.current, selected.toString().trim().slice(0, 16000));
   }
   return (
@@ -165,15 +176,7 @@ export function PdfPageSurface({
               {t('正在读取 PDF…')}
             </span>
           )}
-          <canvas ref={canvas} aria-label={t('{title} 第 {page} 页', { title, page })} />
-          <div
-            className="textLayer"
-            ref={textLayer}
-            tabIndex={-1}
-            onMouseUp={select}
-            onKeyUp={select}
-          />
-          <div className="annotationLayer" ref={annotationLayer} />
+          <div className="pdf-page-surface" ref={surface} onMouseUp={select} onKeyUp={select} />
         </>
       )}
     </div>

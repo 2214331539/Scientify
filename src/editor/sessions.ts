@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import type { EditorState } from '@codemirror/state';
-import type { ResearchBackend } from '../platform/research';
+import type { FileBackend } from '../platform/research';
 
 export type FileSnapshot = {
   content: string;
@@ -45,7 +45,7 @@ export class FileSession {
   }
 
   constructor(
-    readonly backend: ResearchBackend,
+    readonly backend: FileBackend,
     readonly projectId: string,
     readonly path: string,
     readonly workspaceRoot?: string,
@@ -157,8 +157,8 @@ type FileRuntime = {
   revision: number;
   pendingOperations: number;
 };
-const runtimes = new WeakMap<ResearchBackend, FileRuntime>();
-export function getFileRuntime(backend: ResearchBackend) {
+const runtimes = new WeakMap<FileBackend, FileRuntime>();
+export function getFileRuntime(backend: FileBackend) {
   let runtime = runtimes.get(backend);
   if (!runtime) {
     runtime = {
@@ -173,13 +173,13 @@ export function getFileRuntime(backend: ResearchBackend) {
   }
   return runtime;
 }
-export function notifyFileRuntime(backend: ResearchBackend) {
+export function notifyFileRuntime(backend: FileBackend) {
   const runtime = getFileRuntime(backend);
   runtime.revision += 1;
   runtime.listeners.forEach((listener) => listener());
 }
 export function getFileSession(
-  backend: ResearchBackend,
+  backend: FileBackend,
   projectId: string,
   path: string,
   workspaceRoot?: string,
@@ -195,7 +195,7 @@ export function getFileSession(
   return session;
 }
 export function directorySessions(
-  backend: ResearchBackend,
+  backend: FileBackend,
   projectId: string,
   root?: string,
   includeUnscoped = false,
@@ -207,7 +207,7 @@ export function directorySessions(
   );
 }
 export async function reloadDirectorySessions(
-  backend: ResearchBackend,
+  backend: FileBackend,
   projectId: string,
   root?: string,
 ) {
@@ -218,12 +218,12 @@ export async function reloadDirectorySessions(
   );
   window.dispatchEvent(new CustomEvent('scientify-project-files-changed', { detail: projectId }));
 }
-export function hasUnsavedFileChanges(backend: ResearchBackend) {
+export function hasUnsavedFileChanges(backend: FileBackend) {
   return [...getFileRuntime(backend).sessions.values()].some(
     (session) => session.getSnapshot().dirty,
   );
 }
-export function hasPendingFileOperations(backend: ResearchBackend) {
+export function hasPendingFileOperations(backend: FileBackend) {
   const runtime = getFileRuntime(backend);
   return (
     runtime.pendingOperations > 0 ||
@@ -232,7 +232,7 @@ export function hasPendingFileOperations(backend: ResearchBackend) {
     )
   );
 }
-export function beginFileOperation(backend: ResearchBackend) {
+export function beginFileOperation(backend: FileBackend) {
   const runtime = getFileRuntime(backend);
   runtime.pendingOperations += 1;
   notifyFileRuntime(backend);
@@ -245,7 +245,7 @@ export function beginFileOperation(backend: ResearchBackend) {
   };
 }
 /** Rebinding a clean project root must never reuse the previous directory's buffers. */
-export function invalidateProjectFileSessions(backend: ResearchBackend, projectId: string) {
+export function invalidateProjectFileSessions(backend: FileBackend, projectId: string) {
   const runtime = getFileRuntime(backend);
   const sessions = [...runtime.sessions.entries()].filter(
     ([, session]) => session.projectId === projectId,

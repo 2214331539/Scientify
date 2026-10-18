@@ -5,6 +5,8 @@ import {
   type AgentConnection,
   type AgentDomain,
   type AgentEvent,
+  type AgentSkillRef,
+  type PermissionMode,
   type ApprovalDecision,
   type ApprovalRequest,
   type ThreadHandle,
@@ -78,6 +80,7 @@ export class AgentSession {
       domain: AgentDomain;
       conversationId: string;
       workspaceRoot?: string;
+      permission?: PermissionMode;
     },
     private readonly connection: AgentConnection,
     private readonly onUpdate: (snapshot: AgentSessionSnapshot) => void = () => {},
@@ -104,6 +107,7 @@ export class AgentSession {
         this.connection,
         {
           conversationId: this.binding.conversationId,
+          permission: this.binding.permission ?? 'ask',
           ...(this.binding.workspaceRoot ? { workspaceRoot: this.binding.workspaceRoot } : {}),
         },
       );
@@ -209,7 +213,11 @@ export class AgentSession {
     }
     this.set(state);
   }
-  async send(text: string): Promise<boolean> {
+  async send(
+    text: string,
+    images?: { mimeType: string; data: string }[],
+    skills?: AgentSkillRef[],
+  ): Promise<boolean> {
     if (!this.snapshot.threadId || hasPendingWork(this.snapshot)) return false;
     this.starting = true;
     this.textItems.clear();
@@ -229,6 +237,8 @@ export class AgentSession {
         ...this.binding,
         threadId: this.snapshot.threadId!,
         text,
+        ...(images?.length ? { images } : {}),
+        ...(skills?.length ? { skills } : {}),
       });
       if (!turn.turnId) throw new Error(t('Agent 返回了空 turn 标识。'));
       this.set({ turnId: turn.turnId });

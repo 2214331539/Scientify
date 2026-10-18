@@ -673,17 +673,17 @@
   transition-duration: 0s;
 }
 
-.research-shell:not(.launcher-shell) .resize-handle {
+.research-shell:not(.launcher-shell) .resize-handle:not(.dock-resize) {
   background: transparent;
   transition: background-color var(--sf-motion-feedback) var(--sf-ease-standard);
 }
 
-.research-shell:not(.launcher-shell) .resize-handle::after {
+.research-shell:not(.launcher-shell) .resize-handle:not(.dock-resize)::after {
   inset: 12px -5px;
 }
 
-.research-shell:not(.launcher-shell) .resize-handle:hover,
-.research-shell:not(.launcher-shell) .resize-handle:focus-visible {
+.research-shell:not(.launcher-shell) .resize-handle:not(.dock-resize):hover,
+.research-shell:not(.launcher-shell) .resize-handle:not(.dock-resize):focus-visible {
   background: var(--sf-border-control);
   box-shadow: none;
 }

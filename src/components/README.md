@@ -29,7 +29,7 @@ components/
     ResourceList.tsx  对象集合与 ResourceRow
     TreeView.tsx      层级资源、展开状态、键盘导航；可选受控多选，Ctrl/Cmd 切换、Shift 可见区间
     DocumentTabs.tsx 文献标签栏，受控选择/关闭/新增及键盘导航
-    FeaturePlaceholder.tsx 未开放功能的统一占位，名称/图标目录、双语与紧凑侧栏模式
+    FeaturePlaceholder.tsx 未开放功能的统一占位，名称/图标目录与双语文案
     ViewTransition.tsx 保留视图的原位交叉淡化；useActiveView 限制隐藏页前台事件
   ai/
     ContextPanel.tsx  按需在弹窗查看当前项目、文件、选区及可用意图
@@ -39,6 +39,7 @@ components/
 
 ## 组合规则
 
+- AI 业务组合位于 `features/assistant`：[AssistantPanel](../features/assistant/AssistantPanel.tsx) 协调模型配置、草稿、上下文与任务操作；[AssistantConversations](../features/assistant/AssistantConversations.tsx) 呈现会话菜单和后台任务导航；[AssistantTranscript](../features/assistant/AssistantTranscript.tsx) 呈现消息、审批与执行记录，并管理滚动跟随。AgentRuntime / ChatRuntime 持有任务，切换会话或关闭面板不会取消后台执行。
 - 页面控制业务状态，布局和 primitive 不读写 store、磁盘或模型服务。
 - 桌面只保留主 Topbar；空白区域通过 Tauri 拖动属性操作窗口，关闭按钮发起 close 请求，由 App 的未保存保护决定是否退出。浏览器不显示窗口控制。
 - 项目管理只显示空间侧栏，其底部工具只保留设置与亮暗按钮；进入项目后显示 48px 五入口纯图标 Rail（Overview、Literature、Notes、Experiments、Paper）。名称放入 Tooltip 和 aria-label，不显示固定文字。

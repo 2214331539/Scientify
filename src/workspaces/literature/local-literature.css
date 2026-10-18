@@ -45,6 +45,30 @@
   color: var(--sf-text-muted);
   font-size: 12px;
 }
+.subscription-placeholder {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 10px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.subscription-placeholder .sf-button {
+  justify-content: center;
+}
+.subscription-placeholder h3 {
+  margin: 12px 0 0;
+  color: var(--sf-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.subscription-placeholder p {
+  margin: 0;
+  line-height: 1.5;
+}
 .library-directory {
   display: flex;
   flex-direction: column;
@@ -189,22 +213,16 @@
   min-width: 0;
   flex: 1;
 }
-.paper-note-editor .paper-note-textarea {
+.paper-note-workbench {
+  display: flex;
   flex: 1;
-  resize: none;
   min-height: 0;
-  border: 0;
-  border-radius: 0;
-  padding: 14px;
-  line-height: 1.8;
-  font-family: var(--sf-font-mono);
-  outline-offset: -2px;
+  min-width: 0;
+  overflow: hidden;
 }
-.paper-note-preview {
+.paper-note-workbench > .sf-markdown-live-editor {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  padding: 14px;
 }
 .paper-note-footer {
   display: flex;

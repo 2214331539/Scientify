@@ -1,7 +1,7 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
-import type { ResearchBackend } from '../platform/research';
+import type { PdfBackend } from '../platform/research';
 import PdfReader from './PdfReader';
 
 const links = vi.hoisted(() => ({
@@ -32,6 +32,7 @@ vi.mock('pdfjs-dist', async (importOriginal) => {
         numPages: 2,
         pagesMapper: { pagesNumber: 2 },
         getDestination: links.getDestination,
+        getOutline: async () => null,
         getPageIndex: links.getPageIndex,
         cachedPageNumber: () => null,
         getPage: async (page: number) => ({
@@ -89,17 +90,8 @@ function annotation(id: string, target: Record<string, unknown>) {
 }
 
 function setup() {
-  const backend: ResearchBackend = {
-    listFiles: async () => [],
-    readFile: vi.fn(),
-    writeFile: vi.fn(),
-    importPdf: async () => null,
+  const backend: PdfBackend = {
     readPdf: vi.fn(async () => new Uint8Array([1])),
-    gitStatus: async () => [],
-    listModels: async () => [],
-    testModel: async () => {},
-    askAI: async () => '',
-    fetchArxiv: async () => '',
   };
   const context = vi.fn();
   return {
@@ -274,4 +266,35 @@ it('keeps unsupported URI and PDF script actions from leaving the reader', async
   expect(host.container.querySelectorAll('.annotationLayer a[href]')).toHaveLength(0);
   expect(open).not.toHaveBeenCalled();
   open.mockRestore();
+});
+
+it('zooms with Ctrl + wheel, preserves the reading anchor and leaves ordinary scrolling alone', async () => {
+  const { reader, context } = setup();
+  const host = render(reader);
+  await waitFor(() => expect(context.mock.lastCall?.[0].text).toBe('Research text'));
+  const scroll = host.container.querySelector('.pdf-scroll')!;
+  fireEvent.scroll(scroll, { target: { scrollTop: 120, scrollLeft: 0 } });
+  const normal = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true });
+  fireEvent(scroll, normal);
+  expect(normal.defaultPrevented).toBe(false);
+  expect(screen.getByText('100%')).toBeTruthy();
+  const zoom = new WheelEvent('wheel', {
+    ctrlKey: true,
+    deltaY: -100,
+    clientY: 100,
+    bubbles: true,
+    cancelable: true,
+  });
+  fireEvent(scroll, zoom);
+  expect(zoom.defaultPrevented).toBe(true);
+  await waitFor(() => expect(screen.getByText('122%')).toBeTruthy());
+  await waitFor(() => expect(scroll.scrollTop).toBeCloseTo(168.62));
+  await act(async () => {
+    for (let i = 0; i < 20; i++) fireEvent.wheel(scroll, { ctrlKey: true, deltaY: -100 });
+  });
+  await waitFor(() => expect(screen.getByText('200%')).toBeTruthy());
+  await act(async () => {
+    for (let i = 0; i < 20; i++) fireEvent.wheel(scroll, { ctrlKey: true, deltaY: 100 });
+  });
+  await waitFor(() => expect(screen.getByText('50%')).toBeTruthy());
 });

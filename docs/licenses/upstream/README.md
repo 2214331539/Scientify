@@ -7,7 +7,7 @@ review and update this map rather than reuse a notice for a different version.
 
 - The downloaded upstream texts are retained verbatim. For dual-licensed
   `MIT OR Apache-2.0` packages whose archive omits both texts, the MIT option is
-  used here.
+  used here unless another option is specified below.
 - Platform npm archives use the notices from their installed, same-version
   parent package (`esbuild`, `rollup`, `@napi-rs/canvas`, `@tauri-apps/cli`).
 - `selectors` declares MPL-2.0 in its Cargo manifest and source headers. The
@@ -16,6 +16,13 @@ review and update this map rather than reuse a notice for a different version.
 - `stackback` is used by the test toolchain only. Its source and npm archive
   contain an MIT declaration but no separate license text. The supplemental
   record identifies this limitation explicitly; it is not a runtime component.
+- `eventsource-stream` 0.2.3 declares `MIT OR Apache-2.0` but its crate archive
+  omits both texts. This dependency uses the Apache-2.0 option, retained from
+  Apache's canonical license text. The manifest's exact source commit and the
+  license source are recorded in `sources.json`.
+- `remark-math` 6.0.0 and `rehype-katex` 7.0.1 omit the monorepo license from
+  their npm archives. The identical MIT text from each published version's
+  `gitHead` is retained here; both source commits are recorded separately.
 
 The generated report deliberately includes build/test dependencies as well as
 runtime dependencies. It is bundled under `licenses/`, alongside the project,

@@ -26,6 +26,7 @@ import { LocalLiterature } from '../workspaces/literature/LocalLiterature';
 import { nativeLibrary, noteFiles } from '../platform/library';
 import { flushPaperNotes, notesDirty, notesPending } from '../workspaces/literature/local-session';
 import { browserLayout } from '../platform/browser-pane';
+import { installPaperService } from '../platform/paper-service';
 import { ExperimentWorkspace } from '../workspaces/experiments/ExperimentWorkspace';
 import { useExecutions } from '../workspaces/experiments/runtime';
 import { useDevelopmentRuntime } from '../workspaces/experiments/development';
@@ -53,6 +54,7 @@ type Location = {
   workspace: WorkspaceId;
   view: string;
   paperId: string | null;
+  browserId?: string;
   runId?: string | null;
   paths: Partial<Record<WorkspaceId, string | null>>;
   views?: Partial<Record<WorkspaceId, string>>;
@@ -78,6 +80,8 @@ const defaults: UISession = {
   rightWidth: 340,
 };
 const locationDefault: Location = { workspace: 'overview', view: '', paperId: null, paths: {} };
+const MIN_DOCK_WIDTH = 280;
+const MIN_CENTRAL_WIDTH = 320;
 function readSession(storageKey = 'scientify.ui.v2'): UISession {
   try {
     const value = JSON.parse(
@@ -108,7 +112,10 @@ function readSession(storageKey = 'scientify.ui.v2'): UISession {
         ),
         dockOpen: value.dock === 'notes' && value.dockOpen === true,
         leftWidth: Math.max(180, Math.min(300, Number(value.leftWidth) || 240)),
-        rightWidth: Math.max(300, Math.min(760, Number(value.rightWidth) || 340)),
+        rightWidth: Math.max(
+          MIN_DOCK_WIDTH,
+          Number.isFinite(Number(value.rightWidth)) ? Number(value.rightWidth) || 340 : 340,
+        ),
       };
   } catch {
     /* UI preferences are optional. */
@@ -230,6 +237,10 @@ export function App({
 }) {
   const experiments = useExecutions(store, windowMode !== 'projects');
   useDevelopmentRuntime(store, windowMode !== 'projects');
+  useEffect(() => {
+    if (windowMode !== 'workspace') return;
+    return installPaperService((reason) => store.setState({ error: String(reason) }));
+  }, [windowMode, store]);
   const preferences = usePreferences();
   const epoch = useStore(store, (s) => s.epoch);
   const data = useStore(store, (s) => s.data),
@@ -630,9 +641,30 @@ export function App({
       }));
     };
     window.addEventListener('scientify-open-source', open);
+    const openBrowser = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId: string; tabId: string }>).detail;
+      const target = data?.projects.find((p) => p.id === detail?.projectId);
+      if (!target || typeof detail?.tabId !== 'string') return;
+      setUI((s) => ({
+        ...s,
+        projectId: target.id,
+        space: target.space,
+        locations: {
+          ...s.locations,
+          [target.id]: {
+            ...(s.locations[target.id] ?? locationDefault),
+            workspace: 'literature',
+            view: 'local',
+            browserId: detail.tabId,
+          },
+        },
+      }));
+    };
+    window.addEventListener('scientify-open-browser', openBrowser);
     window.addEventListener('scientify-open-run', openRun);
     return () => {
       window.removeEventListener('scientify-open-source', open);
+      window.removeEventListener('scientify-open-browser', openBrowser);
       window.removeEventListener('scientify-open-run', openRun);
     };
   }, [data, windowMode]);
@@ -653,16 +685,19 @@ export function App({
   const rightWidth = Math.min(
     ui.rightWidth,
     Math.max(
-      300,
+      MIN_DOCK_WIDTH,
       windowWidth -
         WORKSPACE_RAIL_WIDTH -
         (workspace === 'literature' || (hasResourceSidebar && sidebarExpanded) ? 180 : 0) -
-        382,
+        MIN_CENTRAL_WIDTH,
     ),
   );
   const maxResourceWidth = Math.max(
     180,
-    Math.min(300, windowWidth - WORKSPACE_RAIL_WIDTH - (inlineDockOpen ? rightWidth : 0) - 382),
+    Math.min(
+      300,
+      windowWidth - WORKSPACE_RAIL_WIDTH - (inlineDockOpen ? rightWidth : 0) - MIN_CENTRAL_WIDTH,
+    ),
   );
   const resourceWidth = Math.min(ui.leftWidth, maxResourceWidth);
   const content = !ready ? (
@@ -696,6 +731,7 @@ export function App({
       store={store}
       backend={backend}
       requestedPaper={location.paperId}
+      requestedBrowser={location.browserId}
       view={view}
       onView={(view) => patchLocation({ view })}
       width={resourceWidth}
@@ -912,18 +948,15 @@ export function App({
           resizeHandle={
             <ResizeHandle
               value={rightWidth}
-              min={300}
+              min={MIN_DOCK_WIDTH}
               max={Math.max(
-                300,
-                Math.min(
-                  760,
-                  windowWidth -
-                    WORKSPACE_RAIL_WIDTH -
-                    (workspace === 'literature' || (hasResourceSidebar && sidebarExpanded)
-                      ? resourceWidth
-                      : 0) -
-                    382,
-                ),
+                MIN_DOCK_WIDTH,
+                windowWidth -
+                  WORKSPACE_RAIL_WIDTH -
+                  (workspace === 'literature' || (hasResourceSidebar && sidebarExpanded)
+                    ? resourceWidth
+                    : 0) -
+                  MIN_CENTRAL_WIDTH,
               )}
               side="right"
               label={t('调整辅助栏宽度')}

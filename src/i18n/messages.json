@@ -1,4 +1,32 @@
 {
+  "执行权限": ["执行权限", "Execution permissions"],
+  "询问": ["询问", "Ask"],
+  "完全允许": ["完全允许", "Full access"],
+  "设置当前会话的执行权限": ["设置当前会话的执行权限", "Set permissions for this chat"],
+  "选择当前工作区可用的技能": ["选择当前工作区可用的技能", "Choose a skill available in this workspace"],
+  "选择模型或配置连接": ["选择模型或配置连接", "Choose a model or configure a connection"],
+  "新建独立会话": ["新建独立会话", "Start a separate chat"],
+  "中止当前任务": ["中止当前任务", "Stop the current task"],
+  "选择技能": ["选择技能", "Choose a skill"],
+  "快捷命令": ["快捷命令", "Commands"],
+  "可用技能": ["可用技能", "Available skills"],
+  "刷新技能": ["刷新技能", "Refresh skills"],
+  "正在读取技能…": ["正在读取技能…", "Loading skills…"],
+  "请在项目中使用支持 Agent 的连接以选择技能。": ["请在项目中使用支持 Agent 的连接以选择技能。", "Open a project with an Agent-compatible connection to select skills."],
+  "每条消息最多选择 4 个技能。": ["每条消息最多选择 4 个技能。", "Select up to 4 skills per message."],
+  "没有匹配的可用技能。技能需先安装到工作区 .agents/skills 或 Scientify 的 Codex 数据目录。": ["没有匹配的可用技能。技能需先安装到工作区 .agents/skills 或 Scientify 的 Codex 数据目录。", "No matching skills. Install skills in the workspace .agents/skills folder or Scientify's Codex data directory."],
+  "↑ ↓ 选择 · Enter 确认 · Esc 关闭": ["↑ ↓ 选择 · Enter 确认 · Esc 关闭", "↑ ↓ Select · Enter Confirm · Esc Close"],
+  "待发送技能": ["待发送技能", "Skills for the next message"],
+  "移除技能 {name}": ["移除技能 {name}", "Remove skill {name}"],
+  "本轮技能": ["本轮技能", "Skills used in this turn"],
+  "当前任务或保存结束后可切换权限": ["当前任务或保存结束后可切换权限", "Change permissions after the current task and save finish"],
+  "仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。": ["仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。", "Applies to this chat from the next turn. Chat-only connections cannot execute local actions."],
+  "在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。": ["在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。", "Run in the workspace sandbox; ask for escalations and Git writes."],
+  "取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。": ["取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。", "Disable the execution sandbox; allow files outside the workspace and network access without execution approvals."],
+  "权限保存失败，请重试。": ["权限保存失败，请重试。", "Permissions could not be saved. Try again."],
+  "技能需要内置 Agent 执行，当前连接仅支持聊天。请更换连接或移除技能。": ["技能需要内置 Agent 执行，当前连接仅支持聊天。请更换连接或移除技能。", "Skills require the built-in Agent. Change the chat-only connection or remove the selected skills."],
+  "请等待当前任务结束后再切换权限。": ["请等待当前任务结束后再切换权限。", "Wait for the current task to finish before changing permissions."],
+  "技能已移除、停用或不属于当前工作区，请重新选择：{name}": ["技能已移除、停用或不属于当前工作区，请重新选择：{name}", "This skill was removed, disabled, or is unavailable in this workspace. Select it again: {name}"],
   "实验管理": ["实验管理", "Experiments"],
   "当前实验": ["当前实验", "Current experiment"],
   "实验": ["实验", "Experiment"],
@@ -42,7 +70,7 @@
   "实验代码任务": ["实验代码任务", "Experiment code tasks"],
   "本地科研工作区 · 文献 / 笔记 / 实验 / 论文": ["本地科研工作区 · 文献 / 笔记 / 实验 / 论文", "Local research workspace · Literature / Notes / Experiments / Paper"],
   "已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。": ["已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。", "Available: local literature and PDF reading, notes, code editing, Git diffs, parallel experiments, logs and results, Markdown preview, and a global AI assistant that operates within workspaces."],
-  "后续接入：代码版本管理、LaTeX 编译、自动订阅更新与 PDF 批注。模型服务在 AI 助手中配置。": ["后续接入：代码版本管理、LaTeX 编译、自动订阅更新与 PDF 批注。模型服务在 AI 助手中配置。", "Planned: code version management, LaTeX compilation, subscription updates and PDF annotations. Configure model providers in the AI assistant."],
+  "后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。": ["后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。", "Planned: LaTeX compilation, PDF annotations and more literature tools. Configure model providers in the AI assistant."],
   "AI 实验": ["AI 实验", "AI experiment"],
   "关联实验运行": ["关联实验运行", "Linked experiment runs"],
   "打开实验运行": ["打开实验运行", "Open experiment run"],
@@ -240,14 +268,6 @@
   "Scientify · 第一轮 MVP": [
     "Scientify · 第一轮 MVP",
     "Scientify · MVP"
-  ],
-  "已支持：项目管理、文献元信息与 PDF 阅读、arXiv 手动订阅、代码编辑与保存、Git 状态、实验记录、Markdown 预览、笔记和模型提问。": [
-    "已支持：项目管理、文献元信息与 PDF 阅读、arXiv 手动订阅、代码编辑与保存、Git 状态、实验记录、Markdown 预览、笔记和模型提问。",
-    "Available: projects, literature metadata, PDF reading, manual arXiv feeds, code editing, Git status, experiment records, Markdown preview, notes and AI assistance."
-  ],
-  "后续接入：实验执行、Git 提交、LaTeX 编译、自动订阅更新、PDF 批注与实时翻译。AI 需要自行配置模型，首版返回完整回答。": [
-    "后续接入：实验执行、Git 提交、LaTeX 编译、自动订阅更新、PDF 批注与实时翻译。AI 需要自行配置模型，首版返回完整回答。",
-    "Planned: experiment execution, Git commits, LaTeX compilation, automatic feed updates, PDF annotations and translation. Configure your own AI model; responses are currently returned in full."
   ],
   "JSON 导出包含元数据，不包含 PDF 和源码；备份请保留完整数据目录及关联项目文件夹。": [
     "JSON 导出包含元数据，不包含 PDF 和源码；备份请保留完整数据目录及关联项目文件夹。",
@@ -1113,10 +1133,6 @@
     "AI 请求通过桌面后端发送。请启动桌面应用并配置模型。",
     "AI requests use the desktop backend. Start the desktop app and configure a model."
   ],
-  "订阅更新通过桌面后端获取，请在桌面应用中更新。": [
-    "订阅更新通过桌面后端获取，请在桌面应用中更新。",
-    "Feed updates use the desktop backend. Update them in the desktop app."
-  ],
   "请通过 pnpm start 启动 Scientify 桌面应用。浏览器预览没有本地数据访问能力。": [
     "请通过 pnpm start 启动 Scientify 桌面应用。浏览器预览没有本地数据访问能力。",
     "Start Scientify with pnpm start. Browser preview cannot access desktop data."
@@ -1785,26 +1801,6 @@
     "正在更新…",
     "Updating…"
   ],
-  "更新订阅": [
-    "更新订阅",
-    "Update subscription"
-  ],
-  "订阅关键词…": [
-    "订阅关键词…",
-    "Subscription keywords…"
-  ],
-  "订阅关键词": [
-    "订阅关键词",
-    "Subscription keywords"
-  ],
-  "添加主题": [
-    "添加主题",
-    "Add topic"
-  ],
-  "订阅文献": [
-    "订阅文献",
-    "Subscription papers"
-  ],
   "已收录 · 打开": [
     "已收录 · 打开",
     "Added · Open"
@@ -2356,18 +2352,6 @@
   "模型没有返回文本回答，请检查模型是否支持对话。": [
     "模型没有返回文本回答，请检查模型是否支持对话。",
     "The model returned no text. Check that it supports chat."
-  ],
-  "订阅关键词应为 1–200 个字符。": [
-    "订阅关键词应为 1–200 个字符。",
-    "Subscription keywords must be 1–200 characters."
-  ],
-  "无法连接 arXiv，网络异常或服务暂时不可用。": [
-    "无法连接 arXiv，网络异常或服务暂时不可用。",
-    "Could not connect to arXiv. Check the network or try again later."
-  ],
-  "arXiv 响应不是有效 UTF-8。": [
-    "arXiv 响应不是有效 UTF-8。",
-    "The arXiv response is not valid UTF-8."
   ],
   "工作区尚未载入": [
     "工作区尚未载入",
@@ -4174,5 +4158,24 @@
   "Agent 返回的 turn 标识不匹配。": ["Agent 返回的 turn 标识不匹配。", "The Agent returned a mismatched turn ID."],
   "不能将文件夹移动到自身或子目录中。": ["不能将文件夹移动到自身或子目录中。", "A folder cannot be moved into itself or a child folder."],
   "目标文件已存在：{path}": ["目标文件已存在：{path}", "Destination already exists: {path}"],
-  "已完成 {count} 个文件操作。{error}": ["已完成 {count} 个文件操作。{error}", "Completed {count} file operations. {error}"]
+  "已完成 {count} 个文件操作。{error}": ["已完成 {count} 个文件操作。{error}", "Completed {count} file operations. {error}"],
+  "新连接": ["新连接", "New connection"],
+  "连接名称": ["连接名称", "Connection name"],
+  "删除连接": ["删除连接", "Delete connection"],
+  "删除此连接配置？已有会话保留原配置。": ["删除此连接配置？已有会话保留原配置。", "Delete this connection? Existing chats keep their saved configuration."],
+  "请填写 API 密钥。": ["请填写 API 密钥。", "Enter an API key."],
+  "模型验证失败。": ["模型验证失败。", "Model verification failed."],
+  "正在验证聊天与 Agent…": ["正在验证聊天与 Agent…", "Verifying chat and Agent…"],
+  "聊天验证通过": ["聊天验证通过", "Chat verified"],
+  "聊天接口不可用": ["聊天接口不可用", "Chat endpoint unavailable"],
+  "Agent 工具验证通过": ["Agent 工具验证通过", "Agent tools verified"],
+  "仅聊天，Agent 未通过验证": ["仅聊天，Agent 未通过验证", "Chat only; Agent verification failed"],
+  "保存时验证聊天及 Agent 工具回传；只发送测试内容。": ["保存时验证聊天及 Agent 工具回传；只发送测试内容。", "Saving verifies chat and Agent tool results using test content only."],
+  "正在回答…": ["正在回答…", "Responding…"],
+  "此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。": ["此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。", "Chat verification failed. Open a project to use the Agent, or choose another model."],
+  "手动填写模型 ID": ["手动填写模型 ID", "Enter model ID manually"],
+  "模型 ID": ["模型 ID", "Model ID"],
+  "上次回答连接已断开，可以继续提问。": ["上次回答连接已断开，可以继续提问。", "The previous response disconnected. You can continue asking."],
+  "当前连接仅支持聊天，无法修改本地文件。": ["当前连接仅支持聊天，无法修改本地文件。", "This connection supports chat only and cannot modify local files."],
+  "此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。": ["此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。", "This chat does not have paper tools. Start a new chat in the same directory; this history will be kept."]
 }

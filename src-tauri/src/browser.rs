@@ -1,4 +1,6 @@
 //! Remote WebView2 children have no application capabilities and no application preload.
+mod agent;
+pub(crate) use agent::operate as agent_operation;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Mutex};
 use tauri::{
@@ -78,6 +80,7 @@ pub struct Bounds {
 #[serde(tag = "op", rename_all = "camelCase")]
 pub enum Request {
     Open { project_id: String },
+    OpenUrl { project_id: String, address: String },
     Navigate { id: String, address: String },
     Action { id: String, action: String },
     Layout { id: String, bounds: Bounds },
@@ -615,6 +618,40 @@ pub async fn browser_command(
         Request::Open { project_id } => {
             let tab = create_tab(&app, &owner, &project_id)?;
             Ok(serde_json::to_value(tab).unwrap())
+        }
+        Request::OpenUrl {
+            project_id,
+            address,
+        } => {
+            let data = app
+                .state::<crate::AppState>()
+                .storage
+                .load()?
+                .ok_or("请先保存项目。")?;
+            if !data["projects"]
+                .as_array()
+                .is_some_and(|projects| projects.iter().any(|p| p["id"] == project_id))
+            {
+                return Err("项目不存在。".into());
+            }
+            let url = tauri::Url::parse(&address).map_err(|e| e.to_string())?;
+            if !allowed(&url) {
+                return Err("仅允许 HTTP 或 HTTPS 网页。".into());
+            }
+            let existing = owner_tabs(&app, &owner)?
+                .into_iter()
+                .find(|t| t.project_id == project_id && t.url == url.as_str());
+            let tab = if let Some(tab) = existing {
+                tab
+            } else {
+                let tab = create_tab(&app, &owner, &project_id)?;
+                navigate(&app, &tab, url)?;
+                tab
+            };
+            let current = get(&app, &owner, &tab.id)?;
+            app.emit_to(&owner, "browser-created", &current)
+                .map_err(|e| e.to_string())?;
+            Ok(serde_json::to_value(current).map_err(|e| e.to_string())?)
         }
         Request::Navigate { id, address } => {
             let tab = get(&app, &owner, &id)?;

@@ -43,7 +43,7 @@ pub fn start(app: tauri::AppHandle) {
             .values()
             .cloned()
             .collect::<Vec<_>>();
-        let report = serde_json::json!({"passed":result.is_ok(),"probes":result.as_ref().ok(),"error":result.as_ref().err(),"browser":browser,"checks":["isolated library mount","paired notes persisted","native HTTP navigation/title","native history","remote IPC denied","HTTP 429 document retained and recovery","view hide/show/close"]});
+        let report = serde_json::json!({"passed":result.is_ok(),"probes":result.as_ref().ok(),"error":result.as_ref().err(),"browser":browser,"checks":["isolated library mount","paired notes persisted","native HTTP navigation/title","agent rendered page extraction and source links","agent browser project/window isolation","agent browser cancellation","native history","remote IPC denied","HTTP 429 document retained and recovery","view hide/show/close"]});
         if let Some(path) = std::env::var_os("SCIENTIFY_NATIVE_REPORT") {
             let _ = fs::write(path, serde_json::to_vec_pretty(&report).unwrap());
         }
@@ -88,6 +88,10 @@ fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String
             let mut request = [0; 4096];
             let n = stream.read(&mut request).unwrap_or(0);
             let req = String::from_utf8_lossy(&request[..n]);
+            if req.contains("GET /redirect ") {
+                let _ = write!(stream, "HTTP/1.1 302 Found\r\nLocation: /two\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                continue;
+            }
             let title = if req.contains("GET /two ") {
                 "Native two"
             } else if req.contains("GET /limited ") {
@@ -96,7 +100,12 @@ fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String
                 "Native one"
             };
             let body = format!(
-                "<!doctype html><title>{title}</title><h1>{title}</h1><a href='/two'>Next</a>"
+                "<!doctype html><title>{title}</title><h1>{title}</h1><a href='/two'>Next</a>{}",
+                if req.contains("GET /login ") {
+                    "<form><input type='password' value='not-for-the-agent'></form>"
+                } else {
+                    ""
+                }
             );
             let status = if title == "Verification page" {
                 "429 Too Many Requests"
@@ -124,6 +133,127 @@ fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String
             .is_ok_and(|t| t.title == "Native one" && !t.loading)
     })
     .map_err(|e| format!("initial visible load: {e}"))?;
+    let page = crate::browser::agent_operation(
+        app,
+        "main",
+        "smoke-project",
+        "scientify_browser_read",
+        serde_json::json!({"tabId":tab.id}),
+        || false,
+    )?;
+    if !page["text"]
+        .as_str()
+        .is_some_and(|text| text.contains("Native one"))
+        || !page["links"].as_array().is_some_and(|links| {
+            links
+                .iter()
+                .any(|link| link["url"] == format!("http://{address}/two"))
+        })
+    {
+        return Err(format!("browser extraction mismatch: {page}"));
+    }
+    if crate::browser::agent_operation(
+        app,
+        "main",
+        "other-project",
+        "scientify_browser_read",
+        serde_json::json!({"tabId":tab.id}),
+        || false,
+    )
+    .is_ok()
+    {
+        return Err("browser project isolation failed".into());
+    }
+    if crate::browser::agent_operation(
+        app,
+        "workspace",
+        "smoke-project",
+        "scientify_browser_read",
+        serde_json::json!({"tabId":tab.id}),
+        || false,
+    )
+    .is_ok()
+    {
+        return Err("browser window isolation failed".into());
+    }
+    if crate::browser::agent_operation(
+        app,
+        "main",
+        "smoke-project",
+        "scientify_browser_read",
+        serde_json::json!({"tabId":tab.id}),
+        || true,
+    )
+    .is_ok()
+    {
+        return Err("browser cancellation failed".into());
+    }
+    let opened = crate::browser::agent_operation(
+        app,
+        "main",
+        "smoke-project",
+        "scientify_browser_open",
+        serde_json::json!({"url":format!("http://{address}/redirect")}),
+        || false,
+    )?;
+    if opened["url"] != format!("http://{address}/two") || opened["title"] != "Native two" {
+        return Err(format!("agent navigation/redirect mismatch: {opened}"));
+    }
+    let opened_id = opened["tabId"].as_str().ok_or("agent tab missing")?;
+    let blocked = crate::browser::agent_operation(
+        app,
+        "main",
+        "smoke-project",
+        "scientify_browser_open",
+        serde_json::json!({"tabId":opened_id,"url":format!("http://{address}/login")}),
+        || false,
+    )
+    .err()
+    .ok_or("login page must not become a successful page read")?;
+    if !blocked.contains("登录") {
+        return Err(format!("login detection mismatch: {blocked}"));
+    }
+    if crate::browser::agent_operation(
+        app,
+        "main",
+        "smoke-project",
+        "scientify_browser_open",
+        serde_json::json!({"tabId":opened_id,"url":format!("http://{address}/limited")}),
+        || false,
+    )
+    .is_ok()
+    {
+        return Err("HTTP failure must not become a successful page read".into());
+    }
+    crate::browser::agent_operation(
+        app,
+        "main",
+        "smoke-project",
+        "scientify_browser_open",
+        serde_json::json!({"tabId":opened_id,"url":format!("http://{address}/two")}),
+        || false,
+    )?;
+    app.get_webview(opened_id)
+        .ok_or("agent view missing")?
+        .close()
+        .map_err(|e| e.to_string())?;
+    if crate::browser::agent_operation(
+        app,
+        "main",
+        "smoke-project",
+        "scientify_browser_read",
+        serde_json::json!({"tabId":opened_id}),
+        || false,
+    )
+    .is_ok()
+    {
+        return Err("closed pages must not return stale text".into());
+    }
+    app.state::<crate::browser::BrowserState>()
+        .0
+        .lock()
+        .map_err(|e| e.to_string())?
+        .remove(opened_id);
     view.navigate(tauri::Url::parse(&format!("http://{address}/two")).unwrap())
         .map_err(|e| e.to_string())?;
     wait(|| {

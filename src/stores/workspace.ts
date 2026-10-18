@@ -102,7 +102,10 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
           for (const projectId of Object.values(get().agentTasks)) {
             const before = data.projects.find((project) => project.id === projectId);
             const after = draft.projects.find((project) => project.id === projectId);
-            if (!after || (before?.path || before?.repo || '') !== (after.path || after.repo || ''))
+            if (
+              before &&
+              (!after || (before.path || before.repo || '') !== (after.path || after.repo || ''))
+            )
               throw new Error(t('请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。'));
           }
           for (const taskKey of Object.keys(get().agentTasks)) {
