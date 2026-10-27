@@ -104,10 +104,7 @@ pub fn complete<R: tauri::Runtime>(
         if entry.active_turn.as_deref() != params["turnId"].as_str() || entry.lease.is_none() {
             return Err("工具任务已经结束。".into());
         }
-        let result = if matches!(
-            decision["decision"].as_str(),
-            Some("accept" | "acceptForSession")
-        ) {
+        let result = if decision["decision"] == "accept" {
             operate(
                 &app.state::<AppState>().storage,
                 project,

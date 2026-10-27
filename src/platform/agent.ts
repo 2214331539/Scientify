@@ -122,6 +122,12 @@ export type ApprovalRequest = Extract<AgentEvent, { kind: 'request' }> & {
   method: ApprovalMethod;
 };
 
+/** Actions Scientify performs itself (Git, note edits); each request is approved on its own. */
+export const HOST_APPROVAL_METHODS: ReadonlySet<ApprovalMethod> = new Set([
+  'scientify/git/requestApproval',
+  'scientify/notes/requestApproval',
+]);
+
 export function isApprovalRequest(event: AgentEvent): event is ApprovalRequest {
   return event.kind === 'request' && (APPROVAL_METHODS as readonly string[]).includes(event.method);
 }

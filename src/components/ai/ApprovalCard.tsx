@@ -1,7 +1,11 @@
 import { ShieldAlert, TerminalSquare, FileWarning, GitBranch } from 'lucide-react';
 import { Button } from '../primitives';
 import { t } from '../../i18n';
-import type { ApprovalDecision, ApprovalRequest } from '../../platform/agent';
+import {
+  HOST_APPROVAL_METHODS,
+  type ApprovalDecision,
+  type ApprovalRequest,
+} from '../../platform/agent';
 import './approval-card.css';
 
 /** Fields the engine sends with an approval prompt. They are optional in the
@@ -132,7 +136,7 @@ export function ApprovalCard({
           >
             {t('允许')}
           </Button>
-          {event.method !== 'scientify/git/requestApproval' && (
+          {!HOST_APPROVAL_METHODS.has(event.method) && (
             <Button
               variant="secondary"
               size="sm"

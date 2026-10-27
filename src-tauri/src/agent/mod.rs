@@ -966,11 +966,13 @@ pub async fn agent_respond(
                 return Err("审批请求已失效或不属于此会话。".into());
             }
             if let Some(event) = entry.host_requests.get(&id.to_string()).cloned() {
+                // Git actions and note edits are approved one request at a time; nothing
+                // remembers a session-wide approval for them.
                 if !matches!(
                     result["decision"].as_str(),
-                    Some("accept" | "acceptForSession" | "decline" | "cancel")
+                    Some("accept" | "decline" | "cancel")
                 ) {
-                    return Err("该操作只能批准、拒绝或中止。".into());
+                    return Err("该操作只能逐次批准、拒绝或中止。".into());
                 }
                 entry.host_requests.remove(&id.to_string());
                 entry.requests.remove(&id.to_string());
