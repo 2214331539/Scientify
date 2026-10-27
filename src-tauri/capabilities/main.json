@@ -63,7 +63,11 @@
     "allow-note-image",
     "allow-library-external",
     "allow-library-import-bytes",
-    "allow-browser-command"
+    "allow-browser-command",
+    "allow-translation-window"
   ],
-  "webviews": ["main", "workspace"]
+  "webviews": [
+    "main",
+    "workspace"
+  ]
 }

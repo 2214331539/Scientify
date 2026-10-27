@@ -17,6 +17,8 @@ fn main() {
             "library_external",
             "library_import_bytes",
             "browser_command",
+            "translation_window",
+            "translation_service",
             "open_project_window",
             "workspace_window_ready",
             "workspace_load",

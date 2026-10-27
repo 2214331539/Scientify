@@ -188,3 +188,18 @@ dialog.settings-dialog[open] {
     flex-direction: column;
   }
 }
+.settings-translation .setting-row select,
+.settings-translation .setting-row input[type='text'],
+.settings-shortcut-input {
+  min-width: 120px;
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+  background: var(--sf-surface-canvas);
+}
+.settings-translation .setting-row input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--sf-accent);
+}

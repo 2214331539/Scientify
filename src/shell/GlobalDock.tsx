@@ -1,25 +1,40 @@
 import { t } from '../i18n';
-import { useCallback, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
-import { Bot, NotebookPen, X } from 'lucide-react';
+import { useStore } from 'zustand';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import { Bot, Languages, NotebookPen, X } from 'lucide-react';
 import { Button } from '../components/primitives';
 import type { WorkContext } from '../domain/context';
 import type { ResearchBackend } from '../platform/research';
 import type { WorkspaceStore } from '../stores/workspace';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
 import { NotesPanel } from '../features/notes/NotesPanel';
+import { NativeTranslationPanel } from '../features/translation/NativeTranslationPanel';
 import { scopeFor } from '../features/notes/model';
 import './auxiliary.css';
+import { isTauri } from '@tauri-apps/api/core';
+import {
+  translationWindow,
+  watchTranslationWindow,
+  type TranslationHandoff,
+} from '../features/translation/window';
 
 export interface GlobalDockProps {
   store: WorkspaceStore;
   backend: ResearchBackend;
-  tool: 'assistant' | 'notes';
+  tool: 'assistant' | 'notes' | 'translator';
   context: WorkContext;
   open?: boolean;
   notesWorkspace?: boolean;
   resizeHandle?: ReactNode;
   onNoteContext?: (context: WorkContext) => void;
-  onToolChange: (tool: 'assistant' | 'notes') => void;
+  onToolChange: (tool: 'assistant' | 'notes' | 'translator') => void;
   onClose: () => void;
   onDirtyChange?: (dirty: boolean) => void;
   workspaceContent?: ReactNode;
@@ -91,6 +106,35 @@ export function GlobalDock({
   notesWorkspaceActive = notesWorkspace,
 }: GlobalDockProps) {
   const scope = scopeFor(context);
+  const handoffTarget = useRef({ scope, onToolChange });
+  handoffTarget.current = { scope, onToolChange };
+  const deliveredHandoff = useRef<string | null>(null);
+  useEffect(() => {
+    let disposed = false;
+    const stop = watchTranslationWindow(
+      'translation-assistant-handoff',
+      async () => {
+        const payload = await translationWindow<TranslationHandoff | null>({ type: 'takeHandoff' });
+        if (disposed || !payload) return;
+        if (deliveredHandoff.current !== payload.id) {
+          const target = handoffTarget.current;
+          window.dispatchEvent(
+            new CustomEvent('scientify-assistant-prefill', {
+              detail: { ...payload, scope: target.scope },
+            }),
+          );
+          target.onToolChange('assistant');
+          deliveredHandoff.current = payload.id;
+        }
+        await translationWindow({ type: 'ackHandoff', id: payload.id });
+      },
+      (reason) => store.setState({ error: String(reason) }),
+    );
+    return () => {
+      disposed = true;
+      stop();
+    };
+  }, [store]);
   const scopes = useRef(new Map<string, WorkContext>());
   const dirtySources = useRef(new Set<string>());
   const dirtyCallback = useRef(onDirtyChange);
@@ -104,9 +148,17 @@ export function GlobalDock({
       dirtyCallback.current?.(dirtySources.current.size > 0);
   }, []);
   const integrated = workspaceContent !== undefined;
-  const sideVisible = open && (!notesWorkspaceActive || tool === 'assistant');
+  const translationEnabled = useStore(
+    store,
+    (state) => isTauri() || state.data?.settings.translation?.enabled !== false,
+  );
+  const sideVisible =
+    open &&
+    (!notesWorkspaceActive || tool !== 'notes') &&
+    (tool !== 'translator' || translationEnabled);
   const notesVisible = notesWorkspaceActive || (open && tool === 'notes' && !notesWorkspace);
   const assistantVisible = open && tool === 'assistant';
+  const translatorVisible = open && tool === 'translator' && translationEnabled;
   useLayoutEffect(() => {
     if (!notesWorkspace && notesLayerRef?.current) {
       notesLayerRef.current.hidden = !notesVisible;
@@ -162,6 +214,16 @@ export function GlobalDock({
             <NotebookPen size={14} />
             {t('Notes')}
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={tool === 'translator'}
+            disabled={!translationEnabled}
+            onClick={() => onToolChange('translator')}
+          >
+            <Languages size={14} />
+            {t('翻译')}
+          </Button>
         </div>
         <Button variant="ghost" size="sm" iconOnly aria-label={t('收起辅助栏')} onClick={onClose}>
           <X size={15} />
@@ -191,6 +253,19 @@ export function GlobalDock({
         aria-label={t('AI Assistant')}
       >
         {sessions('assistant')}
+      </aside>
+      <aside
+        className="sf-dock-layer sf-dock-translator sf-global-dock"
+        data-active={translatorVisible}
+        aria-hidden={!translatorVisible}
+        inert={!translatorVisible}
+        aria-label={t('翻译')}
+      >
+        {isTauri() ? (
+          <NativeTranslationPanel context={context} />
+        ) : (
+          <p>{t('划词翻译请在 Scientify 桌面应用中使用。')}</p>
+        )}
       </aside>
     </div>
   );

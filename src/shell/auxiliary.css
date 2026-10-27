@@ -51,7 +51,8 @@
   overflow: hidden;
 }
 .sf-workspace-layout > .sf-dock-notes,
-.sf-workspace-layout > .sf-dock-assistant {
+.sf-workspace-layout > .sf-dock-assistant,
+.sf-workspace-layout > .sf-dock-translator {
   grid-area: 2 / 2;
 }
 .sf-workspace-layout.has-notes-workspace > .sf-dock-notes {
@@ -141,19 +142,22 @@
 .sf-dock-layout .sf-dock-tabs {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .sf-dock-tab-indicator {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 50%;
+  width: 33.3333%;
   height: 2px;
   background: var(--sf-text-secondary);
   transition: transform var(--sf-motion-selection) var(--sf-ease-apple);
 }
 .sf-dock-layout[data-tool='notes'] .sf-dock-tab-indicator {
   transform: translateX(100%);
+}
+.sf-dock-layout[data-tool='translator'] .sf-dock-tab-indicator {
+  transform: translateX(200%);
 }
 .research-shell .sf-dock-layout .sf-dock-tabs button {
   justify-content: center;
@@ -166,7 +170,9 @@
   .sf-workspace-layout > .sf-dock-resize {
     display: none;
   }
-  .research-shell .sf-workspace-layout > :is(.sf-dock-shared-header, .sf-dock-assistant),
+  .research-shell
+    .sf-workspace-layout
+    > :is(.sf-dock-shared-header, .sf-dock-assistant, .sf-dock-translator),
   .research-shell .sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
     grid-area: auto;
     position: absolute;
@@ -180,6 +186,7 @@
     top: 0;
   }
   .sf-workspace-layout > .sf-dock-assistant,
+  .sf-workspace-layout > .sf-dock-translator,
   .sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
     inset-block: var(--dock-header-height) 0;
     height: auto;
@@ -194,7 +201,7 @@
   }
   .research-shell
     .sf-dock-layout.has-notes-workspace
-    > :is(.sf-dock-shared-header, .sf-dock-assistant) {
+    > :is(.sf-dock-shared-header, .sf-dock-assistant, .sf-dock-translator) {
     grid-area: auto;
     position: absolute;
     right: 0;
@@ -207,7 +214,8 @@
     top: 0;
     height: var(--dock-header-height);
   }
-  .has-notes-workspace > .sf-dock-assistant {
+  .has-notes-workspace > .sf-dock-assistant,
+  .has-notes-workspace > .sf-dock-translator {
     inset-block: var(--dock-header-height) 0;
     height: auto;
   }

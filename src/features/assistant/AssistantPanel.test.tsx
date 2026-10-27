@@ -15,6 +15,45 @@ import { freezeContext, newConversation, requestMessages } from './model';
 
 afterEach(cleanup);
 
+it('hands translation to the requested project without overwriting its draft', async () => {
+  const data = emptyWorkspace();
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+    restore: async () => data,
+    migrateLegacy: async () => data,
+    importWorkspace: async () => null,
+    exportWorkspace: async () => true,
+    chooseDirectory: async () => null,
+  });
+  await store.getState().load();
+  const backend = {} as ResearchBackend;
+  render(
+    <>
+      <AssistantPanel store={store} backend={backend} scope="p1" context={context} />
+      <AssistantPanel
+        store={store}
+        backend={backend}
+        scope="p2"
+        context={{ ...context, projectId: 'p2' }}
+      />
+    </>,
+  );
+  const [first, second] = screen.getAllByLabelText('向 AI 提问') as HTMLTextAreaElement[];
+  fireEvent.change(first, { target: { value: 'Existing draft' } });
+  fireEvent.change(second, { target: { value: 'Other project draft' } });
+  act(() =>
+    window.dispatchEvent(
+      new CustomEvent('scientify-assistant-prefill', {
+        detail: { scope: 'p1', source: 'Original', translation: 'Translated' },
+      }),
+    ),
+  );
+  expect(first.value).toContain('Existing draft');
+  expect(first.value).toContain('Translated');
+  expect(second.value).toBe('Other project draft');
+});
+
 it('starts a paper-tools upgrade chat in the old literature root after navigating to code', async () => {
   const data = emptyWorkspace();
   data.projects.push({ id: 'p1', name: 'project', question: '', createdAt: '', space: 'personal' });

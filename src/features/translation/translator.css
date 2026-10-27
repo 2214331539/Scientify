@@ -1,0 +1,13 @@
+.sf-native-translator {
+  padding: 20px;
+  overflow: auto;
+}
+.sf-native-translator-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.sf-native-translator textarea {
+  min-height: 140px;
+}

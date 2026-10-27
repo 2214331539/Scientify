@@ -69,6 +69,15 @@ export type WebSources = {
   groups: { id: string; name: string; order: number }[];
   items: WebSource[];
 };
+export type TranslationSettings = {
+  enabled: boolean;
+  sourceLanguage: string;
+  targetLanguage: string;
+  style: 'natural' | 'literal' | 'academic' | 'concise';
+  contextEnabled: boolean;
+  hotkey: string;
+  popupScale: number;
+};
 export type Workspace = {
   [key: string]: unknown;
   schema: 3;
@@ -103,6 +112,7 @@ export type Workspace = {
       verification?: ModelSettings['verification'];
     };
     shortcuts?: ShortcutSettings;
+    translation?: TranslationSettings;
   };
   navigation: {
     [key: string]: unknown;
@@ -134,6 +144,15 @@ export function emptyWorkspace(): Workspace {
       theme: 'system',
       name: '',
       model: { endpoint: 'http://127.0.0.1:11434', model: '' },
+      translation: {
+        enabled: true,
+        sourceLanguage: 'auto',
+        targetLanguage: 'zh-CN',
+        style: 'academic',
+        contextEnabled: true,
+        hotkey: 'Alt+Shift+T',
+        popupScale: 1,
+      },
     },
     navigation: { tabs: ['home'], active: 'home', expanded: [], panel: null },
   };

@@ -1,5 +1,57 @@
 {
+  "翻译": ["翻译", "Translate"],
+  "源语言": ["源语言", "Source language"],
+  "目标语言": ["目标语言", "Target language"],
+  "翻译风格": ["翻译风格", "Translation style"],
+  "原文": ["原文", "Original"],
+  "译文": ["译文", "Translation"],
+  "在这里输入或粘贴需要翻译的内容…": [
+    "在这里输入或粘贴需要翻译的内容…",
+    "Type or paste text to translate…"
+  ],
+  "正在流式翻译…": ["正在流式翻译…", "Translating…"],
+  "译文会显示在这里": ["译文会显示在这里", "Your translation will appear here"],
+  "重新翻译": ["重新翻译", "Translate again"],
+  "中止": ["中止", "Stop"],
+  "发送到 AI": ["发送到 AI", "Send to AI"],
   "解释": ["解释", "Explain"],
+  "交换语言": ["交换语言", "Swap languages"],
+  "固定翻译浮窗": ["固定翻译浮窗", "Pin translator"],
+  "取消固定": ["取消固定", "Unpin translator"],
+  "选中文本或粘贴内容": ["选中文本或粘贴内容", "Select text or paste content"],
+  "启用翻译浮窗": ["启用翻译浮窗", "Enable translator popup"],
+  "翻译浮窗复用当前 AI 模型配置，但不会读取或修改工作区文件。": [
+    "翻译浮窗复用当前 AI 模型配置，但不会读取或修改工作区文件。",
+    "The translator reuses the current AI model without reading or modifying workspace files."
+  ],
+  "在 AI、笔记旁打开翻译工具，选中文本后可直接翻译。": [
+    "在 AI、笔记旁打开翻译工具，选中文本后可直接翻译。",
+    "Open the translator beside AI and Notes to translate selected text."
+  ],
+  "默认语言": ["默认语言", "Default languages"],
+  "翻译浮窗首次打开时使用的语言组合。": [
+    "翻译浮窗首次打开时使用的语言组合。",
+    "Languages used when the translator opens."
+  ],
+  "学术风格会优先保留术语、公式和 Markdown 结构。": [
+    "学术风格会优先保留术语、公式和 Markdown 结构。",
+    "Academic style preserves terminology, formulas and Markdown structure."
+  ],
+  "使用当前页面上下文": ["使用当前页面上下文", "Use current page context"],
+  "将论文标题、页码和当前路径作为翻译提示，不会上传整篇文献。": [
+    "将论文标题、页码和当前路径作为翻译提示，不会上传整篇文献。",
+    "Use the paper title, page and path as hints without uploading the whole paper."
+  ],
+  "全局快捷键": ["全局快捷键", "Global shortcut"],
+  "应用快捷键": ["应用快捷键", "Apply shortcut"],
+  "Windows 支持系统选区；其他平台暂支持应用内选区。": [
+    "Windows 支持系统选区；其他平台暂支持应用内选区。",
+    "Windows supports system selections; other platforms currently support in-app selections."
+  ],
+  "按下此快捷键可读取当前应用的选中文本并打开翻译浮窗。": [
+    "按下此快捷键可读取当前应用的选中文本并打开翻译浮窗。",
+    "Use this shortcut to read the current app's selection and open the translator."
+  ],
   "执行权限": ["执行权限", "Execution permissions"],
   "询问": ["询问", "Ask"],
   "完全允许": ["完全允许", "Full access"],
@@ -2326,5 +2378,88 @@
   "分割线": ["分割线", "分割线"],
   "文字": ["文字", "文字"],
   "正在保存图片…": ["正在保存图片…", "正在保存图片…"],
-  "请求修改笔记": ["请求修改笔记", "请求修改笔记"]
+  "请求修改笔记": ["请求修改笔记", "请求修改笔记"],
+  "在独立浮窗打开": ["在独立浮窗打开", "Open in floating window"],
+  "无法保存翻译设置。": ["无法保存翻译设置。", "Could not save translation settings."],
+  "正在载入翻译配置…": ["正在载入翻译配置…", "Loading translation settings…"],
+  "浮窗内的语言与风格仅用于本次翻译；默认值请在全局翻译设置中修改。": [
+    "浮窗内的语言与风格仅用于本次翻译；默认值请在全局翻译设置中修改。",
+    "Language and style apply to this window. Change defaults in Translation settings."
+  ],
+  "学术": ["学术", "Academic"],
+  "自然": ["自然", "Natural"],
+  "直译": ["直译", "Literal"],
+  "简洁": ["简洁", "Concise"],
+  "系统划词权限": ["系统划词权限", "System selection permissions"],
+  "macOS 辅助功能权限": ["macOS 辅助功能权限", "macOS Accessibility permission"],
+  "读取其他应用的选中文字需要辅助功能权限。请在系统设置中允许 Scientify；仍可直接粘贴翻译。": [
+    "读取其他应用的选中文字需要辅助功能权限。请在系统设置中允许 Scientify；仍可直接粘贴翻译。",
+    "Allow Scientify in system Accessibility settings to read selected text in other apps. You can still paste text manually."
+  ],
+  "授予权限": ["授予权限", "Grant permission"],
+  "打开系统设置": ["打开系统设置", "Open System Settings"],
+  "重新检查": ["重新检查", "Check again"],
+  "已授权": ["已授权", "Granted"],
+  "Windows 和 macOS 支持选中文字后按全局快捷键；Mac 需要辅助功能权限。": [
+    "Windows 和 macOS 支持选中文字后按全局快捷键；Mac 需要辅助功能权限。",
+    "On Windows and macOS, select text and press the global shortcut. macOS requires Accessibility permission."
+  ],
+  "请在翻译设置中授予 Scientify macOS 辅助功能权限，再读取其他应用的选中文字。": [
+    "请在翻译设置中授予 Scientify macOS 辅助功能权限，再读取其他应用的选中文字。",
+    "Grant Scientify macOS Accessibility permission in Translation settings to read selections in other apps."
+  ],
+  "翻译浮窗": ["翻译浮窗", "Translation popup"],
+  "阅读内容": ["阅读内容", "Reading content"],
+  "关闭翻译": ["关闭翻译", "Close translation"],
+  "拖动窗口": ["拖动窗口", "Drag to move"],
+  "拖动调整大小": ["拖动调整大小", "Drag to resize"],
+  "切换语言后重新翻译": ["切换语言后重新翻译", "Retranslate when the target language changes"],
+  "AI 解释": ["AI 解释", "AI explanation"],
+  "返回译文": ["返回译文", "Back to translation"],
+  "修改译文": ["修改译文", "Edit translation"],
+  "仅修改当前译文": ["仅修改当前译文", "This translation only"],
+  "应用修改": ["应用修改", "Apply changes"],
+  "解释选中内容": ["解释选中内容", "Explain selection"],
+  "对此提问…": ["对此提问…", "Ask about this…"],
+  "划词翻译": ["划词翻译", "Selection translation"],
+  "在论文、浏览器或其他应用中选中文字，松开鼠标后自动翻译。固定窗口后，再次划词会打开新的翻译窗口。": [
+    "在论文、浏览器或其他应用中选中文字，松开鼠标后自动翻译。固定窗口后，再次划词会打开新的翻译窗口。",
+    "Select text in a paper, browser, or another app to translate on release. Pin a window to keep it when translating another selection."
+  ],
+  "自动划词已启用": ["自动划词已启用", "Automatic selection is enabled"],
+  "自动划词已暂停": ["自动划词已暂停", "Automatic selection is paused"],
+  "Ctrl + Shift + T 翻译剪贴板中的文字。": [
+    "Ctrl + Shift + T 翻译剪贴板中的文字。",
+    "Ctrl + Shift + T translates the text already on your clipboard."
+  ],
+  "暂停划词": ["暂停划词", "Pause selection"],
+  "启用划词": ["启用划词", "Enable selection"],
+  "系统取词尚未就绪，请在翻译设置中检查权限或修复输入捕获。": [
+    "系统取词尚未就绪，请在翻译设置中检查权限或修复输入捕获。",
+    "Selection capture is not ready. Check permissions or repair input capture in translation settings."
+  ],
+  "剪贴板快捷键尚未就绪，仍可使用下方按钮。": [
+    "剪贴板快捷键尚未就绪，仍可使用下方按钮。",
+    "The clipboard shortcut is unavailable. You can still use the button below."
+  ],
+  "翻译设置无法读取，请在翻译设置中检查原文件。": [
+    "翻译设置无法读取，请在翻译设置中检查原文件。",
+    "Translation settings could not be read. Open translation settings to check the original file."
+  ],
+  "打开完整翻译设置": ["打开完整翻译设置", "Open translation settings"],
+  "翻译剪贴板": ["翻译剪贴板", "Translate clipboard"],
+  "语言、术语表、字体、浮窗外观、纠错记忆和问答记录在翻译设置中管理。模型与密钥沿用 AI 助手的配置。": [
+    "语言、术语表、字体、浮窗外观、纠错记忆和问答记录在翻译设置中管理。模型与密钥沿用 AI 助手的配置。",
+    "Manage languages, glossary, fonts, appearance, saved corrections and AI records in translation settings. Models and credentials are shared with the AI assistant."
+  ],
+  "待翻译文本": ["待翻译文本", "Text to translate"],
+  "也可以粘贴文字，在浮窗中翻译…": [
+    "也可以粘贴文字，在浮窗中翻译…",
+    "Paste text to translate in a floating window…"
+  ],
+  "使用当前选区": ["使用当前选区", "Use current selection"],
+  "划词翻译请在 Scientify 桌面应用中使用。": [
+    "划词翻译请在 Scientify 桌面应用中使用。",
+    "Selection translation is available in the Scientify desktop app."
+  ]
 }

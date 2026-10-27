@@ -65,7 +65,7 @@ type UISession = {
   projectId: string | null;
   space: string;
   locations: Record<string, Location>;
-  dock: 'assistant' | 'notes';
+  dock: 'assistant' | 'notes' | 'translator';
   dockOpen: boolean;
   leftWidth: number;
   rightWidth: number;
@@ -111,7 +111,7 @@ function readSession(storageKey = 'scientify.ui.v2'): UISession {
               ];
             }),
         ),
-        dockOpen: value.dock === 'notes' && value.dockOpen === true,
+        dockOpen: ['notes', 'translator'].includes(value.dock) && value.dockOpen === true,
         leftWidth: Math.max(180, Math.min(300, Number(value.leftWidth) || 240)),
         rightWidth: Math.max(
           MIN_DOCK_WIDTH,
@@ -399,10 +399,11 @@ export function App({
     });
   }, []);
   const openTool = useCallback(
-    (tool: 'assistant' | 'notes') => setUI((s) => ({ ...s, dock: tool, dockOpen: true })),
+    (tool: 'assistant' | 'notes' | 'translator') =>
+      setUI((s) => ({ ...s, dock: tool, dockOpen: true })),
     [],
   );
-  function toggleTool(tool: 'assistant' | 'notes') {
+  function toggleTool(tool: 'assistant' | 'notes' | 'translator') {
     if (tool === 'notes' && workspace === 'notes') return;
     setUI((s) => ({ ...s, dock: tool, dockOpen: s.dock !== tool || !s.dockOpen }));
   }
@@ -709,7 +710,7 @@ export function App({
   if (notesWorkspace && !notesPlacement) setNotesPlacement(true);
   const hasResourceSidebar = workspace === 'experiments' && view !== 'runs';
   const inlineDockOpen =
-    ui.dockOpen && windowWidth > 900 && (!notesWorkspace || ui.dock === 'assistant');
+    ui.dockOpen && windowWidth > 900 && (!notesWorkspace || ui.dock !== 'notes');
   const rightWidth = Math.min(
     ui.rightWidth,
     Math.max(
@@ -959,7 +960,7 @@ export function App({
           store={store}
           backend={backend}
           tool={ui.dock}
-          open={!!project && ui.dockOpen}
+          open={ui.dockOpen}
           notesWorkspace={notesPlacement && !!project}
           workspaceContent={project ? central : undefined}
           notesLayerRef={notesLayerRef}
@@ -970,7 +971,13 @@ export function App({
           onClose={() => {
             setUI((s) => ({ ...s, dockOpen: false }));
             document
-              .getElementById(ui.dock === 'assistant' ? 'assistant-toggle' : 'notes-toggle')
+              .getElementById(
+                ui.dock === 'assistant'
+                  ? 'assistant-toggle'
+                  : ui.dock === 'notes'
+                    ? 'notes-toggle'
+                    : 'translator-toggle',
+              )
               ?.focus();
           }}
           resizeHandle={

@@ -110,6 +110,13 @@ pub async fn workspace_window_ready(app: tauri::AppHandle) -> Result<(), String>
 pub fn show_projects(app: &tauri::AppHandle) {
     if let Some(manager) = app.get_webview_window("main") {
         let _ = manager.emit("projects-refresh", ());
+        if let Err(error) = app.emit_to(
+            tauri::EventTarget::webview("main"),
+            "translation-assistant-handoff",
+            (),
+        ) {
+            eprintln!("Scientify 翻译交接通知失败：{error}");
+        }
         let _ = manager.show();
         let _ = manager.unminimize();
         let _ = manager.set_focus();

@@ -370,6 +370,33 @@ export function AssistantPanel({
   }, [recallKey, settings.provider, settings.endpoint, selectedSlot, safeError]);
   useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
 
+  useEffect(() => {
+    const onPrefill = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          scope: string;
+          source?: string;
+          translation?: string;
+          question?: string;
+        }>
+      ).detail;
+      if (detail?.scope !== scope || (!detail.source && !detail.translation)) return;
+      const text = [
+        detail.question ?? '请基于下面的原文和译文继续分析。',
+        detail.source ? `原文：\n${detail.source}` : '',
+        detail.translation ? `译文：\n${detail.translation}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+      setPrompt(
+        [drafts.current.get(activeConversationId.current), text].filter(Boolean).join('\n\n'),
+      );
+      requestAnimationFrame(() => composerRef.current?.focus());
+    };
+    window.addEventListener('scientify-assistant-prefill', onPrefill);
+    return () => window.removeEventListener('scientify-assistant-prefill', onPrefill);
+  }, [scope]);
+
   function openSettings() {
     ++profileRecall.current;
     setMenu(null);

@@ -44,6 +44,8 @@ pub struct AIRequest {
     connection: Connection,
     model: String,
     messages: Vec<Message>,
+    max_tokens: Option<u32>,
+    temperature: Option<f64>,
 }
 #[derive(Deserialize)]
 pub struct ModelTest {
@@ -550,7 +552,18 @@ fn completion_call(
     }
     let connection = &request.connection;
     let root = base(connection)?;
-    let tokens = if probe { 32 } else { 4096 };
+    let tokens = if probe {
+        32
+    } else {
+        request.max_tokens.unwrap_or(4096)
+    };
+    if !(1..=32768).contains(&tokens)
+        || request
+            .temperature
+            .is_some_and(|v| !v.is_finite() || !(0.0..=2.0).contains(&v))
+    {
+        return Err("模型生成参数无效。".into());
+    }
     let system = request
         .messages
         .iter()
@@ -604,6 +617,15 @@ fn completion_call(
         }
     };
     let mut body = body;
+    if !probe {
+        if let Some(temperature) = request.temperature {
+            match connection.provider {
+                Provider::Ollama => body["options"]["temperature"] = json!(temperature),
+                Provider::Gemini => body["generationConfig"]["temperature"] = json!(temperature),
+                _ => body["temperature"] = json!(temperature),
+            }
+        }
+    }
     let mut url = url;
     if streaming {
         if matches!(connection.provider, Provider::Gemini) {
@@ -660,6 +682,8 @@ fn output(value: &Value, provider: Provider) -> String {
 #[tauri::command]
 pub async fn research_test_model(request: ModelTest) -> Result<(), String> {
     let request = AIRequest {
+        max_tokens: None,
+        temperature: None,
         connection: request.connection,
         model: request.model,
         messages: vec![Message {
@@ -945,6 +969,8 @@ pub(crate) mod tests {
             }))
             .unwrap();
             let request = AIRequest {
+                max_tokens: None,
+                temperature: None,
                 connection: connection(&url, provider),
                 model: "chat-a".into(),
                 messages: vec![

@@ -9,6 +9,8 @@ mod ai;
 mod browser;
 mod credentials;
 mod data_location;
+mod translation_window;
+mod yita;
 pub use data_location::migrate_offline as migrate_storage_offline;
 mod code;
 mod experiments;
@@ -18,9 +20,9 @@ pub use experiments::runner::run as run_managed_experiment;
 #[cfg(test)]
 mod ipc_smoke;
 mod library;
-mod notes;
 #[cfg(debug_assertions)]
 mod literature_smoke;
+mod notes;
 mod research;
 mod windows;
 
@@ -79,7 +81,13 @@ async fn workspace_save<R: tauri::Runtime>(
         )?;
         app.state::<experiments::ExperimentState>()
             .protect(storage.load()?.as_ref(), Some(&workspace))?;
-        storage.save(workspace, expected_revision)
+        let saved = storage.save(workspace, expected_revision)?;
+        if ["model", "translation"].iter().any(|key| {
+            current.as_ref().map(|data| &data["settings"][key]) != Some(&saved["settings"][key])
+        }) {
+            yita::refresh(&app);
+        }
+        Ok(saved)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -214,13 +222,21 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(browser::BrowserState::default())
+        .manage(translation_window::WindowState::default())
+        .manage(yita::YitaState::default())
         .manage(agent::papers::PaperState::default())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
+                if let Some(chat) = window.app_handle().try_state::<ai::stream::ChatState>() {
+                    chat.close_owner(window.label());
+                }
                 window
                     .app_handle()
                     .state::<agent::papers::PaperState>()
                     .close_owner(window.label());
+            }
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                yita::stop(window.app_handle());
             }
             if window.label() == "workspace" && matches!(event, tauri::WindowEvent::Destroyed) {
                 browser::close_owner(window.app_handle(), "workspace");
@@ -289,6 +305,7 @@ pub fn run() {
             tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
                 .data_directory(profile)
                 .build()?;
+            yita::refresh(app.handle());
             #[cfg(debug_assertions)]
             if isolated_smoke && std::env::var_os("SCIENTIFY_NATIVE_UI").is_none() {
                 literature_smoke::start(app.handle().clone());
@@ -306,6 +323,8 @@ pub fn run() {
             library::library_external,
             library::library_import_bytes,
             browser::browser_command,
+            translation_window::translation_window,
+            yita::translation_service,
             windows::open_project_window,
             windows::workspace_window_ready,
             workspace_load,

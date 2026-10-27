@@ -8,6 +8,21 @@ use tokio::{io::AsyncBufReadExt, sync::watch};
 #[derive(Default)]
 pub struct ChatState(Mutex<HashMap<String, (String, watch::Sender<bool>)>>);
 
+impl ChatState {
+    pub fn close_owner(&self, label: &str) {
+        match self.0.lock() {
+            Ok(active) => {
+                for (owner, sender) in active.values() {
+                    if owner == label {
+                        let _ = sender.send(true);
+                    }
+                }
+            }
+            Err(error) => eprintln!("Scientify 翻译请求清理失败：{error}"),
+        }
+    }
+}
+
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum ChatEvent {
@@ -28,13 +43,45 @@ fn http_error(status: reqwest::StatusCode) -> String {
         code => format!("模型服务返回 HTTP {code}。"),
     }
 }
-pub(super) async fn send(call: RequestBuilder) -> Result<reqwest::Response, String> {
-    let response = call
-        .send()
-        .await
-        .map_err(|_| "模型连接失败或超时，请检查服务。")?;
+
+pub(crate) struct StreamError {
+    pub message: String,
+    pub status: u16,
+}
+impl From<String> for StreamError {
+    fn from(message: String) -> Self {
+        Self {
+            message,
+            status: 400,
+        }
+    }
+}
+impl From<&str> for StreamError {
+    fn from(message: &str) -> Self {
+        message.to_owned().into()
+    }
+}
+impl From<StreamError> for String {
+    fn from(error: StreamError) -> Self {
+        error.message
+    }
+}
+impl std::fmt::Debug for StreamError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.message.fmt(formatter)
+    }
+}
+
+pub(super) async fn send(call: RequestBuilder) -> Result<reqwest::Response, StreamError> {
+    let response = call.send().await.map_err(|_| StreamError {
+        message: "模型连接失败或超时，请检查服务。".into(),
+        status: 503,
+    })?;
     if !response.status().is_success() {
-        return Err(http_error(response.status()));
+        return Err(StreamError {
+            message: http_error(response.status()),
+            status: response.status().as_u16(),
+        });
     }
     Ok(response)
 }
@@ -87,11 +134,11 @@ fn delta(value: &Value, provider: Provider) -> Result<(String, bool), String> {
     Ok(result)
 }
 
-async fn complete_stream(
+pub(crate) async fn complete_stream(
     request: &AIRequest,
     text: &mut String,
     channel: &Channel<ChatEvent>,
-) -> Result<(), String> {
+) -> Result<(), StreamError> {
     let response = send(completion_call(request, false, true)?).await?;
     let mut size = 0usize;
     let mut consume = |data: &str| -> Result<bool, String> {
@@ -218,6 +265,26 @@ mod tests {
     use tauri::Manager;
 
     #[test]
+    fn closing_popup_cancels_only_its_own_requests() {
+        let state = ChatState::default();
+        let (popup, popup_cancelled) = watch::channel(false);
+        let (workspace, workspace_cancelled) = watch::channel(false);
+        state
+            .0
+            .lock()
+            .unwrap()
+            .insert("translation".into(), ("translator".into(), popup));
+        state
+            .0
+            .lock()
+            .unwrap()
+            .insert("assistant".into(), ("workspace".into(), workspace));
+        state.close_owner("translator");
+        assert!(*popup_cancelled.borrow());
+        assert!(!*workspace_cancelled.borrow());
+    }
+
+    #[test]
     fn streams_native_protocols_and_retains_partial_text_on_broken_streams() {
         for (provider, mime, body, expected, succeeds) in [
             (Provider::Openai, "text/event-stream", "data: {\"choices\":[{\"delta\":{\"content\":\"中文\"}}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"回答\"},\"finish_reason\":\"stop\"}]}\n\n", "中文回答", true),
@@ -228,12 +295,12 @@ mod tests {
             (Provider::Openai, "text/event-stream", "data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\ndata: {\"error\":{\"message\":\"secret\"}}\n\n", "partial", false),
         ] {
             let (endpoint, server) = super::super::tests::server_mime(vec![("200 OK", mime, body)]);
-            let request = AIRequest { connection: Connection { endpoint, provider, api_key: Some("test-secret".into()) }, model: "test-model".into(), messages: vec![Message { role: Role::User, content: "test".into() }] };
+            let request = AIRequest { max_tokens: None, temperature: None, connection: Connection { endpoint, provider, api_key: Some("test-secret".into()) }, model: "test-model".into(), messages: vec![Message { role: Role::User, content: "test".into() }] };
             let mut text = String::new();
             let result = tauri::async_runtime::block_on(complete_stream(&request, &mut text, &Channel::new(|_| Ok(()))));
             assert_eq!(text, expected);
             assert_eq!(result.is_ok(), succeeds, "{result:?}");
-            if let Err(error) = result { assert!(!error.contains("secret")); }
+            if let Err(error) = result { assert!(!error.message.contains("secret")); }
             let requests = server.join().unwrap();
             assert!(requests[0].contains("stream\":true") || requests[0].contains(":streamGenerateContent?alt=sse"));
         }
@@ -255,6 +322,8 @@ mod tests {
         let request_id = uuid::Uuid::new_v4().to_string();
         let id = request_id.clone();
         let request = AIRequest {
+            max_tokens: None,
+            temperature: None,
             connection: Connection {
                 endpoint: format!("http://{}", listener.local_addr().unwrap()),
                 provider: Provider::Openai,

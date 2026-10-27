@@ -1,3 +1,5 @@
+import { isTauri } from '@tauri-apps/api/core';
+import { NativeTranslationPanel } from '../translation/NativeTranslationPanel';
 import { t, translateError } from '../../i18n';
 import { Button, Input } from '../../components/primitives';
 import { PreferenceFields } from './Appearance';
@@ -7,9 +9,17 @@ import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { StorageLocation } from '../../platform/desktop';
-import { CircleHelp, Database, Keyboard, Palette, Settings } from 'lucide-react';
+import { CircleHelp, Database, Keyboard, Languages, Palette, Settings } from 'lucide-react';
 import { ShortcutsSettings } from './ShortcutsSettings';
 import './settings.css';
+
+function TranslationPreferences() {
+  return isTauri() ? (
+    <NativeTranslationPanel settings />
+  ) : (
+    <p>{t('划词翻译请在 Scientify 桌面应用中使用。')}</p>
+  );
+}
 
 function DataPreferences({ store }: { store: WorkspaceStore }) {
   const state = useStore(store);
@@ -163,7 +173,7 @@ export function SettingsDialog({
 }: {
   store: WorkspaceStore;
   onClose(): void;
-  initialSection?: 'general' | 'appearance' | 'shortcuts' | 'data' | 'about';
+  initialSection?: 'general' | 'appearance' | 'shortcuts' | 'translation' | 'data' | 'about';
 }) {
   const data = useStore(store, (s) => s.data);
   const [section, setSection] = useState(initialSection);
@@ -194,6 +204,7 @@ export function SettingsDialog({
     { id: 'general', label: t('通用'), icon: Settings },
     { id: 'appearance', label: t('外观'), icon: Palette },
     { id: 'shortcuts', label: t('快捷键'), icon: Keyboard },
+    { id: 'translation', label: t('翻译'), icon: Languages },
     { id: 'data', label: t('数据与备份'), icon: Database },
     { id: 'about', label: t('关于 Scientify'), icon: CircleHelp },
   ] as const;
@@ -283,6 +294,9 @@ export function SettingsDialog({
         </section>
         <section hidden={section !== 'shortcuts'} aria-label={t('快捷键')}>
           <ShortcutsSettings store={store} onDirtyChange={setShortcutsDirty} />
+        </section>
+        <section hidden={section !== 'translation'} aria-label={t('翻译')}>
+          <TranslationPreferences />
         </section>
         <section hidden={section !== 'data'} aria-label={t('数据与备份')}>
           <DataPreferences store={store} />
