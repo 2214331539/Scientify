@@ -1,6 +1,7 @@
 :root {
-  font-family:
+  --sf-font-body:
     'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+  font-family: var(--sf-font-body);
   color-scheme: light;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;

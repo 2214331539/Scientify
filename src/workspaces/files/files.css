@@ -180,7 +180,7 @@
   text-decoration: underline;
 }
 .sf-markdown-preview code {
-  font-family: var(--sf-font-mono, Consolas, monospace);
+  font-family: var(--sf-font-mono);
   background: var(--sf-surface-sunken);
   padding: 2px 4px;
   border-radius: 3px;
@@ -338,7 +338,7 @@
 .sf-file-disk pre {
   white-space: pre-wrap;
   user-select: text;
-  font-family: var(--sf-font-mono, Consolas, monospace);
+  font-family: var(--sf-font-mono);
 }
 .sf-file-disk p {
   color: var(--sf-text-secondary);

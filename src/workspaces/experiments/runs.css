@@ -67,7 +67,7 @@
   margin: 0;
 }
 .sf-run-detail pre {
-  font-family: var(--sf-font-mono, Consolas, monospace);
+  font-family: var(--sf-font-mono);
   font-size: 12px;
   white-space: pre-wrap;
   background: var(--sf-surface-sunken);
@@ -132,7 +132,7 @@
   font-size: 12px;
 }
 .sf-run-form .sf-run-config-input {
-  font-family: var(--sf-font-mono, Consolas, monospace);
+  font-family: var(--sf-font-mono);
 }
 .sf-run-metric-heading {
   display: flex;

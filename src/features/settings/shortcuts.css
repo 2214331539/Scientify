@@ -43,8 +43,8 @@
   border-radius: 6px;
 }
 .settings-shortcut-row[data-conflict='true'] {
-  border-color: var(--sf-danger, #c84b4b);
-  background: color-mix(in srgb, var(--sf-danger, #c84b4b) 7%, transparent);
+  border-color: var(--sf-status-danger);
+  background: color-mix(in srgb, var(--sf-status-danger) 7%, transparent);
 }
 .settings-shortcut-copy {
   display: grid;
@@ -75,11 +75,11 @@
   border: 1px solid var(--sf-border-subtle);
   background: var(--sf-surface-chrome);
   color: var(--sf-text-primary);
-  font-family: var(--sf-font-mono, Consolas, monospace);
+  font-family: var(--sf-font-mono);
   font-size: 11px;
 }
 .settings-shortcut-warning {
-  color: var(--sf-danger, #c84b4b);
+  color: var(--sf-status-danger);
   font-size: 11px;
 }
 .settings-shortcut-enabled {
