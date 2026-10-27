@@ -149,11 +149,48 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Fra
     await page.screenshot({ path: join(directory, `reader-${width}.png`) });
   }
   await page.locator('.pdf-scroll').hover({ position: { x: 160, y: 180 } });
+  // Observe every paint during a wheel burst, not just the final sharp canvas.
+  await page.evaluate(() => {
+    window.zoomFrames = [];
+    window.sampleZoom = true;
+    const sample = () => {
+      const surface = document.querySelector('.pdf-page');
+      const canvas = surface?.querySelector('canvas');
+      const pixels = canvas?.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+      window.zoomFrames.push({
+        painted: !!pixels?.some((value, index) => index % 4 !== 3 && value < 200),
+        loading: !!surface?.querySelector('[role=status]'),
+        aligned:
+          !!canvas &&
+          Math.abs(canvas.getBoundingClientRect().width - surface.getBoundingClientRect().width) <
+            2,
+      });
+      if (window.sampleZoom) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
   await page.keyboard.down('Control');
   await page.mouse.wheel(0, -100);
   await page.keyboard.up('Control');
   await page.getByText('122%', { exact: true }).waitFor();
   check(true, 'Ctrl + mouse wheel zooms the PDF');
+  await page.waitForTimeout(250);
+  await page.keyboard.down('Control');
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, i % 2 ? 25 : -25);
+  await page.keyboard.up('Control');
+  await page.waitForTimeout(250);
+  const frames = await page.evaluate(() => {
+    window.sampleZoom = false;
+    return window.zoomFrames;
+  });
+  check(
+    frames.length > 5 && frames.every((frame) => frame.painted && !frame.loading && frame.aligned),
+    'Every zoom frame retains painted content, aligned geometry and no loading flash',
+  );
+  check(
+    await page.getByRole('link', { name: 'https://example.com/' }).isVisible(),
+    'Links remain available after zoom',
+  );
   await page.evaluate(async () => {
     for (let i = 0; i < 60; i++) {
       document.getElementById('reader').style.width = `${280 + (i % 20) * 20}px`;
