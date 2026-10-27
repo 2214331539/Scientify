@@ -2654,5 +2654,9 @@
   "实验保存失败。": ["实验保存失败。", "Could not save the experiment."],
   "指标保存失败。": ["指标保存失败。", "Could not save the metrics."],
   "Permission": ["权限", "Permission"],
-  "Commit": ["Commit", "Commit"]
+  "Commit": ["Commit", "Commit"],
+  "网页保护未能启用，已停止加载。": [
+    "网页保护未能启用，已停止加载。",
+    "Web page protection could not be enabled, so loading was stopped."
+  ]
 }

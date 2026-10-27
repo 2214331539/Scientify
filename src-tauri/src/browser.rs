@@ -2,7 +2,13 @@
 mod agent;
 pub(crate) use agent::operate as agent_operation;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Mutex};
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+};
 use tauri::{
     webview::{NewWindowResponse, WebviewBuilder},
     Emitter, Manager, WebviewUrl,
@@ -265,6 +271,10 @@ pub(crate) fn navigate(
         .parent()
         .ok_or("数据目录无效")?
         .join("browser-profile");
+    // Fail closed: remote pages load only once Windows has accepted the request
+    // filters that keep them away from app-owned origins.
+    let protected = Arc::new(AtomicBool::new(!cfg!(windows)));
+    let ready = protected.clone();
     let builder = configure_browser_proxy(crate::webview_profile::browser(
         WebviewBuilder::new(
             &tab.id,
@@ -276,10 +286,17 @@ pub(crate) fn navigate(
         if url.as_str() == "about:blank" {
             return true;
         }
-        if !allowed(url) {
+        let blocked = if !ready.load(Ordering::Acquire) {
+            Some("网页保护未能启用，已停止加载。")
+        } else if !allowed(url) {
+            Some("已阻止非网页或应用内部地址。")
+        } else {
+            None
+        };
+        if let Some(reason) = blocked {
             update(&a, &id, |t| {
                 t.loading = false;
-                t.error = Some("已阻止非网页或应用内部地址。".into());
+                t.error = Some(reason.into());
             });
             return false;
         }
@@ -382,7 +399,7 @@ pub(crate) fn navigate(
         t.loading = true;
     });
     #[cfg(windows)]
-    install_native(&view)?;
+    install_native(&view, protected)?;
     #[cfg(target_os = "macos")]
     install_macos(&view);
     view.navigate(url).map_err(|e| e.to_string())?;
@@ -477,7 +494,7 @@ pub(crate) fn perform_action(view: &tauri::Webview, action: &str) -> Result<(), 
 }
 
 #[cfg(windows)]
-fn install_native(view: &tauri::Webview) -> Result<(), String> {
+fn install_native(view: &tauri::Webview, protected: Arc<AtomicBool>) -> Result<(), String> {
     use std::{cell::Cell, rc::Rc};
     use webview2_com::{
         HistoryChangedEventHandler, Microsoft::Web::WebView2::Win32::*,
@@ -496,6 +513,7 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
             return;
         };
         let environment = native.environment();
+        let mut secured = true;
         // Remote pages have no app capabilities. Also deny app-owned resource origins.
         for pattern in [
             w!("https://tauri.localhost/*"),
@@ -509,43 +527,52 @@ fn install_native(view: &tauri::Webview) -> Result<(), String> {
             w!("http://localhost:1421/*"),
             w!("https://localhost:1421/*"),
         ] {
-            let _ =
-                core.AddWebResourceRequestedFilter(pattern, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+            secured &= core
+                .AddWebResourceRequestedFilter(pattern, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL)
+                .is_ok();
         }
-        let _ = core.add_WebResourceRequested(
-            &WebResourceRequestedEventHandler::create(Box::new(move |_, args| {
-                if let Some(args) = args {
-                    let request = args.Request()?;
-                    let mut raw = PWSTR::null();
-                    request.Uri(&mut raw)?;
-                    let value = raw.to_string().unwrap_or_default();
-                    CoTaskMemFree(Some(raw.0.cast()));
-                    if let Ok(url) = tauri::Url::parse(&value) {
-                        trace(format!("blocked web resource {}", url));
-                        if !allowed(&url) && !matches!(url.scheme(), "data" | "blob") {
-                            let response = environment.CreateWebResourceResponse(
-                                None::<&windows::Win32::System::Com::IStream>,
-                                403,
-                                w!("Forbidden"),
-                                w!("Content-Type: text/plain"),
-                            )?;
-                            args.SetResponse(&response)?;
+        secured &= core
+            .add_WebResourceRequested(
+                &WebResourceRequestedEventHandler::create(Box::new(move |_, args| {
+                    if let Some(args) = args {
+                        let request = args.Request()?;
+                        let mut raw = PWSTR::null();
+                        request.Uri(&mut raw)?;
+                        let value = raw.to_string().unwrap_or_default();
+                        CoTaskMemFree(Some(raw.0.cast()));
+                        if let Ok(url) = tauri::Url::parse(&value) {
+                            trace(format!("blocked web resource {}", url));
+                            if !allowed(&url) && !matches!(url.scheme(), "data" | "blob") {
+                                let response = environment.CreateWebResourceResponse(
+                                    None::<&windows::Win32::System::Com::IStream>,
+                                    403,
+                                    w!("Forbidden"),
+                                    w!("Content-Type: text/plain"),
+                                )?;
+                                args.SetResponse(&response)?;
+                            }
                         }
                     }
-                }
-                Ok(())
-            })),
-            &mut 0,
-        );
-        let _ = core.add_PermissionRequested(
-            &PermissionRequestedEventHandler::create(Box::new(|_, args| {
-                if let Some(args) = args {
-                    args.SetState(COREWEBVIEW2_PERMISSION_STATE_DENY)?;
-                }
-                Ok(())
-            })),
-            &mut 0,
-        );
+                    Ok(())
+                })),
+                &mut 0,
+            )
+            .is_ok();
+        secured &= core
+            .add_PermissionRequested(
+                &PermissionRequestedEventHandler::create(Box::new(|_, args| {
+                    if let Some(args) = args {
+                        args.SetState(COREWEBVIEW2_PERMISSION_STATE_DENY)?;
+                    }
+                    Ok(())
+                })),
+                &mut 0,
+            )
+            .is_ok();
+        protected.store(secured, Ordering::Release);
+        if !secured {
+            trace("browser protection unavailable; remote navigation stays blocked");
+        }
         let app = a.clone();
         let label = id.clone();
         let navigation = Rc::new(Cell::new(0u64));
