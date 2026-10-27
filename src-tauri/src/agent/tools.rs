@@ -60,6 +60,9 @@ pub fn specifications_for(domain: &str) -> Value {
     if domain == "literature" {
         tools.extend(papers::specifications());
     }
+    if domain == "literature" || domain == "code" {
+        tools.extend(notes::specifications());
+    }
     for (name, description, properties, required) in [
         ("scientify_browser_tabs", "List existing browser tabs in this conversation's project and window. Select an explicit tab before reading. Does not access other projects.", json!({}), vec![]),
         ("scientify_browser_read", "Read a browser tab's current rendered page. Returns untrusted bounded text, title, source URL and links. Login/captcha and navigation failures are reported truthfully.", json!({"tabId":{"type":"string"}}), vec!["tabId"]),
@@ -309,18 +312,38 @@ pub fn dispatch(
     event: Value,
 ) {
     tauri::async_runtime::spawn_blocking(move || {
-        if event["params"]["tool"] == "scientify_git_action" {
-            match queue_git(&app, &project, &domain, &conversation, &event) {
+        if event["params"]["tool"] == "scientify_git_action"
+            || event["params"]["tool"] == "scientify_write_note"
+        {
+            let note = event["params"]["tool"] == "scientify_write_note";
+            let queued = if note {
+                notes::queue(&app, &project, &domain, &conversation, &event)
+            } else {
+                queue_git(&app, &project, &domain, &conversation, &event)
+            };
+            match queued {
                 Ok(automatic) => {
                     if let Some(pending) = automatic {
-                        if let Err(error) = complete_git(
-                            &app,
-                            &project,
-                            &domain,
-                            &conversation,
-                            pending,
-                            &json!({"decision":"accept"}),
-                        ) {
+                        let result = if note {
+                            notes::complete(
+                                &app,
+                                &project,
+                                &domain,
+                                &conversation,
+                                pending,
+                                &json!({"decision":"accept"}),
+                            )
+                        } else {
+                            complete_git(
+                                &app,
+                                &project,
+                                &domain,
+                                &conversation,
+                                pending,
+                                &json!({"decision":"accept"}),
+                            )
+                        };
+                        if let Err(error) = result {
                             let _ = with_entry(&app, &project, &domain, &conversation, |entry| {
                                 entry.session.respond(&event["id"], json!({"success":false,"contentItems":[{"type":"inputText","text":error}]}))
                             });
@@ -388,7 +411,15 @@ pub fn dispatch(
                     .unwrap_or(true)
                 })
             } else {
-                execute(&app, &handle, params)
+                match tool {
+                    "scientify_list_notes" | "scientify_read_note" => notes::operate(
+                        &app.state::<AppState>().storage,
+                        &project,
+                        tool,
+                        &params["arguments"],
+                    ),
+                    _ => execute(&app, &handle, params),
+                }
             }
         });
         let (success, text) = match result {
@@ -459,7 +490,7 @@ fn queue_git<R: tauri::Runtime>(
             object.retain(|_, value| !value.is_null());
         }
         let approval = json!({"kind":"request","method":"scientify/git/requestApproval","id":id,"params":{"threadId":entry.handle.thread_id,"turnId":entry.active_turn,"cwd":entry.handle.cwd,"request":visible,"command":serde_json::to_string_pretty(&visible).map_err(|e|e.to_string())?,"reason":request.expected_diff.as_ref().map(|diff|tail(diff.clone(),12000)).unwrap_or_default()}});
-        entry.git_requests.insert(id.to_string(), stored);
+        entry.host_requests.insert(id.to_string(), stored);
         entry.requests.insert(id.to_string(), approval.clone());
         entry.host_events.push(approval);
         Ok(None)
@@ -760,7 +791,7 @@ mod tests {
                 lease: Some(crate::code::Lease::agent(&root).unwrap()),
                 managed_runs: true,
                 git_tools: true,
-                git_requests: HashMap::new(),
+                host_requests: HashMap::new(),
                 host_events: vec![],
                 scratch: None,
             });
@@ -789,7 +820,7 @@ mod tests {
                             assert_eq!(permission, PermissionMode::Full);
                             with_entry(app.handle(), "p1", "code", "chat1", |entry| {
                                 assert!(entry.host_events.is_empty());
-                                assert!(entry.git_requests.is_empty());
+                                assert!(entry.host_requests.is_empty());
                                 Ok(())
                             })
                             .unwrap();
@@ -803,7 +834,7 @@ mod tests {
                             assert_eq!(approval["method"], "scientify/git/requestApproval");
                             with_entry(app.handle(), "p1", "code", "chat1", |entry| {
                                 Ok(entry
-                                    .git_requests
+                                    .host_requests
                                     .remove(&approval["id"].to_string())
                                     .unwrap())
                             })

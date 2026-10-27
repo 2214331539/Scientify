@@ -1,5 +1,7 @@
 import { t, translateError, locale } from '../../i18n';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { noteImages } from '../../platform/note-images';
+import { openBrowserSource } from '../../platform/browser-pane';
 import { useStore } from 'zustand';
 import { ArrowLeft, Check, Link2, Plus, Save, Search } from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
@@ -37,6 +39,8 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   const inFlight = useRef<Promise<boolean> | null>(null);
   const openNote = useRef<(id: string) => void>(() => {});
   const sourceKey = `notes:${scope}`;
+  const images = useMemo(() => noteImages(scope), [scope]);
+  const imagePending = useRef(false);
   const notes = selectNotes(data, scope, query);
   const sources = readNoteSources(draft);
 
@@ -118,6 +122,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   }
 
   async function switchNote(note: Note | null, isNew = false) {
+    if (imagePending.current) return;
     if (!(await save())) return;
     // A save acknowledgment must never hide input entered while saving.
     if (latest.current && noteFingerprint(latest.current) !== baseline.current) return;
@@ -199,11 +204,19 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
           ) : null}
           <div className="sf-note-workbench">
             <MarkdownLiveEditor
+              key={draft.id}
+              images={images}
+              onLink={(url) => openBrowserSource(scope, url)}
+              onPendingChange={(pending) => {
+                imagePending.current = pending;
+                store.getState().setDirtySource(`${sourceKey}:images`, pending);
+              }}
               className="sf-note-editor"
               ariaLabel={t('笔记正文')}
               value={draft.body}
               onChange={(value) => edit({ ...draft, body: value })}
               onSave={() => void save()}
+              shortcuts={data?.settings.shortcuts}
             />
           </div>
           {sources.length ? (

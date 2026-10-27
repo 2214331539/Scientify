@@ -10,6 +10,7 @@ const suites = {
   git: 'scripts/verify-git-ui.mjs',
   reader: 'scripts/verify-reader-ui.mjs',
   assistant: 'scripts/verify-assistant-ui.mjs',
+  notes: 'scripts/verify-notes-ui.mjs',
 };
 const selected = process.argv.slice(2);
 if (selected.some((suite) => !Object.hasOwn(suites, suite)))

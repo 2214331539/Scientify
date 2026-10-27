@@ -18,6 +18,7 @@ pub use experiments::runner::run as run_managed_experiment;
 #[cfg(test)]
 mod ipc_smoke;
 mod library;
+mod notes;
 #[cfg(debug_assertions)]
 mod literature_smoke;
 mod research;
@@ -301,6 +302,7 @@ pub fn run() {
             library::library_pdf,
             library::library_read_file,
             library::library_note,
+            notes::note_image,
             library::library_external,
             library::library_import_bytes,
             browser::browser_command,

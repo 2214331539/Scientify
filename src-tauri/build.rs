@@ -9,6 +9,7 @@ fn main() {
             "library_pdf",
             "library_read_file",
             "library_note",
+            "note_image",
             "library_external",
             "library_import_bytes",
             "browser_command",

@@ -60,6 +60,7 @@
     "allow-library-pdf",
     "allow-library-read-file",
     "allow-library-note",
+    "allow-note-image",
     "allow-library-external",
     "allow-library-import-bytes",
     "allow-browser-command"

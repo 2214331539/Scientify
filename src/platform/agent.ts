@@ -114,6 +114,7 @@ export const APPROVAL_METHODS = [
   'item/fileChange/requestApproval',
   'item/permissions/requestApproval',
   'scientify/git/requestApproval',
+  'scientify/notes/requestApproval',
 ] as const;
 
 export type ApprovalMethod = (typeof APPROVAL_METHODS)[number];
