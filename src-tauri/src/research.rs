@@ -8,6 +8,12 @@ use std::{path::PathBuf, time::Duration};
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
+/// The folder a project works in: its `path`, or the linked Git `repo` when no path is set.
+pub(crate) fn configured_root(project: &serde_json::Value) -> Option<&str> {
+    let set = |key: &str| project[key].as_str().filter(|path| !path.trim().is_empty());
+    set("path").or_else(|| set("repo"))
+}
+
 pub(crate) fn project_root(
     storage: &Storage,
     files: &ResearchFiles,
@@ -18,16 +24,7 @@ pub(crate) fn project_root(
         .as_array()
         .and_then(|ps| ps.iter().find(|p| p["id"].as_str() == Some(id)))
         .ok_or("项目不存在，请返回项目管理重新打开。")?;
-    let repository = project["repo"]
-        .as_str()
-        .filter(|path| !path.trim().is_empty());
-    files.project_root(
-        id,
-        project["path"]
-            .as_str()
-            .filter(|path| !path.trim().is_empty())
-            .or(repository),
-    )
+    files.project_root(id, configured_root(project))
 }
 
 #[tauri::command]

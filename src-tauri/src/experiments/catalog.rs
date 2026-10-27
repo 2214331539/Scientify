@@ -21,10 +21,7 @@ pub(crate) fn root_of(
             .ok_or("实验所属项目不存在。")?;
         files.project_root(
             project["id"].as_str().ok_or("项目标识无效。")?,
-            project["path"]
-                .as_str()
-                .filter(|s| !s.trim().is_empty())
-                .or_else(|| project["repo"].as_str().filter(|s| !s.trim().is_empty())),
+            crate::research::configured_root(project),
         )
     } else {
         checked_root(

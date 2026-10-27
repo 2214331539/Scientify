@@ -401,21 +401,20 @@ fn resolve_root<R: tauri::Runtime>(
     project_id: &str,
     domain: &str,
 ) -> Result<PathBuf, String> {
+    if domain != "literature" {
+        // Same lookup as the research and experiment commands, including the linked
+        // repository when the project has no folder of its own.
+        return crate::research::project_root(&state.storage, &state.files, project_id);
+    }
     let loaded = state.storage.load()?.ok_or("工作区尚未载入。")?;
-    let project = loaded["projects"]
+    loaded["projects"]
         .as_array()
         .and_then(|items| items.iter().find(|p| p["id"].as_str() == Some(project_id)))
         .ok_or("项目不存在。")?;
-    if domain == "literature" {
-        return app
-            .state::<super::library::LibraryState>()
-            .service
-            .root(project_id)?
-            .ok_or_else(|| "请先在文献库打开本地文件夹。".to_string());
-    }
-    state
-        .files
-        .project_root(project_id, project["path"].as_str())
+    app.state::<super::library::LibraryState>()
+        .service
+        .root(project_id)?
+        .ok_or_else(|| "请先在文献库打开本地文件夹。".to_string())
 }
 
 fn conversation_root<R: tauri::Runtime>(
