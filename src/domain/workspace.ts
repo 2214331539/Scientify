@@ -8,6 +8,8 @@ export type ModelSettings = {
   verification?: {
     model: string;
     checkedAt: string;
+    endpoint?: string;
+    provider?: ModelSettings['provider'];
     chat: boolean;
     agent: boolean;
     agentError?: string | null;

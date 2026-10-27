@@ -94,6 +94,16 @@ export function AssistantPanel({
       defaultSettings,
   };
   const [settings, setSettings] = useState<AISettings>(defaultSelection.settings);
+  const verification =
+    settings.verification?.model === settings.model &&
+    (!settings.verification.endpoint ||
+      credentialSlot(settings.provider, settings.endpoint) ===
+        credentialSlot(
+          settings.verification.provider ?? settings.provider,
+          settings.verification.endpoint,
+        ))
+      ? settings.verification
+      : undefined;
   const [editingProfileId, setEditingProfileId] = useState(defaultSelection.profileId);
   const [profileName, setProfileName] = useState('');
   const profileRecall = useRef(0);
@@ -274,8 +284,7 @@ export function AssistantPanel({
     !!agent.skills &&
     !!agentProject &&
     (agent !== nativeAgent || isTauri()) &&
-    engineSupports(settings.provider) &&
-    !(settings.verification?.model === settings.model && !settings.verification.agent);
+    engineSupports(settings.provider);
   const skillRoot = conversation.agentCwd ?? (domain === 'code' ? selectedCodeRoot : undefined);
   const skillKey = JSON.stringify([scope, conversation.id, domain, skillRoot]);
   const skillListing = skillListings[skillKey];
@@ -510,6 +519,63 @@ export function AssistantPanel({
       setError('');
     } else if (showSettings) setSettingsError(store.getState().error ?? t('模型配置保存失败'));
     else setError(store.getState().error ?? t('模型配置保存失败'));
+  }
+
+  async function reverifyConnection() {
+    if (!backend.verifyModel || settingsBusy || !credentialsReady || agentPending || chatPending)
+      return;
+    const connection = { ...settings };
+    const matches = (value: AISettings) =>
+      value.model === connection.model &&
+      value.provider === connection.provider &&
+      value.endpoint.trim().replace(/\/$/, '') === connection.endpoint.trim().replace(/\/$/, '');
+    setSettingsBusy(true);
+    setError('');
+    try {
+      const result = await backend.verifyModel({ ...connection, apiKey });
+      const verification = {
+        ...result,
+        model: connection.model,
+        endpoint: connection.endpoint,
+        provider: connection.provider,
+        checkedAt: new Date().toISOString(),
+      };
+      const saved = await store.getState().update((workspace) => {
+        const model = workspace.settings.model;
+        if (matches({ ...model, provider: model.provider ?? 'ollama' }))
+          model.verification = verification;
+        for (const profile of workspace.settings.modelProfiles ?? [])
+          if (matches(profile)) profile.verification = verification;
+        for (const entity of workspace.sessions) {
+          const chat = entity as Conversation;
+          const tasks = store.getState().agentTasks;
+          if (tasks[`${chat.project}:${chat.id}`] || tasks[`${chat.project}:${chat.id}:chat`])
+            continue;
+          if (chat.modelSelection && matches(chat.modelSelection.settings))
+            chat.modelSelection.settings.verification = verification;
+        }
+      });
+      if (!saved) throw new Error(store.getState().error ?? t('模型配置保存失败'));
+      for (const chat of draftChats.current.values())
+        if (chat.modelSelection && matches(chat.modelSelection.settings))
+          chat.modelSelection.settings.verification = verification;
+      setSettings((current) => (matches(current) ? { ...current, verification } : current));
+      setConversation((chat) =>
+        chat.modelSelection && matches(chat.modelSelection.settings)
+          ? {
+              ...chat,
+              modelSelection: {
+                ...chat.modelSelection,
+                settings: { ...chat.modelSelection.settings, verification },
+              },
+            }
+          : chat,
+      );
+    } catch (reason) {
+      setError(safeError(reason));
+    } finally {
+      setSettingsBusy(false);
+    }
   }
 
   async function chooseModel(profileId: string, value: AISettings) {
@@ -789,13 +855,7 @@ export function AssistantPanel({
     // OpenAI-shaped protocol. Users should describe the outcome; they should
     // not have to choose a transport mode before every request.
     const harnessAvailable = agent !== nativeAgent || isTauri();
-    if (
-      harnessAvailable &&
-      agentProject &&
-      domain &&
-      engineSupports(settings.provider) &&
-      !(settings.verification?.model === settings.model && !settings.verification.agent)
-    ) {
+    if (harnessAvailable && agentProject && domain && engineSupports(settings.provider)) {
       await sendToAgent();
       return;
     }
@@ -804,7 +864,7 @@ export function AssistantPanel({
       setError(t('技能需要内置 Agent 执行，当前连接仅支持聊天。请更换连接或移除技能。'));
       return;
     }
-    if (settings.verification?.model === settings.model && !settings.verification.chat) {
+    if (verification && !verification.chat) {
       setError(t('此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。'));
       return;
     }
@@ -1011,11 +1071,9 @@ export function AssistantPanel({
           </>
         ) : menu?.kind === 'models' ? (
           <>
-            {settings.verification?.model === settings.model ? (
+            {verification ? (
               <div className="sf-ai-model-verification" role="status">
-                {settings.verification.agent
-                  ? t('Agent 工具验证通过')
-                  : t('仅聊天，Agent 未通过验证')}
+                {verification.agent ? t('Agent 工具验证通过') : t('Agent 连接验证未通过')}
               </div>
             ) : null}
             {models.map((name) => (
@@ -1225,11 +1283,24 @@ export function AssistantPanel({
           </Button>
         </div>
       ) : null}
-      {agentProject &&
-      settings.verification?.model === settings.model &&
-      !settings.verification.agent ? (
-        <div className="sf-agent-sandbox-notice" role="status">
-          <span>{t('当前连接仅支持聊天，无法修改本地文件。')}</span>
+      {agentProject && verification && !verification.agent ? (
+        <div className="sf-agent-sandbox-notice sf-agent-verification-notice" role="status">
+          <span>
+            {engineSupports(settings.provider)
+              ? t('Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。')
+              : t('此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。')}
+            {verification.agentError && <small>{translateError(verification.agentError)}</small>}
+          </span>
+          {backend.verifyModel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={settingsBusy || !credentialsReady || agentPending || chatPending}
+              onClick={() => void reverifyConnection()}
+            >
+              {settingsBusy ? t('正在验证…') : t('重新验证')}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={openSettings}>
             {t('模型设置')}
           </Button>

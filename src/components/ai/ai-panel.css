@@ -256,6 +256,17 @@
 .sf-agent-sandbox-notice .sf-button {
   flex-shrink: 0;
 }
+.sf-agent-verification-notice {
+  flex-wrap: wrap;
+}
+.sf-agent-verification-notice > span {
+  flex-basis: 100%;
+}
+.sf-agent-verification-notice small {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
 .sf-ai-composer {
   position: relative;
   container-type: inline-size;

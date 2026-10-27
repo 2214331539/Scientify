@@ -1,4 +1,5 @@
 {
+  "解释": ["解释", "Explain"],
   "执行权限": ["执行权限", "Execution permissions"],
   "询问": ["询问", "Ask"],
   "完全允许": ["完全允许", "Full access"],
@@ -2231,5 +2232,15 @@
   "此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。": [
     "此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。",
     "This chat does not have paper tools. Start a new chat in the same directory; this history will be kept."
+  ],
+  "Agent 连接验证未通过": ["Agent 连接验证未通过", "Agent connection verification failed"],
+  "Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。": [
+    "Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。",
+    "Agent verification failed. Sending a message will still attempt the Agent, without falling back to chat."
+  ],
+  "重新验证": ["重新验证", "Verify again"],
+  "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。": [
+    "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。",
+    "This protocol is not connected to the built-in Agent. Configure an OpenAI Responses-compatible connection."
   ]
 }

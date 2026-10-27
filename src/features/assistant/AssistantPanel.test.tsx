@@ -19,6 +19,13 @@ it('starts a paper-tools upgrade chat in the old literature root after navigatin
   const data = emptyWorkspace();
   data.projects.push({ id: 'p1', name: 'project', question: '', createdAt: '', space: 'personal' });
   data.settings.model.model = 'fixture';
+  data.settings.model.verification = {
+    model: 'fixture',
+    checkedAt: 'old',
+    chat: true,
+    agent: false,
+    agentError: 'HTTP 400',
+  };
   const store = createWorkspaceStore({
     load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
     save: async (value: Workspace) => value,
@@ -566,7 +573,7 @@ it('allows Stop to be retried after a cancellation failure without losing the ne
   });
 });
 
-it('records separate chat and Agent verification and routes a verified chat-only connection honestly', async () => {
+it('records failed Agent verification without claiming the service is chat-only', async () => {
   const { store, backend, user } = await actionHarness();
   backend.verifyModel = vi.fn(async () => ({
     chat: true,
@@ -583,8 +590,49 @@ it('records separate chat and Agent verification and routes a verified chat-only
   );
   await user.click(screen.getByRole('button', { name: '选择模型' }));
   expect(
-    screen.getAllByRole('status').some((status) => status.textContent?.includes('仅聊天')),
+    screen
+      .getAllByRole('status')
+      .some((status) => status.textContent?.includes('Agent 连接验证未通过')),
   ).toBe(true);
+});
+
+it('reverifies a failed connection without changing chat roots, models or histories', async () => {
+  const { store, backend, user, view } = await actionHarness();
+  view.unmount();
+  const settings = {
+    ...store.getState().data!.settings.model,
+    provider: 'ollama' as const,
+    verification: {
+      model: 'test-model',
+      checkedAt: 'old',
+      chat: true,
+      agent: false,
+      agentError: 'HTTP 400',
+    },
+  };
+  const different = { ...settings, model: 'another-model' };
+  await store.getState().update((data) => {
+    data.settings.model = settings;
+    data.settings.modelProfiles = [{ ...settings, id: 'legacy', name: 'Local' }];
+    data.sessions = [settings, different].map((value, i) => ({
+      ...newConversation('p1'),
+      id: `old-${i}`,
+      updatedAt: i ? '2026-01-01' : '2026-10-22',
+      agentCwd: 'C:/papers',
+      modelSelection: { profileId: 'legacy', settings: value },
+    }));
+  });
+  backend.verifyModel = vi.fn(async () => ({ chat: true, agent: true }));
+  render(<AssistantPanel store={store} backend={backend} scope="p1" context={context} />);
+  await user.click(screen.getByRole('button', { name: '重新验证' }));
+  await waitFor(() => expect(store.getState().data?.settings.model.verification?.agent).toBe(true));
+  const chats = store.getState().data!.sessions as ReturnType<typeof newConversation>[];
+  expect(chats[0].modelSelection?.settings.verification?.agent).toBe(true);
+  expect(chats[0].agentCwd).toBe('C:/papers');
+  expect(chats[0].messages).toEqual([]);
+  expect(chats[1].modelSelection?.settings.model).toBe('another-model');
+  expect(chats[1].modelSelection?.settings.verification?.agent).toBe(false);
+  expect(screen.queryByRole('button', { name: '重新验证' })).toBeNull();
 });
 
 it('can verify a manually supplied model without requiring a model-list endpoint', async () => {
