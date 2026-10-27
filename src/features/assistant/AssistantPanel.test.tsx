@@ -1,5 +1,5 @@
 import { t } from '../../i18n';
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace, type Workspace } from '../../domain/workspace';
@@ -123,14 +123,6 @@ it('starts a paper-tools upgrade chat in the old literature root after navigatin
   } finally {
     await act(async () => runtime.dispose());
   }
-});
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
 });
 const context: WorkContext = {
   projectId: 'p1',

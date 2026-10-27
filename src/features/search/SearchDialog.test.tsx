@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace } from '../../domain/workspace';
@@ -7,14 +7,6 @@ import { createWorkspaceStore } from '../../stores/workspace';
 import { createNote } from '../notes/model';
 import { SearchDialog, searchWorkspace } from './SearchDialog';
 
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(cleanup);
 
 function fixture() {

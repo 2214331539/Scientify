@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, useSyncExternalStore } from 'react';
@@ -35,14 +35,6 @@ vi.mock('../../editor/CodeEditor', () => ({
     );
   },
 }));
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(() => {
   cleanup();
   executionStore.setState({ runs: [], error: '' });

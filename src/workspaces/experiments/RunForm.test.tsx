@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace, type Project, type Workspace } from '../../domain/workspace';
@@ -6,14 +6,6 @@ import type { WorkspaceBackend } from '../../platform/desktop';
 import { createWorkspaceStore, type WorkspaceStore } from '../../stores/workspace';
 import { ExperimentRuns } from './ExperimentRuns';
 
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(cleanup);
 const project: Project = {
   id: 'p1',

@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { AssistantRuns } from './AssistantRuns';
 import { ExecutionPanel } from '../../workspaces/experiments/ExecutionPanel';
 import {
@@ -10,14 +10,6 @@ import {
   type Execution,
 } from '../../workspaces/experiments/runtime';
 
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(() => {
   cleanup();
   executionStore.setState({ runs: [], error: '' });

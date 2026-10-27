@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { useState } from 'react';
 import { LocalLiterature } from './LocalLiterature';
@@ -41,14 +41,6 @@ vi.mock('../../platform/browser-pane', () => ({
   browserEvents: async () => () => {},
   browserLayout: async () => {},
 }));
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(() => {
   cleanup();
   localStorage.clear();

@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GitWorkspace, changeSides } from './GitWorkspace';
@@ -10,14 +10,6 @@ import { getFileSession } from '../../editor/sessions';
 import { selectCodeRoot, codeContext } from './code-context';
 
 vi.mock('../../components/prompts', () => ({ confirmAction: vi.fn(async () => true) }));
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
