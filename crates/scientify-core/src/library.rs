@@ -1,5 +1,6 @@
 //! Authorized local literature roots. All mutations share one queue and fail closed.
 use crate::research::{reject_links, FileContent};
+use crate::workspace::valid_id;
 use atomicwrites::{AllowOverwrite, AtomicFile, DisallowOverwrite};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -35,13 +36,6 @@ fn digest(bytes: &[u8]) -> String {
 }
 fn portable(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
-}
-fn id_valid(id: &str) -> bool {
-    !id.is_empty()
-        && id.len() <= 80
-        && id
-            .bytes()
-            .all(|v| v.is_ascii_alphanumeric() || v == b'-' || v == b'_')
 }
 fn relative(path: &str, root: bool) -> Result<PathBuf> {
     if root && path.is_empty() {
@@ -260,14 +254,14 @@ impl LocalLibrary {
             .map_err(|_| "文献根目录映射损坏，已停止修改。")?;
         if roots
             .iter()
-            .any(|(id, root)| !id_valid(id) || !Path::new(root).is_absolute())
+            .any(|(id, root)| !valid_id(id) || !Path::new(root).is_absolute())
         {
             return Err("文献根目录映射无效。".into());
         }
         Ok(roots)
     }
     pub fn root(&self, project: &str) -> Result<Option<PathBuf>> {
-        if !id_valid(project) {
+        if !valid_id(project) {
             return Err("项目标识无效。".into());
         }
         self.roots()?
@@ -327,7 +321,7 @@ impl LocalLibrary {
         for p in &index.papers {
             self.resolve(root, &p.path, false)?;
             self.resolve(root, &p.note_path, false)?;
-            if !id_valid(&p.id)
+            if !valid_id(&p.id)
                 || !p.path.to_lowercase().ends_with(".pdf")
                 || !p.note_path.to_lowercase().ends_with(".md")
                 || !ids.insert(&p.id)
@@ -351,7 +345,7 @@ impl LocalLibrary {
     }
     pub fn mount(&self, project: &str, root: &Path) -> Result<Scan> {
         let _guard = self.gate.lock().map_err(err)?;
-        if !id_valid(project) {
+        if !valid_id(project) {
             return Err("项目标识无效。".into());
         }
         let root = self.check_root(root)?;

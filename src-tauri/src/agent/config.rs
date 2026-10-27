@@ -41,53 +41,39 @@ fn quoted(value: &str) -> String {
     out
 }
 
-fn valid_endpoint(endpoint: &str) -> Result<(), String> {
-    let trimmed = endpoint.trim();
-    if trimmed.is_empty() || trimmed.len() > 2048 {
-        return Err("模型服务地址无效。".into());
-    }
-    if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
-        return Err("模型服务地址必须以 http:// 或 https:// 开头。".into());
-    }
-    if trimmed.chars().any(|c| c.is_whitespace() || c.is_control()) {
-        return Err("模型服务地址不能包含空白字符。".into());
-    }
-    Ok(())
-}
-
-fn valid_model(model: &str) -> Result<(), String> {
-    let trimmed = model.trim();
-    if trimmed.is_empty() || trimmed.len() > 256 {
+fn check_model(model: &str) -> Result<(), String> {
+    if model.trim().is_empty() {
         return Err("请先选择模型。".into());
     }
-    if trimmed.chars().any(char::is_control) {
+    if !crate::ai::valid_model(model) {
         return Err("模型名称无效。".into());
     }
     Ok(())
 }
 
-/// Check the connection and return the provider protocol the engine will use.
-pub fn prepare(connection: &Connection<'_>) -> Result<(), String> {
-    valid_endpoint(connection.endpoint)?;
-    valid_model(connection.model)?;
+/// Check the connection with the same rules as model chat and return the
+/// Responses base URL the engine will use.
+pub fn prepare(connection: &Connection<'_>) -> Result<reqwest::Url, String> {
     match connection.provider {
         // Both expose an OpenAI-shaped surface; anything else would need a
         // translating proxy that this project does not ship.
-        "openai" | "ollama" => Ok(()),
-        "anthropic" | "gemini" => Err(
-            "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。请选择 OpenAI 兼容的服务商。"
-                .into(),
-        ),
-        _ => Err("未知的模型服务协议。".into()),
+        "openai" | "ollama" => {}
+        "anthropic" | "gemini" => {
+            return Err(
+                "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。请选择 OpenAI 兼容的服务商。"
+                    .into(),
+            )
+        }
+        _ => return Err("未知的模型服务协议。".into()),
     }
+    check_model(connection.model)?;
+    crate::ai::responses_base(connection.endpoint, connection.provider, connection.api_key)
 }
 
 /// Per-process overrides prevent parallel conversations from rewriting a shared
 /// config.toml. Sandbox setup remains the only writer of the shared home config.
 pub fn arguments(connection: &Connection<'_>) -> Result<Vec<String>, String> {
-    prepare(connection)?;
-    let endpoint =
-        crate::ai::responses_base(connection.endpoint, connection.provider, connection.api_key)?;
+    let endpoint = prepare(connection)?;
     let endpoint = endpoint.as_str().trim_end_matches('/');
     let mut args = vec!["app-server".into(), "--listen".into(), "stdio://".into()];
     for value in [

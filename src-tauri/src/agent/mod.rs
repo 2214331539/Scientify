@@ -16,6 +16,7 @@ mod tools;
 
 use super::AppState;
 use process::EngineSession;
+use scientify_core::workspace::valid_id;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -265,15 +266,8 @@ fn valid_domain(domain: &str) -> Result<&'static str, String> {
         .find(|d| *d == domain)
         .ok_or_else(|| "未知的 Agent 作用域。".into())
 }
-fn valid_key(value: &str) -> bool {
-    !value.is_empty()
-        && value.len() <= 80
-        && value
-            .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
-}
 fn session_key(project: &str, conversation: &str) -> Result<String, String> {
-    if !valid_key(project) || !valid_key(conversation) {
+    if !valid_id(project) || !valid_id(conversation) {
         return Err("项目或会话标识无效。".into());
     }
     Ok(format!("{project}:{conversation}"))
@@ -532,7 +526,7 @@ pub async fn agent_domains(
 ) -> Result<Vec<DomainBinding>, String> {
     super::library::trusted(&view)?;
     blocking(move || {
-        if !valid_key(&project_id) {
+        if !valid_id(&project_id) {
             return Err("项目标识无效。".into());
         }
         Ok(DOMAINS
@@ -1191,11 +1185,11 @@ mod tests {
 
     #[test]
     fn identifiers_reject_path_like_input() {
-        assert!(valid_key("project-1"));
-        assert!(!valid_key(""));
-        assert!(!valid_key("../escape"));
-        assert!(!valid_key("has space"));
-        assert!(!valid_key(&"a".repeat(81)));
+        assert!(valid_id("project-1"));
+        assert!(!valid_id(""));
+        assert!(!valid_id("../escape"));
+        assert!(!valid_id("has space"));
+        assert!(!valid_id(&"a".repeat(81)));
     }
 
     #[test]

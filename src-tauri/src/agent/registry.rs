@@ -1,6 +1,7 @@
 //! Native-only conversation -> thread registry. Never accept arbitrary thread ids
 //! from imported workspace JSON. Binding changes fail closed.
-use super::{valid_key, ThreadHandle};
+use super::ThreadHandle;
+use scientify_core::workspace::valid_id;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 #[derive(Serialize, Deserialize)]
@@ -24,7 +25,7 @@ pub struct Binding {
     pub paper_tools: bool,
 }
 fn path(data: &Path, project: &str, conversation: &str) -> Result<PathBuf, String> {
-    if !valid_key(project) || !valid_key(conversation) {
+    if !valid_id(project) || !valid_id(conversation) {
         return Err("项目或会话标识无效。".into());
     }
     Ok(data

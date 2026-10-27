@@ -17,7 +17,9 @@ pub fn empty() -> Value {
         "navigation":{"tabs":["home"],"active":"home","expanded":[],"panel":null}})
 }
 
-fn id_valid(id: &str) -> bool {
+/// Record, project and conversation ids: 1-80 ASCII letters, digits, `-` or `_`,
+/// so an id is always safe as a single path component.
+pub fn valid_id(id: &str) -> bool {
     !id.is_empty()
         && id.len() <= 80
         && id
@@ -104,7 +106,7 @@ fn validate_web_sources(data: &Value) -> Result<(), String> {
     for group in groups {
         let id = group["id"]
             .as_str()
-            .filter(|s| id_valid(s))
+            .filter(|s| valid_id(s))
             .ok_or_else(fail)?;
         if !ids.insert(id) || !text(&group["name"], 200) || !order(&group["order"]) {
             return Err(fail());
@@ -115,7 +117,7 @@ fn validate_web_sources(data: &Value) -> Result<(), String> {
     for item in items {
         let id = item["id"]
             .as_str()
-            .filter(|s| id_valid(s))
+            .filter(|s| valid_id(s))
             .ok_or_else(fail)?;
         let url = item["url"].as_str().ok_or_else(fail)?;
         let address = url
@@ -167,7 +169,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         for item in array(&data, key)? {
             let id = item["id"]
                 .as_str()
-                .filter(|s| id_valid(s))
+                .filter(|s| valid_id(s))
                 .ok_or("记录标识无效。")?;
             if !ids.insert(id) {
                 return Err("工作区包含重复的记录标识。".into());
@@ -284,7 +286,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
     for team in array(&data, "teams")? {
         let id = team["id"]
             .as_str()
-            .filter(|s| id_valid(s) && *s != "personal")
+            .filter(|s| valid_id(s) && *s != "personal")
             .ok_or("团队标识无效。")?;
         if !team_ids.insert(id) || !team["name"].as_str().is_some_and(|s| !s.trim().is_empty()) {
             return Err("团队信息无效。".into());
@@ -347,7 +349,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         for profile in profiles {
             let id = profile["id"]
                 .as_str()
-                .filter(|s| id_valid(s))
+                .filter(|s| valid_id(s))
                 .ok_or("模型连接标识无效。")?;
             if !ids.insert(id)
                 || !profile["name"]
@@ -361,13 +363,13 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
     }
     if data["settings"]
         .get("defaultModelProfileId")
-        .is_some_and(|v| !v.as_str().is_some_and(id_valid))
+        .is_some_and(|v| !v.as_str().is_some_and(valid_id))
     {
         return Err("默认模型连接标识无效。".into());
     }
     for chat in array(&data, "sessions")? {
         if let Some(selection) = chat.get("modelSelection") {
-            if !selection["profileId"].as_str().is_some_and(id_valid) {
+            if !selection["profileId"].as_str().is_some_and(valid_id) {
                 return Err("会话模型选择无效。".into());
             }
             // A saved snapshot remains valid even after a profile is removed.
@@ -390,7 +392,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         if !matches!(
             entry["collection"].as_str(),
             Some("records" | "papers" | "runs" | "sessions")
-        ) || !entry["value"]["id"].as_str().is_some_and(id_valid)
+        ) || !entry["value"]["id"].as_str().is_some_and(valid_id)
         {
             return Err("回收站数据无效。".into());
         }

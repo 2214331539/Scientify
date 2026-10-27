@@ -245,7 +245,8 @@ async fn response(call: RequestBuilder, limit: usize) -> Result<Value, String> {
     serde_json::from_slice(&bytes).map_err(|_| "模型服务返回了无法解析的 JSON。".into())
 }
 
-fn valid_model(model: &str) -> bool {
+/// Model ids are sent in requests and process arguments; keep them short and printable.
+pub(crate) fn valid_model(model: &str) -> bool {
     !model.trim().is_empty() && model.len() <= 256 && !model.chars().any(char::is_control)
 }
 fn text_model(value: &Value, provider: Provider) -> bool {

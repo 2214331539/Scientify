@@ -1,4 +1,5 @@
 //! Bounded local project file access. Paths from the webview are always relative.
+use crate::workspace::valid_id;
 use atomicwrites::{AllowOverwrite, AtomicFile, DisallowOverwrite};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -60,14 +61,6 @@ pub fn reject_links(path: &Path) -> Result<(), String> {
         }
     }
     Ok(())
-}
-
-fn valid_id(value: &str) -> bool {
-    !value.is_empty()
-        && value.len() <= 80
-        && value
-            .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
 }
 
 fn relative(value: &str) -> Result<PathBuf, String> {

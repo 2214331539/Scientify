@@ -11,7 +11,9 @@ pub struct Scratch {
 }
 impl Scratch {
     pub fn new(container: &Path, project: &str, conversation: &str) -> Result<Self, String> {
-        if !super::valid_key(project) || !super::valid_key(conversation) {
+        if !scientify_core::workspace::valid_id(project)
+            || !scientify_core::workspace::valid_id(conversation)
+        {
             return Err("临时任务标识无效。".into());
         }
         let base = container.join("tmp/agent");
