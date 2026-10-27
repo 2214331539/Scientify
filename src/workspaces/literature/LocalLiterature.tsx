@@ -16,7 +16,6 @@ import { useStore } from 'zustand';
 import {
   FolderOpen,
   FolderPlus,
-  Globe,
   Search,
   RefreshCw,
   MoreHorizontal,
@@ -64,6 +63,8 @@ import {
 } from './local-session';
 import { PaperNotes } from './PaperNotes';
 import { BrowserPane } from './BrowserPane';
+import { SubscriptionSidebar, type BookmarkRequest } from './SubscriptionSidebar';
+import { FeaturePlaceholder } from '../../components/workspace/FeaturePlaceholder';
 import TextMarkdownPreview from '../files/MarkdownPreview';
 import '../files/files.css';
 import type { Project } from '../../domain/workspace';
@@ -111,6 +112,8 @@ export function LocalLiterature({
 }) {
   const viewActive = useActiveView();
   const workspaceBusy = useStore(store, (s) => s.busy);
+  const webSources = useStore(store, (s) => s.data?.webSources);
+  const [bookmark, setBookmark] = useState<BookmarkRequest | null>(null);
   const [scan, setScan] = useState<LibraryScan>({
     root: null,
     entries: [],
@@ -635,18 +638,39 @@ export function LocalLiterature({
           </Button>
         </nav>
         {view === 'subscriptions' ? (
-          <div className="subscription-placeholder" role="region" aria-label={t('文献订阅')}>
-            <span className="sr-only">{t('开发中')}</span>
-            <span className="sr-only">{t('敬请期待')}</span>
-            <Button onClick={() => void newWeb()}>
-              <Globe />
-              {t('打开浏览器')}
-            </Button>
-            <h3>{t('消息推荐')}</h3>
-            <p>{t('尚未启用')}</p>
-            <h3>{t('个人信息源')}</h3>
-            <p>{t('尚未启用')}</p>
-          </div>
+          <SubscriptionSidebar
+            store={store}
+            bookmark={bookmark}
+            onBookmarkHandled={() => setBookmark(null)}
+            onNewBrowser={() => void newWeb()}
+            onOpen={async (address) => {
+              const tab = await browserCommand<BrowserTab>({
+                op: 'openUrl',
+                project_id: project.id,
+                address,
+              });
+              setSession((s) => ({
+                ...s,
+                active: tab.id,
+                tabs: [
+                  ...s.tabs.filter((t) => t.id !== tab.id),
+                  { id: tab.id, title: tab.title || tab.url, url: tab.url, kind: 'web' },
+                ],
+              }));
+            }}
+            onRecommendations={() =>
+              setSession((s) => {
+                const id = `recommendations:${project.id}`;
+                return {
+                  ...s,
+                  active: id,
+                  tabs: s.tabs.some((t) => t.id === id)
+                    ? s.tabs
+                    : [...s.tabs, { id, title: t('消息推荐'), kind: 'recommendations' }],
+                };
+              })
+            }
+          />
         ) : (
           <div className="library-directory">
             <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
@@ -968,11 +992,18 @@ export function LocalLiterature({
               onNew={() => void newWeb()}
             />
             <div className="local-reader" id={panelId} role="tabpanel" aria-label={t('文献呈现区')}>
-              {active?.kind === 'web' ? (
+              {active?.kind === 'recommendations' ? (
+                <FeaturePlaceholder feature="recommendations" />
+              ) : active?.kind === 'web' ? (
                 <BrowserPane
                   key={active.id}
                   id={active.id}
                   initialUrl={active.url}
+                  isBookmarked={(url) => !!webSources?.items.some((item) => item.url === url)}
+                  onBookmark={(tab) => {
+                    onView('subscriptions');
+                    setBookmark({ title: tab.title || tab.url, url: tab.url });
+                  }}
                   onChanged={(tab) =>
                     setSession((s) => ({
                       ...s,

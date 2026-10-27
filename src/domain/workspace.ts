@@ -1,3 +1,4 @@
+import { validateWebSources } from './web-sources';
 export type Entity = { id: string; [key: string]: unknown };
 export type ModelSettings = {
   endpoint: string;
@@ -54,6 +55,19 @@ export type Experiment = Entity & {
   runConfigurations?: unknown;
   python?: { executable: string; version: string; prefix: string; manager: string };
 };
+export type WebSource = {
+  id: string;
+  title: string;
+  url: string;
+  groupId?: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+};
+export type WebSources = {
+  groups: { id: string; name: string; order: number }[];
+  items: WebSource[];
+};
 export type Workspace = {
   [key: string]: unknown;
   schema: 3;
@@ -68,6 +82,7 @@ export type Workspace = {
   tasks: Task[];
   sessions: (Entity & { project: string })[];
   subscriptions: Entity[];
+  webSources?: WebSources;
   trash: Entity[];
   recent: { key: string }[];
   activity: Entity[];
@@ -124,6 +139,7 @@ export function emptyWorkspace(): Workspace {
 
 /** Legacy projects retain their existing directory, configurations and chat history. */
 export function normalizeExperiments(data: Workspace): Workspace {
+  validateWebSources(data.webSources);
   data.experiments ??= [];
   for (const project of data.projects) {
     if (project.experimentsInitialized === true) continue;

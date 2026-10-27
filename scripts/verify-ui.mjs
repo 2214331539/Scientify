@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { resolve } from 'node:path';
 
 const suites = {
+  sources: 'scripts/verify-sources-ui.mjs',
   experiments: 'scripts/verify-experiments-ui.mjs',
   git: 'scripts/verify-git-ui.mjs',
   reader: 'scripts/verify-reader-ui.mjs',

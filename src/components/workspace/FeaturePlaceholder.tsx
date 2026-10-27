@@ -1,10 +1,11 @@
-import { Construction, House, PenLine, UsersRound } from 'lucide-react';
+import { Construction, House, PenLine, UsersRound, Rss } from 'lucide-react';
 import { t } from '../../i18n';
 import './feature-placeholder.css';
 
 // A single catalog keeps unavailable destinations consistent across both windows.
 const features = {
-  collaboration: { title: '团队协作空间', icon: UsersRound },
+  recommendations: { title: '消息推荐', icon: Rss },
+  collaboration: { title: '团队协作空间', icon: UsersRound, Rss },
   overview: { title: 'Overview', icon: House },
   writing: { title: 'LaTeX 论文撰写', icon: PenLine },
 } as const;

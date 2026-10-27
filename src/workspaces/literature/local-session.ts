@@ -9,7 +9,7 @@ import { nativeLibrary, noteFiles, type LibraryBackend } from '../../platform/li
 
 export type LocalTab = {
   id: string;
-  kind: 'pdf' | 'text' | 'web';
+  kind: 'pdf' | 'text' | 'web' | 'recommendations';
   title: string;
   paperId?: string;
   path?: string;
@@ -56,7 +56,8 @@ export function readLocalSession(project: string): LocalSession {
             t &&
             typeof t.id === 'string' &&
             typeof t.title === 'string' &&
-            ((t.kind === 'pdf' && typeof t.paperId === 'string') ||
+            (t.kind === 'recommendations' ||
+              (t.kind === 'pdf' && typeof t.paperId === 'string') ||
               (t.kind === 'text' && typeof t.path === 'string') ||
               (t.kind === 'web' && (!t.url || typeof t.url === 'string'))),
         ),

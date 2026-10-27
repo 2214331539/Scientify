@@ -165,3 +165,30 @@ it('keeps verification pages visible without hiding the view on HTTP errors or r
   act(() => bridge.receive?.({ ...initial, url: 'https://www.google.com' }));
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
+it('bookmarks the loaded page instead of unsubmitted address input', async () => {
+  bridge.command.mockResolvedValueOnce([
+    { ...initial, url: 'https://example.org/', title: 'Loaded page' },
+  ]);
+  const onBookmark = vi.fn();
+  const user = userEvent.setup();
+  render(
+    <BrowserPane
+      id="web"
+      onChanged={() => {}}
+      onBookmark={onBookmark}
+      isBookmarked={() => false}
+    />,
+  );
+  await waitFor(() =>
+    expect(
+      (screen.getByRole('button', { name: '收藏当前网页' }) as HTMLButtonElement).disabled,
+    ).toBe(false),
+  );
+  await user.clear(screen.getByRole('textbox', { name: '网址或搜索词' }));
+  await user.type(screen.getByRole('textbox', { name: '网址或搜索词' }), 'unsent query');
+  await user.click(screen.getByRole('button', { name: '收藏当前网页' }));
+  expect(onBookmark).toHaveBeenCalledWith(
+    expect.objectContaining({ url: 'https://example.org/', title: 'Loaded page' }),
+  );
+});

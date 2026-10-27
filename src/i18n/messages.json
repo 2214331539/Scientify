@@ -2239,8 +2239,63 @@
     "Agent verification failed. Sending a message will still attempt the Agent, without falling back to chat."
   ],
   "重新验证": ["重新验证", "Verify again"],
+  "请输入不含账号密码的 HTTP 或 HTTPS 链接。": [
+    "请输入不含账号密码的 HTTP 或 HTTPS 链接。",
+    "Enter an HTTP or HTTPS URL without embedded credentials."
+  ],
+  "个人信息源数据无效，请检查导入文件。": [
+    "个人信息源数据无效，请检查导入文件。",
+    "Invalid personal sources. Check the imported file."
+  ],
+  "此网址已在个人信息源中。": [
+    "此网址已在个人信息源中。",
+    "This URL is already in your personal sources."
+  ],
+  "分组已被删除，请重新选择。": [
+    "分组已被删除，请重新选择。",
+    "The group was deleted. Choose another group."
+  ],
+  "信息源已被删除，请重新添加。": [
+    "信息源已被删除，请重新添加。",
+    "The source was deleted. Add it again."
+  ],
+  "名称不能超过 200 个字符。": ["名称不能超过 200 个字符。", "Names cannot exceed 200 characters."],
+  "删除此分组？其中的网站会移至未分组。": [
+    "删除此分组？其中的网站会移至未分组。",
+    "Delete this group? Its websites will move to Ungrouped."
+  ],
+  "删除此信息源？不会删除下载的文件或笔记。": [
+    "删除此信息源？不会删除下载的文件或笔记。",
+    "Delete this source? Downloaded files and notes will be kept."
+  ],
+  "添加经常访问的网站，或在浏览器中收藏当前网页。": [
+    "添加经常访问的网站，或在浏览器中收藏当前网页。",
+    "Add websites you visit often, or bookmark the current page in the browser."
+  ],
+  "管理分组 {name}": ["管理分组 {name}", "Manage group {name}"],
+  "管理信息源 {name}": ["管理信息源 {name}", "Manage source {name}"],
+  "信息源操作": ["信息源操作", "Source actions"],
+  "编辑信息源": ["编辑信息源", "Edit source"],
+  "添加信息源": ["添加信息源", "Add source"],
+  "重命名分组": ["重命名分组", "Rename group"],
+  "新建分组": ["新建分组", "New group"],
+  "未分组": ["未分组", "Ungrouped"],
+  "收藏当前网页": ["收藏当前网页", "Bookmark current page"],
+  "编辑网页收藏": ["编辑网页收藏", "Edit bookmark"],
+  "上移": ["上移", "Move up"],
+  "下移": ["下移", "Move down"],
+  "分组": ["分组", "Group"],
+  "网址": ["网址", "URL"],
   "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。": [
     "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。",
     "This protocol is not connected to the built-in Agent. Configure an OpenAI Responses-compatible connection."
-  ]
+  ],
+  "请输入完整的 HTTP 或 HTTPS 链接。": [
+    "请输入完整的 HTTP 或 HTTPS 链接。",
+    "Enter a complete HTTP or HTTPS URL."
+  ],
+  "删除": ["删除", "Delete"],
+  "列表": ["列表", "列表"],
+  "链接": ["链接", "链接"],
+  "表格": ["表格", "表格"]
 }

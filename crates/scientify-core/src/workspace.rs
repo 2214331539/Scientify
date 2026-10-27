@@ -82,6 +82,67 @@ fn model_connection(value: &Value) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_web_sources(data: &Value) -> Result<(), String> {
+    let Some(sources) = data.get("webSources") else {
+        return Ok(());
+    };
+    let fail = || "个人信息源数据无效，请检查导入文件。".to_string();
+    let groups = sources["groups"]
+        .as_array()
+        .filter(|a| a.len() <= 100)
+        .ok_or_else(fail)?;
+    let items = sources["items"]
+        .as_array()
+        .filter(|a| a.len() <= 2000)
+        .ok_or_else(fail)?;
+    let text = |v: &Value, max: usize| {
+        v.as_str()
+            .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= max)
+    };
+    let order = |v: &Value| v.as_u64().is_some_and(|n| n <= MAX_REVISION);
+    let mut ids = HashSet::new();
+    for group in groups {
+        let id = group["id"]
+            .as_str()
+            .filter(|s| id_valid(s))
+            .ok_or_else(fail)?;
+        if !ids.insert(id) || !text(&group["name"], 200) || !order(&group["order"]) {
+            return Err(fail());
+        }
+    }
+    let mut item_ids = HashSet::new();
+    let mut urls = HashSet::new();
+    for item in items {
+        let id = item["id"]
+            .as_str()
+            .filter(|s| id_valid(s))
+            .ok_or_else(fail)?;
+        let url = item["url"].as_str().ok_or_else(fail)?;
+        let address = url
+            .strip_prefix("https://")
+            .or_else(|| url.strip_prefix("http://"))
+            .ok_or_else(fail)?;
+        let authority = address.split(['/', '?', '#']).next().unwrap_or("");
+        if !item_ids.insert(id)
+            || !urls.insert(url)
+            || !text(&item["title"], 200)
+            || url.len() > 8192
+            || authority.is_empty()
+            || authority.contains('@')
+            || url.chars().any(|c| c.is_control() || c.is_whitespace())
+            || !order(&item["order"])
+            || !text(&item["createdAt"], 100)
+            || !text(&item["updatedAt"], 100)
+            || item
+                .get("groupId")
+                .is_some_and(|g| !g.as_str().is_some_and(|g| ids.contains(g)))
+        {
+            return Err(fail());
+        }
+    }
+    Ok(())
+}
+
 /// Normalize schema 3 without discarding fields from features not migrated yet.
 pub fn validate(mut data: Value) -> Result<Value, String> {
     if data["schema"] != 3 {
@@ -91,6 +152,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         return Err("工作区格式无效。".into());
     }
     normalize_experiments(&mut data)?;
+    validate_web_sources(&data)?;
     for key in [
         "projects",
         "experiments",

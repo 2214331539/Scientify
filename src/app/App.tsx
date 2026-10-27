@@ -654,7 +654,7 @@ export function App({
           [target.id]: {
             ...(s.locations[target.id] ?? locationDefault),
             workspace: 'literature',
-            view: 'local',
+            view: 'subscriptions',
             browserId: detail.tabId,
           },
         },

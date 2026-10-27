@@ -31,7 +31,11 @@ function promptDialog(message: string, initial?: string): Promise<string | null>
       usePreferences();
       const [value, setValue] = useState(initial ?? '');
       return (
-        <Modal title={initial === undefined ? t('确认操作') : message} onClose={() => finish(null)}>
+        <Modal
+          className="prompt-dialog"
+          title={initial === undefined ? t('确认操作') : message}
+          onClose={() => finish(null)}
+        >
           <form
             className="form-grid"
             onSubmit={(event) => {

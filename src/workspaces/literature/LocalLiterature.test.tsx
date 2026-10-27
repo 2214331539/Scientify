@@ -500,6 +500,7 @@ it('opens a real context menu and restores the embedded browser subscription ent
   await user.click(screen.getByRole('menuitem', { name: '复制' }));
   await user.click(screen.getByRole('button', { name: '订阅' }));
   expect(screen.getByText('开发中')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: /消息推荐/ }));
   expect(screen.getByText('敬请期待')).toBeTruthy();
   expect(screen.getByRole('button', { name: '打开浏览器' })).toBeTruthy();
   expect(library.command).toHaveBeenCalledWith(expect.any(String), { op: 'scan' });
