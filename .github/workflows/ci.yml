@@ -46,6 +46,8 @@ jobs:
         run: pnpm prepare:translation
       - name: Prepare assets and build frontend
         run: pnpm run build
+      - name: Formatting
+        run: pnpm format:check
       - name: Type checking
         run: pnpm check
       - name: Release platform mapping
