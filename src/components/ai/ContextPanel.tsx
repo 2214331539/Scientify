@@ -105,7 +105,9 @@ export function ContextPanel({
       </Section>
       <Section title={t('工作区上下文')}>
         <p>
-          {t('附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭 Attach 后不自动附带。')}
+          {t(
+            '附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭“附带材料”后不自动附带。',
+          )}
         </p>
         {lastContext ? (
           <>

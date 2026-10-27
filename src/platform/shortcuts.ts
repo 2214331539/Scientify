@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+
 export type ShortcutScope = 'global' | 'editor' | 'assistant';
 
 export type ShortcutCommand =
@@ -158,7 +160,7 @@ export function normalizeShortcut(value: string) {
 
 export function formatShortcut(value: string) {
   const normalized = normalizeShortcut(value);
-  if (!normalized) return '未设置';
+  if (!normalized) return t('未设置');
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
   return normalized
     .split('+')

@@ -2347,38 +2347,38 @@
     "Enter a complete HTTP or HTTPS URL."
   ],
   "删除": ["删除", "Delete"],
-  "笔记格式工具": ["笔记格式工具", "笔记格式工具"],
-  "粗体": ["粗体", "粗体"],
-  "斜体": ["斜体", "斜体"],
-  "插入 Markdown": ["插入 Markdown", "插入 Markdown"],
-  "插入图片": ["插入图片", "插入图片"],
-  "查找与替换": ["查找与替换", "查找与替换"],
-  "Markdown 源码": ["Markdown 源码", "Markdown 源码"],
-  "笔记标题目录": ["笔记标题目录", "笔记标题目录"],
-  "笔记标题导航": ["笔记标题导航", "笔记标题导航"],
-  "标题目录": ["标题目录", "标题目录"],
+  "笔记格式工具": ["笔记格式工具", "Note formatting"],
+  "粗体": ["粗体", "Bold"],
+  "斜体": ["斜体", "Italic"],
+  "插入 Markdown": ["插入 Markdown", "Insert Markdown"],
+  "插入图片": ["插入图片", "Insert image"],
+  "查找与替换": ["查找与替换", "Find and replace"],
+  "Markdown 源码": ["Markdown 源码", "Markdown source"],
+  "笔记标题目录": ["笔记标题目录", "Note outline"],
+  "笔记标题导航": ["笔记标题导航", "Note outline navigation"],
+  "标题目录": ["标题目录", "Outline"],
   "输入 Markdown 标题后将在此显示": [
     "输入 Markdown 标题后将在此显示",
-    "输入 Markdown 标题后将在此显示"
+    "Markdown headings will appear here"
   ],
-  "未命名标题": ["未命名标题", "未命名标题"],
-  "插入": ["插入", "插入"],
-  "标题": ["标题", "标题"],
-  "列表": ["列表", "列表"],
-  "列表项": ["列表项", "列表项"],
-  "任务列表": ["任务列表", "任务列表"],
-  "待办事项": ["待办事项", "待办事项"],
-  "引用": ["引用", "引用"],
-  "链接": ["链接", "链接"],
-  "链接文字": ["链接文字", "链接文字"],
-  "代码块": ["代码块", "代码块"],
-  "数学公式": ["数学公式", "数学公式"],
-  "表格": ["表格", "表格"],
-  "内容": ["内容", "内容"],
-  "分割线": ["分割线", "分割线"],
-  "文字": ["文字", "文字"],
-  "正在保存图片…": ["正在保存图片…", "正在保存图片…"],
-  "请求修改笔记": ["请求修改笔记", "请求修改笔记"],
+  "未命名标题": ["未命名标题", "Untitled heading"],
+  "插入": ["插入", "Insert"],
+  "标题": ["标题", "Heading"],
+  "列表": ["列表", "List"],
+  "列表项": ["列表项", "List item"],
+  "任务列表": ["任务列表", "Task list"],
+  "待办事项": ["待办事项", "To-do"],
+  "引用": ["引用", "Quote"],
+  "链接": ["链接", "Link"],
+  "链接文字": ["链接文字", "Link text"],
+  "代码块": ["代码块", "Code block"],
+  "数学公式": ["数学公式", "Math"],
+  "表格": ["表格", "Table"],
+  "内容": ["内容", "Content"],
+  "分割线": ["分割线", "Divider"],
+  "文字": ["文字", "Text"],
+  "正在保存图片…": ["正在保存图片…", "Saving image…"],
+  "请求修改笔记": ["请求修改笔记", "Note edit approval"],
   "在独立浮窗打开": ["在独立浮窗打开", "Open in floating window"],
   "无法保存翻译设置。": ["无法保存翻译设置。", "Could not save translation settings."],
   "正在载入翻译配置…": ["正在载入翻译配置…", "Loading translation settings…"],
@@ -2461,5 +2461,198 @@
   "划词翻译请在 Scientify 桌面应用中使用。": [
     "划词翻译请在 Scientify 桌面应用中使用。",
     "Selection translation is available in the Scientify desktop app."
-  ]
+  ],
+  "待发送附件": ["待发送附件", "Pending attachments"],
+  "移除图片": ["移除图片", "Remove image"],
+  "移除附件": ["移除附件", "Remove attachment"],
+  "已截短": ["已截短", "Truncated"],
+  "本轮材料来源": ["本轮材料来源", "Sources for this message"],
+  "工作区上下文": ["工作区上下文", "Workspace context"],
+  "附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭“附带材料”后不自动附带。": [
+    "附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭“附带材料”后不自动附带。",
+    "While Attach is on, a short summary of this conversation's folder and its linked files is read automatically. Turn Attach off to stop."
+  ],
+  "上次发送的材料": ["上次发送的材料", "Last sent material"],
+  "发送后可在这里检查实际附带的来源。": [
+    "发送后可在这里检查实际附带的来源。",
+    "After sending, check here which sources were attached."
+  ],
+  "Agent 返回了空线程标识。": [
+    "Agent 返回了空线程标识。",
+    "The agent returned an empty thread ID."
+  ],
+  "Agent 返回了空 turn 标识。": [
+    "Agent 返回了空 turn 标识。",
+    "The agent returned an empty turn ID."
+  ],
+  "每条消息最多附带 4 个文件。": [
+    "每条消息最多附带 4 个文件。",
+    "Each message can include up to 4 files."
+  ],
+  "个人收集箱没有可操作的目录，请先进入一个项目。": [
+    "个人收集箱没有可操作的目录，请先进入一个项目。",
+    "The personal inbox has no folder to work in. Open a project first."
+  ],
+  "当前页面没有可操作的目录，请进入文献库或项目文件后再让 Agent 执行。": [
+    "当前页面没有可操作的目录，请进入文献库或项目文件后再让 Agent 执行。",
+    "This page has no folder to work in. Open the literature library or project files before asking the agent to act."
+  ],
+  "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。": [
+    "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。",
+    "The built-in agent engine speaks the OpenAI Responses protocol and does not support this provider's own protocol yet."
+  ],
+  "当前会话工作区": ["当前会话工作区", "Current conversation workspace"],
+  "Windows 沙箱配置已完成，请再次发送任务。": [
+    "Windows 沙箱配置已完成，请再次发送任务。",
+    "Windows sandbox setup is complete. Send the task again."
+  ],
+  "Windows 沙箱配置未完成，请检查系统权限后重试。": [
+    "Windows 沙箱配置未完成，请检查系统权限后重试。",
+    "Windows sandbox setup did not finish. Check system permissions and try again."
+  ],
+  "中止任务失败，请重试。": ["中止任务失败，请重试。", "Could not stop the task. Try again."],
+  "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。": [
+    "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。",
+    "This earlier conversation keeps its original tools. Start a new conversation to use browser search and web reading; this one is kept."
+  ],
+  "新建会话": ["新建会话", "New conversation"],
+  "正在准备材料…": ["正在准备材料…", "Preparing material…"],
+  "对话不存在。": ["对话不存在。", "The conversation does not exist."],
+  "保存在本机数据目录，下次自动填入": [
+    "保存在本机数据目录，下次自动填入",
+    "Saved in the local data folder and filled in next time"
+  ],
+  "已读取本机保存的密钥。": ["已读取本机保存的密钥。", "Loaded the key saved on this device."],
+  "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。": [
+    "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。",
+    "The endpoint and model name are saved in the workspace settings. The key stays in this device's data folder and is never synced with the project."
+  ],
+  "PDF 附件不能超过 20 MiB。": [
+    "PDF 附件不能超过 20 MiB。",
+    "PDF attachments must be 20 MiB or smaller."
+  ],
+  "单张图片不能超过 8 MiB。": ["单张图片不能超过 8 MiB。", "Each image must be 8 MiB or smaller."],
+  "图片读取失败，请重试。": ["图片读取失败，请重试。", "Could not read the image. Try again."],
+  "此 PDF 没有可提取的文字，请粘贴页面截图；暂不支持 OCR。": [
+    "此 PDF 没有可提取的文字，请粘贴页面截图；暂不支持 OCR。",
+    "This PDF has no extractable text. Paste screenshots of the pages instead; OCR is not supported yet."
+  ],
+  "支持图片、PDF、文本、Markdown 和代码/项目配置文件。": [
+    "支持图片、PDF、文本、Markdown 和代码/项目配置文件。",
+    "Supported: images, PDF, text, Markdown, and code or project configuration files."
+  ],
+  "文本附件不能超过 2 MiB。": [
+    "文本附件不能超过 2 MiB。",
+    "Text attachments must be 2 MiB or smaller."
+  ],
+  "附件读取失败，请重试。": ["附件读取失败，请重试。", "Could not read the attachment. Try again."],
+  "附件不是可读取的文本文件。": [
+    "附件不是可读取的文本文件。",
+    "The attachment is not a readable text file."
+  ],
+  "请通过 pnpm start 启动 Scientify 桌面应用。浏览器预览没有内置 Agent 引擎。": [
+    "请通过 pnpm start 启动 Scientify 桌面应用。浏览器预览没有内置 Agent 引擎。",
+    "Start the Scientify desktop app with pnpm start. The browser preview has no built-in agent engine."
+  ],
+  "浏览器预览没有本机凭据存储。": [
+    "浏览器预览没有本机凭据存储。",
+    "The browser preview has no local credential storage."
+  ],
+  "确认": ["确认", "Confirm"],
+  "快捷键": ["快捷键", "Keyboard shortcuts"],
+  "存在快捷键冲突，请先修改重复按键。": [
+    "存在快捷键冲突，请先修改重复按键。",
+    "Some shortcuts conflict. Change the duplicate keys first."
+  ],
+  "像 VS Code、Typora 一样，在这里查看和编辑 Scientify 的快捷操作。输入框、代码编辑器和中文输入法会优先使用自己的快捷键。": [
+    "像 VS Code、Typora 一样，在这里查看和编辑 Scientify 的快捷操作。输入框、代码编辑器和中文输入法会优先使用自己的快捷键。",
+    "View and edit Scientify shortcuts here, as in VS Code or Typora. Text fields, the code editor and Chinese input methods keep their own shortcuts first."
+  ],
+  "恢复默认": ["恢复默认", "Restore defaults"],
+  "全局": ["全局", "Global"],
+  "编辑器": ["编辑器", "Editor"],
+  "冲突": ["冲突", "Conflict"],
+  "启用 {name}": ["启用 {name}", "Enable {name}"],
+  "启用": ["启用", "Enable"],
+  "正在录入快捷键": ["正在录入快捷键", "Recording shortcut"],
+  "编辑 {name}": ["编辑 {name}", "Edit {name}"],
+  "请按组合键…": ["请按组合键…", "Press a key combination…"],
+  "清除 {name}": ["清除 {name}", "Clear {name}"],
+  "恢复 {name}": ["恢复 {name}", "Reset {name}"],
+  "保存快捷键": ["保存快捷键", "Save shortcuts"],
+  "未设置": ["未设置", "Not set"],
+  "打开 AI 助手": ["打开 AI 助手", "Open AI assistant"],
+  "显示或聚焦侧边栏 AI 助手。": [
+    "显示或聚焦侧边栏 AI 助手。",
+    "Show or focus the AI assistant in the sidebar."
+  ],
+  "打开笔记": ["打开笔记", "Open notes"],
+  "切换到当前项目的笔记工作区。": [
+    "切换到当前项目的笔记工作区。",
+    "Switch to the current project's notes."
+  ],
+  "打开文献库": ["打开文献库", "Open literature"],
+  "切换到当前项目的文献工作区。": [
+    "切换到当前项目的文献工作区。",
+    "Switch to the current project's literature."
+  ],
+  "切换到当前项目的实验工作区。": [
+    "切换到当前项目的实验工作区。",
+    "Switch to the current project's experiments."
+  ],
+  "打开代码": ["打开代码", "Open code"],
+  "打开当前实验的代码文件。": [
+    "打开当前实验的代码文件。",
+    "Open the current experiment's code files."
+  ],
+  "打开项目、文献和笔记搜索。": [
+    "打开项目、文献和笔记搜索。",
+    "Search projects, literature and notes."
+  ],
+  "新建 AI 会话": ["新建 AI 会话", "New AI conversation"],
+  "在 AI 助手中创建独立会话。": [
+    "在 AI 助手中创建独立会话。",
+    "Start a separate conversation in the AI assistant."
+  ],
+  "加粗": ["加粗", "Bold"],
+  "在 Markdown 编辑器中加粗选中文本。": [
+    "在 Markdown 编辑器中加粗选中文本。",
+    "Make the selected text bold in the Markdown editor."
+  ],
+  "在 Markdown 编辑器中设置斜体。": [
+    "在 Markdown 编辑器中设置斜体。",
+    "Make the selected text italic in the Markdown editor."
+  ],
+  "保存文件": ["保存文件", "Save file"],
+  "保存当前笔记或代码文件。": ["保存当前笔记或代码文件。", "Save the current note or code file."],
+  "在当前编辑器中查找文本。": ["在当前编辑器中查找文本。", "Find text in the current editor."],
+  "发送消息": ["发送消息", "Send message"],
+  "发送当前 AI 输入。": ["发送当前 AI 输入。", "Send the current AI message."],
+  "中止当前 AI 任务。": ["中止当前 AI 任务。", "Stop the current AI task."],
+  "图片格式无效。": ["图片格式无效。", "Invalid image format."],
+  "图片需为 PNG、JPEG、WebP 或 GIF，且不超过 8 MiB。": [
+    "图片需为 PNG、JPEG、WebP 或 GIF，且不超过 8 MiB。",
+    "Images must be PNG, JPEG, WebP or GIF and no larger than 8 MiB."
+  ],
+  "打开标题目录": ["打开标题目录", "Open outline"],
+  "PDF 标题目录": ["PDF 标题目录", "PDF outline"],
+  "此 PDF 没有可用的标题目录": ["此 PDF 没有可用的标题目录", "This PDF has no outline"],
+  "当前版本不支持在文献区读取此文件。": [
+    "当前版本不支持在文献区读取此文件。",
+    "This version cannot open this file in the literature library."
+  ],
+  "在外部程序打开": ["在外部程序打开", "Open in default app"],
+  "没有可显示的内容。": ["没有可显示的内容。", "Nothing to show."],
+  "纯文本": ["纯文本", "Plain text"],
+  "只读预览": ["只读预览", "Read-only preview"],
+  "工作区尚未载入。": ["工作区尚未载入。", "The workspace has not loaded yet."],
+  "默认实验": ["默认实验", "Default experiment"],
+  "导入指标将替换此记录的已有指标，继续？": [
+    "导入指标将替换此记录的已有指标，继续？",
+    "Importing metrics replaces the metrics already on this record. Continue?"
+  ],
+  "实验保存失败。": ["实验保存失败。", "Could not save the experiment."],
+  "指标保存失败。": ["指标保存失败。", "Could not save the metrics."],
+  "Permission": ["权限", "Permission"],
+  "Commit": ["Commit", "Commit"]
 }

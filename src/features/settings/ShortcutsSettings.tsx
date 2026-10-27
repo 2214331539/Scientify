@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from 'zustand';
 import { Check, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '../../components/primitives';
-import { t } from '../../i18n';
+import { t, translateError } from '../../i18n';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
   cloneShortcutSettings,
@@ -14,6 +14,8 @@ import {
   type ShortcutBinding,
 } from '../../platform/shortcuts';
 import './shortcuts.css';
+
+const SCOPES = ['global', 'editor', 'assistant'] as const;
 
 export function ShortcutsSettings({
   store,
@@ -33,7 +35,6 @@ export function ShortcutsSettings({
   const [error, setError] = useState('');
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const conflicts = useMemo(() => detectShortcutConflicts(draft), [draft]);
-  const groups = useMemo(() => ['global', 'editor', 'assistant'] as const, []);
 
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   useEffect(() => {
@@ -124,7 +125,7 @@ export function ShortcutsSettings({
           {t('恢复默认')}
         </Button>
       </div>
-      {groups.map((scope) => (
+      {SCOPES.map((scope) => (
         <section
           className="settings-shortcut-group"
           key={scope}
@@ -136,6 +137,7 @@ export function ShortcutsSettings({
           {SHORTCUT_COMMANDS.filter((item) => item.scope === scope).map((item) => {
             const binding = draft.find((value) => value.command === item.command)!;
             const conflict = conflicts.has(item.command);
+            const label = t(item.label);
             return (
               <div
                 className="settings-shortcut-row"
@@ -143,7 +145,7 @@ export function ShortcutsSettings({
                 data-conflict={conflict || undefined}
               >
                 <div className="settings-shortcut-copy">
-                  <strong>{t(item.label)}</strong>
+                  <strong>{label}</strong>
                   <span>{t(item.description)}</span>
                 </div>
                 <div className="settings-shortcut-actions">
@@ -152,7 +154,7 @@ export function ShortcutsSettings({
                     <input
                       type="checkbox"
                       checked={binding.enabled}
-                      aria-label={t('启用 {name}', { name: item.label })}
+                      aria-label={t('启用 {name}', { name: label })}
                       onChange={(event) =>
                         setDraft((current) =>
                           current.map((value) =>
@@ -171,7 +173,7 @@ export function ShortcutsSettings({
                     aria-label={
                       capturing === item.command
                         ? t('正在录入快捷键')
-                        : t('编辑 {name}', { name: item.label })
+                        : t('编辑 {name}', { name: label })
                     }
                     onClick={() => setCapturing(item.command)}
                   >
@@ -180,7 +182,7 @@ export function ShortcutsSettings({
                   <Button
                     variant="ghost"
                     iconOnly
-                    aria-label={t('清除 {name}', { name: item.label })}
+                    aria-label={t('清除 {name}', { name: label })}
                     onClick={() =>
                       setDraft((current) =>
                         current.map((value) =>
@@ -194,7 +196,7 @@ export function ShortcutsSettings({
                   <Button
                     variant="ghost"
                     iconOnly
-                    aria-label={t('恢复 {name}', { name: item.label })}
+                    aria-label={t('恢复 {name}', { name: label })}
                     onClick={() => resetOne(item.command)}
                   >
                     <RotateCcw size={14} />
@@ -207,7 +209,7 @@ export function ShortcutsSettings({
       ))}
       {error ? (
         <p className="error-text" role="alert">
-          {error}
+          {translateError(error)}
         </p>
       ) : null}
       <footer className="settings-actions settings-shortcut-footer">
