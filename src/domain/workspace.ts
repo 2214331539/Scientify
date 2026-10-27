@@ -1,10 +1,12 @@
 import { validateWebSources } from './web-sources';
 import type { ShortcutSettings } from '../platform/shortcuts';
 export type Entity = { id: string; [key: string]: unknown };
+/** Wire protocols a model service can speak. */
+export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini';
 export type ModelSettings = {
   endpoint: string;
   model: string;
-  provider: 'ollama' | 'openai' | 'anthropic' | 'gemini';
+  provider: AIProtocol;
   serviceId?: string;
   modelCatalog?: string[];
   verification?: {
@@ -105,7 +107,7 @@ export type Workspace = {
     model: {
       endpoint: string;
       model: string;
-      provider?: 'ollama' | 'openai' | 'anthropic' | 'gemini';
+      provider?: AIProtocol;
       serviceId?: string;
       modelCatalog?: string[];
       recentModels?: string[];

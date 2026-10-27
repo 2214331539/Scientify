@@ -1,4 +1,5 @@
 import { Channel, invoke } from '@tauri-apps/api/core';
+import type { AIProtocol } from '../domain/workspace';
 
 export interface ResearchFile {
   path: string;
@@ -21,7 +22,6 @@ export interface GitChange {
   status: string;
   oldPath?: string;
 }
-export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini';
 export interface AIConnection {
   endpoint: string;
   apiKey?: string;

@@ -30,14 +30,14 @@ import {
   type AgentSkillRef,
   type PermissionMode,
 } from '../../platform/agent';
-import type { AIProtocol, ResearchBackend } from '../../platform/research';
+import type { ResearchBackend } from '../../platform/research';
 import {
   credentialSlot,
   nativeCredentials,
   type CredentialBackend,
 } from '../../platform/credentials';
 import type { WorkspaceStore } from '../../stores/workspace';
-import type { ModelProfile } from '../../domain/workspace';
+import type { AIProtocol, ModelProfile } from '../../domain/workspace';
 import { hasPendingWork, initialAgentSession } from './agent-session';
 import { getAgentRuntime } from './agent-runtime';
 import { getChatRuntime } from './chat-runtime';

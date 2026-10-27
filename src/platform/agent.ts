@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import type { WorkContext, WorkspaceId } from '../domain/context';
-import type { AIProtocol } from './research';
+import type { AIProtocol } from '../domain/workspace';
 
 /**
  * Operation domains. A domain is a permission boundary defined by a root

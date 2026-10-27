@@ -1,4 +1,4 @@
-import type { AIProtocol } from '../../platform/research';
+import type { AIProtocol } from '../../domain/workspace';
 import type { AISettings } from './model';
 
 /** Service branding is separate from the wire protocol. Models always come from the service. */

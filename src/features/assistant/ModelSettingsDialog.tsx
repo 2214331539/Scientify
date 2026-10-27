@@ -3,9 +3,9 @@ import { Check, LoaderCircle, RefreshCw, Settings2, Plus, Trash2 } from 'lucide-
 import { Modal } from '../../components/Modal';
 import { Button, Dropdown, Input } from '../../components/primitives';
 import { t, translateError } from '../../i18n';
-import type { AIModel, AIProtocol, ResearchBackend } from '../../platform/research';
+import type { AIModel, ResearchBackend } from '../../platform/research';
 import type { AISettings } from './model';
-import type { ModelProfile } from '../../domain/workspace';
+import type { AIProtocol, ModelProfile } from '../../domain/workspace';
 import { modelServices, serviceFor } from './providers';
 import { errorMessage } from '../../domain/errors';
 import '../settings/settings.css';
