@@ -598,7 +598,7 @@ mod tests {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
-            .creation_flags(0x08000000);
+            .creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
         let mut provider = Provider(command.spawn().unwrap());
         let mut endpoint = String::new();
         BufReader::new(provider.0.stdout.take().unwrap())
@@ -733,7 +733,7 @@ mod tests {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::inherit());
             use std::os::windows::process::CommandExt;
-            command.creation_flags(0x08000000);
+            command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
             let mut provider = Provider(command.spawn().unwrap());
             let mut endpoint = String::new();
             BufReader::new(provider.0.stdout.take().unwrap())

@@ -20,8 +20,7 @@ fn hide_console_window(_command: &mut Command) {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        _command.creation_flags(CREATE_NO_WINDOW);
+        _command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
     }
 }
 

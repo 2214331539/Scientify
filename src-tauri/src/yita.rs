@@ -105,7 +105,7 @@ async fn ensure_started<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
         .stderr(Stdio::null())
         .kill_on_drop(true);
     #[cfg(windows)]
-    command.creation_flags(0x08000000);
+    command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
     let mut child = command
         .spawn()
         .map_err(|e| format!("翻译组件启动失败：{e}"))?;
