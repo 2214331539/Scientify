@@ -6,6 +6,7 @@ import { Modal } from '../../components/Modal';
 import { t, translateError } from '../../i18n';
 import type { ResearchFile } from '../../platform/research';
 import { describeError, experimentApi, experimentOutput, type Execution } from './runtime';
+import { statusLabel } from './status';
 
 export function ExecutionPanel({
   run,
@@ -85,19 +86,7 @@ export function ExecutionPanel({
     <div className="sf-execution-panel">
       <div className="sf-execution-toolbar">
         <code>{run.id.slice(0, 8)}</code>
-        <span>
-          {t(
-            run.status === 'running'
-              ? '运行中'
-              : run.status === 'completed'
-                ? '已完成'
-                : run.status === 'cancelled'
-                  ? '已取消'
-                  : run.status === 'interrupted'
-                    ? '已中断'
-                    : '失败',
-          )}
-        </span>
+        <span>{statusLabel(run.status)}</span>
         <span className="spacer" />
         <Button
           variant="ghost"

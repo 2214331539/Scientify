@@ -8,19 +8,12 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import type { WorkContext } from '../../domain/context';
 import { t } from '../../i18n';
 import { confirmAction } from '../../components/prompts';
-import { RunForm, metricsOf } from './RunWorkspace';
+import { RunForm, metricsOf } from './RunForm';
+import { statusLabel } from './status';
 import { ExecutionPanel } from './ExecutionPanel';
 import type { Execution } from './runtime';
 type Record = Entity & { project: string };
 const text = (v: unknown) => (typeof v === 'string' ? v : '');
-const labels: { [key: string]: string } = {
-  planned: '计划中',
-  running: '运行中',
-  completed: '已完成',
-  failed: '失败',
-  cancelled: '已取消',
-  interrupted: '已中断',
-};
 export function ExperimentRuns({
   project,
   experimentId,
@@ -202,7 +195,7 @@ export function ExperimentRuns({
                               : '手动记录',
                         )
                       ) : field.name === '状态' ? (
-                        t(labels[text(r.status)] || text(r.status))
+                        statusLabel(text(r.status))
                       ) : field.name === '配置与参数' ? (
                         <pre>{text(r.config) || '—'}</pre>
                       ) : field.name === '结果与结论' ? (
@@ -257,7 +250,7 @@ export function ExperimentRuns({
                         {text(r.name) || t('未命名实验')}
                       </Button>
                     </td>
-                    <td>{t(labels[text(r.status)] || text(r.status))}</td>
+                    <td>{statusLabel(text(r.status))}</td>
                     <td>
                       {t(
                         native.get(r.id)?.source

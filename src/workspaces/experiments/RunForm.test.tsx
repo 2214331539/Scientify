@@ -3,8 +3,8 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace, type Project, type Workspace } from '../../domain/workspace';
 import type { WorkspaceBackend } from '../../platform/desktop';
-import { createWorkspaceStore } from '../../stores/workspace';
-import { RunWorkspace } from './RunWorkspace';
+import { createWorkspaceStore, type WorkspaceStore } from '../../stores/workspace';
+import { ExperimentRuns } from './ExperimentRuns';
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () {
@@ -37,11 +37,25 @@ async function setup(data = emptyWorkspace()) {
   return { backend, store };
 }
 
+/** The record form opens from the runs list, its only host. */
+function renderRuns(store: WorkspaceStore) {
+  render(
+    <ExperimentRuns
+      project={project}
+      store={store}
+      executions={[]}
+      onSelect={vi.fn()}
+      onContext={vi.fn()}
+      onRerun={vi.fn()}
+    />,
+  );
+}
+
 it('keeps failed experimental notes and saves finite numeric or missing metrics on retry', async () => {
   const { backend, store } = await setup();
   vi.mocked(backend.save).mockRejectedValueOnce(new Error('写入失败'));
   const user = userEvent.setup();
-  render(<RunWorkspace project={project} store={store} onContext={vi.fn()} />);
+  renderRuns(store);
   await user.click(screen.getAllByRole('button', { name: '新建记录' })[0]);
   await user.type(screen.getByLabelText('实验名称'), 'Ablation test');
   await user.type(screen.getByLabelText('结果与结论'), 'The smaller model converges faster.');
@@ -83,7 +97,7 @@ it('preserves old run and metric extension fields while editing known fields', a
   });
   const { store } = await setup(data);
   const user = userEvent.setup();
-  render(<RunWorkspace project={project} store={store} onContext={vi.fn()} />);
+  renderRuns(store);
   await user.click(screen.getByRole('button', { name: '编辑记录' }));
   await user.clear(screen.getByLabelText('实验名称'));
   await user.type(screen.getByLabelText('实验名称'), 'Renamed');
@@ -107,7 +121,7 @@ it('blocks invalid metrics and disables fields until an in-flight save is acknow
       finish = resolve;
     });
   });
-  render(<RunWorkspace project={project} store={store} onContext={vi.fn()} />);
+  renderRuns(store);
   await user.click(screen.getAllByRole('button', { name: '新建记录' })[0]);
   await user.type(screen.getByLabelText('实验名称'), 'Pending');
   await user.click(screen.getByRole('button', { name: '添加指标' }));

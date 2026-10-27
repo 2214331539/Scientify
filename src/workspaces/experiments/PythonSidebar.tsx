@@ -14,6 +14,7 @@ import {
   type Interpreter,
 } from './development';
 import { describeError } from './runtime';
+import { statusLabel } from './status';
 
 export function PythonSidebar({
   projectId,
@@ -386,16 +387,7 @@ export function PythonSidebar({
                 onClick={() => setLogId(task.id)}
               >
                 <span>
-                  {task.kind} ·{' '}
-                  {t(
-                    task.status === 'running'
-                      ? '运行中'
-                      : task.status === 'completed'
-                        ? '已完成'
-                        : task.status === 'cancelled'
-                          ? '已取消'
-                          : '失败',
-                  )}
+                  {task.kind} · {statusLabel(task.status)}
                 </span>
               </Button>
               {task.status === 'running' && (

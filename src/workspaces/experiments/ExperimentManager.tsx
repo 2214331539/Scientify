@@ -19,6 +19,7 @@ import { Modal } from '../../components/Modal';
 import { ViewTransition } from '../../components/workspace/ViewTransition';
 import { confirmAction, requestText } from '../../components/prompts';
 import { t, locale, translateError } from '../../i18n';
+import { statusLabel } from './status';
 import { experimentsFor, experimentCatalog, registerExperiment } from './catalog';
 import { describeError, type Execution } from './runtime';
 import { developmentStore } from './development';
@@ -339,11 +340,7 @@ export function ExperimentManager({
                           ? `${experiment.python.version} · ${experiment.python.manager}`
                           : t('未配置')}
                       </td>
-                      <td>
-                        {latest
-                          ? `${latest.name} · ${t(latest.status === 'running' ? '运行中' : latest.status === 'completed' ? '已完成' : latest.status === 'failed' ? '失败' : '已结束')}`
-                          : '—'}
-                      </td>
+                      <td>{latest ? `${latest.name} · ${statusLabel(latest.status)}` : '—'}</td>
                       <td>
                         {experiment.updatedAt
                           ? new Date(experiment.updatedAt).toLocaleDateString(locale())

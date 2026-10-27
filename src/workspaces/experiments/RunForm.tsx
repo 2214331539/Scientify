@@ -1,27 +1,17 @@
 import { t, translateError } from '../../i18n';
-import { Badge, Button, Input, Textarea, Dropdown } from '../../components/primitives';
-import { useEffect, useRef, useState } from 'react';
-import { useStore } from 'zustand';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { Panel } from '../../components/layout/Panel';
-import { Section } from '../../components/workspace/Section';
-import { ResourceList, ResourceRow } from '../../components/workspace/ResourceList';
+import { Button, Input, Textarea, Dropdown } from '../../components/primitives';
+import { useEffect, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { Entity, Project } from '../../domain/workspace';
-import type { WorkContext } from '../../domain/context';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
+import { MANUAL_STATUSES, statusLabel } from './status';
 import './runs.css';
 
 type Run = Entity & { project: string };
 type Metric = { name: string; value: number | null; [key: string]: unknown };
 const str = (value: unknown) => (typeof value === 'string' ? value : '');
-const statuses: Record<string, string> = {
-  planned: '计划中',
-  running: '进行中',
-  completed: '已完成',
-  failed: '未成功',
-};
 export function metricsOf(run?: Run): Metric[] {
   return Array.isArray(run?.metrics)
     ? run.metrics.filter(
@@ -31,174 +21,6 @@ export function metricsOf(run?: Run): Metric[] {
           (metric.value === null || typeof metric.value === 'number'),
       )
     : [];
-}
-
-export function RunWorkspace({
-  project,
-  store,
-  onContext,
-  selectedRunId,
-  onSelect,
-}: {
-  project: Project;
-  store: WorkspaceStore;
-  onContext: (context: WorkContext) => void;
-  selectedRunId?: string | null;
-  onSelect?: (id: string) => void;
-}) {
-  const source = useStore(store, (state) => state.data?.runs);
-  const runs = (source ?? [])
-    .filter((run) => run.project === project.id)
-    .sort((a, b) => str(b.updatedAt).localeCompare(str(a.updatedAt)));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Run | 'new' | null>(null);
-  const selected =
-    runs.find((run) => run.id === (selectedRunId === undefined ? selectedId : selectedRunId)) ??
-    runs[0];
-  function selectRun(id: string) {
-    setSelectedId(id);
-    onSelect?.(id);
-  }
-  const contextCallback = useRef(onContext);
-  contextCallback.current = onContext;
-  useEffect(() => {
-    contextCallback.current({
-      projectId: project.id,
-      workspace: 'experiments',
-      title: selected ? str(selected.name) : t('实验记录'),
-      resourceId: selected?.id,
-      text: selected
-        ? [
-            str(selected.protocol),
-            str(selected.config),
-            metricsOf(selected)
-              .map((metric) => `${metric.name}: ${metric.value ?? t('未填写')}`)
-              .join('\n'),
-            str(selected.conclusion),
-          ]
-            .filter(Boolean)
-            .join('\n\n')
-        : undefined,
-    });
-  }, [project.id, selected]);
-  useEffect(() => {
-    setSelectedId(null);
-    setEditing(null);
-  }, [project.id]);
-  return (
-    <Panel
-      className="sf-runs-workspace"
-      aria-label={t('实验记录工作区')}
-      header={
-        <>
-          <span>{t('Runs')}</span>
-          <span className="muted">{t('{count} 条 · 手动记录', { count: runs.length })}</span>
-          <span className="spacer" />
-          <Button variant="primary" onClick={() => setEditing('new')}>
-            <Plus size={14} />
-            {t('新建记录')}
-          </Button>
-        </>
-      }
-    >
-      {runs.length ? (
-        <div className="sf-runs-content">
-          <ResourceList className="sf-runs-list" label={t('实验记录列表')}>
-            {runs.map((run) => (
-              <ResourceRow
-                key={run.id}
-                className="sf-run-resource"
-                selected={selected?.id === run.id}
-                onClick={() => selectRun(run.id)}
-                aria-pressed={selected?.id === run.id}
-              >
-                <span>
-                  <strong>{str(run.name) || t('未命名实验')}</strong>
-                  <Badge>{t(statuses[str(run.status)] ?? str(run.status))}</Badge>
-                </span>
-                <time>{str(run.updatedAt).slice(0, 10)}</time>
-              </ResourceRow>
-            ))}
-          </ResourceList>
-          {selected ? (
-            <article className="sf-run-detail">
-              <header>
-                <div>
-                  <Badge>{t(statuses[str(selected.status)] ?? str(selected.status))}</Badge>
-                  <h3>{str(selected.name)}</h3>
-                </div>
-                <Button onClick={() => setEditing(selected)}>
-                  <Pencil size={14} />
-                  {t('编辑记录')}
-                </Button>
-              </header>
-              <Section title={t('实验方案')}>
-                <p>{str(selected.protocol) || t('尚未记录实验方案')}</p>
-              </Section>
-              <Section title={t('配置与参数')}>
-                {str(selected.config) ? (
-                  <pre>{str(selected.config)}</pre>
-                ) : (
-                  <p className="sf-run-muted">{t('尚未记录配置')}</p>
-                )}
-              </Section>
-              <Section title={t('指标')}>
-                {metricsOf(selected).length ? (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{t('指标名称')}</th>
-                        <th>{t('数值')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {metricsOf(selected).map((metric, index) => (
-                        <tr key={index}>
-                          <td>{metric.name}</td>
-                          <td>{metric.value ?? t('未填写')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p className="sf-run-muted">{t('尚未记录指标')}</p>
-                )}
-              </Section>
-              <Section title={t('结果与结论')}>
-                <p>{str(selected.conclusion) || t('尚未记录结论')}</p>
-              </Section>
-              <footer>
-                {t('状态与结果由你手动记录 · 更新于')}{' '}
-                {str(selected.updatedAt).replace('T', ' ').slice(0, 16)}
-              </footer>
-            </article>
-          ) : null}
-        </div>
-      ) : (
-        <div className="sf-runs-empty">
-          <h3>{t('暂无实验记录')}</h3>
-
-          <Button onClick={() => setEditing('new')}>
-            <Plus size={14} />
-            {t('新建记录')}
-          </Button>
-        </div>
-      )}
-      {editing ? (
-        <RunForm
-          key={editing === 'new' ? `${project.id}:new` : editing.id}
-          project={project}
-          store={store}
-          initial={editing === 'new' ? undefined : editing}
-          onClose={() => setEditing(null)}
-          onSaved={(id) => {
-            selectRun(id);
-            setEditing(null);
-          }}
-        />
-      ) : null}
-    </Panel>
-  );
 }
 
 export function RunForm({
@@ -330,12 +152,12 @@ export function RunForm({
               value={fields.status}
               onChange={(event) => edit('status', event.target.value)}
             >
-              {!statuses[fields.status] ? (
-                <option value={fields.status}>{fields.status}</option>
+              {!MANUAL_STATUSES.includes(fields.status) ? (
+                <option value={fields.status}>{statusLabel(fields.status)}</option>
               ) : null}
-              {Object.entries(statuses).map(([value, label]) => (
+              {MANUAL_STATUSES.map((value) => (
                 <option key={value} value={value}>
-                  {t(label)}
+                  {statusLabel(value)}
                 </option>
               ))}
             </Dropdown>
