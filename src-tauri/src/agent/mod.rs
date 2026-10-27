@@ -75,26 +75,26 @@ impl SessionEntry {
                 self.active_turn = event["params"]["turn"]["id"].as_str().map(str::to_string);
             }
             if event["method"] == "turn/completed" {
-                self.scratch = None;
-                self.active_turn = None;
-                self.lease = None;
-                self.requests.clear();
-                self.host_requests.clear();
+                self.end_turn();
             }
             delivered.push(event);
         }
         // Deliver buffered final output even if the process exits immediately afterwards.
         if delivered.is_empty() {
             if let Err(error) = self.session.ensure_alive() {
-                self.scratch = None;
-                self.active_turn = None;
-                self.lease = None;
-                self.requests.clear();
-                self.host_requests.clear();
+                self.end_turn();
                 return Err(error);
             }
         }
         Ok(delivered)
+    }
+    /// Forget the running turn: its approvals, the code lease and the scratch folder.
+    fn end_turn(&mut self) {
+        self.active_turn = None;
+        self.lease = None;
+        self.scratch = None;
+        self.requests.clear();
+        self.host_requests.clear();
     }
     fn validate(&self, thread_id: &str) -> Result<(), String> {
         if self.handle.thread_id != thread_id {
@@ -639,10 +639,7 @@ pub async fn agent_start_thread(
                             Ok(response) => response,
                             Err(error) => {
                                 entry.session.terminate();
-                                entry.active_turn = None;
-                                entry.lease = None;
-                                entry.requests.clear();
-                                entry.host_requests.clear();
+                                entry.end_turn();
                                 return Err(error);
                             }
                         };
@@ -855,20 +852,17 @@ pub async fn agent_start_turn(
                 // The request may have reached Codex. Stop this process rather than
                 // automatically sending a duplicate turn or leaving an invisible job.
                 entry.session.terminate();
-                entry.scratch = None;
-                entry.active_turn = None;
-                entry.lease = None;
-                entry.requests.clear();
+                entry.end_turn();
                 return Err(error);
             }
         };
         let Some(id) = response["turn"]["id"].as_str().filter(|s|!s.is_empty()).map(str::to_string) else {
-            entry.session.terminate(); entry.active_turn=None; entry.lease=None; entry.scratch=None;
+            entry.session.terminate(); entry.end_turn();
             return Err("Agent 返回了空 turn 标识。".into());
         };
         entry.active_turn = Some(id.clone());
         let status = response["turn"]["status"].clone();
-        if matches!(status.as_str(), Some("completed" | "failed" | "interrupted")) { entry.active_turn=None; entry.lease=None; entry.scratch=None; }
+        if matches!(status.as_str(), Some("completed" | "failed" | "interrupted")) { entry.end_turn(); }
         Ok(TurnHandle { turn_id:id,status,events:entry.collect()? })
     })).await
 }
