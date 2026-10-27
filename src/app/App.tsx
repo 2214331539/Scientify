@@ -47,6 +47,7 @@ import type { WorkContext, WorkspaceId } from '../domain/context';
 import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
 import { nativeResearch, type ResearchBackend } from '../platform/research';
 import { ViewTransition } from '../components/workspace/ViewTransition';
+import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/shortcuts';
 
 type Dialog =
   { kind: 'project'; project?: Project } | { kind: 'data' | 'profile' | 'search' | 'about' } | null;
@@ -347,16 +348,6 @@ export function App({
         : s;
     });
   }, [data]);
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        if (!document.querySelector('dialog[open]')) setDialog({ kind: 'search' });
-      }
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, []);
   const project = data?.projects.find((p) => p.id === ui.projectId);
   const location = project ? (ui.locations[project.id] ?? locationDefault) : locationDefault;
   const workspace = workspaceItems.some((w) => w.id === location.workspace)
@@ -415,6 +406,43 @@ export function App({
     if (tool === 'notes' && workspace === 'notes') return;
     setUI((s) => ({ ...s, dock: tool, dockOpen: s.dock !== tool || !s.dockOpen }));
   }
+  useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing) return;
+      const shortcut = eventToShortcut(event);
+      if (!shortcut) return;
+      const settings = data?.settings.shortcuts;
+      const command = [
+        'app.openAssistant',
+        'app.openNotes',
+        'app.openLiterature',
+        'app.openExperiments',
+        'app.openCode',
+        'app.focusSearch',
+        'app.newConversation',
+      ].find((value) => {
+        const binding = bindingFor(settings, value as Parameters<typeof bindingFor>[1]);
+        return binding?.enabled !== false && binding?.keys === shortcut;
+      });
+      if (!command || (isEditableTarget(event.target) && command !== 'app.focusSearch')) return;
+      if (document.querySelector('dialog[open]') && command !== 'app.focusSearch') return;
+      event.preventDefault();
+      if (command === 'app.focusSearch') {
+        if (!document.querySelector('dialog[open]')) setDialog({ kind: 'search' });
+      } else if (command === 'app.openAssistant') openTool('assistant');
+      else if (command === 'app.openNotes') navigate('notes');
+      else if (command === 'app.openLiterature') navigate('literature');
+      else if (command === 'app.openExperiments') navigate('experiments');
+      else if (command === 'app.openCode') {
+        patchLocation({ workspace: 'experiments', view: 'files' });
+      } else if (command === 'app.newConversation') {
+        openTool('assistant');
+        window.dispatchEvent(new CustomEvent('scientify-new-conversation'));
+      }
+    };
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, [data?.settings.shortcuts, navigate, openTool, patchLocation, workspace]);
   function openProject(id: string) {
     if (windowMode === 'projects') {
       void launchWorkspace(id);

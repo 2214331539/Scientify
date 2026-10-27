@@ -1014,6 +1014,15 @@ export function AssistantPanel({
     else if (command === 'stop') void interruptAgent();
   }
 
+  useEffect(() => {
+    const onNewConversation = () => {
+      if (!document.querySelector('.sf-dock-session:not([hidden]) .sf-assistant-panel')) return;
+      if (!conversationActionsDisabled) selectConversation('', '');
+    };
+    window.addEventListener('scientify-new-conversation', onNewConversation);
+    return () => window.removeEventListener('scientify-new-conversation', onNewConversation);
+  }, [conversationActionsDisabled, selectConversation]);
+
   return (
     <Panel
       className="sf-assistant-panel sf-project-assistant"
@@ -1435,6 +1444,7 @@ export function AssistantPanel({
         onSkillsOpen={loadSkills}
         onSkillsRefresh={() => loadSkills(true)}
         selectedSkills={selectedSkills}
+        shortcuts={data?.settings.shortcuts}
         onSelectSkill={(skill) =>
           setSelectedSkills((current) =>
             current.length < 4 && !current.some((item) => item.path === skill.path)

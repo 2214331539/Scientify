@@ -7,7 +7,8 @@ import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { StorageLocation } from '../../platform/desktop';
-import { CircleHelp, Database, Palette, Settings } from 'lucide-react';
+import { CircleHelp, Database, Keyboard, Palette, Settings } from 'lucide-react';
+import { ShortcutsSettings } from './ShortcutsSettings';
 import './settings.css';
 
 function DataPreferences({ store }: { store: WorkspaceStore }) {
@@ -162,7 +163,7 @@ export function SettingsDialog({
 }: {
   store: WorkspaceStore;
   onClose(): void;
-  initialSection?: 'general' | 'appearance' | 'data' | 'about';
+  initialSection?: 'general' | 'appearance' | 'shortcuts' | 'data' | 'about';
 }) {
   const data = useStore(store, (s) => s.data);
   const [section, setSection] = useState(initialSection);
@@ -178,6 +179,11 @@ export function SettingsDialog({
     store.getState().setDirtySource('settings-profile', dirty);
     return () => store.getState().setDirtySource('settings-profile', false);
   }, [dirty, store]);
+  const [shortcutsDirty, setShortcutsDirty] = useState(false);
+  useEffect(() => {
+    store.getState().setDirtySource('settings-shortcuts', shortcutsDirty);
+    return () => store.getState().setDirtySource('settings-shortcuts', false);
+  }, [shortcutsDirty, store]);
   useEffect(() => {
     const next = data?.settings.name ?? '';
     setProfile((current) =>
@@ -187,6 +193,7 @@ export function SettingsDialog({
   const sections = [
     { id: 'general', label: t('通用'), icon: Settings },
     { id: 'appearance', label: t('外观'), icon: Palette },
+    { id: 'shortcuts', label: t('快捷键'), icon: Keyboard },
     { id: 'data', label: t('数据与备份'), icon: Database },
     { id: 'about', label: t('关于 Scientify'), icon: CircleHelp },
   ] as const;
@@ -273,6 +280,9 @@ export function SettingsDialog({
             <p>{t('跟随系统，或固定使用浅色和深色外观。')}</p>
           </div>
           <p className="settings-note">{t('顶栏按钮可直接切换亮暗。')}</p>
+        </section>
+        <section hidden={section !== 'shortcuts'} aria-label={t('快捷键')}>
+          <ShortcutsSettings store={store} onDirtyChange={setShortcutsDirty} />
         </section>
         <section hidden={section !== 'data'} aria-label={t('数据与备份')}>
           <DataPreferences store={store} />

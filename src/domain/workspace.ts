@@ -1,4 +1,5 @@
 import { validateWebSources } from './web-sources';
+import type { ShortcutSettings } from '../platform/shortcuts';
 export type Entity = { id: string; [key: string]: unknown };
 export type ModelSettings = {
   endpoint: string;
@@ -101,6 +102,7 @@ export type Workspace = {
       recentModels?: string[];
       verification?: ModelSettings['verification'];
     };
+    shortcuts?: ShortcutSettings;
   };
   navigation: {
     [key: string]: unknown;

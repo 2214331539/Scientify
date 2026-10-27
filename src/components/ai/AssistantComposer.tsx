@@ -4,6 +4,12 @@ import { useEffect, useId, useRef, useState, type Ref, type MouseEvent } from 'r
 import { Button, Textarea } from '../primitives';
 import type { ChatAttachment } from '../../features/assistant/model';
 import type { AgentSkill, AgentSkillRef, PermissionMode } from '../../platform/agent';
+import {
+  bindingFor,
+  eventToShortcut,
+  normalizeShortcut,
+  type ShortcutSettings,
+} from '../../platform/shortcuts';
 
 export type ComposerCommand = 'new' | 'context' | 'stop';
 const commands = [
@@ -48,6 +54,7 @@ interface Props {
   selectedSkills?: AgentSkillRef[];
   onSelectSkill?: (skill: AgentSkillRef) => void;
   onRemoveSkill?: (index: number) => void;
+  shortcuts?: ShortcutSettings;
 }
 
 export function AssistantComposer({
@@ -83,6 +90,7 @@ export function AssistantComposer({
   selectedSkills = [],
   onSelectSkill,
   onRemoveSkill,
+  shortcuts,
 }: Props) {
   const [dragging, setDragging] = useState(false);
   const modelButton = useRef<HTMLButtonElement>(null);
@@ -288,6 +296,26 @@ export function AssistantComposer({
                 (activeIndex + (event.key === 'ArrowDown' ? 1 : -1) + options.length) %
                 options.length,
             });
+            return;
+          }
+          const pressedShortcut = eventToShortcut(event.nativeEvent);
+          const stopShortcut = bindingFor(shortcuts, 'assistant.stop');
+          const sendShortcut = bindingFor(shortcuts, 'assistant.send');
+          if (
+            isBusy &&
+            stopShortcut?.enabled !== false &&
+            pressedShortcut === normalizeShortcut(stopShortcut?.keys ?? 'Escape')
+          ) {
+            event.preventDefault();
+            onInterrupt();
+            return;
+          }
+          if (
+            sendShortcut?.enabled !== false &&
+            pressedShortcut === normalizeShortcut(sendShortcut?.keys ?? 'Mod+Enter')
+          ) {
+            event.preventDefault();
+            submit();
             return;
           }
           if (event.key === 'Enter' && !event.shiftKey) {

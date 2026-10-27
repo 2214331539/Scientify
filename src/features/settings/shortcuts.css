@@ -1,0 +1,119 @@
+.settings-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.settings-shortcuts-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  padding-bottom: 16px;
+}
+.settings-shortcuts-intro h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+.settings-shortcuts-intro p {
+  max-width: 600px;
+  margin: 0;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.settings-shortcut-group {
+  display: grid;
+  gap: 4px;
+}
+.settings-shortcut-group h4 {
+  margin: 4px 0 5px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.settings-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+}
+.settings-shortcut-row[data-conflict='true'] {
+  border-color: var(--sf-danger, #c84b4b);
+  background: color-mix(in srgb, var(--sf-danger, #c84b4b) 7%, transparent);
+}
+.settings-shortcut-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.settings-shortcut-copy strong {
+  color: var(--sf-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.settings-shortcut-copy span {
+  overflow: hidden;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-shortcut-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+}
+.settings-shortcut-key {
+  min-width: 88px;
+  min-height: 28px;
+  border: 1px solid var(--sf-border-subtle);
+  background: var(--sf-surface-chrome);
+  color: var(--sf-text-primary);
+  font-family: var(--sf-font-mono, Consolas, monospace);
+  font-size: 11px;
+}
+.settings-shortcut-warning {
+  color: var(--sf-danger, #c84b4b);
+  font-size: 11px;
+}
+.settings-shortcut-enabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.settings-shortcut-enabled input {
+  accent-color: var(--sf-accent);
+}
+.settings-shortcut-footer {
+  margin-top: 2px;
+}
+.settings-shortcut-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+@media (max-width: 680px) {
+  .settings-shortcuts-intro,
+  .settings-shortcut-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .settings-shortcut-actions {
+    width: 100%;
+  }
+  .settings-shortcut-key {
+    flex: 1;
+  }
+  .settings-shortcut-copy span {
+    white-space: normal;
+  }
+}
