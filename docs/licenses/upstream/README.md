@@ -23,6 +23,10 @@ review and update this map rather than reuse a notice for a different version.
 - `remark-math` 6.0.0 and `rehype-katex` 7.0.1 omit the monorepo license from
   their npm archives. The identical MIT text from each published version's
   `gitHead` is retained here; both source commits are recorded separately.
+- The Apple `objc2` family omits notice files from its crate archives. The
+  upstream workspace's `LICENSE.md` is retained verbatim; each exact crate
+  version links to its published source commit. That notice links the license
+  terms and documents the Apple SDK provenance.
 
 The generated report deliberately includes build/test dependencies as well as
 runtime dependencies. It is bundled under `licenses/`, alongside the project,

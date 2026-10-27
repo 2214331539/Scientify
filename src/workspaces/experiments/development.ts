@@ -37,7 +37,9 @@ export type EnvironmentTask = {
 export const developmentApi = {
   available: () => isTauri(),
   snapshot: () =>
-    invoke<{ terminals: TerminalInfo[]; tasks: EnvironmentTask[] }>('development_snapshot'),
+    invoke<{ terminals: TerminalInfo[]; tasks: EnvironmentTask[]; platform?: string }>(
+      'development_snapshot',
+    ),
   trust: (projectId: string, experimentId: string, allow?: boolean) =>
     invoke<boolean>('experiment_trust', { projectId, experimentId, allow }),
   terminal: <T>(projectId: string, request: object) =>
@@ -49,7 +51,8 @@ export const developmentStore = createStore<{
   terminals: TerminalInfo[];
   tasks: EnvironmentTask[];
   error: string;
-}>(() => ({ terminals: [], tasks: [], error: '' }));
+  platform: string;
+}>(() => ({ terminals: [], tasks: [], error: '', platform: 'unknown' }));
 
 export async function ensureExecutionTrust(project: string, experiment: string) {
   if (await developmentApi.trust(project, experiment)) return true;
@@ -80,16 +83,22 @@ export function useDevelopmentRuntime(store: WorkspaceStore, enabled: boolean) {
       polling = true;
       clearTimeout(timer);
       try {
-        const { terminals, tasks } = await developmentApi.snapshot();
+        const { terminals, tasks, platform } = await developmentApi.snapshot();
         if (!alive) return;
         const previous = developmentStore.getState();
         const sameTerminals = JSON.stringify(previous.terminals) === JSON.stringify(terminals);
         const sameTasks = JSON.stringify(previous.tasks) === JSON.stringify(tasks);
-        if (!sameTerminals || !sameTasks || previous.error)
+        if (
+          !sameTerminals ||
+          !sameTasks ||
+          previous.error ||
+          (platform && previous.platform !== platform)
+        )
           developmentStore.setState({
             terminals: sameTerminals ? previous.terminals : terminals,
             tasks: sameTasks ? previous.tasks : tasks,
             error: '',
+            platform: platform || previous.platform,
           });
         const active = new Map<string, string>([
           ...terminals

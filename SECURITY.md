@@ -4,7 +4,7 @@ Scientify is an early-alpha desktop application. Security reports in Chinese or 
 
 ## Report a vulnerability privately
 
-If GitHub private vulnerability reporting is available, use [Report a vulnerability](https://github.com/Tsingyu-x-THU/Scientify-Desktop/security/advisories/new). Availability depends on repository settings; this document does not enable that feature.
+If GitHub private vulnerability reporting is available, use [Report a vulnerability](https://github.com/2214331539/Scientify/security/advisories/new). Availability depends on repository settings; this document does not enable that feature.
 
 If that entry is unavailable, open an issue containing only a request for a private contact channel, addressed to [@2214331539](https://github.com/2214331539). Do not include exploit details, credentials, private paths, browser sessions, or research material in a public issue. There is currently no dedicated security mailbox or guaranteed response time.
 
@@ -17,7 +17,7 @@ Include the affected commit/version, platform, impact, and a minimal reproductio
 - Trusted manual terminals and experiments execute with the local user's permissions, including network and filesystem access. Only run code and dependency commands you trust.
 - AI formal runs use a workspace sandbox. External webpages are separate webviews without application IPC capabilities. These boundaries do not make arbitrary code or downloaded files safe.
 - JSON export excludes PDFs and source files. Unsaved drafts are not guaranteed to survive crashes; back up linked directories separately.
-- Desktop validation currently targets Windows x64. Other platforms, signed distribution, automatic updates, and complete installer recovery are not established support claims.
+- Desktop CI targets Windows x64 and macOS Apple Silicon. The Mac preview is ad-hoc signed and unnotarized; Developer ID distribution, Intel Mac, automatic updates, complete manual-device coverage, and complete installer recovery are not established support claims.
 
 ## Contribution and release requirements
 

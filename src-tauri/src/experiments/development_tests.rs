@@ -55,7 +55,7 @@ fn real_python_environment_terminal_and_formal_run_work_without_a_model() {
             experiment_artifacts,
             crate::workspace_save
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
@@ -199,7 +199,12 @@ fn real_python_environment_terminal_and_formal_run_work_without_a_model() {
     )
     .is_err());
     term(json!({"action":"resize","id":id,"cols":110,"rows":28}));
-    term(json!({"action":"input","id":id,"data":"\u{1b}[1;1RScientify\r"}));
+    let input = if cfg!(windows) {
+        "\u{1b}[1;1RScientify\r"
+    } else {
+        "Scientify\r"
+    };
+    term(json!({"action":"input","id":id,"data":input}));
     let deadline = Instant::now() + Duration::from_secs(15);
     let mut offset = 0;
     let mut transcript = Vec::new();
@@ -373,7 +378,8 @@ fn real_python_environment_terminal_and_formal_run_work_without_a_model() {
         assert!(Instant::now() < deadline);
         std::thread::sleep(Duration::from_millis(60));
     }
-    let terminal = term(json!({"action":"open","experimentId":"p1","profile":"cmd"}));
+    let profile = if cfg!(windows) { "cmd" } else { "zsh" };
+    let terminal = term(json!({"action":"open","experimentId":"p1","profile":profile}));
     let mut invalid = storage.load().unwrap().unwrap();
     invalid["experiments"][0]["archived"] = json!(true);
     invalid["revision"] = json!(4);
