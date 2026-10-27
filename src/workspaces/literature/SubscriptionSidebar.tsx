@@ -9,6 +9,7 @@ import { t, translateError } from '../../i18n';
 import { sourceUrl } from '../../domain/web-sources';
 import type { WebSource, WebSources, Workspace } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
+import { errorMessage } from '../../domain/errors';
 import './subscriptions.css';
 
 const empty: WebSources = { groups: [], items: [] };
@@ -79,7 +80,7 @@ export function SubscriptionSidebar({
       if (!saved) throw new Error(store.getState().error ?? t('保存失败，请重试。'));
       return true;
     } catch (reason) {
-      setError(translateError(reason instanceof Error ? reason.message : String(reason)));
+      setError(translateError(errorMessage(reason)));
       return false;
     } finally {
       pending.current = false;

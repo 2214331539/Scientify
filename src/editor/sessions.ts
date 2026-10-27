@@ -1,6 +1,7 @@
 import { t } from '../i18n';
 import type { EditorState } from '@codemirror/state';
 import type { FileBackend } from '../platform/research';
+import { errorMessage } from '../domain/errors';
 
 export type FileSnapshot = {
   content: string;
@@ -73,7 +74,7 @@ export class FileSession {
       .catch((error) =>
         this.update({
           phase: 'error',
-          error: String(error instanceof Error ? error.message : error),
+          error: errorMessage(error),
         }),
       )
       .finally(() => {
@@ -109,7 +110,7 @@ export class FileSession {
     } catch (error) {
       this.update({
         phase: 'ready',
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
       return false;
     }
@@ -140,7 +141,7 @@ export class FileSession {
       });
       return true;
     } catch (error) {
-      this.update({ error: error instanceof Error ? error.message : String(error) });
+      this.update({ error: errorMessage(error) });
       return false;
     } finally {
       if (this.getSnapshot().phase === 'loading')

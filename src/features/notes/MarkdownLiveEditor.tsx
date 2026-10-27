@@ -19,6 +19,7 @@ import type { NoteImages } from '../../platform/note-images';
 import type { Heading } from './markdown-document';
 import { bindingFor, shortcutToCodeMirror, type ShortcutSettings } from '../../platform/shortcuts';
 import { livePreview, previewFocus, previewSource } from './live-preview';
+import { errorMessage } from '../../domain/errors';
 import './markdown-editor.css';
 
 interface Props {
@@ -110,8 +111,7 @@ export function MarkdownLiveEditor({
         userEvent: 'input',
       });
     } catch (reason) {
-      if (viewRef.current === view)
-        setError(String(reason instanceof Error ? reason.message : reason));
+      if (viewRef.current === view) setError(errorMessage(reason));
     } finally {
       uploads.current.delete(marker);
       if (viewRef.current === view) setPending(uploads.current.size);

@@ -41,7 +41,6 @@ import { PythonSidebar } from './PythonSidebar';
 import { developmentApi, ensureExecutionTrust, openTerminal, useDevelopment } from './development';
 import {
   configurationsOf,
-  describeError,
   experimentApi,
   parseArguments,
   startExecution,
@@ -49,6 +48,7 @@ import {
   type Execution,
   type RunConfiguration,
 } from './runtime';
+import { errorMessage } from '../../domain/errors';
 import './experiments.css';
 import './development.css';
 const TerminalPanel = lazy(() =>
@@ -131,7 +131,7 @@ export function ExperimentWorkspace({
       );
       openExperiment(next);
     } catch (reason) {
-      setError(describeError(reason));
+      setError(errorMessage(reason));
     }
   }
   const root = code.root;
@@ -295,7 +295,7 @@ export function ExperimentWorkspace({
         if (result.error) setError(result.error);
       }
     } catch (e) {
-      if (alive.current) setError(describeError(e));
+      if (alive.current) setError(errorMessage(e));
     } finally {
       if (alive.current) setStarting(false);
     }
@@ -344,7 +344,7 @@ export function ExperimentWorkspace({
       }
       if (info) store.getState().setAgentTask(`terminal:${info.id}`, project.id);
     } catch (e) {
-      if (alive.current) setError(describeError(e));
+      if (alive.current) setError(errorMessage(e));
     } finally {
       if (alive.current) setStarting(false);
     }
@@ -373,7 +373,7 @@ export function ExperimentWorkspace({
       }
       code.refresh();
     } catch (e) {
-      if (alive.current && currentRoot.current === root) setError(describeError(e));
+      if (alive.current && currentRoot.current === root) setError(errorMessage(e));
     } finally {
       if (alive.current) setSavingAll(false);
     }
@@ -731,7 +731,7 @@ export function ExperimentWorkspace({
                   aria-label={t('停止当前运行')}
                   onClick={() => {
                     void experimentApi.stop(activeRun.id).catch((e) => {
-                      if (alive.current) setError(describeError(e));
+                      if (alive.current) setError(errorMessage(e));
                     });
                   }}
                 >
@@ -957,7 +957,7 @@ export function ExperimentWorkspace({
                       try {
                         await experimentApi.stop(r.id);
                       } catch (e) {
-                        setError(describeError(e));
+                        setError(errorMessage(e));
                       }
                     }}
                   >
@@ -1027,7 +1027,7 @@ export function ConfigurationForm({
       if (result) onSaved(id);
       else setError(store.getState().error || t('保存失败'));
     } catch (e) {
-      setError(describeError(e));
+      setError(errorMessage(e));
     } finally {
       setSaving(false);
     }

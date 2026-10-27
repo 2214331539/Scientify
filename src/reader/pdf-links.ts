@@ -4,6 +4,7 @@ import { EventBus, LinkTarget, PDFLinkService } from 'pdfjs-dist/web/pdf_viewer.
 import { isTauri } from '@tauri-apps/api/core';
 import { browserCommand } from '../platform/browser-pane';
 import { t } from '../i18n';
+import { errorMessage } from '../domain/errors';
 
 export type PdfLinkTarget = { pageNumber: number; destArray?: unknown[] | null };
 
@@ -79,8 +80,7 @@ export class ReaderLinkService extends PDFLinkService {
     try {
       await super.goToDestination(destination);
     } catch (error) {
-      if (this.pdfDocument)
-        this.callbacks.error(String(error instanceof Error ? error.message : error));
+      if (this.pdfDocument) this.callbacks.error(errorMessage(error));
     }
   }
 
@@ -96,8 +96,7 @@ export class ReaderLinkService extends PDFLinkService {
     link.addEventListener('click', (event) => {
       event.preventDefault();
       void (this.callbacks.openExternal ?? openWebLink)(target.href).catch((error) => {
-        if (this.pdfDocument)
-          this.callbacks.error(String(error instanceof Error ? error.message : error));
+        if (this.pdfDocument) this.callbacks.error(errorMessage(error));
       });
     });
   }

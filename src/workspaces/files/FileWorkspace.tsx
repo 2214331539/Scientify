@@ -43,6 +43,7 @@ import {
   type FileSession,
 } from '../../editor/sessions';
 import MarkdownPreview from './MarkdownPreview';
+import { errorMessage } from '../../domain/errors';
 import './files.css';
 
 const CodeEditor = lazy(() =>
@@ -65,7 +66,6 @@ type FileWorkspaceProps = {
   onCreateHandled?: () => void;
 };
 const fileName = (path: string) => path.split('/').pop() || path;
-const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const resourceEvent = 'scientify-project-files-changed';
 
 function useRuntime(backend: ResearchBackend) {
@@ -210,7 +210,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
       }
       window.dispatchEvent(new CustomEvent(resourceEvent, { detail: project.id }));
     } catch (error) {
-      if (mounted.current && activeScope.current === scope) setCreateError(errorText(error));
+      if (mounted.current && activeScope.current === scope) setCreateError(errorMessage(error));
     } finally {
       finishOperation();
       if (mounted.current && activeScope.current === scope) setCreating(false);
@@ -568,7 +568,7 @@ function FileDocument({
                       ).content,
                     );
                   } catch (error) {
-                    setCompareError(errorText(error));
+                    setCompareError(errorMessage(error));
                   }
                 }}
               >
@@ -738,7 +738,7 @@ export function FileResources({
       })
       .catch((reason) => {
         if (alive) {
-          setError(errorText(reason));
+          setError(errorMessage(reason));
           setPhase('error');
         }
       });
@@ -877,7 +877,7 @@ function GitChanges({
       })
       .catch((reason) => {
         if (alive) {
-          setError(errorText(reason));
+          setError(errorMessage(reason));
           setState('error');
         }
       });

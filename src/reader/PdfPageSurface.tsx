@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { AnnotationLayer, AnnotationType, TextLayer, type PDFDocumentProxy } from 'pdfjs-dist';
 import { pdfLinkLabel, type ReaderLinkService } from './pdf-links';
 import { t } from '../i18n';
+import { errorMessage } from '../domain/errors';
 
 /** Keep geometry while releasing canvases and text layers far from the viewport. */
 export function PdfPageSurface({
@@ -170,7 +171,7 @@ export function PdfPageSurface({
           .catch((error) => {
             if (!stale && error?.name !== 'RenderingCancelledException') {
               setLoading(false);
-              callbacks.current.onError(error instanceof Error ? error.message : String(error));
+              callbacks.current.onError(errorMessage(error));
             }
           });
       },

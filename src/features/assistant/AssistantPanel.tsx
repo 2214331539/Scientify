@@ -52,6 +52,7 @@ import {
   type ChatMessage,
   type Conversation,
 } from './model';
+import { errorMessage } from '../../domain/errors';
 
 interface Props {
   store: WorkspaceStore;
@@ -298,7 +299,7 @@ export function AssistantPanel({
   }, [store, key, dirty, onDirtyChange]);
   const safeError = useCallback(
     (reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason);
+      const message = errorMessage(reason);
       return apiKey ? message.split(apiKey).join(t('[已隐藏密钥]')) : message;
     },
     [apiKey],

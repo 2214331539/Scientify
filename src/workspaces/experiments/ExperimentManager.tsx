@@ -21,8 +21,9 @@ import { confirmAction, requestText } from '../../components/prompts';
 import { t, locale, translateError } from '../../i18n';
 import { statusLabel } from './status';
 import { experimentsFor, experimentCatalog, registerExperiment } from './catalog';
-import { describeError, type Execution } from './runtime';
+import { type Execution } from './runtime';
 import { developmentStore } from './development';
+import { errorMessage } from '../../domain/errors';
 
 export function ExperimentManager({
   project,
@@ -103,7 +104,7 @@ export function ExperimentManager({
       });
       if (!ok) throw new Error(store.getState().error ?? t('保存失败'));
     } catch (reason) {
-      setError(describeError(reason));
+      setError(errorMessage(reason));
     } finally {
       setBusy(false);
     }
@@ -398,7 +399,7 @@ function ExperimentForm({
         await registerExperiment(store, project.id, name, purpose, source, directory || undefined),
       );
     } catch (reason) {
-      setError(describeError(reason));
+      setError(errorMessage(reason));
     } finally {
       setSaving(false);
     }
@@ -463,7 +464,7 @@ function ExperimentForm({
                         setDirty(true);
                       }
                     } catch (reason) {
-                      setError(describeError(reason));
+                      setError(errorMessage(reason));
                     }
                   }}
                 >

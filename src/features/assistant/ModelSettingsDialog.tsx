@@ -7,6 +7,7 @@ import type { AIModel, AIProtocol, ResearchBackend } from '../../platform/resear
 import type { AISettings } from './model';
 import type { ModelProfile } from '../../domain/workspace';
 import { modelServices, serviceFor } from './providers';
+import { errorMessage } from '../../domain/errors';
 import '../settings/settings.css';
 import './model-settings.css';
 
@@ -116,7 +117,7 @@ export function ModelSettingsDialog({
     onKeyChange(stored);
   }
   function safeError(reason: unknown) {
-    const message = reason instanceof Error ? reason.message : String(reason);
+    const message = errorMessage(reason);
     return apiKey.trim() ? message.split(apiKey.trim()).join(t('[已隐藏密钥]')) : message;
   }
   async function discover() {

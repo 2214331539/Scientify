@@ -71,13 +71,13 @@ import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { PdfBackend, ResearchBackend } from '../../platform/research';
 import type { WorkContext } from '../../domain/context';
+import { errorMessage } from '../../domain/errors';
 import './local-literature.css';
 
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
 const parent = (path: string) => path.split('/').slice(0, -1).join('/');
 const filename = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 const join = (folder: string, name: string) => (folder ? `${folder}/${name}` : name);
-const asError = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const textExtensions =
   /\.(md|markdown|mdown|txt|text|csv|tsv|json|tex|bib|xml|yaml|yml|toml|ini|log|rst|py|js|jsx|ts|tsx|css|scss|html|sql|sh|ps1|c|cc|cpp|h|hpp)$/i;
 const isTextEntry = (entry: { name: string; directory: boolean; note: boolean }) =>
@@ -202,7 +202,7 @@ export function LocalLiterature({
         );
       }
     } catch (e) {
-      if (alive.current && ticket === generation.current) setError(asError(e));
+      if (alive.current && ticket === generation.current) setError(errorMessage(e));
     }
   }, [project.id, library]);
   useEffect(() => {
@@ -290,7 +290,7 @@ export function LocalLiterature({
         }
       })
       .catch((e) => {
-        if (!cancelled) setError(asError(e));
+        if (!cancelled) setError(errorMessage(e));
       });
     return () => {
       cancelled = true;
@@ -307,7 +307,7 @@ export function LocalLiterature({
       await action();
       return true;
     } catch (e) {
-      if (alive.current) setError(asError(e));
+      if (alive.current) setError(errorMessage(e));
       return false;
     } finally {
       finish();
@@ -543,7 +543,7 @@ export function LocalLiterature({
         throw new Error(
           t('已完成 {count} 个文件操作。{error}', {
             count: completed.length,
-            error: asError(reason),
+            error: errorMessage(reason),
           }),
         );
       } finally {
@@ -832,7 +832,7 @@ export function LocalLiterature({
                       throw new Error(
                         t('已导入 {count} 个文件。{error}', {
                           count: completed,
-                          error: translateError(asError(error)),
+                          error: translateError(errorMessage(error)),
                         }),
                       );
                     } finally {
@@ -990,7 +990,7 @@ export function LocalLiterature({
                   };
                 })
               }
-              onClose={(id) => void closeTab(id).catch((e) => setError(asError(e)))}
+              onClose={(id) => void closeTab(id).catch((e) => setError(errorMessage(e)))}
               onNew={() => void newWeb()}
             />
             <div className="local-reader" id={panelId} role="tabpanel" aria-label={t('文献呈现区')}>
@@ -1209,7 +1209,9 @@ export function LocalLiterature({
           role="menuitem"
           disabled={!scan.root}
           onClick={async () => {
-            void library.external(project.id, target, false).catch((e) => setError(asError(e)));
+            void library
+              .external(project.id, target, false)
+              .catch((e) => setError(errorMessage(e)));
             setMenu(null);
           }}
         >
@@ -1350,7 +1352,7 @@ function LocalTextFile({
       onContextRef.current(file.content.slice(0, 24000));
     } catch (reason) {
       if (ticket !== generation.current) return;
-      setError(asError(reason));
+      setError(errorMessage(reason));
       setContent(null);
     } finally {
       if (ticket === generation.current) setLoading(false);
@@ -1385,7 +1387,7 @@ function LocalTextFile({
           onClick={() =>
             void library
               .external?.(project, path, true)
-              .catch((reason) => setError(asError(reason)))
+              .catch((reason) => setError(errorMessage(reason)))
           }
         >
           {t('在外部程序打开')}

@@ -2,6 +2,7 @@ import type { AIRequest, ChatStream, ResearchBackend } from '../../platform/rese
 import type { WorkspaceStore } from '../../stores/workspace';
 import { t } from '../../i18n';
 import { asConversation, type Conversation } from './model';
+import { errorMessage } from '../../domain/errors';
 
 export interface ChatTask {
   projectId: string;
@@ -170,7 +171,7 @@ export class ChatRuntime {
         throw new Error(t('模型没有返回文本，请检查模型配置后重试。'));
       task.error = null;
     } catch (reason) {
-      const error = reason instanceof Error ? reason.message : String(reason);
+      const error = errorMessage(reason);
       task.error = request.apiKey ? error.split(request.apiKey).join(t('[已隐藏密钥]')) : error;
       task.resultStatus = 'failed';
     } finally {

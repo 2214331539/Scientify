@@ -12,6 +12,7 @@ import {
   type ThreadHandle,
 } from '../../platform/agent';
 import { t } from '../../i18n';
+import { errorMessage } from '../../domain/errors';
 
 export type AgentPhase = 'idle' | 'opening' | 'running' | 'waiting' | 'stopping';
 export type AgentOperation = { id: string; label: string; status: string; output: string };
@@ -93,7 +94,7 @@ export class AgentSession {
     this.onUpdate(this.snapshot);
   }
   private failure(reason: unknown) {
-    const value = reason instanceof Error ? reason.message : String(reason);
+    const value = errorMessage(reason);
     return this.connection.apiKey
       ? value.split(this.connection.apiKey).join(t('[已隐藏密钥]'))
       : value;

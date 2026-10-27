@@ -8,6 +8,7 @@ import {
   type PaperJob,
   type PaperResult,
 } from '../reader/pdf-text';
+import { errorMessage } from '../domain/errors';
 
 interface PaperBridge {
   source(id: string): Promise<ArrayBuffer>;
@@ -219,9 +220,7 @@ export class PaperService {
       await this.bridge.complete(job.id, result, null);
     } catch (reason) {
       if (!this.disposed && pending.reportError)
-        await this.bridge
-          .complete(job.id, null, reason instanceof Error ? reason.message : String(reason))
-          .catch(console.error);
+        await this.bridge.complete(job.id, null, errorMessage(reason)).catch(console.error);
     } finally {
       if (abort) signal.removeEventListener('abort', abort);
       if (entry) {

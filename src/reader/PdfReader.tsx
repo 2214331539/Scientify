@@ -20,6 +20,7 @@ import type { PdfBackend } from '../platform/research';
 import type { WorkContext } from '../domain/context';
 import { PdfPageSurface } from './PdfPageSurface';
 import { destinationOffset, ReaderLinkService, type PdfLinkTarget } from './pdf-links';
+import { errorMessage } from '../domain/errors';
 import './reader.css';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
@@ -142,8 +143,7 @@ export default function PdfReader({
       setPage(pageNumber);
       requestAnimationFrame(() => restore(texts.current.has(pageNumber)));
     } catch (reason) {
-      if (ticket === navigationTicket.current)
-        setError(reason instanceof Error ? reason.message : String(reason));
+      if (ticket === navigationTicket.current) setError(errorMessage(reason));
     }
   }
   async function followOutline(item: PdfOutlineItem) {
@@ -162,7 +162,7 @@ export default function PdfReader({
       });
       setOutlineOpen(false);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      setError(errorMessage(reason));
     }
   }
   const linkCallbacks = useRef({ followLink });
@@ -305,7 +305,7 @@ export default function PdfReader({
       })
       .catch((error) => {
         if (!stale) {
-          setError(error instanceof Error ? error.message : String(error));
+          setError(errorMessage(error));
           setLoading(false);
         }
       });

@@ -6,12 +6,8 @@ import { Modal } from '../../components/Modal';
 import { t, translateError } from '../../i18n';
 import { ExecutionPanel } from '../../workspaces/experiments/ExecutionPanel';
 import { statusLabel } from '../../workspaces/experiments/status';
-import {
-  executionStore,
-  experimentApi,
-  openExecution,
-  describeError,
-} from '../../workspaces/experiments/runtime';
+import { executionStore, experimentApi, openExecution } from '../../workspaces/experiments/runtime';
+import { errorMessage } from '../../domain/errors';
 import '../../workspaces/experiments/experiments.css';
 
 export function AssistantRuns({
@@ -80,7 +76,7 @@ export function AssistantRuns({
                   try {
                     await experimentApi.stop(run.id);
                   } catch (reason) {
-                    setError(describeError(reason));
+                    setError(errorMessage(reason));
                     setStopping((s) => s.filter((id) => id !== run.id));
                   }
                 }}

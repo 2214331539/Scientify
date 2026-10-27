@@ -5,8 +5,9 @@ import { Button } from '../../components/primitives';
 import { Modal } from '../../components/Modal';
 import { t, translateError } from '../../i18n';
 import type { ResearchFile } from '../../platform/research';
-import { describeError, experimentApi, experimentOutput, type Execution } from './runtime';
+import { experimentApi, experimentOutput, type Execution } from './runtime';
 import { statusLabel } from './status';
+import { errorMessage } from '../../domain/errors';
 
 export function ExecutionPanel({
   run,
@@ -39,7 +40,7 @@ export function ExecutionPanel({
         if (alive && ticket === logTicket.current) setLog(text);
       })
       .catch((e) => {
-        if (alive) setError(describeError(e));
+        if (alive) setError(errorMessage(e));
       });
     return () => {
       alive = false;
@@ -71,7 +72,7 @@ export function ExecutionPanel({
         }
         if (alive) setError('');
       } catch (e) {
-        if (alive) setError(describeError(e));
+        if (alive) setError(errorMessage(e));
       }
       if (alive && run!.status === 'running') timer = setTimeout(() => void read(), 1000);
     }
@@ -105,7 +106,7 @@ export function ExecutionPanel({
                 await experimentApi.stop(run.id);
               } catch (e) {
                 if (identity.current === run.id) {
-                  setError(describeError(e));
+                  setError(errorMessage(e));
                   setStopping(false);
                 }
               }
@@ -200,7 +201,7 @@ export function ExecutionPanel({
                       const result = await experimentApi.artifact(run.id, file.path);
                       if (identity.current === run.id) setArtifact(result);
                     } catch (e) {
-                      if (identity.current === run.id) setError(describeError(e));
+                      if (identity.current === run.id) setError(errorMessage(e));
                     }
                   }}
                 >
@@ -215,7 +216,7 @@ export function ExecutionPanel({
                         if (identity.current === run.id)
                           await onMetrics(numericMetrics(JSON.parse(result.content)));
                       } catch (e) {
-                        if (identity.current === run.id) setError(describeError(e));
+                        if (identity.current === run.id) setError(errorMessage(e));
                       }
                     }}
                   >

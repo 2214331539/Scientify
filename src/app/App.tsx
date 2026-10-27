@@ -48,6 +48,7 @@ import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
 import { nativeResearch, type ResearchBackend } from '../platform/research';
 import { ViewTransition } from '../components/workspace/ViewTransition';
 import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/shortcuts';
+import { errorMessage } from '../domain/errors';
 
 type Dialog =
   { kind: 'project'; project?: Project } | { kind: 'data' | 'profile' | 'search' | 'about' } | null;
@@ -468,7 +469,7 @@ export function App({
     } catch (error) {
       setLaunching(false);
       store.setState({ busy: false });
-      store.setState({ error: error instanceof Error ? error.message : String(error) });
+      store.setState({ error: errorMessage(error) });
     }
   }
   function returnToProjects() {

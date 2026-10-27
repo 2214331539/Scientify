@@ -2,6 +2,7 @@ import { t } from '../i18n';
 import { createStore } from 'zustand/vanilla';
 import { emptyWorkspace, normalizeExperiments, type Workspace } from '../domain/workspace';
 import { desktop, type WorkspaceBackend, type StorageLocation } from '../platform/desktop';
+import { errorMessage } from '../domain/errors';
 
 interface WorkspaceState {
   data: Workspace | null;
@@ -28,8 +29,6 @@ interface WorkspaceState {
   setDirtySource(source: string, dirty: boolean): void;
   clearMessage(): void;
 }
-
-const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export function createWorkspaceStore(backend: WorkspaceBackend) {
   let pending = 0;
@@ -66,7 +65,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
           epoch: get().epoch + 1,
         });
       } catch (error) {
-        set({ phase: 'error', error: message(error) });
+        set({ phase: 'error', error: errorMessage(error) });
       }
     },
     async refreshSaved() {
@@ -80,7 +79,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         set({ data: normalizeExperiments(result.workspace), error: null });
         return true;
       } catch (error) {
-        set({ error: message(error) });
+        set({ error: errorMessage(error) });
         return false;
       } finally {
         exclusive = false;
@@ -122,7 +121,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
           set({ data: normalizeExperiments(saved), notice: t('已保存到本机') });
           return true;
         } catch (error) {
-          set({ error: message(error) });
+          set({ error: errorMessage(error) });
           return false;
         } finally {
           pending -= 1;
@@ -160,7 +159,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         }
         return true;
       } catch (error) {
-        set({ error: message(error) });
+        set({ error: errorMessage(error) });
         return false;
       } finally {
         exclusive = false;
@@ -175,7 +174,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         if (await backend.exportWorkspace())
           set({ notice: t('已导出 JSON。附件二进制请另行备份整个数据目录。') });
       } catch (error) {
-        set({ error: message(error) });
+        set({ error: errorMessage(error) });
       } finally {
         exclusive = false;
         set({ busy: false });
@@ -185,7 +184,7 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
       try {
         return await backend.chooseDirectory();
       } catch (error) {
-        set({ error: message(error) });
+        set({ error: errorMessage(error) });
         return null;
       }
     },

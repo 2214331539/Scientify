@@ -23,10 +23,10 @@ import { gitApi, type GitAction, type GitCommit } from '../../platform/git';
 import type { ResearchBackend, GitChange } from '../../platform/research';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { t, translateError } from '../../i18n';
-import { describeError } from './runtime';
 import { clearCodeRoot, selectCodeRoot, type useCodeWorkspace } from './code-context';
 import { splitPatch } from './git-diff';
 import { beginGitOperation, gitDraftKey, gitDrafts, setGitMessage } from './git-drafts';
+import { errorMessage } from '../../domain/errors';
 import './git.css';
 
 export type GitView = 'changes' | 'history' | 'branches' | 'stashes' | 'worktrees';
@@ -141,7 +141,7 @@ export function GitWorkspace({
         }
       })
       .catch((e) => {
-        if (alive) setPatchError(describeError(e));
+        if (alive) setPatchError(errorMessage(e));
       })
       .finally(() => {
         if (alive) setPatchLoading(false);
@@ -201,7 +201,7 @@ export function GitWorkspace({
       return true;
     } catch (e) {
       if (mounted.current && current.current === operationBinding) {
-        setError(describeError(e));
+        setError(errorMessage(e));
         refresh();
       }
       return false;
@@ -289,7 +289,7 @@ export function GitWorkspace({
                     )
                       void execute({ kind: 'restore', path: change.path, expectedDiff });
                   } catch (e) {
-                    setError(describeError(e));
+                    setError(errorMessage(e));
                   }
                 }}
               >
