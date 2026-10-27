@@ -5,7 +5,7 @@ import './feature-placeholder.css';
 // A single catalog keeps unavailable destinations consistent across both windows.
 const features = {
   recommendations: { title: '消息推荐', icon: Rss },
-  collaboration: { title: '团队协作空间', icon: UsersRound, Rss },
+  collaboration: { title: '团队协作空间', icon: UsersRound },
   overview: { title: 'Overview', icon: House },
   writing: { title: 'LaTeX 论文撰写', icon: PenLine },
 } as const;
