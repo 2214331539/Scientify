@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Yita.Desktop</AssemblyName>
+    <RootNamespace>Yita.Desktop</RootNamespace>
+    <ApplicationIcon>Assets\Yita.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.6" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Yita.Core\Yita.Core.csproj" />
+    <ProjectReference Include="..\Yita.Native.Windows\Yita.Native.Windows.csproj" />
+    <ProjectReference Include="..\Yita.Native.Mac\Yita.Native.Mac.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\Yita.ico" CopyToOutputDirectory="PreserveNewest" />
+    <AvaloniaResource Include="../Yita.App/Assets/AppLogo.png" Link="Assets/AppLogo.png" />
+    <AvaloniaResource Include="Assets/Yita.ico" />
+    <AvaloniaResource Include="../Yita.App/Assets/Fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!--
+    UI Automation is deliberately compiled as a Windows-only helper process.
+    Building the desktop project on Windows builds and places the helper next
+    to Yita.Desktop.exe. The condition keeps macOS/Linux builds free of
+    WindowsDesktop dependencies.
+  -->
+  <Target Name="BuildAndCopyWindowsUiAutomationWorker"
+          BeforeTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' and '$(RuntimeIdentifier)' == ''">
+    <MSBuild Projects="..\Yita.Native.Windows.UIA.Worker\Yita.Native.Windows.UIA.Worker.csproj"
+             Targets="Restore;Build"
+             Properties="Configuration=$(Configuration)" />
+    <ItemGroup>
+      <WindowsUiAutomationWorkerFiles Include="..\Yita.Native.Windows.UIA.Worker\bin\$(Configuration)\net8.0-windows\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WindowsUiAutomationWorkerFiles)"
+          DestinationFiles="@(WindowsUiAutomationWorkerFiles->'$(TargetDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="BuildMacNativeHelper"
+          AfterTargets="Build"
+          Condition="$([MSBuild]::IsOSPlatform('OSX'))"
+          Inputs="../Yita.Native.Mac.Helper/main.swift;../Yita.Native.Mac.Helper/SelectionReader.swift;../Yita.Native.Mac.Helper/SelectionSelfTests.swift;../Yita.Native.Mac.Helper/ClipboardSelectionReader.swift;../Yita.Native.Mac.Helper/ClipboardSelfTests.swift;../Yita.Native.Mac.Helper/HelperRequestControl.swift;../Yita.Native.Mac.Helper/NativeInput.swift;../Yita.Native.Mac.Helper/InputSelfTests.swift;../Yita.Native.Mac.Helper/Info.plist;../../scripts/Build-Mac-Helper.sh"
+          Outputs="$(TargetDir)Yita.Native.Mac.Helper.app/Contents/MacOS/Yita.Native.Mac.Helper">
+    <Exec Command="bash &quot;$(MSBuildThisFileDirectory)../../scripts/Build-Mac-Helper.sh&quot; &quot;$(TargetDir)&quot;" />
+  </Target>
+  <!-- Keep managed assemblies in Resources so macOS signs them as bundle resources. -->
+  <Target Name="CreateMacBundleAppHost" AfterTargets="Publish"
+          Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$(MacBundleAppHostPath)' != ''">
+    <Error Condition="'$(RuntimeIdentifier)' != 'osx-arm64' or '$(SelfContained)' != 'true' or '$(PublishSingleFile)' == 'true'"
+           Text="Mac bundle packaging requires self-contained, non-single-file osx-arm64 output." />
+    <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+                   AppHostDestinationPath="$(MacBundleAppHostPath)"
+                   AppBinaryName="../Resources/Runtime/Yita.Desktop.dll"
+                   IntermediateAssembly="@(IntermediateAssembly->'%(FullPath)')"
+                   EnableMacOSCodeSign="true" />
+  </Target>
+</Project>
