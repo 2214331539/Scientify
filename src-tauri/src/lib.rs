@@ -7,10 +7,13 @@ use tauri_plugin_dialog::DialogExt;
 mod agent;
 mod ai;
 mod browser;
+mod collaboration;
 mod credentials;
 mod data_location;
 mod translation_window;
+mod tray;
 mod yita;
+mod webview_profile;
 pub use data_location::migrate_offline as migrate_storage_offline;
 mod code;
 mod experiments;
@@ -24,9 +27,6 @@ mod library;
 mod literature_smoke;
 mod notes;
 mod research;
-#[cfg(unix)]
-mod unix_process;
-mod webview_profile;
 mod windows;
 
 struct AppState {
@@ -198,18 +198,13 @@ async fn choose_directory(app: tauri::AppHandle) -> Result<Option<String>, Strin
     .map_err(|e| e.to_string())?
 }
 
-// Generate native application metadata once, shared by production and IPC tests.
-fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
-    tauri::generate_context!()
-}
-
 pub fn run() {
     let builder = tauri::Builder::default();
     #[cfg(debug_assertions)]
     let isolated_smoke = std::env::var_os("SCIENTIFY_NATIVE_SMOKE").is_some();
     #[cfg(not(debug_assertions))]
     let isolated_smoke = false;
-    let mut context = crate::app_context();
+    let mut context = tauri::generate_context!();
     // Resolve and migrate before WebView2 opens any profile in the old directory.
     context.config_mut().app.windows[0].create = false;
     let builder = if isolated_smoke {
@@ -310,12 +305,12 @@ pub fn run() {
                     literature_smoke::seed_ui(app.handle())?;
                 }
             }
-            webview_profile::window(
-                tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?,
-                profile,
-            )
-            .map_err(std::io::Error::other)?
-            .build()?;
+            tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                .data_directory(profile)
+                .build()?;
+            if !isolated_smoke {
+                tray::install(app.handle())?;
+            }
             yita::refresh(app.handle());
             #[cfg(debug_assertions)]
             if isolated_smoke && std::env::var_os("SCIENTIFY_NATIVE_UI").is_none() {
@@ -395,22 +390,9 @@ pub fn run() {
             credentials::secret_save,
             credentials::secret_load,
             credentials::secret_clear,
+            collaboration::collaboration_status,
+            collaboration::collaboration_configure,
         ])
-        .build(context)
-        .expect("Scientify failed to start")
-        .run(move |app, event| {
-            // The native Quit menu must use the same save/task guard as closing
-            // the workspace. Once back at Projects, Quit exits the application.
-            #[cfg(target_os = "macos")]
-            if let (false, tauri::RunEvent::ExitRequested { api, .. }) = (isolated_smoke, event) {
-                if let Some(workspace) = app.get_webview_window("workspace") {
-                    api.prevent_exit();
-                    let _ = workspace.show();
-                    let _ = workspace.set_focus();
-                    let _ = workspace.close();
-                }
-            }
-            #[cfg(not(target_os = "macos"))]
-            let _ = (app, event);
-        });
+        .run(context)
+        .expect("Scientify failed to start");
 }

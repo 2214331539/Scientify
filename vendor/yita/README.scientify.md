@@ -13,13 +13,21 @@ install Yita or .NET separately. The integration does not run an HTTP listener.
   macOS Swift helper, floating windows, prompts, streaming presentation, retries,
   cache/coalescing, glossary, corrections, records, and translation settings.
 - Scientify owns the component process, its data location, provider credentials,
-  network requests, and the handoff to the workspace AI assistant.
+  network requests, shared conversation persistence, and the workspace AI assistant.
 - Embedded mode has no separate tray, startup registration, or standalone
   single-instance guard. The Scientify parent is the owner. Closing the parent
   closes the pipe and stops Yita and its native input helpers.
 - Translation requests cannot invoke Agent or workspace mutation commands.
 
 ## Integration changes
+
+`ScientifyAppearance.cs` adapts the host palette and reuses the main app's light/dark
+brand assets. Embedded windows use fine borders, restrained shadows and compact
+corner radii. The host sends resolved theme changes through the private pipe;
+these update resources without rebuilding the transcript or clearing selections
+and drafts. Upstream motion cancellation and reduced-motion preferences remain
+in use. The reading surface is high-opacity, not native backdrop blur. Yita names
+remain in namespaces, persisted settings and license notices for compatibility.
 
 `ScientifyBridge.cs` is an injected HttpClient handler. Original Yita providers
 still build prompts and parse SSE. The handler forwards only the request body
@@ -35,8 +43,29 @@ requests keep their model snapshot; stale queued requests fail explicitly.
 Small changes in App, MainWindow, DesktopPlatformServices and the two popup
 windows add host lifecycle, scoped data and assistant handoff. macOS correction
 encryption uses a Scientify Keychain service rather than standalone Yita's.
-Both translation and question windows offer handoff without sending the user's
-draft automatically. Original quick chat remains available.
+Both translation and question windows offer an arrow to open the **same session**
+in the sidebar, without sending the user's draft automatically. Original quick
+chat and the question window remain available. There is no translation Dock tab.
+
+`QuestionAnswerWindow.Scientify.cs` uses the existing Scientify ChatRuntime over
+the private pipe. One session has one active turn, one persisted history and one
+cancel operation. A closed popup does not stop that shared task. The window can
+continue to receive sidebar replies, and input remains editable while answering.
+Snapshot polling is serialized (150 ms while running, 750 ms idle); unchanged
+transcripts are not rerendered. Large snapshots show recent content with a tooltip;
+full history is retained by Scientify. Retry keeps the existing user turn.
+
+Translation and explanation still use the original Yita prompt/runtime. Question
+turns use Scientify's chat prompt with bounded translation material. They retain
+chat semantics in the sidebar, rather than silently gaining filesystem execution.
+The initial project binding is fixed; another project's view rejects access.
+Yita's manual records and optional automatic records for turns sent in a visible
+question window are retained. If that window closes before completion, Scientify
+still saves the full conversation, but the popup cannot write its Markdown record.
+
+Scientify's single application tray provides open app, selection toggle, clipboard
+translation, original settings, and input repair. Settings changes in Yita update
+the tray through status notifications. No separate Yita tray or startup item is added.
 
 The original frontend/runtime/native tests are retained. Extra bridge tests cover
 parallel stream ownership, cancellation and pipe disconnect. Windows and macOS

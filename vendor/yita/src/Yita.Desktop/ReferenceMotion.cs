@@ -54,7 +54,7 @@ internal static class ReferenceMotion
         {
             var animation = new Animation
             {
-                Duration = TimeSpan.FromMilliseconds(180), Easing = new CubicEaseOut(),
+                Duration = TimeSpan.FromMilliseconds(ScientifyBridge.IsEmbedded ? 220 : 180), Easing = new CubicEaseOut(),
                 Children =
                 {
                     new KeyFrame { Cue = new Cue(0), Setters = { new Setter(Visual.OpacityProperty, 0d) } },
@@ -68,7 +68,7 @@ internal static class ReferenceMotion
                 Duration = TimeSpan.FromMilliseconds(220), Easing = new CubicEaseOut(),
                 Children =
                 {
-                    new KeyFrame { Cue = new Cue(0), Setters = { new Setter(ScaleTransform.ScaleXProperty, .985), new Setter(ScaleTransform.ScaleYProperty, .985) } },
+                    new KeyFrame { Cue = new Cue(0), Setters = { new Setter(ScaleTransform.ScaleXProperty, ScientifyBridge.IsEmbedded ? .995 : .985), new Setter(ScaleTransform.ScaleYProperty, ScientifyBridge.IsEmbedded ? .995 : .985) } },
                     new KeyFrame { Cue = new Cue(1), Setters = { new Setter(ScaleTransform.ScaleXProperty, 1d), new Setter(ScaleTransform.ScaleYProperty, 1d) } },
                 },
             };

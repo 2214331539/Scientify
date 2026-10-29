@@ -7,7 +7,7 @@ pub struct DataLocation {
     pub container: PathBuf,
 }
 
-#[cfg(windows)]
+#[cfg(not(target_os = "macos"))]
 fn installation_root(exe: &Path) -> Result<PathBuf, String> {
     let parent = exe.parent().ok_or("安装目录不可用")?;
     // Both ordinary and UI-shell builds belong to this checkout's installation.
@@ -21,7 +21,7 @@ fn installation_root(exe: &Path) -> Result<PathBuf, String> {
     Ok(parent.to_path_buf())
 }
 
-#[cfg(windows)]
+#[cfg(not(target_os = "macos"))]
 pub fn production_locator() -> Result<Locator, String> {
     let installation = installation_root(&std::env::current_exe().map_err(|e| e.to_string())?)?;
     let roaming = std::env::var_os("APPDATA").ok_or("无法定位旧数据目录")?;
@@ -33,17 +33,19 @@ pub fn production_locator() -> Result<Locator, String> {
     ))
 }
 
-#[cfg(not(windows))]
+// The signed .app bundle and /Applications are not writable data containers.
+// Keep the same relocation settings, with a per-user control directory on macOS.
+#[cfg(target_os = "macos")]
 pub fn production_locator() -> Result<Locator, String> {
-    let data = dirs::data_dir()
-        .ok_or("无法定位用户数据目录")?
-        .join("com.scientify.desktop");
-    let cache = dirs::cache_dir()
-        .ok_or("无法定位用户缓存目录")?
-        .join("com.scientify.desktop");
-    std::fs::create_dir_all(&data).map_err(|e| e.to_string())?;
-    // The location manifest and data container live outside the signed .app.
-    Ok(Locator::new(data.clone(), data.join("legacy"), cache))
+    let user = std::env::var_os("HOME").ok_or("无法定位用户数据目录")?;
+    let library = PathBuf::from(user).join("Library");
+    let installation = library.join("Application Support/Scientify");
+    std::fs::create_dir_all(&installation).map_err(|e| e.to_string())?;
+    Ok(Locator::new(
+        installation,
+        library.join("Application Support/com.scientify.desktop"),
+        library.join("Caches/com.scientify.desktop"),
+    ))
 }
 
 pub fn prepare() -> Result<(PathBuf, DataLocation), String> {

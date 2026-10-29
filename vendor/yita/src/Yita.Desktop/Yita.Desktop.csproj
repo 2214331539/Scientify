@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Yita.Desktop</AssemblyName>
     <RootNamespace>Yita.Desktop</RootNamespace>
-    <ApplicationIcon>Assets\Yita.ico</ApplicationIcon>
+    <ApplicationIcon>../../../../src-tauri/icons/icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <ItemGroup>
@@ -21,7 +21,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Yita.ico" CopyToOutputDirectory="PreserveNewest" />
-    <AvaloniaResource Include="../Yita.App/Assets/AppLogo.png" Link="Assets/AppLogo.png" />
+    <AvaloniaResource Include="../../../../public/brand/scientify-light.png" Link="Assets/ScientifyLight.png" />
+    <AvaloniaResource Include="../../../../public/brand/scientify-dark.png" Link="Assets/ScientifyDark.png" />
+    <AvaloniaResource Include="../../../../src-tauri/icons/icon.ico" Link="Assets/Scientify.ico" />
     <AvaloniaResource Include="Assets/Yita.ico" />
     <AvaloniaResource Include="../Yita.App/Assets/Fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
   </ItemGroup>

@@ -227,8 +227,17 @@ public sealed partial class MainWindow
         popup.AssistantRequested += async (_, _) =>
         {
             if (ScientifyBridge.Current is not { } bridge || !_sessions.TryGetValue(popup, out var session)) return;
-            try { await bridge.HandoffAsync(session.Request.Text, session.Translation, popup.PendingQuestion); }
+            popup.SetAssistantBusy(true);
+            try
+            {
+                var draft = popup.PendingQuestion;
+                await bridge.ConversationAsync(session.Context.SessionId, "create", source: session.Request.Text,
+                    translation: session.Translation, explanation: session.Explanation);
+                await bridge.ConversationAsync(session.Context.SessionId, "open", draft);
+                popup.ClearTransferredQuestion(draft);
+            }
             catch (Exception error) { popup.ShowNotice(error.Message); }
+            finally { popup.SetAssistantBusy(false); }
         };
         popup.CorrectionSaved += (_, text) =>
         {
@@ -297,7 +306,8 @@ public sealed partial class MainWindow
         if (_shuttingDown || !_desktopSessionActive || !_sessions.TryGetValue(popup, out var session)) return;
         var conversation = new QuestionAnswerWindow(session.Settings, session.Request.Text, session.Translation,
             session.Explanation, kind,
-            _translationRuntime, _records, session.Context);
+            _translationRuntime, _records, kind == QuestionContextKind.GeneralChat
+                ? session.Context with { SessionId = Guid.NewGuid() } : session.Context);
         _conversations.Add(conversation);
         conversation.Closed += (_, _) => { _conversations.Remove(conversation); _suspendedWindows.Remove(conversation); };
         conversation.Position = new Avalonia.PixelPoint(popup.Position.X + 24, popup.Position.Y + 24);
@@ -325,7 +335,7 @@ public sealed partial class MainWindow
 
     internal string CreatePlatformDiagnostics() => string.Join("\n", new[]
     {
-        "Yita " + _platform.PlatformName + " Avalonia preview",
+        "Scientify Translation · " + _platform.PlatformName,
         "Automatic selection: " + (_selectionRuntime is null ? "not implemented" : _selectionRuntime.IsRunning ? "running" : "unavailable"),
         "Global shortcut: " + (_selectionRuntime?.IsHotkeyRunning == true ? "running" : "unavailable"),
         "Login startup: " + (_startupRegistration.IsSupported ? "available" : "not implemented"),
@@ -359,8 +369,8 @@ public sealed partial class MainWindow
 
     internal async void ShowAbout()
     {
-        try { await ShowMessageAsync("Yita · 译獭\n" + new DesktopPlatformServices().PlatformName
-            + Localize(" Avalonia preview", " Avalonia 预览版")); }
+        try { await ShowMessageAsync("Scientify · 翻译\n" + new DesktopPlatformServices().PlatformName
+            + Localize("\nTranslation powered by Yita (MIT)", "\n翻译组件基于 Yita（MIT）")); }
         catch { }
     }
 

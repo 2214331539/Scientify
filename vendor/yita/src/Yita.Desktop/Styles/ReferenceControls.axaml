@@ -1,8 +1,9 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource AppCardBackgroundBrush}" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource SettingsCardBorderThickness}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource SettingsCardCornerRadius}" />
     <Setter Property="Padding" Value="24" />
   </Style>
   <Style Selector="TextBlock.section">
@@ -102,7 +103,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border x:Name="NavigationChrome" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" CornerRadius="9">
-          <TextBlock Text="{TemplateBinding Content}" LineHeight="20" TextWrapping="Wrap" />
+          <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" LineHeight="20" TextWrapping="Wrap" />
         </Border>
       </ControlTemplate>
     </Setter>
@@ -126,6 +127,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border x:Name="ReadingChrome" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource PopupButtonCornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="{DynamicResource PressMotionDuration}" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
       </ControlTemplate>

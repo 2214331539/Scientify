@@ -168,6 +168,19 @@ dialog.settings-dialog[open] {
   font-size: 18px;
   font-weight: 600;
 }
+.settings-collaboration-status {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  padding: 14px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.settings-collaboration-status strong {
+  color: var(--sf-text-primary);
+}
 @media (max-width: 640px) {
   dialog.settings-dialog {
     width: calc(100vw - 24px);

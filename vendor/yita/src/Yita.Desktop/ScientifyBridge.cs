@@ -21,6 +21,7 @@ internal sealed class ScientifyBridge : HttpMessageHandler
     internal static void Start(MainWindow window, IClassicDesktopStyleApplicationLifetime desktop)
     {
         var bridge = Current!;
+        window.SettingsChanged += (_, _) => bridge.Send(new { type = "status", id = "settings", result = window.Status() });
         _ = Task.Run(async () =>
         {
             try
@@ -115,17 +116,25 @@ internal sealed class ScientifyBridge : HttpMessageHandler
         }
     }
 
-    internal async Task HandoffAsync(string source, string translation, string? question)
+    internal async Task<JsonElement> ConversationAsync(Guid conversationId, string op, string question = "",
+        string source = "", string translation = "", string explanation = "")
     {
         var id = Guid.NewGuid().ToString();
         var channel = Channel.CreateUnbounded<JsonElement>();
         _pending[id] = channel;
         try
         {
-            Send(new { type = "handoff", id, source, translation, question });
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            Send(new { type = "conversation", id, request = new { id, conversationId, op, question, source, translation, explanation } });
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(25));
             var reply = await channel.Reader.ReadAsync(timeout.Token);
             if (reply.TryGetProperty("error", out var error)) throw new IOException(error.GetString());
+            var result = reply.GetProperty("result");
+            // A snapshot may contain a recoverable run error and still contain saved partial output.
+            if (!result.TryGetProperty("conversationId", out _) && result.TryGetProperty("error", out error))
+                throw new IOException(error.GetString());
+            if (!result.TryGetProperty("conversationId", out var returned) || returned.GetGuid() != conversationId)
+                throw new IOException("Scientify 返回了不匹配的会话。");
+            return result.Clone();
         }
         finally { _pending.TryRemove(id, out _); }
     }

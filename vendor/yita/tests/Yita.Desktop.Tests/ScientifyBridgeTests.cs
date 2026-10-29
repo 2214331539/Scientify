@@ -7,6 +7,38 @@ namespace Yita.Desktop.Tests;
 public sealed class ScientifyBridgeTests
 {
     [Fact]
+    public async Task SharedConversationKeepsIdentityAndTransfersOnlyAnUnsentDraft()
+    {
+        using var wire = new StringWriter();
+        using var bridge = new ScientifyBridge(wire);
+        var conversationId = Guid.NewGuid();
+        var read = bridge.ConversationAsync(conversationId, "read");
+        var open = bridge.ConversationAsync(conversationId, "open", "unsent draft");
+        var requests = wire.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => JsonDocument.Parse(line).RootElement.Clone()).ToArray();
+        Assert.All(requests, request => Assert.Equal(conversationId, request.GetProperty("request").GetProperty("conversationId").GetGuid()));
+        Assert.Equal("unsent draft", requests[1].GetProperty("request").GetProperty("question").GetString());
+        Assert.Equal("", requests[1].GetProperty("request").GetProperty("source").GetString());
+        Deliver(bridge, new { id = requests[1].GetProperty("id").GetString(), result = new { conversationId, running = true } });
+        Assert.True((await open).GetProperty("running").GetBoolean());
+        Assert.False(read.IsCompleted);
+        Deliver(bridge, new { id = requests[0].GetProperty("id").GetString(), result = new { conversationId, running = false } });
+        Assert.False((await read).GetProperty("running").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DeletedConversationErrorIsVisibleInsteadOfRecreatingHistory()
+    {
+        using var wire = new StringWriter();
+        using var bridge = new ScientifyBridge(wire);
+        var request = bridge.ConversationAsync(Guid.NewGuid(), "send", "question");
+        Deliver(bridge, new { id = Requests(wire)[0], result = new { error = "此会话已删除" } });
+        var error = await Assert.ThrowsAsync<IOException>(() => request);
+        Assert.Contains("已删除", error.Message);
+        Assert.Single(Requests(wire));
+    }
+
+    [Fact]
     public async Task ParallelResponsesRemainIsolatedAndStreamBeforeCompletion()
     {
         using var wire = new StringWriter();

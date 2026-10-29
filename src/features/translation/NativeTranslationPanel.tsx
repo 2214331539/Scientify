@@ -2,9 +2,8 @@ import './translator.css';
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { Button, Textarea } from '../../components/primitives';
+import { Button } from '../../components/primitives';
 import { t, translateError } from '../../i18n';
-import type { WorkContext } from '../../domain/context';
 
 type TranslationStatus = {
   enabled: boolean;
@@ -21,16 +20,9 @@ export function translationService(action: TranslationAction) {
   return invoke<TranslationStatus>('translation_service', { action });
 }
 
-/** One control surface for the native Yita runtime; settings and sidebar never create another engine. */
-export function NativeTranslationPanel({
-  context,
-  settings = false,
-}: {
-  context?: WorkContext;
-  settings?: boolean;
-}) {
+/** Settings entry for the original Yita controls; translation lives in its native popup. */
+export function NativeTranslationPanel() {
   const [status, setStatus] = useState<TranslationStatus | null>(null);
-  const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const refresh = useCallback(async () => {
@@ -127,29 +119,6 @@ export function NativeTranslationPanel({
           '语言、术语表、字体、浮窗外观、纠错记忆和问答记录在翻译设置中管理。模型与密钥沿用 AI 助手的配置。',
         )}
       </p>
-      {!settings && (
-        <>
-          <Textarea
-            aria-label={t('待翻译文本')}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder={t('也可以粘贴文字，在浮窗中翻译…')}
-          />
-          <div className="sf-native-translator-actions">
-            <Button
-              disabled={busy || !text.trim()}
-              onClick={() => void run({ type: 'translate', text })}
-            >
-              {t('翻译')}
-            </Button>
-            {context?.selection && (
-              <Button variant="ghost" disabled={busy} onClick={() => setText(context.selection!)}>
-                {t('使用当前选区')}
-              </Button>
-            )}
-          </div>
-        </>
-      )}
       {error && (
         <div role="alert">
           <p>{error}</p>

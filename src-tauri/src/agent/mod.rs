@@ -16,7 +16,6 @@ mod tools;
 
 use super::AppState;
 use process::EngineSession;
-use scientify_core::workspace::valid_id;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -76,26 +75,26 @@ impl SessionEntry {
                 self.active_turn = event["params"]["turn"]["id"].as_str().map(str::to_string);
             }
             if event["method"] == "turn/completed" {
-                self.end_turn();
+                self.scratch = None;
+                self.active_turn = None;
+                self.lease = None;
+                self.requests.clear();
+                self.host_requests.clear();
             }
             delivered.push(event);
         }
         // Deliver buffered final output even if the process exits immediately afterwards.
         if delivered.is_empty() {
             if let Err(error) = self.session.ensure_alive() {
-                self.end_turn();
+                self.scratch = None;
+                self.active_turn = None;
+                self.lease = None;
+                self.requests.clear();
+                self.host_requests.clear();
                 return Err(error);
             }
         }
         Ok(delivered)
-    }
-    /// Forget the running turn: its approvals, the code lease and the scratch folder.
-    fn end_turn(&mut self) {
-        self.active_turn = None;
-        self.lease = None;
-        self.scratch = None;
-        self.requests.clear();
-        self.host_requests.clear();
     }
     fn validate(&self, thread_id: &str) -> Result<(), String> {
         if self.handle.thread_id != thread_id {
@@ -266,8 +265,15 @@ fn valid_domain(domain: &str) -> Result<&'static str, String> {
         .find(|d| *d == domain)
         .ok_or_else(|| "未知的 Agent 作用域。".into())
 }
+fn valid_key(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 80
+        && value
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+}
 fn session_key(project: &str, conversation: &str) -> Result<String, String> {
-    if !valid_id(project) || !valid_id(conversation) {
+    if !valid_key(project) || !valid_key(conversation) {
         return Err("项目或会话标识无效。".into());
     }
     Ok(format!("{project}:{conversation}"))
@@ -395,20 +401,21 @@ fn resolve_root<R: tauri::Runtime>(
     project_id: &str,
     domain: &str,
 ) -> Result<PathBuf, String> {
-    if domain != "literature" {
-        // Same lookup as the research and experiment commands, including the linked
-        // repository when the project has no folder of its own.
-        return crate::research::project_root(&state.storage, &state.files, project_id);
-    }
     let loaded = state.storage.load()?.ok_or("工作区尚未载入。")?;
-    loaded["projects"]
+    let project = loaded["projects"]
         .as_array()
         .and_then(|items| items.iter().find(|p| p["id"].as_str() == Some(project_id)))
         .ok_or("项目不存在。")?;
-    app.state::<super::library::LibraryState>()
-        .service
-        .root(project_id)?
-        .ok_or_else(|| "请先在文献库打开本地文件夹。".to_string())
+    if domain == "literature" {
+        return app
+            .state::<super::library::LibraryState>()
+            .service
+            .root(project_id)?
+            .ok_or_else(|| "请先在文献库打开本地文件夹。".to_string());
+    }
+    state
+        .files
+        .project_root(project_id, project["path"].as_str())
 }
 
 fn conversation_root<R: tauri::Runtime>(
@@ -526,7 +533,7 @@ pub async fn agent_domains(
 ) -> Result<Vec<DomainBinding>, String> {
     super::library::trusted(&view)?;
     blocking(move || {
-        if !valid_id(&project_id) {
+        if !valid_key(&project_id) {
             return Err("项目标识无效。".into());
         }
         Ok(DOMAINS
@@ -633,7 +640,10 @@ pub async fn agent_start_thread(
                             Ok(response) => response,
                             Err(error) => {
                                 entry.session.terminate();
-                                entry.end_turn();
+                                entry.active_turn = None;
+                                entry.lease = None;
+                                entry.requests.clear();
+                                entry.host_requests.clear();
                                 return Err(error);
                             }
                         };
@@ -846,17 +856,20 @@ pub async fn agent_start_turn(
                 // The request may have reached Codex. Stop this process rather than
                 // automatically sending a duplicate turn or leaving an invisible job.
                 entry.session.terminate();
-                entry.end_turn();
+                entry.scratch = None;
+                entry.active_turn = None;
+                entry.lease = None;
+                entry.requests.clear();
                 return Err(error);
             }
         };
         let Some(id) = response["turn"]["id"].as_str().filter(|s|!s.is_empty()).map(str::to_string) else {
-            entry.session.terminate(); entry.end_turn();
+            entry.session.terminate(); entry.active_turn=None; entry.lease=None; entry.scratch=None;
             return Err("Agent 返回了空 turn 标识。".into());
         };
         entry.active_turn = Some(id.clone());
         let status = response["turn"]["status"].clone();
-        if matches!(status.as_str(), Some("completed" | "failed" | "interrupted")) { entry.end_turn(); }
+        if matches!(status.as_str(), Some("completed" | "failed" | "interrupted")) { entry.active_turn=None; entry.lease=None; entry.scratch=None; }
         Ok(TurnHandle { turn_id:id,status,events:entry.collect()? })
     })).await
 }
@@ -954,13 +967,11 @@ pub async fn agent_respond(
                 return Err("审批请求已失效或不属于此会话。".into());
             }
             if let Some(event) = entry.host_requests.get(&id.to_string()).cloned() {
-                // Git actions and note edits are approved one request at a time; nothing
-                // remembers a session-wide approval for them.
                 if !matches!(
                     result["decision"].as_str(),
-                    Some("accept" | "decline" | "cancel")
+                    Some("accept" | "acceptForSession" | "decline" | "cancel")
                 ) {
-                    return Err("该操作只能逐次批准、拒绝或中止。".into());
+                    return Err("该操作只能批准、拒绝或中止。".into());
                 }
                 entry.host_requests.remove(&id.to_string());
                 entry.requests.remove(&id.to_string());
@@ -1185,11 +1196,11 @@ mod tests {
 
     #[test]
     fn identifiers_reject_path_like_input() {
-        assert!(valid_id("project-1"));
-        assert!(!valid_id(""));
-        assert!(!valid_id("../escape"));
-        assert!(!valid_id("has space"));
-        assert!(!valid_id(&"a".repeat(81)));
+        assert!(valid_key("project-1"));
+        assert!(!valid_key(""));
+        assert!(!valid_key("../escape"));
+        assert!(!valid_key("has space"));
+        assert!(!valid_key(&"a".repeat(81)));
     }
 
     #[test]

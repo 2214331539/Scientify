@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Window x:Class="Yita.Desktop.MainWindow" Title="Yita Settings" Icon="avares://Yita.Desktop/Assets/Yita.ico" Width="980" Height="760" MinWidth="760" MinHeight="500" WindowStartupLocation="CenterScreen" ShowInTaskbar="True" UseLayoutRounding="True" FontFamily="{DynamicResource InterfaceFont}" FontSize="14" Background="{DynamicResource AppWindowBackgroundBrush}" Foreground="{DynamicResource AppTextBrush}" xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" CanResize="True" RenderOptions.TextRenderingMode="Antialias" x:CompileBindings="False">
+<Window x:Class="Yita.Desktop.MainWindow" Title="Scientify · Translation" Icon="avares://Yita.Desktop/Assets/Scientify.ico" Width="980" Height="760" MinWidth="760" MinHeight="500" WindowStartupLocation="CenterScreen" ShowInTaskbar="True" UseLayoutRounding="True" FontFamily="{DynamicResource InterfaceFont}" FontSize="14" Background="{DynamicResource AppWindowBackgroundBrush}" Foreground="{DynamicResource AppTextBrush}" xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" CanResize="True" RenderOptions.TextRenderingMode="Antialias" x:CompileBindings="False">
   <Grid x:Name="SettingsRoot" Background="{DynamicResource AppWindowBackgroundBrush}">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
@@ -13,10 +13,10 @@
         <ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
       <Border Width="42" Height="42" Margin="0,0,13,0" VerticalAlignment="Center" Background="Transparent" BorderThickness="0">
-        <Image Width="34" Height="34" Source="avares://Yita.Desktop/Assets/AppLogo.png" />
+        <Image Width="34" Height="34" Source="{DynamicResource BrandLogo}" />
       </Border>
       <StackPanel Grid.Column="1" VerticalAlignment="Center">
-        <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AppTextBrush}" Tag="loc:HeaderTitle" Text="Settings" LineHeight="31" />
+        <TextBlock FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource AppTextBrush}" Tag="loc:HeaderTitle" Text="Settings" LineHeight="31" />
         <TextBlock Margin="0,3,0,0" Tag="loc:HeaderSubtitle" Text="Translation behavior, appearance, and connection" Classes="supporting" LineHeight="20" />
         <TextBlock x:Name="SettingsStatusText" Margin="0,6,0,0" TextWrapping="Wrap" IsVisible="False" Classes="supporting" LineHeight="20" />
         <TextBlock x:Name="MacInstallationStatusText" Margin="0,6,0,0" TextWrapping="Wrap" IsVisible="False" Classes="supporting" LineHeight="20" />
@@ -29,7 +29,7 @@
     </Grid>
     <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="1" Margin="0,0,7,0" Padding="28,0,21,24" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
       <Grid ColumnDefinitions="178,*" MinWidth="680">
-        <Border Margin="0,0,18,0" Padding="7" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="16" VerticalAlignment="Top">
+        <Border Margin="0,0,18,0" Padding="7" Background="{DynamicResource AppCardBackgroundBrush}" CornerRadius="{DynamicResource SettingsCardCornerRadius}" BorderBrush="{DynamicResource AppCardBorderBrush}" BorderThickness="{DynamicResource SettingsCardBorderThickness}" VerticalAlignment="Top">
           <ListBox x:Name="SettingsNavigation" Classes="settings-navigation" SelectionChanged="SettingsNavigationChanged" SelectedIndex="0">
             <ListBoxItem Tag="general" Content="General" />
             <ListBoxItem Tag="ai-history" Content="AI history" />
@@ -275,7 +275,7 @@
                         <ColumnDefinition Width="Auto" />
                       </Grid.ColumnDefinitions>
                       <ComboBox x:Name="ColorThemeComboBox" SelectionChanged="ColorThemeComboBox_SelectionChanged">
-                        <ComboBoxItem Content="Yita · Lakeside" Tag="yita" />
+                        <ComboBoxItem Content="Scientify · Graphite" Tag="yita" />
                         <ComboBoxItem Content="Ocean blue" Tag="ocean" />
                         <ComboBoxItem Content="Violet" Tag="violet" />
                         <ComboBoxItem Content="Emerald" Tag="emerald" />
@@ -334,7 +334,7 @@
                   <StackPanel>
                     <TextBlock Tag="loc:HighlightPalette" Text="Highlight palette" Classes="label" LineHeight="19" />
                     <ComboBox x:Name="HighlightPaletteComboBox" SelectionChanged="HighlightPaletteComboBox_SelectionChanged">
-                      <ComboBoxItem Content="Yita · Soft emphasis" Tag="yita" />
+                      <ComboBoxItem Content="Scientify · Soft emphasis" Tag="yita" />
                       <ComboBoxItem Content="Clarity" Tag="clarity" />
                       <ComboBoxItem Content="Morandi" Tag="morandi" />
                       <ComboBoxItem Content="Ocean" Tag="ocean" />

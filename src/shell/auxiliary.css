@@ -51,8 +51,7 @@
   overflow: hidden;
 }
 .sf-workspace-layout > .sf-dock-notes,
-.sf-workspace-layout > .sf-dock-assistant,
-.sf-workspace-layout > .sf-dock-translator {
+.sf-workspace-layout > .sf-dock-assistant {
   grid-area: 2 / 2;
 }
 .sf-workspace-layout.has-notes-workspace > .sf-dock-notes {
@@ -142,22 +141,19 @@
 .sf-dock-layout .sf-dock-tabs {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .sf-dock-tab-indicator {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 33.3333%;
+  width: 50%;
   height: 2px;
   background: var(--sf-text-secondary);
   transition: transform var(--sf-motion-selection) var(--sf-ease-apple);
 }
 .sf-dock-layout[data-tool='notes'] .sf-dock-tab-indicator {
   transform: translateX(100%);
-}
-.sf-dock-layout[data-tool='translator'] .sf-dock-tab-indicator {
-  transform: translateX(200%);
 }
 .research-shell .sf-dock-layout .sf-dock-tabs button {
   justify-content: center;
@@ -172,7 +168,7 @@
   }
   .research-shell
     .sf-workspace-layout
-    > :is(.sf-dock-shared-header, .sf-dock-assistant, .sf-dock-translator),
+    > :is(.sf-dock-shared-header, .sf-dock-assistant),
   .research-shell .sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
     grid-area: auto;
     position: absolute;
@@ -186,7 +182,6 @@
     top: 0;
   }
   .sf-workspace-layout > .sf-dock-assistant,
-  .sf-workspace-layout > .sf-dock-translator,
   .sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
     inset-block: var(--dock-header-height) 0;
     height: auto;
@@ -201,7 +196,7 @@
   }
   .research-shell
     .sf-dock-layout.has-notes-workspace
-    > :is(.sf-dock-shared-header, .sf-dock-assistant, .sf-dock-translator) {
+    > :is(.sf-dock-shared-header, .sf-dock-assistant) {
     grid-area: auto;
     position: absolute;
     right: 0;
@@ -214,8 +209,7 @@
     top: 0;
     height: var(--dock-header-height);
   }
-  .has-notes-workspace > .sf-dock-assistant,
-  .has-notes-workspace > .sf-dock-translator {
+  .has-notes-workspace > .sf-dock-assistant {
     inset-block: var(--dock-header-height) 0;
     height: auto;
   }
@@ -229,7 +223,7 @@
   justify-content: space-between;
   gap: 4px;
   flex-shrink: 0;
-  min-height: var(--sf-header-height);
+  min-height: var(--sf-header-height, 36px);
   padding: 0 4px 0 8px;
   border-bottom: 1px solid var(--sf-border-subtle);
   background: var(--sf-surface-canvas);
@@ -276,7 +270,7 @@
   gap: 4px;
   align-items: center;
   flex-shrink: 0;
-  min-height: var(--sf-toolbar-height);
+  min-height: var(--sf-toolbar-height, 32px);
   padding: 2px 8px;
   background: var(--sf-surface-canvas);
   border-bottom: 1px solid var(--sf-border-subtle);
@@ -401,7 +395,7 @@
   padding: 14px 18px 28px;
   background: var(--sf-surface-canvas);
   color: var(--sf-text-primary);
-  font: 13px/1.8 var(--sf-font-body);
+  font: 13px/1.8 var(--sf-font-body, system-ui, sans-serif);
   outline-offset: -2px;
 }
 .sf-markdown-live-editor .cm-line.sf-md-heading-1 {

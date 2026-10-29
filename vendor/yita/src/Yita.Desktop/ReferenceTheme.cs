@@ -45,6 +45,15 @@ internal static class ReferenceTheme
         resources["PopupTextSurfaceBrush"] = glass ? Brush(palette.PopupBackground) : Brushes.Transparent;
         resources["PopupTextSurfaceCornerRadius"] = new CornerRadius(glass ? 18 : 0);
         resources["PopupTextSurfacePadding"] = new Thickness(glass ? 12 : 0);
+        resources["InputCornerRadius"] = new CornerRadius(14);
+        resources["SettingsCardCornerRadius"] = new CornerRadius(18);
+        resources["SettingsCardBorderThickness"] = new Thickness(0);
+        resources["PopupEdgeThickness"] = new Thickness(0);
+        resources["PopupRootMargin"] = new Thickness(0);
+        resources["ConversationMargin"] = new Thickness(9);
+        resources["PopupSurfaceShadow"] = new BoxShadows();
+        resources["PopupToolbarShadow"] = new BoxShadows();
+        resources["BrandLogo"] = ScientifyAppearance.Logo(false);
         if (glass && palette.PopupBackground != "#FFFCF7")
         {
             var colorful = PopupVisualStyleCatalog.IsBubbleV3Color(settings.PopupVisualStyle);
@@ -58,6 +67,7 @@ internal static class ReferenceTheme
             resources["PopupTextBrush"] = Brush("#17232F");
             resources["PopupMutedBrush"] = Brush("#4D6073");
         }
+        if (ScientifyBridge.IsEmbedded) ScientifyAppearance.Apply(resources, settings, ScientifyAppearance.Dark);
         if (WindowsDisplayPreferences.HighContrast) ApplyHighContrast(resources);
     }
 
@@ -69,6 +79,7 @@ internal static class ReferenceTheme
         resources["AccentTextBrush"] = Brush(WindowsDisplayPreferences.SystemColor(14));
         resources["AppMutedTextBrush"] = resources["PopupMutedBrush"] = Brush(WindowsDisplayPreferences.SystemColor(17));
         resources["PopupGlassEnabled"] = false;
+        resources["PopupSurfaceShadow"] = resources["PopupToolbarShadow"] = new BoxShadows();
         resources["PopupTextSurfacePadding"] = new Thickness(0);
         foreach (var key in new[] { "PopupSurfaceCornerRadius", "PopupActionBarCornerRadius", "PopupButtonCornerRadius", "PopupTextSurfaceCornerRadius" }) resources[key] = new CornerRadius(0);
     }
@@ -78,7 +89,7 @@ internal static class ReferenceTheme
         var motion = ReferenceMotion.CanAnimate;
         resources["PressMotionDuration"] = TimeSpan.FromMilliseconds(motion ? 140 : 0);
         resources["SwitchMotionDuration"] = TimeSpan.FromMilliseconds(motion ? 200 : 0);
-        resources["PressedScale"] = Avalonia.Media.Transformation.TransformOperations.Parse(motion ? "scale(0.96)" : "scale(1)");
+        resources["PressedScale"] = Avalonia.Media.Transformation.TransformOperations.Parse(motion ? (ScientifyBridge.IsEmbedded ? "scale(0.985)" : "scale(0.96)") : "scale(1)");
     }
 
     internal static IBrush PreviewBrush(string style, ThemePalette palette)

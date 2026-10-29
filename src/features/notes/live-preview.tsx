@@ -4,7 +4,6 @@ import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemir
 import { Markdown } from './Markdown';
 import { parseMarkdown, type MarkdownBlock } from './markdown-document';
 import type { NoteImages } from '../../platform/note-images';
-import { errorMessage } from '../../domain/errors';
 
 export const previewFocus = StateEffect.define<boolean>();
 export const previewSource = StateEffect.define<boolean>();
@@ -56,7 +55,7 @@ export function livePreview(images?: NoteImages, onLink?: (url: string) => void)
           })
           .catch((error) => {
             imageCache.delete(path);
-            placeholder.title = errorMessage(error);
+            placeholder.title = String(error instanceof Error ? error.message : error);
             placeholder.classList.add('sf-note-image-error');
           });
       }

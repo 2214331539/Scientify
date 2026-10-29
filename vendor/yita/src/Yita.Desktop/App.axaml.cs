@@ -19,6 +19,7 @@ public sealed class App : Application
     {
         AvaloniaXamlLoader.Load(this);
         Resources["InterfaceFont"] = DesktopFontResolver.InterfaceFont;
+        ReferenceTheme.Apply(Resources, Yita.Settings.AppSettings.Default);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -126,6 +127,9 @@ public sealed class App : Application
         _selectionRuntime = platform.CreateSelectionRuntime();
         var mainWindow = new MainWindow(_selectionRuntime, httpClient: client, startupRegistration: platform.Startup);
         _settingsWindow = mainWindow;
+        _displayPreferencesTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+        _displayPreferencesTimer.Tick += (_, _) => RefreshDisplayPreferences();
+        _displayPreferencesTimer.Start();
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         desktop.MainWindow = null;
         desktop.ShutdownRequested += (_, _) => _allowWindowClose = true;
@@ -133,6 +137,7 @@ public sealed class App : Application
         desktop.Exit += (_, _) =>
         {
             _allowWindowClose = true;
+            _displayPreferencesTimer?.Stop();
             mainWindow.ShutdownServices();
             _selectionRuntime?.Dispose();
             client.Dispose();

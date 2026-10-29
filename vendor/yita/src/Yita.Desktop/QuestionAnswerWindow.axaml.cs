@@ -42,19 +42,7 @@ internal sealed partial class QuestionAnswerWindow : Window
         (_settings, _source, _translation, _explanation, _kind, _runtime, _records, _context) =
             (settings, source, translation, explanation, kind, runtime, records, context);
         InitializeComponent();
-        if (!OperatingSystem.IsWindows())
-        {
-            PinButton.Content = new Avalonia.Controls.Shapes.Path
-            {
-                Data = Geometry.Parse("M16,9V4L17,3V2H7V3L8,4V9C8,10.66 6.66,12 5,12V14H11V21H13V14H19V12C17.34,12 16,10.66 16,9Z"),
-                Fill = ReferenceTheme.Brush("#302D29"), Stretch = Stretch.Uniform, Width = 12, Height = 12,
-            };
-            CloseButton.Content = new Avalonia.Controls.Shapes.Path
-            {
-                Data = Geometry.Parse("M6,6 L18,18 M18,6 L6,18"),
-                Stroke = ReferenceTheme.Brush("#302D29"), StrokeThickness = 2, Stretch = Stretch.Uniform, Width = 12, Height = 12,
-            };
-        }
+        QuestionInputTextBox.AddHandler(KeyDownEvent, InputKeyDown, RoutingStrategies.Tunnel);
         DesktopFloatingWindowBehavior.Apply(this);
         ReferenceTheme.Apply(Resources, settings);
         ApplyUiLanguage(settings.UiLanguage);
@@ -66,6 +54,7 @@ internal sealed partial class QuestionAnswerWindow : Window
         SizeChanged += (_, _) => UpdateSurfaceClip();
         Opened += (_, _) => { WindowSizePresetBar.Constrain(this); ReferenceMotion.Reveal(Surface); };
         Closed += (_, _) => { _closed = true; _requests.Dispose(); };
+        if (ScientifyBridge.IsEmbedded) Opened += (_, _) => StartHostConversation();
     }
 
     private async void AssistantClick(object? sender, RoutedEventArgs e)
@@ -75,14 +64,16 @@ internal sealed partial class QuestionAnswerWindow : Window
         try
         {
             var draft = QuestionInputTextBox.Text?.Trim() ?? "";
-            var context = string.Join("\n\n", new[] { _explanation, _transcript, draft }.Where(value => !string.IsNullOrWhiteSpace(value)));
-            await bridge.HandoffAsync(_source, string.IsNullOrWhiteSpace(_translation) ? "AI 快捷问答" : _translation, context);
+            await EnsureHostConversationAsync();
+            await bridge.ConversationAsync(_context.SessionId, "open", draft);
+            if (QuestionInputTextBox.Text?.Trim() == draft) QuestionInputTextBox.Text = "";
         }
         catch (Exception error) { EmptyStateText.Text = error.Message; EmptyStateText.IsVisible = true; }
         finally { ScientifyAssistantButton.IsEnabled = true; }
     }
 
     internal void ApplyHostModel(string model) => _settings = _settings with { DeepSeekModel = model };
+    internal void ApplyHostAppearance() => ReferenceTheme.Apply(Resources, _settings);
 
     internal void ApplyUiLanguage(string language)
     {
@@ -90,7 +81,8 @@ internal sealed partial class QuestionAnswerWindow : Window
         var chinese = _settings.UiLanguage == "zh-CN";
         TitleText.Text = _kind == QuestionContextKind.GeneralChat ? "DeepSeek" : chinese ? "AI 问答" : "Ask AI";
         ScientifyAssistantButton.IsVisible = ScientifyBridge.IsEmbedded;
-        ScientifyAssistantButton.Content = chinese ? "转到 AI 助手" : "AI assistant";
+        ToolTip.SetTip(ScientifyAssistantButton, chinese ? "在 Scientify 中继续此会话" : "Continue this conversation in Scientify");
+        Avalonia.Automation.AutomationProperties.SetName(ScientifyAssistantButton, chinese ? "在 Scientify 中继续此会话" : "Continue this conversation in Scientify");
         CopyButton.Content = chinese ? "复制" : "Copy";
         RecordButton.Content = chinese ? "记录" : "Record";
         StopButton.Content = chinese ? "停止" : "Stop";
@@ -120,6 +112,7 @@ internal sealed partial class QuestionAnswerWindow : Window
 
     internal async Task AskAsync(string question)
     {
+        if (ScientifyBridge.IsEmbedded) { await AskHostAsync(question.Trim()); return; }
         question = question.Trim();
         if (_closed || _streaming || question.Length == 0) return;
         if (question.Length > 2000) question = question[..2000];
@@ -208,12 +201,14 @@ internal sealed partial class QuestionAnswerWindow : Window
     private async void SendClick(object? sender, RoutedEventArgs e) => await AskAsync(QuestionInputTextBox.Text ?? "");
     private void StopClick(object? sender, RoutedEventArgs e)
     {
+        if (ScientifyBridge.IsEmbedded) { _ = StopHostAsync(); return; }
         _requests.Cancel(); SetIdle();
         RetryButton.IsVisible = true;
     }
 
     internal void SuspendSession()
     {
+        if (ScientifyBridge.IsEmbedded) return; // The shared task belongs to Scientify, not this view.
         if (!_streaming) return;
         _requests.Cancel();
         if (_waitingForAnswer) _pendingAnswer = _settings.UiLanguage == "zh-CN" ? "已停止。" : "Stopped.";
@@ -221,7 +216,11 @@ internal sealed partial class QuestionAnswerWindow : Window
         RenderTranscript();
         RetryButton.IsVisible = true;
     }
-    private async void RetryClick(object? sender, RoutedEventArgs e) => await AskAsync(_question);
+    private async void RetryClick(object? sender, RoutedEventArgs e)
+    {
+        if (ScientifyBridge.IsEmbedded) await AskHostAsync("", retry: true);
+        else await AskAsync(_question);
+    }
     private async void CopyClick(object? sender, RoutedEventArgs e)
     {
         try { if (Clipboard is { } clipboard) await clipboard.SetTextAsync(_transcript); }

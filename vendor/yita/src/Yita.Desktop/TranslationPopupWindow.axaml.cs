@@ -41,6 +41,8 @@ public sealed partial class TranslationPopupWindow : Window
     public TranslationPopupWindow()
     {
         InitializeComponent();
+        // Handle Enter before the multiline TextBox consumes it as a newline.
+        InlineQuestionTextBox.AddHandler(KeyDownEvent, QuestionKeyDown, RoutingStrategies.Tunnel);
         PopupTargetLanguageComboBox.ItemsSource = TargetLanguageOptions.CreateItems();
         SetTargetLanguage(_settings.TargetLanguageMode, _settings.TargetLanguage);
         DesktopFloatingWindowBehavior.Apply(this);
@@ -79,6 +81,12 @@ public sealed partial class TranslationPopupWindow : Window
         RefreshText();
     }
 
+    internal void ApplyHostAppearance()
+    {
+        ReferenceTheme.Apply(Resources, _settings);
+        TranslationText.Foreground = (IBrush)Resources[!_showOriginal && _hasError ? "DangerBrush" : "PopupTextBrush"]!;
+    }
+
     internal void ApplyUiLanguage(string language)
     {
         _settings = _settings with { UiLanguage = UiLanguageCatalog.Normalize(language) };
@@ -102,7 +110,13 @@ public sealed partial class TranslationPopupWindow : Window
         InlineQuestionTextBox.Watermark = chinese ? "对此提问…" : "Ask about this…";
         AskButton.Content = chinese ? "提问" : "Ask";
         ScientifyAssistantButton.IsVisible = ScientifyBridge.IsEmbedded;
-        ScientifyAssistantButton.Content = chinese ? "转到 AI 助手" : "Open in AI assistant";
+        if (ScientifyBridge.IsEmbedded)
+        {
+            InlineQuestionTextBox.MinWidth = 60;
+            DeepSeekChatButton.MinWidth = 48;
+        }
+        ToolTip.SetTip(ScientifyAssistantButton, chinese ? "在 Scientify 中继续此会话" : "Continue in Scientify");
+        Avalonia.Automation.AutomationProperties.SetName(ScientifyAssistantButton, chinese ? "在 Scientify 中继续此会话" : "Continue in Scientify");
         ExplanationTitle.Text = chinese ? "AI 解释" : "AI explanation";
         ExplanationCopyButton.Content = chinese ? "复制" : "Copy";
         ExplanationRecordButton.Content = chinese ? "记录" : "Record";
@@ -253,14 +267,15 @@ public sealed partial class TranslationPopupWindow : Window
         EditMenu.IsEnabled = !_showOriginal && !_hasError && QuestionRow.IsVisible;
         if (_userSized) return;
         var content = ExplanationOverlay.IsVisible ? ExplanationText : TranslationText;
-        var glass = PopupVisualStyleCatalog.IsBubbleV3(_settings.PopupVisualStyle);
+        var glass = !ScientifyBridge.IsEmbedded && PopupVisualStyleCatalog.IsBubbleV3(_settings.PopupVisualStyle);
         var calculated = PopupAutoSizeCalculator.Calculate(ReferenceTypography.GetText(content), content.FontSize, MaxWidth, MaxHeight,
             additionalHorizontalPadding: glass ? 24 : 0, additionalVerticalPadding: glass ? 24 : 0);
         var inset = PopupSurface.Margin;
         ActionBarSurface.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        Width = Math.Clamp(Math.Max(calculated.Width + inset.Left + inset.Right, ActionBarSurface.DesiredSize.Width), MinWidth, MaxWidth);
-        content.Measure(new Size(Math.Max(100, Width - 44 - inset.Left - inset.Right - (glass ? 24 : 0)), double.PositiveInfinity));
-        Height = Math.Clamp(Math.Max(calculated.Height, content.DesiredSize.Height + 174 + (glass ? 24 : 0)) + inset.Top + inset.Bottom, MinHeight, MaxHeight);
+        var outer = PopupRoot.Margin;
+        Width = Math.Clamp(Math.Max(calculated.Width + inset.Left + inset.Right, ActionBarSurface.DesiredSize.Width) + outer.Left + outer.Right, MinWidth, MaxWidth);
+        content.Measure(new Size(Math.Max(100, Width - 44 - inset.Left - inset.Right - outer.Left - outer.Right - (glass ? 24 : 0)), double.PositiveInfinity));
+        Height = Math.Clamp(Math.Max(calculated.Height, content.DesiredSize.Height + 174 + (glass ? 24 : 0)) + inset.Top + inset.Bottom + outer.Top + outer.Bottom, MinHeight, MaxHeight);
         ConstrainToScreen();
     }
 
@@ -438,6 +453,11 @@ public sealed partial class TranslationPopupWindow : Window
     internal event EventHandler? AssistantRequested;
     private void AssistantClick(object? sender, RoutedEventArgs e) => AssistantRequested?.Invoke(this, EventArgs.Empty);
     internal string PendingQuestion => InlineQuestionTextBox.Text?.Trim() ?? "";
+    internal void SetAssistantBusy(bool busy) => ScientifyAssistantButton.IsEnabled = !busy;
+    internal void ClearTransferredQuestion(string draft)
+    {
+        if (PendingQuestion == draft) InlineQuestionTextBox.Text = "";
+    }
     private void ChatClick(object? sender, RoutedEventArgs e) => QuestionRequested?.Invoke(this, new QuestionAction("", QuestionContextKind.GeneralChat));
     private void QuestionKeyDown(object? sender, KeyEventArgs e)
     {

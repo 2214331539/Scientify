@@ -27,7 +27,7 @@ it('reads pending data only after listening, and coalesces notifications during 
     .mockResolvedValue(undefined);
   const onError = vi.fn();
   const unlisten = vi.fn();
-  const stop = watchTranslationWindow('translation-assistant-handoff', refresh, onError);
+  const stop = watchTranslationWindow('translation-conversation-request', refresh, onError);
   expect(refresh).not.toHaveBeenCalled();
   registered(unlisten);
   await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce());
@@ -52,7 +52,7 @@ it('cleans up a late listener without consuming pending selection after unmount'
   );
   const refresh = vi.fn();
   const unlisten = vi.fn();
-  const stop = watchTranslationWindow('translation-assistant-handoff', refresh, vi.fn());
+  const stop = watchTranslationWindow('translation-conversation-request', refresh, vi.fn());
   stop();
   registered(unlisten);
   await vi.waitFor(() => expect(unlisten).toHaveBeenCalledOnce());

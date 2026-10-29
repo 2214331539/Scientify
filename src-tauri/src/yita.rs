@@ -99,13 +99,16 @@ async fn ensure_started<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
     let mut command = tokio::process::Command::new(executable(app)?);
     command
-        .env("SCIENTIFY_TRANSLATION_DATA", &directory)
+        .env(
+            "SCIENTIFY_TRANSLATION_DATA",
+            crate::local_process::process_path(&directory),
+        )
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .kill_on_drop(true);
     #[cfg(windows)]
-    command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
+    command.creation_flags(0x08000000);
     let mut child = command
         .spawn()
         .map_err(|e| format!("翻译组件启动失败：{e}"))?;
@@ -137,12 +140,35 @@ async fn ensure_started<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
                         let message: Value = serde_json::from_str(&line).map_err(|_| "翻译组件协议错误。")?;
                         let id = message["id"].as_str().ok_or("翻译组件消息缺少标识。")?.to_owned();
                         match message["type"].as_str() {
+                            Some("conversation") => {
+                                if tasks.len() >= 32 {
+                                    let _ = responses.send(json!({"type":"conversationResult", "id":id, "error":"并行请求过多，请稍后重试。"}));
+                                    continue;
+                                }
+                                let request = serde_json::from_value::<crate::translation_window::ConversationRequest>(message["request"].clone());
+                                let app = host.clone();
+                                let output = responses.clone();
+                                tasks.spawn(async move {
+                                    let result = match request {
+                                        Ok(request) => crate::translation_window::conversation(&app, request).await,
+                                        Err(error) => Err(format!("翻译问答协议错误：{error}")),
+                                    };
+                                    let reply = match result {
+                                        Ok(result) => json!({"type":"conversationResult","id":id,"result":result}),
+                                        Err(error) => json!({"type":"conversationResult","id":id,"error":error}),
+                                    };
+                                    let _ = output.send(reply);
+                                    id
+                                });
+                            }
                             Some("reply") => {
+                                crate::tray::update(&host, &message["result"]);
                                 if let Some(reply) = pending.lock().map_err(|e| e.to_string())?.remove(&id) {
                                     let result = if let Some(error) = message["error"].as_str() { Err(error.to_string()) } else { Ok(message["result"].clone()) };
                                     let _ = reply.send(result);
                                 }
                             }
+                            Some("status") => { crate::tray::update(&host, &message["result"]); }
                             Some("completion") => {
                                 if cancellations.contains_key(&id) { return Err("翻译请求标识重复。".into()); }
                                 if cancellations.len() >= 16 {
@@ -161,14 +187,6 @@ async fn ensure_started<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
                                 cancellations.insert(id, handle);
                             }
                             Some("cancel") => { if let Some(handle) = cancellations.remove(&id) { handle.abort(); } }
-                            Some("handoff") => {
-                                let result = crate::translation_window::send_to_assistant(&host,
-                                    message["source"].as_str().unwrap_or_default().to_owned(),
-                                    message["translation"].as_str().unwrap_or_default().to_owned(),
-                                    message["question"].as_str().map(str::to_owned));
-                                let reply = match result { Ok(()) => json!({"type":"handoffResult","id":id}), Err(error) => json!({"type":"handoffResult","id":id,"error":error}) };
-                                let _ = responses.send(reply);
-                            }
                             _ => return Err("翻译组件返回未知消息。".into()),
                         }
                     }
@@ -390,7 +408,7 @@ pub async fn translation_service<R: tauri::Runtime>(
     crate::library::trusted(&view)?;
     if !matches!(
         action["type"].as_str(),
-        Some("status" | "settings" | "enabled" | "translate" | "clipboard")
+        Some("status" | "settings" | "enabled" | "translate" | "clipboard" | "appearance")
     ) {
         return Err("未知翻译操作。".into());
     }

@@ -1,26 +1,56 @@
-//! Translation handoff is queued until the active Scientify window acknowledges receipt.
+//! Bounded request/reply bridge to the local window that owns the shared chat runtime.
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Mutex;
+use std::{collections::HashMap, sync::Mutex, time::Duration};
 use tauri::{Emitter, Manager, Runtime};
 
-#[derive(Clone, Serialize)]
-struct Handoff {
-    id: String,
-    source: String,
-    translation: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    question: Option<String>,
-}
 #[derive(Default)]
 pub struct WindowState {
-    handoff: Mutex<Option<Handoff>>,
+    conversations: Mutex<HashMap<String, PendingConversation>>,
+}
+struct PendingConversation {
+    owner: String,
+    request: Option<ConversationRequest>,
+    reply: tokio::sync::oneshot::Sender<Value>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ConversationRequest {
+    pub id: String,
+    pub conversation_id: String,
+    pub op: String,
+    #[serde(default)]
+    pub question: String,
+    #[serde(default)]
+    pub source: String,
+    #[serde(default)]
+    pub translation: String,
+    #[serde(default)]
+    pub explanation: String,
+}
+impl ConversationRequest {
+    fn validate(&self) -> Result<(), String> {
+        if uuid::Uuid::parse_str(&self.id).is_err()
+            || uuid::Uuid::parse_str(&self.conversation_id).is_err()
+            || !matches!(
+                self.op.as_str(),
+                "create" | "read" | "send" | "retry" | "cancel" | "open"
+            )
+            || self.question.len() > 32_000
+            || self.source.len() > 100_000
+            || self.translation.len() > 256_000
+            || self.explanation.len() > 256_000
+        {
+            return Err("翻译问答请求无效或过长。".into());
+        }
+        Ok(())
+    }
 }
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Action {
-    TakeHandoff,
-    AckHandoff { id: String },
+    TakeConversations,
+    ConversationReply { id: String, result: Value },
 }
 fn host<R: Runtime>(app: &tauri::AppHandle<R>) -> &'static str {
     if app.get_webview_window("workspace").is_some() {
@@ -30,57 +60,58 @@ fn host<R: Runtime>(app: &tauri::AppHandle<R>) -> &'static str {
     }
 }
 
-pub(crate) fn send_to_assistant<R: Runtime>(
+pub(crate) async fn conversation<R: Runtime>(
     app: &tauri::AppHandle<R>,
-    source: String,
-    translation: String,
-    question: Option<String>,
-) -> Result<(), String> {
+    request: ConversationRequest,
+) -> Result<Value, String> {
+    request.validate()?;
+    let owner = host(app);
+    if request.op == "open" {
+        let window = app
+            .get_webview_window(owner)
+            .ok_or("Scientify 主窗口不可用。")?;
+        window
+            .unminimize()
+            .and_then(|_| window.show())
+            .and_then(|_| window.set_focus())
+            .map_err(|e| e.to_string())?;
+    }
+    let id = request.id.clone();
+    let (reply, received) = tokio::sync::oneshot::channel();
     let state = app.state::<WindowState>();
-    if source.chars().count() > 20000
-        || translation.len() > 1024 * 1024
-        || translation.trim().is_empty()
-        || question
-            .as_ref()
-            .is_some_and(|question| question.chars().count() > 64000)
     {
-        return Err("发送到 AI 的翻译内容无效或过长。".into());
-    }
-    let target = host(app);
-    let window = app
-        .get_webview_window(target)
-        .ok_or("请先打开 Scientify 主窗口。")?;
-    // Do not queue a duplicate if the main UI is still booting or has reported an error.
-    {
-        let mut pending = state.handoff.lock().map_err(|e| e.to_string())?;
-        if let Some(existing) = pending.as_ref() {
-            if existing.source != source
-                || existing.translation != translation
-                || existing.question != question
-            {
-                return Err("上一条翻译正在交给 AI 助手，请稍后重试。".into());
-            }
-        } else {
-            *pending = Some(Handoff {
-                id: uuid::Uuid::new_v4().to_string(),
-                source,
-                translation,
-                question,
-            });
+        let mut queue = state.conversations.lock().map_err(|e| e.to_string())?;
+        if queue.len() >= 16 || queue.contains_key(&id) {
+            return Err("翻译问答请求正在处理中，请稍后重试。".into());
         }
+        queue.insert(
+            id.clone(),
+            PendingConversation {
+                owner: owner.into(),
+                request: Some(request),
+                reply,
+            },
+        );
     }
-    window
-        .unminimize()
-        .and_then(|_| window.show())
-        .and_then(|_| window.set_focus())
+    let result = async {
+        app.emit_to(
+            tauri::EventTarget::webview(owner),
+            "translation-conversation-request",
+            (),
+        )
         .map_err(|e| e.to_string())?;
-    app.emit_to(
-        tauri::EventTarget::webview(target),
-        "translation-assistant-handoff",
-        (),
-    )
-    .map_err(|e| e.to_string())?;
-    Ok(())
+        tokio::time::timeout(Duration::from_secs(20), received)
+            .await
+            .map_err(|_| "Scientify 会话响应超时，请重试。".to_owned())?
+            .map_err(|_| "Scientify 会话窗口已关闭。".to_owned())
+    }
+    .await;
+    state
+        .conversations
+        .lock()
+        .map_err(|e| e.to_string())?
+        .remove(&id);
+    result
 }
 
 #[tauri::command]
@@ -94,16 +125,29 @@ pub async fn translation_window<R: Runtime>(
         return Ok(Value::Null);
     }
     let state = app.state::<WindowState>();
-    let mut pending = state.handoff.lock().map_err(|e| e.to_string())?;
     match action {
-        Action::TakeHandoff => return serde_json::to_value(&*pending).map_err(|e| e.to_string()),
-        Action::AckHandoff { id } => {
-            if pending.as_ref().is_some_and(|handoff| handoff.id == id) {
-                *pending = None;
+        Action::TakeConversations => {
+            let mut queue = state.conversations.lock().map_err(|e| e.to_string())?;
+            let requests: Vec<_> = queue
+                .values_mut()
+                .filter(|pending| pending.owner == view.label())
+                .filter_map(|pending| pending.request.take())
+                .collect();
+            return serde_json::to_value(requests).map_err(|e| e.to_string());
+        }
+        Action::ConversationReply { id, result } => {
+            let mut queue = state.conversations.lock().map_err(|e| e.to_string())?;
+            if queue
+                .get(&id)
+                .is_some_and(|pending| pending.owner == view.label())
+            {
+                if let Some(pending) = queue.remove(&id) {
+                    let _ = pending.reply.send(result);
+                }
             }
+            return Ok(Value::Null);
         }
     }
-    Ok(Value::Null)
 }
 
 #[cfg(test)]
@@ -113,7 +157,21 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn handoff_preserves_drafts_and_requires_active_host_acknowledgement() {
+    fn conversation_protocol_validates_external_inputs() {
+        let mut request: ConversationRequest = serde_json::from_value(json!({
+            "id": uuid::Uuid::new_v4(), "conversationId": uuid::Uuid::new_v4(), "op":"read"
+        }))
+        .unwrap();
+        assert!(request.validate().is_ok());
+        request.op = "execute".into();
+        assert!(request.validate().is_err());
+        request.op = "send".into();
+        request.question = "a".repeat(32_001);
+        assert!(request.validate().is_err());
+    }
+
+    #[test]
+    fn only_the_owning_local_window_can_take_and_answer_requests() {
         let app = tauri::test::mock_builder()
             .manage(WindowState::default())
             .invoke_handler(tauri::generate_handler![translation_window])
@@ -122,10 +180,31 @@ mod tests {
         let main = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
             .unwrap();
+        let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+            .build()
+            .unwrap();
         let remote =
             tauri::WebviewWindowBuilder::new(&app, "browser-untrusted", Default::default())
                 .build()
                 .unwrap();
+        let request: ConversationRequest = serde_json::from_value(json!({
+            "id":uuid::Uuid::new_v4(), "conversationId":uuid::Uuid::new_v4(), "op":"read"
+        }))
+        .unwrap();
+        let id = request.id.clone();
+        let (reply, mut received) = tokio::sync::oneshot::channel();
+        app.state::<WindowState>()
+            .conversations
+            .lock()
+            .unwrap()
+            .insert(
+                id.clone(),
+                PendingConversation {
+                    owner: "workspace".into(),
+                    request: Some(request),
+                    reply,
+                },
+            );
         let origin = if cfg!(feature = "custom-protocol") {
             if cfg!(windows) {
                 "http://tauri.localhost"
@@ -137,31 +216,39 @@ mod tests {
         };
         let call =
             |view, action| invoke(view, "translation_window", json!({"action":action}), origin);
-        send_to_assistant(
-            app.handle(),
-            "paper".into(),
-            "translation".into(),
-            Some("unsent question".into()),
-        )
-        .unwrap();
-        assert!(send_to_assistant(app.handle(), "different".into(), "new".into(), None).is_err());
-        assert!(call(&remote, json!({"type":"takeHandoff"})).is_err());
-        let item: Value = call(&main, json!({"type":"takeHandoff"}))
-            .unwrap()
-            .deserialize()
-            .unwrap();
-        assert_eq!(item["question"], "unsent question");
-        call(&main, json!({"type":"ackHandoff","id":"wrong"})).unwrap();
-        assert!(app.state::<WindowState>().handoff.lock().unwrap().is_some());
-        let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
-            .build()
-            .unwrap();
-        let hidden: Value = call(&main, json!({"type":"takeHandoff"}))
+        assert!(call(&remote, json!({"type":"takeConversations"})).is_err());
+        let hidden: Value = call(&main, json!({"type":"takeConversations"}))
             .unwrap()
             .deserialize()
             .unwrap();
         assert!(hidden.is_null());
-        call(&workspace, json!({"type":"ackHandoff","id":item["id"]})).unwrap();
-        assert!(app.state::<WindowState>().handoff.lock().unwrap().is_none());
+        call(
+            &main,
+            json!({"type":"conversationReply","id":id,"result":{"fake":true}}),
+        )
+        .unwrap();
+        assert!(received.try_recv().is_err());
+        let items: Value = call(&workspace, json!({"type":"takeConversations"}))
+            .unwrap()
+            .deserialize()
+            .unwrap();
+        assert_eq!(items.as_array().unwrap().len(), 1);
+        let again: Value = call(&workspace, json!({"type":"takeConversations"}))
+            .unwrap()
+            .deserialize()
+            .unwrap();
+        assert!(again.as_array().unwrap().is_empty());
+        call(
+            &workspace,
+            json!({"type":"conversationReply","id":id,"result":{"running":true}}),
+        )
+        .unwrap();
+        assert_eq!(received.try_recv().unwrap(), json!({"running":true}));
+        assert!(app
+            .state::<WindowState>()
+            .conversations
+            .lock()
+            .unwrap()
+            .is_empty());
     }
 }

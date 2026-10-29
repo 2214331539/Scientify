@@ -1,11 +1,19 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { SubscriptionSidebar } from './SubscriptionSidebar';
 import { createWorkspaceStore } from '../../stores/workspace';
 import { emptyWorkspace } from '../../domain/workspace';
 import type { WorkspaceBackend } from '../../platform/desktop';
 
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
+});
 afterEach(() => {
   cleanup();
   localStorage.clear();

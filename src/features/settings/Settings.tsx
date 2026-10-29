@@ -9,13 +9,14 @@ import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { StorageLocation } from '../../platform/desktop';
-import { CircleHelp, Database, Keyboard, Languages, Palette, Settings } from 'lucide-react';
+import { CircleHelp, Cloud, Database, Keyboard, Languages, Palette, Settings } from 'lucide-react';
 import { ShortcutsSettings } from './ShortcutsSettings';
+import { CollaborationPreferences } from './CollaborationPreferences';
 import './settings.css';
 
 function TranslationPreferences() {
   return isTauri() ? (
-    <NativeTranslationPanel settings />
+    <NativeTranslationPanel />
   ) : (
     <p>{t('划词翻译请在 Scientify 桌面应用中使用。')}</p>
   );
@@ -173,7 +174,8 @@ export function SettingsDialog({
 }: {
   store: WorkspaceStore;
   onClose(): void;
-  initialSection?: 'general' | 'appearance' | 'shortcuts' | 'translation' | 'data' | 'about';
+  initialSection?:
+    'general' | 'appearance' | 'shortcuts' | 'translation' | 'collaboration' | 'data' | 'about';
 }) {
   const data = useStore(store, (s) => s.data);
   const [section, setSection] = useState(initialSection);
@@ -205,6 +207,7 @@ export function SettingsDialog({
     { id: 'appearance', label: t('外观'), icon: Palette },
     { id: 'shortcuts', label: t('快捷键'), icon: Keyboard },
     { id: 'translation', label: t('翻译'), icon: Languages },
+    { id: 'collaboration', label: t('协作'), icon: Cloud },
     { id: 'data', label: t('数据与备份'), icon: Database },
     { id: 'about', label: t('关于 Scientify'), icon: CircleHelp },
   ] as const;
@@ -297,6 +300,9 @@ export function SettingsDialog({
         </section>
         <section hidden={section !== 'translation'} aria-label={t('翻译')}>
           <TranslationPreferences />
+        </section>
+        <section hidden={section !== 'collaboration'} aria-label={t('协作')}>
+          <CollaborationPreferences />
         </section>
         <section hidden={section !== 'data'} aria-label={t('数据与备份')}>
           <DataPreferences store={store} />

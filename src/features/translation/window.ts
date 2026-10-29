@@ -1,13 +1,8 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
-export type TranslationHandoff = {
-  id: string;
-  source: string;
-  translation: string;
-  question?: string;
-};
-type WindowAction = { type: 'takeHandoff' } | { type: 'ackHandoff'; id: string };
+type WindowAction =
+  { type: 'takeConversations' } | { type: 'conversationReply'; id: string; result: unknown };
 
 export function translationWindow<T = void>(action: WindowAction) {
   return invoke<T>('translation_window', { action });
@@ -15,7 +10,7 @@ export function translationWindow<T = void>(action: WindowAction) {
 
 /** Register before reading pending data so a window boot cannot lose the first event. */
 export function watchTranslationWindow(
-  event: 'translation-assistant-handoff',
+  event: 'translation-conversation-request',
   refresh: () => Promise<void>,
   onError: (reason: unknown) => void,
 ) {

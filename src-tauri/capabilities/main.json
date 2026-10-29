@@ -64,7 +64,10 @@
     "allow-library-external",
     "allow-library-import-bytes",
     "allow-browser-command",
-    "allow-translation-window"
+    "allow-translation-window",
+    "allow-translation-service",
+    "allow-collaboration-status",
+    "allow-collaboration-configure"
   ],
   "webviews": [
     "main",

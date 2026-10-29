@@ -46,7 +46,7 @@
 }
 .sf-md-host .cm-scroller {
   overflow: auto;
-  font-family: var(--sf-font-body);
+  font-family: var(--sf-font-body, system-ui, sans-serif);
   line-height: 1.8;
 }
 .sf-md-host .cm-content {
@@ -199,7 +199,7 @@
   border-radius: var(--sf-radius-dialog);
   background: var(--sf-surface-raised);
   box-shadow: var(--sf-shadow-popover);
-  animation: sf-note-outline-enter var(--sf-motion-overlay) var(--sf-ease-enter);
+  animation: sf-note-outline-enter var(--sf-motion-overlay, 220ms) var(--sf-ease-enter, ease);
 }
 .sf-note-outline-panel > strong {
   display: block;

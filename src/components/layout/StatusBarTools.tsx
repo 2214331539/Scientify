@@ -1,4 +1,4 @@
-import { Bot, Languages, NotebookPen } from 'lucide-react';
+import { Bot, NotebookPen } from 'lucide-react';
 import { Button } from '../primitives';
 import { t } from '../../i18n';
 
@@ -10,10 +10,10 @@ export function StatusBarTools({
   onTool,
 }: {
   ready: boolean;
-  tool: 'assistant' | 'notes' | 'translator';
+  tool: 'assistant' | 'notes';
   open: boolean;
   notesWorkspace: boolean;
-  onTool: (tool: 'assistant' | 'notes' | 'translator') => void;
+  onTool: (tool: 'assistant' | 'notes') => void;
 }) {
   return (
     <div className="statusbar-tools" role="group" aria-label={t('全局辅助工具')}>
@@ -28,18 +28,6 @@ export function StatusBarTools({
         onClick={() => onTool('assistant')}
       >
         <Bot />
-      </Button>
-      <Button
-        variant="ghost"
-        iconOnly
-        id="translator-toggle"
-        aria-label={t('翻译')}
-        title={t('翻译')}
-        aria-pressed={open && tool === 'translator'}
-        disabled={!ready}
-        onClick={() => onTool('translator')}
-      >
-        <Languages />
       </Button>
       <Button
         variant="ghost"

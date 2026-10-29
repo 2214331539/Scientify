@@ -1,5 +1,5 @@
 import { t } from '../../i18n';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace, type Workspace } from '../../domain/workspace';
@@ -15,7 +15,7 @@ import { freezeContext, newConversation, requestMessages } from './model';
 
 afterEach(cleanup);
 
-it('hands translation to the requested project without overwriting its draft', async () => {
+it('opens the same translation session without sending or overwriting another project draft', async () => {
   const data = emptyWorkspace();
   const store = createWorkspaceStore({
     load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
@@ -42,15 +42,32 @@ it('hands translation to the requested project without overwriting its draft', a
   const [first, second] = screen.getAllByLabelText('向 AI 提问') as HTMLTextAreaElement[];
   fireEvent.change(first, { target: { value: 'Existing draft' } });
   fireEvent.change(second, { target: { value: 'Other project draft' } });
+  await act(async () => {
+    await store.getState().update((data) =>
+      data.sessions.push({
+        ...newConversation('p1'),
+        id: 'translation-session',
+        title: '翻译问答',
+        translationContext: { source: 'Original', translation: 'Translated', explanation: '' },
+        messages: [
+          { id: 'question', role: 'user', text: 'Earlier question', createdAt: '' },
+          { id: 'answer', role: 'assistant', text: 'Earlier answer', createdAt: '' },
+        ],
+      }),
+    );
+  });
+  const accept = vi.fn();
   act(() =>
     window.dispatchEvent(
-      new CustomEvent('scientify-assistant-prefill', {
-        detail: { scope: 'p1', source: 'Original', translation: 'Translated' },
+      new CustomEvent('scientify-assistant-open-session', {
+        detail: { scope: 'p1', id: 'translation-session', draft: 'Follow-up draft', accept },
       }),
     ),
   );
-  expect(first.value).toContain('Existing draft');
-  expect(first.value).toContain('Translated');
+  expect(accept).toHaveBeenCalledOnce();
+  expect(first.value).toBe('Follow-up draft');
+  expect(screen.getByText('Earlier answer')).toBeTruthy();
+  expect(store.getState().data!.sessions).toHaveLength(1);
   expect(second.value).toBe('Other project draft');
 });
 
@@ -123,6 +140,14 @@ it('starts a paper-tools upgrade chat in the old literature root after navigatin
   } finally {
     await act(async () => runtime.dispose());
   }
+});
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
 });
 const context: WorkContext = {
   projectId: 'p1',

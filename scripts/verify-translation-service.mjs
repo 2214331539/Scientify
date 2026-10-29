@@ -86,6 +86,15 @@ try {
   await delay(200);
   const after = await command({ type: 'status' });
   assert.equal(after.popupCount, 1, 'unpinned popup is reused');
+  for (const dark of [true, false]) {
+    const themed = await command({ type: 'appearance', dark });
+    assert.equal(themed.popupCount, 1, 'theme changes preserve the reading popup');
+    assert.equal(
+      events.filter((m) => m.type === 'completion').length,
+      2,
+      'theme changes do not restart translation',
+    );
+  }
   const settings = readFileSync(join(data, 'desktop-settings.json'), 'utf8');
   assert.ok(
     !settings.includes('apiKey'),

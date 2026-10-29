@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Yita.Desktop.WindowSizePresetBar" Focusable="False">
-  <Border Padding="4,3" Background="{DynamicResource PopupButtonBrush}" CornerRadius="{DynamicResource PopupActionBarCornerRadius}">
+  <Border Padding="4,3" Background="{DynamicResource PopupButtonBrush}" CornerRadius="{DynamicResource PopupActionBarCornerRadius}"
+          BorderBrush="{DynamicResource PopupButtonBorderBrush}" BorderThickness="{DynamicResource PopupEdgeThickness}" BoxShadow="{DynamicResource PopupToolbarShadow}">
     <StackPanel Orientation="Horizontal">
       <Button x:Name="SmallButton" Classes="reading-action size-preset" Tag="Small" Click="PresetClick"><Border Width="9" Height="7" BorderBrush="{DynamicResource PopupTextBrush}" BorderThickness="1.4" CornerRadius="1" /></Button>
       <Button x:Name="MediumButton" Classes="reading-action size-preset" Tag="Medium" Click="PresetClick"><Border Width="13" Height="10" BorderBrush="{DynamicResource PopupTextBrush}" BorderThickness="1.4" CornerRadius="1.2" /></Button>

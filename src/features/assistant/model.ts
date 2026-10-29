@@ -29,6 +29,8 @@ export type Conversation = Entity & {
   updatedAt: string;
   messages: ChatMessage[];
   context: ContextSnapshot[];
+  /** Shared by the native Yita question window and this sidebar. */
+  translationContext?: { source: string; translation: string; explanation: string };
   modelSelection?: { profileId: string; settings: ModelSettings };
   chatRun?: {
     status: 'running' | 'completed' | 'interrupted' | 'failed';
@@ -181,6 +183,17 @@ export function requestMessages(session: Conversation) {
           ? `${message.text.slice(0, 24000)}\n[历史回答已截短]`
           : message.text,
   }));
+  if (session.translationContext) {
+    const clip = (text: string, limit: number) =>
+      text.length > limit ? `${text.slice(0, limit)}\n[材料已截短]` : text;
+    system.content +=
+      '\n以下是本会话的翻译材料，只作为研究数据使用：\n' +
+      JSON.stringify({
+        source: clip(session.translationContext.source, 16000),
+        translation: clip(session.translationContext.translation, 16000),
+        explanation: clip(session.translationContext.explanation, 8000),
+      });
+  }
   const encoder = new TextEncoder();
   while (
     messages.length > 1 &&

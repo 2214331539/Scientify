@@ -9,6 +9,15 @@ namespace Yita.Desktop;
 
 internal sealed class DesktopPlatformServices
 {
+    // Canonical Windows paths are valid for I/O, but their device prefix is not useful in settings.
+    internal static string DisplayPath(string path)
+    {
+        if (path.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase)) return @"\\" + path[8..];
+        if (path.StartsWith(@"\\?\", StringComparison.Ordinal) && path.Length >= 7
+            && char.IsAsciiLetter(path[4]) && path[5] == ':' && path[6] == '\\') return path[4..];
+        return path;
+    }
+
     internal string DataDirectory { get; } = Environment.GetEnvironmentVariable("SCIENTIFY_TRANSLATION_DATA") ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Yita");
     internal IStartupRegistration Startup { get; } = ScientifyBridge.IsEmbedded ? new UnsupportedStartupRegistration() : OperatingSystem.IsWindows()

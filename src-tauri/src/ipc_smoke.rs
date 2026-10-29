@@ -16,6 +16,42 @@ use tauri::{
 };
 
 #[test]
+fn translation_service_passes_generated_acl_only_for_local_app_views() {
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![yita::translation_service])
+        .build(tauri::generate_context!())
+        .unwrap();
+    let origin = if cfg!(feature = "custom-protocol") {
+        "http://tauri.localhost"
+    } else {
+        "http://127.0.0.1:1420"
+    };
+    for label in ["main", "workspace", "untrusted"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        for source in [origin, "https://untrusted.example"] {
+            // An unsupported action reaches the real handler without starting a native process.
+            let error = invoke(
+                &window,
+                "translation_service",
+                json!({"action":{"type":"invalid"}}),
+                source,
+            )
+            .unwrap_err();
+            if label != "untrusted" && source == origin {
+                assert_eq!(error, json!("未知翻译操作。"));
+            } else {
+                assert!(
+                    error.to_string().contains("not allowed"),
+                    "{label}: {error}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn assistant_context_obeys_generated_acl_and_reads_only_the_bound_library_and_note() {
     let temp = tempfile::tempdir().unwrap();
     let storage = Arc::new(Storage::open(temp.path().join("data")).unwrap());

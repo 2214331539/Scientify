@@ -5,8 +5,8 @@ internal static class SettingsText
     internal static readonly IReadOnlyDictionary<string, (string English, string Chinese)> LocalizedText =
         new Dictionary<string, (string English, string Chinese)>(StringComparer.Ordinal)
         {
-            ["WindowTitle"] = ("Yita Settings", "Yita 设置"),
-            ["HeaderTitle"] = ("Settings", "设置"),
+            ["WindowTitle"] = ("Scientify · Translation settings", "Scientify · 翻译设置"),
+            ["HeaderTitle"] = ("Scientify", "Scientify"),
             ["HeaderSubtitle"] = ("Translation behavior, appearance, and connection", "调整翻译行为、外观与服务连接"),
             ["InterfaceLanguage"] = ("Interface language", "界面语言"),
             ["GeneralTitle"] = ("General", "常规"),
@@ -81,7 +81,7 @@ internal static class SettingsText
             ["HistoryDirectoryRequired"] = ("Choose a writable folder before enabling AI history.", "开启 AI 记录前，请选择可写入的目录。"),
             ["GeneratingSummary"] = ("Generating summary…", "正在生成总结…"),
             ["SummaryCreated"] = ("Summary created from {0} record(s).", "已根据 {0} 条记录生成总结。"),
-            ["SummaryNoRecords"] = ("No Yita records were found in this range.", "所选范围内没有 Yita 记录。"),
+            ["SummaryNoRecords"] = ("No translation records were found in this range.", "所选范围内没有翻译记录。"),
             ["SummaryTimeout"] = ("Summary timed out. Please try again.", "总结超时，请重试。"),
             ["SummaryProviderFailed"] = ("The AI service could not generate the summary.", "AI 服务未能生成总结。"),
             ["HistoryDirectoryUnavailable"] = ("The selected folder is unavailable or not writable.", "所选目录不可用或无法写入。"),

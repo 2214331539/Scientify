@@ -16,11 +16,14 @@ const TRIPLE: &str = env!("SCIENTIFY_TARGET");
 
 /// The bundled engine communicates over stdio. On Windows it must not create
 /// a visible console window every time a user starts an Agent task.
-fn hide_console_window(_command: &mut Command) {
+fn hide_console_window(command: &mut Command) {
+    #[cfg(not(windows))]
+    let _ = command;
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        _command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
     }
 }
 
@@ -484,7 +487,6 @@ impl EngineSession {
     /// Wait for one named notification while preserving every other message.
     /// Codex's Windows sandbox setup returns before it finishes and reports the
     /// final result as `windowsSandbox/setupCompleted` on the same stream.
-    #[cfg(windows)]
     pub fn wait_for_notification(
         &mut self,
         method: &str,

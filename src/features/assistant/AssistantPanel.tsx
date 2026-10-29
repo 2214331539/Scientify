@@ -52,7 +52,6 @@ import {
   type ChatMessage,
   type Conversation,
 } from './model';
-import { errorMessage } from '../../domain/errors';
 
 interface Props {
   store: WorkspaceStore;
@@ -299,7 +298,7 @@ export function AssistantPanel({
   }, [store, key, dirty, onDirtyChange]);
   const safeError = useCallback(
     (reason: unknown) => {
-      const message = errorMessage(reason);
+      const message = reason instanceof Error ? reason.message : String(reason);
       return apiKey ? message.split(apiKey).join(t('[已隐藏密钥]')) : message;
     },
     [apiKey],
@@ -370,33 +369,6 @@ export function AssistantPanel({
     };
   }, [recallKey, settings.provider, settings.endpoint, selectedSlot, safeError]);
   useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
-
-  useEffect(() => {
-    const onPrefill = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{
-          scope: string;
-          source?: string;
-          translation?: string;
-          question?: string;
-        }>
-      ).detail;
-      if (detail?.scope !== scope || (!detail.source && !detail.translation)) return;
-      const text = [
-        detail.question ?? '请基于下面的原文和译文继续分析。',
-        detail.source ? `原文：\n${detail.source}` : '',
-        detail.translation ? `译文：\n${detail.translation}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n');
-      setPrompt(
-        [drafts.current.get(activeConversationId.current), text].filter(Boolean).join('\n\n'),
-      );
-      requestAnimationFrame(() => composerRef.current?.focus());
-    };
-    window.addEventListener('scientify-assistant-prefill', onPrefill);
-    return () => window.removeEventListener('scientify-assistant-prefill', onPrefill);
-  }, [scope]);
 
   function openSettings() {
     ++profileRecall.current;
@@ -883,7 +855,13 @@ export function AssistantPanel({
     // OpenAI-shaped protocol. Users should describe the outcome; they should
     // not have to choose a transport mode before every request.
     const harnessAvailable = agent !== nativeAgent || isTauri();
-    if (harnessAvailable && agentProject && domain && engineSupports(settings.provider)) {
+    if (
+      !conversation.translationContext &&
+      harnessAvailable &&
+      agentProject &&
+      domain &&
+      engineSupports(settings.provider)
+    ) {
       await sendToAgent();
       return;
     }
@@ -963,6 +941,27 @@ export function AssistantPanel({
     setNewDomain(null);
     setError('');
   }
+
+  useEffect(() => {
+    const open = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{ scope: string; id: string; draft: string; accept(): void }>
+      ).detail;
+      if (detail.scope !== scope || conversationActionsDisabled) return;
+      const target = store
+        .getState()
+        .data?.sessions.find((chat) => chat.id === detail.id && chat.project === scope);
+      if (!target) return;
+      selectConversation(detail.id);
+      setSettings(asConversation(target).modelSelection?.settings ?? defaultSelection.settings);
+      if (detail.draft)
+        setPrompt([drafts.current.get(detail.id), detail.draft].filter(Boolean).join('\n\n'));
+      detail.accept();
+      requestAnimationFrame(() => composerRef.current?.focus());
+    };
+    window.addEventListener('scientify-assistant-open-session', open);
+    return () => window.removeEventListener('scientify-assistant-open-session', open);
+  });
 
   async function setupWindowsSandbox() {
     if (!agentProject || !domain || !agent.setupSandbox) return;

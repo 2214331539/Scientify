@@ -48,7 +48,6 @@ import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
 import { nativeResearch, type ResearchBackend } from '../platform/research';
 import { ViewTransition } from '../components/workspace/ViewTransition';
 import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/shortcuts';
-import { errorMessage } from '../domain/errors';
 
 type Dialog =
   { kind: 'project'; project?: Project } | { kind: 'data' | 'profile' | 'search' | 'about' } | null;
@@ -66,7 +65,7 @@ type UISession = {
   projectId: string | null;
   space: string;
   locations: Record<string, Location>;
-  dock: 'assistant' | 'notes' | 'translator';
+  dock: 'assistant' | 'notes';
   dockOpen: boolean;
   leftWidth: number;
   rightWidth: number;
@@ -112,7 +111,8 @@ function readSession(storageKey = 'scientify.ui.v2'): UISession {
               ];
             }),
         ),
-        dockOpen: ['notes', 'translator'].includes(value.dock) && value.dockOpen === true,
+        dock: value.dock === 'notes' ? 'notes' : 'assistant',
+        dockOpen: value.dock === 'notes' && value.dockOpen === true,
         leftWidth: Math.max(180, Math.min(300, Number(value.leftWidth) || 240)),
         rightWidth: Math.max(
           MIN_DOCK_WIDTH,
@@ -316,11 +316,21 @@ export function App({
   }, []);
   useLayoutEffect(() => {
     const media = matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => applyAppearance(preferences, media.matches);
+    const apply = () => {
+      applyAppearance(preferences, media.matches);
+      if (isTauri()) {
+        void invoke('translation_service', {
+          action: {
+            type: 'appearance',
+            dark: preferences.theme === 'dark' || (preferences.theme === 'system' && media.matches),
+          },
+        }).catch((reason) => store.setState({ error: translateError(String(reason)) }));
+      }
+    };
     apply();
     media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
-  }, [preferences]);
+  }, [preferences, store]);
   useEffect(() => {
     if (!isTauri() || windowMode === 'browser') return;
     void getCurrentWindow()
@@ -400,11 +410,10 @@ export function App({
     });
   }, []);
   const openTool = useCallback(
-    (tool: 'assistant' | 'notes' | 'translator') =>
-      setUI((s) => ({ ...s, dock: tool, dockOpen: true })),
+    (tool: 'assistant' | 'notes') => setUI((s) => ({ ...s, dock: tool, dockOpen: true })),
     [],
   );
-  function toggleTool(tool: 'assistant' | 'notes' | 'translator') {
+  function toggleTool(tool: 'assistant' | 'notes') {
     if (tool === 'notes' && workspace === 'notes') return;
     setUI((s) => ({ ...s, dock: tool, dockOpen: s.dock !== tool || !s.dockOpen }));
   }
@@ -469,7 +478,7 @@ export function App({
     } catch (error) {
       setLaunching(false);
       store.setState({ busy: false });
-      store.setState({ error: errorMessage(error) });
+      store.setState({ error: error instanceof Error ? error.message : String(error) });
     }
   }
   function returnToProjects() {
@@ -972,13 +981,7 @@ export function App({
           onClose={() => {
             setUI((s) => ({ ...s, dockOpen: false }));
             document
-              .getElementById(
-                ui.dock === 'assistant'
-                  ? 'assistant-toggle'
-                  : ui.dock === 'notes'
-                    ? 'notes-toggle'
-                    : 'translator-toggle',
-              )
+              .getElementById(ui.dock === 'assistant' ? 'assistant-toggle' : 'notes-toggle')
               ?.focus();
           }}
           resizeHandle={

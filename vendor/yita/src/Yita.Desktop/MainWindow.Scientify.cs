@@ -54,6 +54,15 @@ public sealed partial class MainWindow
                 }
                 return Status();
             case "status": return Status();
+            case "appearance":
+                ScientifyAppearance.Dark = action.GetProperty("dark").GetBoolean();
+                Avalonia.Application.Current!.RequestedThemeVariant = ScientifyAppearance.Dark
+                    ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
+                ReferenceTheme.Apply(Avalonia.Application.Current.Resources, _settings.ToOriginal());
+                foreach (var popup in _popups) popup.ApplyHostAppearance();
+                foreach (var conversation in _conversations) conversation.ApplyHostAppearance();
+                UpdateThemePreview();
+                return Status();
             case "settings":
                 if (!IsVisible) { PopulateSettings(); Show(); }
                 Activate();
@@ -65,6 +74,9 @@ public sealed partial class MainWindow
                 return Status();
             case "clipboard":
                 TranslateClipboardFromTray();
+                return Status();
+            case "repair":
+                await Task.Run(() => _selectionRuntime?.RepairInputCapture());
                 return Status();
             case "translate":
                 var text = action.GetProperty("text").GetString() ?? "";
@@ -84,7 +96,7 @@ public sealed partial class MainWindow
             _ => fallback,
         } : fallback;
 
-    private object Status() => new
+    internal object Status() => new
     {
         enabled = _settings.IsEnabled,
         running = _selectionRuntime?.IsRunning == true,

@@ -45,7 +45,7 @@ export default function PdfReader({
   paperId: string;
   backend: PdfBackend;
   onContext: (context: WorkContext) => void;
-  onTool: (tool: 'assistant' | 'notes' | 'translator') => void;
+  onTool: (tool: 'assistant' | 'notes') => void;
   compact?: boolean;
 }) {
   const scroll = useRef<HTMLDivElement>(null);

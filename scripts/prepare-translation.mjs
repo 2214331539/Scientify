@@ -29,6 +29,12 @@ function hashDirectory(path) {
   }
 }
 hashDirectory(source);
+for (const asset of [
+  'public/brand/scientify-light.png',
+  'public/brand/scientify-dark.png',
+  'src-tauri/icons/icon.ico',
+])
+  fingerprint.update(asset).update(readFileSync(join(root, asset)));
 const hash = fingerprint.digest('hex');
 const stamp = join(output, 'scientify-source.sha256');
 const exe = join(output, process.platform === 'win32' ? 'Yita.Desktop.exe' : 'Yita.Desktop');
@@ -129,8 +135,9 @@ if (!existsSync(exe) || !existsSync(stamp) || readFileSync(stamp, 'utf8') !== ha
   writeFileSync(stamp, hash);
 }
 // `tauri build --no-bundle` is also a supported local acceptance distribution.
+const cargoTarget = resolve(root, process.env.CARGO_TARGET_DIR ?? 'target');
 for (const mode of ['debug', 'release']) {
-  const destination = join(root, 'target', mode, 'yita');
+  const destination = join(cargoTarget, mode, 'yita');
   const destinationStamp = join(destination, 'scientify-source.sha256');
   if (!existsSync(destinationStamp) || readFileSync(destinationStamp, 'utf8') !== hash)
     cpSync(output, destination, { recursive: true });

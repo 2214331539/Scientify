@@ -1,25 +1,24 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="using:Yita.Desktop" x:Class="Yita.Desktop.QuestionAnswerWindow" x:ClassModifier="internal" Width="520" Height="360" MinWidth="360" MinHeight="240" MaxWidth="860" MaxHeight="720"
+        xmlns:local="using:Yita.Desktop" x:Class="Yita.Desktop.QuestionAnswerWindow" Title="Scientify · AI" Icon="avares://Yita.Desktop/Assets/Scientify.ico" x:ClassModifier="internal" Width="520" Height="360" MinWidth="360" MinHeight="240" MaxWidth="860" MaxHeight="720"
         SystemDecorations="None" TransparencyLevelHint="Transparent" Background="Transparent" ShowActivated="False"
         ShowInTaskbar="False" Topmost="True" CanResize="True" FontFamily="{DynamicResource InterfaceFont}" KeyDown="WindowKeyDown" PointerWheelChanged="WindowPointerWheelChanged">
-  <Grid Margin="9" RowDefinitions="Auto,*">
+  <Grid Margin="{DynamicResource ConversationMargin}" RowDefinitions="Auto,*">
     <local:WindowSizePresetBar x:Name="SizePresetBar" Margin="0,0,0,6" HorizontalAlignment="Left" />
-    <Border x:Name="Surface" Grid.Row="1" Background="{DynamicResource QuestionAnswerSurfaceBrush}" CornerRadius="{DynamicResource PopupSurfaceCornerRadius}" ClipToBounds="True">
+    <Border x:Name="Surface" Grid.Row="1" BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="{DynamicResource PopupEdgeThickness}" BoxShadow="{DynamicResource PopupSurfaceShadow}" Background="{DynamicResource QuestionAnswerSurfaceBrush}" CornerRadius="{DynamicResource PopupSurfaceCornerRadius}" ClipToBounds="True">
       <Grid RowDefinitions="Auto,*,Auto">
         <Border Padding="14,10" Background="{DynamicResource QuestionAnswerHeaderBrush}" PointerPressed="HeaderPointerPressed">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock x:Name="TitleText" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center" Text="Ask AI" />
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><Image Width="18" Height="18" Source="{DynamicResource BrandLogo}" /><TextBlock x:Name="TitleText" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource PopupTextBrush}" VerticalAlignment="Center" Text="Ask AI" /></StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-              <Button x:Name="ScientifyAssistantButton" IsVisible="False" Classes="reading-action qa-action" Content="AI 助手" Click="AssistantClick" />
               <Button x:Name="CopyButton" Classes="reading-action qa-action" Content="Copy" Click="CopyClick" />
               <Button x:Name="RecordButton" Classes="reading-action qa-action" Content="Record" IsEnabled="False" Click="RecordClick" />
               <Button x:Name="StopButton" Classes="reading-action qa-action" Content="Stop" IsVisible="False" Click="StopClick" />
               <Button x:Name="RetryButton" Classes="reading-action qa-action" Content="Retry" IsVisible="False" Click="RetryClick" />
               <ToggleButton x:Name="PinButton" Classes="reading-action" Width="34" Height="28" Margin="4,0,0,0" ToolTip.Tip="Keep this answer">
-                <TextBlock FontFamily="Segoe Fluent Icons" FontSize="11.5" FontWeight="SemiBold" Text="&#xE718;" />
+                <Path Data="M16,9V4L17,3V2H7V3L8,4V9C8,10.66 6.66,12 5,12V14H11V21H13V14H19V12C17.34,12 16,10.66 16,9Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Stretch="Uniform" Width="12" Height="12" />
               </ToggleButton>
               <Button x:Name="CloseButton" Classes="reading-action" Width="34" Height="28" Margin="4,0,0,0" ToolTip.Tip="Close" Click="CloseClick">
-                <TextBlock FontFamily="Segoe Fluent Icons" FontSize="11.5" FontWeight="SemiBold" Text="&#xE711;" />
+                <Path Data="M6,6 L18,18 M18,6 L6,18" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="2" Stretch="Uniform" Width="12" Height="12" />
               </Button>
             </StackPanel>
           </Grid>
@@ -32,10 +31,13 @@
             </ScrollViewer>
           </Grid>
         </Border>
-        <Border Grid.Row="2" Margin="12,0,12,12" Padding="10,7" Background="{DynamicResource QuestionInputBrush}" CornerRadius="14">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBox x:Name="QuestionInputTextBox" Classes="qa-input" FontSize="12" MinHeight="24" MaxHeight="86" Padding="6,2" Background="Transparent" BorderThickness="0" AcceptsReturn="True" TextWrapping="Wrap" Watermark="Ask a follow-up…" KeyDown="InputKeyDown" />
-            <Button x:Name="SendButton" Grid.Column="1" MinWidth="50" Margin="8,0,0,0" Classes="reading-action qa-action" Background="{DynamicResource AccentBrush}" Foreground="White" Content="Ask" Click="SendClick" />
+        <Border Grid.Row="2" Margin="12,0,12,12" Padding="10,7" Background="{DynamicResource QuestionInputBrush}" CornerRadius="{DynamicResource InputCornerRadius}">
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBox x:Name="QuestionInputTextBox" Classes="qa-input" FontSize="12" MinHeight="24" MaxHeight="86" Padding="6,2" Background="Transparent" BorderThickness="0" AcceptsReturn="True" TextWrapping="Wrap" Watermark="Ask a follow-up…" />
+            <Button x:Name="SendButton" Grid.Column="1" MinWidth="50" Margin="8,0,0,0" Classes="reading-action qa-action" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextBrush}" Content="Ask" Click="SendClick" />
+            <Button x:Name="ScientifyAssistantButton" Grid.Column="2" IsVisible="False" Width="32" Margin="6,0,0,0" Classes="reading-action qa-action" Click="AssistantClick">
+              <Path Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource PopupTextBrush}" StrokeThickness="1.8" Data="M4,20 L20,4 M7,4 H20 V17" />
+            </Button>
           </Grid>
         </Border>
         <Border Width="18" Height="18" Grid.RowSpan="3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" PointerPressed="ResizePointerPressed" />

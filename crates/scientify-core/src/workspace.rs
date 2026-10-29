@@ -17,8 +17,6 @@ pub fn empty() -> Value {
         "navigation":{"tabs":["home"],"active":"home","expanded":[],"panel":null}})
 }
 
-/// Record, project and conversation ids: 1-80 ASCII letters, digits, `-` or `_`,
-/// so an id is always safe as a single path component.
 pub fn valid_id(id: &str) -> bool {
     !id.is_empty()
         && id.len() <= 80
