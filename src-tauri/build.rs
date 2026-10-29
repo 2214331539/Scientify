@@ -80,6 +80,10 @@ fn main() {
             "secret_clear",
             "collaboration_status",
             "collaboration_configure",
+            "collaboration_enqueue",
+            "collaboration_outbox",
+            "collaboration_acknowledge",
+            "collaboration_mark_conflict",
         ]),
     ))
     .expect("failed to build Tauri manifest");

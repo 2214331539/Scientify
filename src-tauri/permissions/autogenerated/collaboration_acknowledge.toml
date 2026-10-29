@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-acknowledge"
+description = "Enables the collaboration_acknowledge command without any pre-configured scope."
+commands.allow = ["collaboration_acknowledge"]
+
+[[permission]]
+identifier = "deny-collaboration-acknowledge"
+description = "Denies the collaboration_acknowledge command without any pre-configured scope."
+commands.deny = ["collaboration_acknowledge"]

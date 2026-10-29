@@ -67,7 +67,11 @@
     "allow-translation-window",
     "allow-translation-service",
     "allow-collaboration-status",
-    "allow-collaboration-configure"
+    "allow-collaboration-configure",
+    "allow-collaboration-enqueue",
+    "allow-collaboration-outbox",
+    "allow-collaboration-acknowledge",
+    "allow-collaboration-mark-conflict"
   ],
   "webviews": [
     "main",

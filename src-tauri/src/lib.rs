@@ -12,8 +12,8 @@ mod credentials;
 mod data_location;
 mod translation_window;
 mod tray;
-mod yita;
 mod webview_profile;
+mod yita;
 pub use data_location::migrate_offline as migrate_storage_offline;
 mod code;
 mod experiments;
@@ -196,6 +196,12 @@ async fn choose_directory(app: tauri::AppHandle) -> Result<Option<String>, Strin
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+// Generate native application metadata once, shared by production and IPC tests.
+#[cfg(test)]
+fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
+    tauri::generate_context!()
 }
 
 pub fn run() {
@@ -392,6 +398,10 @@ pub fn run() {
             credentials::secret_clear,
             collaboration::collaboration_status,
             collaboration::collaboration_configure,
+            collaboration::collaboration_enqueue,
+            collaboration::collaboration_outbox,
+            collaboration::collaboration_acknowledge,
+            collaboration::collaboration_mark_conflict,
         ])
         .run(context)
         .expect("Scientify failed to start");
