@@ -188,6 +188,8 @@ export function ModelSettingsDialog({
         );
       const verification = {
         model: request.model,
+        endpoint: request.endpoint,
+        provider: request.provider,
         checkedAt: new Date().toISOString(),
         ...verified,
       };
@@ -434,7 +436,7 @@ export function ModelSettingsDialog({
               <div className="sf-model-capabilities" role="status">
                 <span>{capability.chat ? t('聊天验证通过') : t('聊天接口不可用')}</span>
                 <span>
-                  {capability.agent ? t('Agent 工具验证通过') : t('仅聊天，Agent 未通过验证')}
+                  {capability.agent ? t('Agent 工具验证通过') : t('Agent 连接验证未通过')}
                 </span>
                 {!capability.agent && capability.agentError ? (
                   <p>{translateError(capability.agentError)}</p>

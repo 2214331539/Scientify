@@ -3,6 +3,7 @@
 mod config;
 pub(crate) mod execution;
 pub(crate) mod materials;
+pub(crate) mod notes;
 pub(crate) mod papers;
 pub(crate) mod process;
 mod protocol;
@@ -48,7 +49,7 @@ struct SessionEntry {
     managed_runs: bool,
     git_tools: bool,
     browser_tools: bool,
-    git_requests: HashMap<String, Value>,
+    host_requests: HashMap<String, Value>,
     host_events: Vec<Value>,
     scratch: Option<scratch::Scratch>,
 }
@@ -78,7 +79,7 @@ impl SessionEntry {
                 self.active_turn = None;
                 self.lease = None;
                 self.requests.clear();
-                self.git_requests.clear();
+                self.host_requests.clear();
             }
             delivered.push(event);
         }
@@ -89,7 +90,7 @@ impl SessionEntry {
                 self.active_turn = None;
                 self.lease = None;
                 self.requests.clear();
-                self.git_requests.clear();
+                self.host_requests.clear();
                 return Err(error);
             }
         }
@@ -642,7 +643,7 @@ pub async fn agent_start_thread(
                                 entry.active_turn = None;
                                 entry.lease = None;
                                 entry.requests.clear();
-                                entry.git_requests.clear();
+                                entry.host_requests.clear();
                                 return Err(error);
                             }
                         };
@@ -748,7 +749,7 @@ pub async fn agent_start_thread(
             managed_runs,
             git_tools,
             browser_tools,
-            git_requests: HashMap::new(),
+            host_requests: HashMap::new(),
             host_events: Vec::new(),
             scratch: None,
         });
@@ -965,14 +966,14 @@ pub async fn agent_respond(
             if !result.is_object() || !entry.requests.contains_key(&id.to_string()) {
                 return Err("审批请求已失效或不属于此会话。".into());
             }
-            if let Some(event) = entry.git_requests.get(&id.to_string()).cloned() {
+            if let Some(event) = entry.host_requests.get(&id.to_string()).cloned() {
                 if !matches!(
                     result["decision"].as_str(),
-                    Some("accept" | "decline" | "cancel")
+                    Some("accept" | "acceptForSession" | "decline" | "cancel")
                 ) {
-                    return Err("Git 操作只能批准本次请求。".into());
+                    return Err("该操作只能批准、拒绝或中止。".into());
                 }
-                entry.git_requests.remove(&id.to_string());
+                entry.host_requests.remove(&id.to_string());
                 entry.requests.remove(&id.to_string());
                 return Ok(Some(event));
             }
@@ -981,7 +982,11 @@ pub async fn agent_respond(
             Ok(None)
         })?;
         if let Some(event) = pending {
-            tools::complete_git(&app, &project_id, &domain, &conversation_id, event, &result)?;
+            if event["params"]["tool"] == "scientify_write_note" {
+                notes::complete(&app, &project_id, &domain, &conversation_id, event, &result)?;
+            } else {
+                tools::complete_git(&app, &project_id, &domain, &conversation_id, event, &result)?;
+            }
         }
         Ok(())
     })
@@ -1108,7 +1113,7 @@ mod tests {
         assert!(new_code.managed_runs && new_code.git_tools);
         assert_eq!(
             new_code.params["dynamicTools"].as_array().unwrap().len(),
-            11
+            14
         );
         assert!(new_code.browser_tools);
         let literature = thread_plan(dir.path(), "model", "literature", None);
@@ -1124,8 +1129,19 @@ mod tests {
             .iter()
             .all(|name| name.starts_with("scientify_browser_")
                 || name.ends_with("paper")
-                || *name == "scientify_list_papers"));
-        assert_eq!(names.len(), 7);
+                || *name == "scientify_list_papers"
+                || matches!(
+                    *name,
+                    "scientify_list_notes" | "scientify_read_note" | "scientify_write_note"
+                )));
+        for name in [
+            "scientify_list_notes",
+            "scientify_read_note",
+            "scientify_write_note",
+        ] {
+            assert!(names.contains(&name));
+        }
+        assert_eq!(names.len(), 10);
         assert!(literature.paper_tools);
     }
 

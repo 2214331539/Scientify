@@ -8,6 +8,7 @@ const links = vi.hoisted(() => ({
   annotations: new Map<number, Record<string, unknown>[]>(),
   getDestination: vi.fn(async () => [{ num: 3, gen: 0 }, { name: 'XYZ' }, 120, 300, null]),
   getPageIndex: vi.fn(async () => 1),
+  render: vi.fn(() => ({ promise: Promise.resolve(), cancel: vi.fn() })),
 }));
 
 vi.mock('pdfjs-dist', async (importOriginal) => {
@@ -39,7 +40,7 @@ vi.mock('pdfjs-dist', async (importOriginal) => {
           view: [0, 0, 600, 800],
           getViewport: ({ scale }: { scale: number }) => viewport(scale),
           getAnnotations: async () => links.annotations.get(page) ?? [],
-          render: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+          render: links.render,
           getTextContent: async () => ({ items: [{ str: 'Research text' }] }),
         }),
       }),
@@ -55,6 +56,9 @@ beforeEach(() => {
   links.annotations.clear();
   links.getDestination.mockClear();
   links.getPageIndex.mockClear();
+  links.render
+    .mockReset()
+    .mockImplementation(() => ({ promise: Promise.resolve(), cancel: vi.fn() }));
 });
 beforeAll(() => {
   vi.stubGlobal(
@@ -111,6 +115,44 @@ function setup() {
     ),
   };
 }
+
+it('keeps the painted page during slow zooms and ignores a superseded render', async () => {
+  const { reader, context } = setup();
+  const host = render(reader);
+  await waitFor(() => expect(context.mock.lastCall?.[0].text).toBe('Research text'));
+  const original = host.container.querySelector('canvas');
+  let finishOld!: () => void;
+  let finishNew!: () => void;
+  const cancelled = vi.fn();
+  links.render.mockImplementationOnce(() => ({
+    promise: new Promise<void>((resolve) => {
+      finishOld = resolve;
+    }),
+    cancel: cancelled,
+  }));
+  fireEvent.click(screen.getByRole('button', { name: '放大 PDF' }));
+  await waitFor(() => expect(finishOld).toBeTypeOf('function'));
+  expect(host.container.querySelector('canvas')).toBe(original);
+  expect(host.container.querySelector('.pdf-page-frame')?.getAttribute('style')).toContain(
+    'scale(1.15)',
+  );
+  expect(host.container.querySelector('.pdf-loading')).toBeNull();
+  links.render.mockImplementationOnce(() => ({
+    promise: new Promise<void>((resolve) => {
+      finishNew = resolve;
+    }),
+    cancel: vi.fn(),
+  }));
+  fireEvent.click(screen.getByRole('button', { name: '放大 PDF' }));
+  await waitFor(() => expect(finishNew).toBeTypeOf('function'));
+  expect(cancelled).toHaveBeenCalledOnce();
+  await act(async () => finishNew());
+  const latest = host.container.querySelector('canvas');
+  expect(latest).not.toBe(original);
+  expect(latest?.style.width).toBe('780px');
+  await act(async () => finishOld());
+  expect(host.container.querySelector('canvas')).toBe(latest);
+});
 
 it('restores page, zoom and scroll when a document tab is remounted', async () => {
   const { reader, context } = setup();

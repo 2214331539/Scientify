@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, ExternalLink, RotateCw, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ExternalLink, RotateCw, X, Star } from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
 import {
   browserCommand,
@@ -15,10 +15,14 @@ export function BrowserPane({
   id,
   initialUrl,
   onChanged,
+  onBookmark,
+  isBookmarked,
 }: {
   id: string;
   initialUrl?: string;
   onChanged: (tab: BrowserTab) => void;
+  onBookmark?: (tab: BrowserTab) => void;
+  isBookmarked?: (url: string) => boolean;
 }) {
   const viewActive = useActiveView();
   const [tab, setTab] = useState<BrowserTab | null>(null),
@@ -190,6 +194,21 @@ export function BrowserPane({
           }}
           onChange={(e) => setAddress(e.target.value)}
         />
+        {onBookmark && (
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            aria-label={isBookmarked?.(tab?.url ?? '') ? t('编辑网页收藏') : t('收藏当前网页')}
+            aria-pressed={isBookmarked?.(tab?.url ?? '') ?? false}
+            disabled={!tab?.url || !/^https?:\/\//i.test(tab.url)}
+            onClick={() => {
+              if (tab) onBookmark(tab);
+            }}
+          >
+            <Star />
+          </Button>
+        )}
         <Button type="submit">{t('打开')}</Button>
         <Button
           type="button"

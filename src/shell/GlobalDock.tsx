@@ -1,5 +1,12 @@
 import { t } from '../i18n';
-import { useCallback, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { Bot, NotebookPen, X } from 'lucide-react';
 import { Button } from '../components/primitives';
 import type { WorkContext } from '../domain/context';
@@ -8,7 +15,12 @@ import type { WorkspaceStore } from '../stores/workspace';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
 import { NotesPanel } from '../features/notes/NotesPanel';
 import { scopeFor } from '../features/notes/model';
+import {
+  translationConversation,
+  type TranslationConversationRequest,
+} from '../features/translation/conversations';
 import './auxiliary.css';
+import { translationWindow, watchTranslationWindow } from '../features/translation/window';
 
 export interface GlobalDockProps {
   store: WorkspaceStore;
@@ -91,6 +103,53 @@ export function GlobalDock({
   notesWorkspaceActive = notesWorkspace,
 }: GlobalDockProps) {
   const scope = scopeFor(context);
+  const handoffTarget = useRef({ scope, onToolChange });
+  handoffTarget.current = { scope, onToolChange };
+  useEffect(
+    () =>
+      watchTranslationWindow(
+        'translation-conversation-request',
+        async () => {
+          const requests = await translationWindow<TranslationConversationRequest[] | null>({
+            type: 'takeConversations',
+          });
+          for (const request of requests ?? []) {
+            let result: unknown;
+            try {
+              const target = handoffTarget.current;
+              result = await translationConversation(
+                store,
+                backend,
+                target.scope,
+                request,
+                (id, draft) => {
+                  target.onToolChange('assistant');
+                  let accepted = false;
+                  window.dispatchEvent(
+                    new CustomEvent('scientify-assistant-open-session', {
+                      detail: {
+                        scope: target.scope,
+                        id,
+                        draft,
+                        accept: () => {
+                          accepted = true;
+                        },
+                      },
+                    }),
+                  );
+                  if (!accepted) throw new Error('请先保存当前草稿或处理附件，再跳转到此会话。');
+                },
+              );
+            } catch (error) {
+              result = { error: String(error) };
+            }
+            await translationWindow({ type: 'conversationReply', id: request.id, result });
+          }
+        },
+        (error) => store.setState({ error: String(error) }),
+      ),
+    [store, backend],
+  );
   const scopes = useRef(new Map<string, WorkContext>());
   const dirtySources = useRef(new Set<string>());
   const dirtyCallback = useRef(onDirtyChange);
@@ -104,7 +163,7 @@ export function GlobalDock({
       dirtyCallback.current?.(dirtySources.current.size > 0);
   }, []);
   const integrated = workspaceContent !== undefined;
-  const sideVisible = open && (!notesWorkspaceActive || tool === 'assistant');
+  const sideVisible = open && (!notesWorkspaceActive || tool !== 'notes');
   const notesVisible = notesWorkspaceActive || (open && tool === 'notes' && !notesWorkspace);
   const assistantVisible = open && tool === 'assistant';
   useLayoutEffect(() => {

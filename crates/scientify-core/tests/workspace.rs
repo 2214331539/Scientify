@@ -369,3 +369,29 @@ fn migration_rejects_directory_junctions_without_following_them() {
         "must not copy"
     );
 }
+
+#[test]
+fn web_sources_survive_storage_and_reject_invalid_imports() {
+    let directory = tempdir().unwrap();
+    let mut data = fixture();
+    data["webSources"] = json!({"groups":[{"id":"group-a","name":"Papers","order":0}],"items":[{"id":"source-a","title":"arXiv","url":"https://arxiv.org/","groupId":"group-a","order":0,"createdAt":"now","updatedAt":"now"}]});
+    let valid = validate(data.clone()).unwrap();
+    let path = directory.path().join("sources.json");
+    fs::write(&path, serde_json::to_vec(&valid).unwrap()).unwrap();
+    assert_eq!(
+        validate(serde_json::from_slice(&fs::read(path).unwrap()).unwrap()).unwrap()["webSources"],
+        data["webSources"]
+    );
+    for bad in [
+        json!("javascript:alert(1)"),
+        json!("https://user:password@example.org/"),
+        json!("https://"),
+    ] {
+        let mut broken = data.clone();
+        broken["webSources"]["items"][0]["url"] = bad;
+        assert!(validate(broken).is_err());
+    }
+    data["webSources"]["items"][0]["groupId"] = json!("missing");
+    assert!(validate(data).is_err());
+    assert!(validate(fixture()).is_ok());
+}

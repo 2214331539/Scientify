@@ -98,9 +98,19 @@ fn store(project: &State<'_, AppState>) -> Result<PathBuf, String> {
     Ok(project.storage.directory().to_path_buf())
 }
 
+pub(crate) fn load_for_model(
+    directory: &Path,
+    provider: &str,
+    endpoint: &str,
+) -> Result<Option<String>, String> {
+    Ok(read(directory)?
+        .credentials
+        .remove(&slot(provider, endpoint)?))
+}
+
 #[tauri::command]
-pub async fn secret_save(
-    view: tauri::Webview,
+pub async fn secret_save<R: tauri::Runtime>(
+    view: tauri::Webview<R>,
     state: State<'_, AppState>,
     provider: String,
     endpoint: String,
@@ -123,8 +133,8 @@ pub async fn secret_save(
 }
 
 #[tauri::command]
-pub async fn secret_load(
-    view: tauri::Webview,
+pub async fn secret_load<R: tauri::Runtime>(
+    view: tauri::Webview<R>,
     state: State<'_, AppState>,
     provider: String,
     endpoint: String,

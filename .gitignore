@@ -22,3 +22,6 @@ scientify-storage.json
 !.env.*.example
 .release/
 src-tauri/release-resources/
+vendor/yita/**/bin/
+vendor/yita/**/obj/
+vendor/yita/**/TestResults/

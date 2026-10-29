@@ -1,4 +1,8 @@
 fn main() {
+    println!(
+        "cargo:rustc-env=SCIENTIFY_TARGET={}",
+        std::env::var("TARGET").expect("Cargo target")
+    );
     // Recompile Windows resources when branding changes, even if config is unchanged.
     println!("cargo:rerun-if-changed=icons");
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
@@ -9,9 +13,12 @@ fn main() {
             "library_pdf",
             "library_read_file",
             "library_note",
+            "note_image",
             "library_external",
             "library_import_bytes",
             "browser_command",
+            "translation_window",
+            "translation_service",
             "open_project_window",
             "workspace_window_ready",
             "workspace_load",
@@ -71,6 +78,8 @@ fn main() {
             "secret_save",
             "secret_load",
             "secret_clear",
+            "collaboration_status",
+            "collaboration_configure",
         ]),
     ))
     .expect("failed to build Tauri manifest");

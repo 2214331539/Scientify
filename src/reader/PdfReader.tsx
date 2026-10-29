@@ -1,6 +1,6 @@
 import { t, translateError } from '../i18n';
 import { Button, Input } from '../components/primitives';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -109,6 +109,11 @@ export default function PdfReader({
     },
     [pageOffset],
   );
+  useLayoutEffect(() => {
+    // Apply the zoom anchor with the preview geometry, without waiting for
+    // PDF.js to finish rasterizing the new resolution.
+    restore(texts.current.has(current.current.page));
+  }, [zoom, width, restore]);
   function navigate(number: number) {
     ++navigationTicket.current;
     if (!document || number < 1 || number > document.numPages || !Number.isInteger(number)) return;

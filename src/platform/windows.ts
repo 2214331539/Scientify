@@ -4,7 +4,8 @@ import { getPreferences } from '../i18n/preferences';
 
 export function windowRole(): 'projects' | 'workspace' | 'browser' {
   if (!isTauri()) return 'browser';
-  return getCurrentWindow().label === 'workspace' ? 'workspace' : 'projects';
+  const label = getCurrentWindow().label;
+  return label === 'workspace' ? label : 'projects';
 }
 
 export function openProjectWindow(projectId: string, target?: unknown) {

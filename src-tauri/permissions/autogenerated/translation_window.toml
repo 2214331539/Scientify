@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-translation-window"
+description = "Enables the translation_window command without any pre-configured scope."
+commands.allow = ["translation_window"]
+
+[[permission]]
+identifier = "deny-translation-window"
+description = "Denies the translation_window command without any pre-configured scope."
+commands.deny = ["translation_window"]

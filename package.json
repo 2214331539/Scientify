@@ -23,7 +23,8 @@
     "test:ui": "node scripts/verify-ui.mjs",
     "test:rust": "cargo test --workspace",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
+    "prepare:translation": "node scripts/prepare-translation.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
@@ -67,6 +68,7 @@
     "rehype-katex": "7.0.1",
     "remark-gfm": "4.0.1",
     "remark-math": "6.0.0",
+    "remark-parse": "11.0.0",
     "unified": "11.0.5",
     "zustand": "5.0.14"
   },

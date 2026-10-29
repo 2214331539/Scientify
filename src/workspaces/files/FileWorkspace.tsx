@@ -88,6 +88,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
   const viewActive = useActiveView();
   const { project, backend, mode, view, onContext, onDirtyChange, onActivePathChange } = props;
   const runtime = useRuntime(backend);
+  const shortcuts = useStore(props.store, (state) => state.data?.settings.shortcuts);
   const workspaceRoot = props.workspaceRoot;
   const scope = JSON.stringify([project.id, mode, workspaceRoot ?? '']);
   const activeScope = useRef(scope);
@@ -347,6 +348,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           session={session}
           project={project}
           mode={mode}
+          shortcuts={shortcuts}
           onContext={onContext}
           onCreate={(content) => {
             setCreateContent(content ?? '');
@@ -379,12 +381,14 @@ function FileDocument({
   session,
   project,
   mode,
+  shortcuts,
   onContext,
   onCreate,
 }: {
   session: FileSession;
   project: Project;
   mode: Mode;
+  shortcuts?: import('../../platform/shortcuts').ShortcutSettings;
   onContext: (value: WorkContext) => void;
   onCreate: (content?: string) => void;
 }) {
@@ -618,6 +622,7 @@ function FileDocument({
               <Suspense fallback={<div className="sf-file-loading">{t('正在加载编辑器…')}</div>}>
                 <CodeEditor
                   session={session}
+                  shortcuts={shortcuts}
                   onSelection={setSelection}
                   onCursor={(line, column) => setCursor({ line, column })}
                 />

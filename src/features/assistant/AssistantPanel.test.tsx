@@ -15,10 +15,73 @@ import { freezeContext, newConversation, requestMessages } from './model';
 
 afterEach(cleanup);
 
+it('opens the same translation session without sending or overwriting another project draft', async () => {
+  const data = emptyWorkspace();
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+    restore: async () => data,
+    migrateLegacy: async () => data,
+    importWorkspace: async () => null,
+    exportWorkspace: async () => true,
+    chooseDirectory: async () => null,
+  });
+  await store.getState().load();
+  const backend = {} as ResearchBackend;
+  render(
+    <>
+      <AssistantPanel store={store} backend={backend} scope="p1" context={context} />
+      <AssistantPanel
+        store={store}
+        backend={backend}
+        scope="p2"
+        context={{ ...context, projectId: 'p2' }}
+      />
+    </>,
+  );
+  const [first, second] = screen.getAllByLabelText('向 AI 提问') as HTMLTextAreaElement[];
+  fireEvent.change(first, { target: { value: 'Existing draft' } });
+  fireEvent.change(second, { target: { value: 'Other project draft' } });
+  await act(async () => {
+    await store.getState().update((data) =>
+      data.sessions.push({
+        ...newConversation('p1'),
+        id: 'translation-session',
+        title: '翻译问答',
+        translationContext: { source: 'Original', translation: 'Translated', explanation: '' },
+        messages: [
+          { id: 'question', role: 'user', text: 'Earlier question', createdAt: '' },
+          { id: 'answer', role: 'assistant', text: 'Earlier answer', createdAt: '' },
+        ],
+      }),
+    );
+  });
+  const accept = vi.fn();
+  act(() =>
+    window.dispatchEvent(
+      new CustomEvent('scientify-assistant-open-session', {
+        detail: { scope: 'p1', id: 'translation-session', draft: 'Follow-up draft', accept },
+      }),
+    ),
+  );
+  expect(accept).toHaveBeenCalledOnce();
+  expect(first.value).toBe('Follow-up draft');
+  expect(screen.getByText('Earlier answer')).toBeTruthy();
+  expect(store.getState().data!.sessions).toHaveLength(1);
+  expect(second.value).toBe('Other project draft');
+});
+
 it('starts a paper-tools upgrade chat in the old literature root after navigating to code', async () => {
   const data = emptyWorkspace();
   data.projects.push({ id: 'p1', name: 'project', question: '', createdAt: '', space: 'personal' });
   data.settings.model.model = 'fixture';
+  data.settings.model.verification = {
+    model: 'fixture',
+    checkedAt: 'old',
+    chat: true,
+    agent: false,
+    agentError: 'HTTP 400',
+  };
   const store = createWorkspaceStore({
     load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
     save: async (value: Workspace) => value,
@@ -566,7 +629,7 @@ it('allows Stop to be retried after a cancellation failure without losing the ne
   });
 });
 
-it('records separate chat and Agent verification and routes a verified chat-only connection honestly', async () => {
+it('records failed Agent verification without claiming the service is chat-only', async () => {
   const { store, backend, user } = await actionHarness();
   backend.verifyModel = vi.fn(async () => ({
     chat: true,
@@ -583,8 +646,49 @@ it('records separate chat and Agent verification and routes a verified chat-only
   );
   await user.click(screen.getByRole('button', { name: '选择模型' }));
   expect(
-    screen.getAllByRole('status').some((status) => status.textContent?.includes('仅聊天')),
+    screen
+      .getAllByRole('status')
+      .some((status) => status.textContent?.includes('Agent 连接验证未通过')),
   ).toBe(true);
+});
+
+it('reverifies a failed connection without changing chat roots, models or histories', async () => {
+  const { store, backend, user, view } = await actionHarness();
+  view.unmount();
+  const settings = {
+    ...store.getState().data!.settings.model,
+    provider: 'ollama' as const,
+    verification: {
+      model: 'test-model',
+      checkedAt: 'old',
+      chat: true,
+      agent: false,
+      agentError: 'HTTP 400',
+    },
+  };
+  const different = { ...settings, model: 'another-model' };
+  await store.getState().update((data) => {
+    data.settings.model = settings;
+    data.settings.modelProfiles = [{ ...settings, id: 'legacy', name: 'Local' }];
+    data.sessions = [settings, different].map((value, i) => ({
+      ...newConversation('p1'),
+      id: `old-${i}`,
+      updatedAt: i ? '2026-01-01' : '2026-10-22',
+      agentCwd: 'C:/papers',
+      modelSelection: { profileId: 'legacy', settings: value },
+    }));
+  });
+  backend.verifyModel = vi.fn(async () => ({ chat: true, agent: true }));
+  render(<AssistantPanel store={store} backend={backend} scope="p1" context={context} />);
+  await user.click(screen.getByRole('button', { name: '重新验证' }));
+  await waitFor(() => expect(store.getState().data?.settings.model.verification?.agent).toBe(true));
+  const chats = store.getState().data!.sessions as ReturnType<typeof newConversation>[];
+  expect(chats[0].modelSelection?.settings.verification?.agent).toBe(true);
+  expect(chats[0].agentCwd).toBe('C:/papers');
+  expect(chats[0].messages).toEqual([]);
+  expect(chats[1].modelSelection?.settings.model).toBe('another-model');
+  expect(chats[1].modelSelection?.settings.verification?.agent).toBe(false);
+  expect(screen.queryByRole('button', { name: '重新验证' })).toBeNull();
 });
 
 it('can verify a manually supplied model without requiring a model-list endpoint', async () => {

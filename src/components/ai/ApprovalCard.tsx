@@ -30,6 +30,14 @@ function describe(event: ApprovalRequest): {
       target: text(params.command),
     };
   }
+  if (event.method === 'scientify/notes/requestApproval') {
+    return {
+      icon: FileWarning,
+      title: t('请求修改笔记'),
+      detail: text(params.reason),
+      target: text(params.command),
+    };
+  }
   if (event.method === 'item/commandExecution/requestApproval') {
     return {
       icon: TerminalSquare,

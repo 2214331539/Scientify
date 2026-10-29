@@ -1,4 +1,8 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { noteImages } from '../../platform/note-images';
+import { noteFiles } from '../../platform/library';
+import { openBrowserSource } from '../../platform/browser-pane';
+import { getFileRuntime, notifyFileRuntime } from '../../editor/sessions';
 import { Link2, Save } from 'lucide-react';
 import { Button } from '../../components/primitives';
 import { confirmAction, requestText } from '../../components/prompts';
@@ -26,6 +30,8 @@ export function PaperNotes({
   const session = paperNote(library, project, id);
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [error, setError] = useState('');
+  const images = useMemo(() => noteImages(project, id), [project, id]);
+  const imagePending = useRef(false);
   useEffect(() => {
     if (session.getSnapshot().phase === 'ready' && !session.getSnapshot().dirty)
       void session.reloadDiscardingEdits();
@@ -83,6 +89,16 @@ export function PaperNotes({
       ) : (
         <div className="paper-note-workbench">
           <MarkdownLiveEditor
+            key={id}
+            images={images}
+            onLink={(url) => openBrowserSource(project, url)}
+            onPendingChange={(pending) => {
+              if (imagePending.current === pending) return;
+              imagePending.current = pending;
+              const backend = noteFiles(library);
+              getFileRuntime(backend).pendingOperations += pending ? 1 : -1;
+              notifyFileRuntime(backend);
+            }}
             ariaLabel={t('论文笔记正文')}
             value={state.content}
             disabled={state.phase === 'error'}

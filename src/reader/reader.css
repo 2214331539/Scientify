@@ -39,6 +39,12 @@
   position: absolute;
   inset: 0;
 }
+.pdf-page-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
 .pdf-page canvas {
   display: block;
 }

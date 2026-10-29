@@ -74,6 +74,12 @@ fn atomic_bytes(path: &Path, bytes: &[u8]) -> Result<(), String> {
         .map_err(io_error)
 }
 
+/// Write a small application-owned JSON sidecar with the same atomic replace
+/// semantics as the main workspace file.
+pub fn write_atomic_bytes(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    atomic_bytes(path, bytes)
+}
+
 fn encoded(data: &Value) -> Result<Vec<u8>, String> {
     let bytes = serde_json::to_vec(data).map_err(io_error)?;
     if bytes.len() as u64 > MAX_BYTES {

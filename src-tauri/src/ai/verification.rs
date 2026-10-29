@@ -21,11 +21,41 @@ async fn response_output(connection: &Connection, body: Value) -> Result<Value, 
         },
         connection.api_key.as_deref(),
     )?;
-    let response = stream::send(authorize(
+    let response = authorize(
         client(&root)?.post(child(&root, "responses")).json(&body),
         connection,
-    ))
-    .await?;
+    )
+    .send()
+    .await
+    .map_err(|_| "模型连接失败或超时，请检查服务。")?;
+    if !response.status().is_success() {
+        let status = response.status().as_u16();
+        let mut bytes = Vec::new();
+        let mut chunks = stream::bounded_bytes(response, 8192);
+        while let Some(chunk) = chunks.next().await {
+            match chunk {
+                Ok(chunk) => bytes.extend_from_slice(&chunk),
+                Err(_) => break,
+            }
+        }
+        let payload: Value = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+        let detail = payload["error"]["message"].as_str().unwrap_or("");
+        let detail = if let Some(key) = connection.api_key.as_deref().filter(|s| !s.is_empty()) {
+            detail.replace(key, "[redacted]")
+        } else {
+            detail.to_string()
+        };
+        let detail: String = detail
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(500)
+            .collect();
+        return Err(if detail.is_empty() {
+            format!("模型服务返回 HTTP {status}。")
+        } else {
+            format!("模型服务返回 HTTP {status}：{detail}")
+        });
+    }
     if !response
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
@@ -73,7 +103,7 @@ async fn agent_probe(request: &ModelTest) -> Result<(), String> {
     let nonce = uuid::Uuid::new_v4().to_string();
     let initial = json!({"role":"user","content":format!("Call scientify_connection_test with nonce {nonce}. After the tool result, reply with its acknowledgement exactly.")});
     let tools = json!([{"type":"function","name":"scientify_connection_test","description":"Harmless connection test, no filesystem access.","parameters":{"type":"object","properties":{"nonce":{"type":"string"}},"required":["nonce"],"additionalProperties":false},"strict":true}]);
-    let output = response_output(&request.connection, json!({"model":request.model,"input":[initial.clone()],"tools":tools,"tool_choice":{"type":"function","name":"scientify_connection_test"},"stream":true,"store":false})).await?;
+    let output = response_output(&request.connection, json!({"model":request.model,"input":[initial.clone()],"tools":tools,"tool_choice":"auto","stream":true,"store":false})).await?;
     let items = output.as_array().ok_or("Responses 缺少工具输出。")?;
     let calls = items
         .iter()
@@ -179,7 +209,10 @@ mod tests {
                         .find_map(|word| uuid::Uuid::parse_str(word.trim_end_matches('.')).ok())
                         .unwrap()
                         .to_string();
-                    assert_eq!(body["tool_choice"]["name"], "scientify_connection_test");
+                    assert_eq!(
+                        body["tool_choice"], "auto",
+                        "Thinking providers reject forced tool choice"
+                    );
                     json!([{"type":"function_call","call_id":"fixture-call","name":"scientify_connection_test","arguments":json!({"nonce":nonce}).to_string()}])
                 };
                 let event = json!({"type":"response.completed","response":{"status":"completed","output":output}});
@@ -228,9 +261,35 @@ mod tests {
     }
 
     #[test]
+    fn exposes_parameter_errors_without_leaking_credentials() {
+        let (endpoint, server) = super::super::tests::server_mime(vec![(
+            "400 Bad Request",
+            "application/json",
+            r#"{"error":{"message":"Thinking mode does not support this tool_choice private-key"}}"#,
+        )]);
+        let request = ModelTest {
+            connection: Connection {
+                endpoint,
+                provider: Provider::Openai,
+                api_key: Some("private-key".into()),
+            },
+            model: "fixture".into(),
+        };
+        let error = tauri::async_runtime::block_on(agent_probe(&request)).unwrap_err();
+        assert!(error.contains("Thinking mode does not support this tool_choice"));
+        assert!(error.contains("400"));
+        assert!(!error.contains("private-key"));
+        server.join().unwrap();
+    }
+
+    #[test]
     fn rejects_json_only_responses_and_incomplete_tool_streams() {
         for (mime, body) in [
             ("application/json", "{\"output\":[]}"),
+            (
+                "text/event-stream",
+                "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"OK\"}]}]}}\n\n",
+            ),
             (
                 "text/event-stream",
                 "data: {\"type\":\"response.incomplete\"}\n\n",

@@ -5,10 +5,12 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { resolve } from 'node:path';
 
 const suites = {
+  sources: 'scripts/verify-sources-ui.mjs',
   experiments: 'scripts/verify-experiments-ui.mjs',
   git: 'scripts/verify-git-ui.mjs',
   reader: 'scripts/verify-reader-ui.mjs',
   assistant: 'scripts/verify-assistant-ui.mjs',
+  notes: 'scripts/verify-notes-ui.mjs',
 };
 const selected = process.argv.slice(2);
 if (selected.some((suite) => !Object.hasOwn(suites, suite)))

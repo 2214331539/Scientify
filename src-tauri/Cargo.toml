@@ -14,17 +14,18 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 scientify-core = { path = "../crates/scientify-core" }
-tauri = { version = "2", features = ["unstable"] }
+tauri = { version = "2", features = ["unstable", "tray-icon"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
+sha2 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "system-proxy", "stream"] }
 eventsource-stream = "0.2"
 bytes = "1"
 futures-util = "0.3"
-tokio = { version = "1", features = ["macros", "sync", "io-util"] }
+tokio = { version = "1", features = ["macros", "sync", "io-util", "process"] }
 tokio-util = { version = "0.7", features = ["io"] }
 notify = "8"
 tauri-plugin-opener = "2"
@@ -33,7 +34,7 @@ uuid = { version = "1", features = ["v4"] }
 portable-pty = "0.9"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Pipes", "Win32_System_Threading", "Win32_System_StationsAndDesktops", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Pipes", "Win32_System_Threading", "Win32_System_StationsAndDesktops", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
 webview2-com = "0.38"
 windows = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Com", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp"] }
 

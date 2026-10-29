@@ -64,6 +64,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -80,6 +83,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Prepare assets, licenses and frontend
         run: pnpm run build
+      - name: Prepare bundled translation
+        run: pnpm prepare:translation
       - name: Type checking
         run: pnpm check
       - name: Frontend tests

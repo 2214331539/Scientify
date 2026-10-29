@@ -60,9 +60,17 @@
     "allow-library-pdf",
     "allow-library-read-file",
     "allow-library-note",
+    "allow-note-image",
     "allow-library-external",
     "allow-library-import-bytes",
-    "allow-browser-command"
+    "allow-browser-command",
+    "allow-translation-window",
+    "allow-translation-service",
+    "allow-collaboration-status",
+    "allow-collaboration-configure"
   ],
-  "webviews": ["main", "workspace"]
+  "webviews": [
+    "main",
+    "workspace"
+  ]
 }
