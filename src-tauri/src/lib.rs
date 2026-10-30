@@ -19,6 +19,8 @@ mod code;
 mod experiments;
 mod git;
 mod local_process;
+#[cfg(unix)]
+mod unix_process;
 pub use experiments::runner::run as run_managed_experiment;
 #[cfg(test)]
 mod ipc_smoke;
