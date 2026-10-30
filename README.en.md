@@ -71,7 +71,7 @@ Trusted manual terminals and runs execute with your local user permissions. AI f
 
 ## Current limits
 
-- Team collaboration, the project overview, LaTeX writing, and literature subscriptions currently show an in-development placeholder. Personal projects, literature, code, AI, and notes remain available; existing files and team data are retained.
+- The project overview, LaTeX writing, and some literature subscription features still show an in-development placeholder. Collaboration sign-in, project binding, and literature sync require a configured collaboration server.
 - Paper recommendations, subscriptions, OCR, PDF annotations, and a full-text research corpus are not implemented.
 - Notebook kernels, Python debugging, remote GPU scheduling, and complete Git remote/conflict workflows are not included.
 - Recording execution conditions does not guarantee a fully reproducible environment.

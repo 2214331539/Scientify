@@ -1,6 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { FileBackend } from './research';
+import { collaboration } from './collaboration';
 
 export type LibraryPaper = { id: string; path: string; notePath: string; fingerprint: string };
 export type LibraryEntry = {
@@ -47,6 +48,29 @@ export interface LibraryBackend {
 export function localCommand<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) return Promise.reject(new Error('请在桌面应用中使用本地文献目录和内嵌浏览器。'));
   return invoke<T>(name, args);
+}
+
+/** Persist a literature mutation locally first, then add it to the offline outbox. */
+export async function queueLiteratureMutation(
+  entityId: string,
+  kind: string,
+  payload: unknown,
+): Promise<void> {
+  if (!isTauri()) return;
+  await collaboration.enqueueIfEnabled({
+    operationId: crypto.randomUUID(),
+    domain: 'literature',
+    // Outbox identifiers are deliberately path-free; the original relative
+    // path stays in the payload and is validated by the local library.
+    entityId: encodeURIComponent(entityId)
+      .replace(/%/g, '_')
+      .replace(/[^A-Za-z0-9_-]/g, '_')
+      .slice(0, 160),
+    baseRevision: 0,
+    kind,
+    payload,
+    createdAt: new Date().toISOString(),
+  });
 }
 export const nativeLibrary: LibraryBackend = {
   choose: (projectId) => localCommand('library_choose', { projectId }),
@@ -96,6 +120,11 @@ export function noteFiles(library: LibraryBackend): FileBackend {
         content,
         revision === 'missing' ? null : revision,
       );
+      void queueLiteratureMutation(id, 'note-upsert', {
+        path: id,
+        content,
+        revision: note.revision,
+      }).catch((error) => console.warn('Scientify collaboration outbox unavailable:', error));
       return { path: id, content: note.content, version: note.revision ?? 'missing' };
     },
   };

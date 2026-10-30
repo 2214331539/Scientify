@@ -1,5 +1,6 @@
 import { Menu } from '../../components/primitives/Menu';
 import { confirmAction } from '../../components/prompts';
+import { isTauri } from '@tauri-apps/api/core';
 import {
   lazy,
   Suspense,
@@ -34,6 +35,7 @@ import { useActiveView } from '../../components/workspace/ViewTransition';
 import {
   nativeLibrary,
   noteFiles,
+  queueLiteratureMutation,
   type LibraryBackend,
   type LibraryScan,
   type LibraryOperation,
@@ -72,6 +74,7 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import type { PdfBackend, ResearchBackend } from '../../platform/research';
 import type { WorkContext } from '../../domain/context';
 import { errorMessage } from '../../domain/errors';
+import { collaboration } from '../../platform/collaboration';
 import './local-literature.css';
 
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
@@ -158,6 +161,7 @@ export function LocalLiterature({
   const currentSession = useRef(session);
   currentSession.current = session;
   const actionPending = useRef(false);
+  const collaborationSyncAt = useRef(0);
   useEffect(() => {
     if (!viewActive) return;
     const preventFileNavigation = (event: DragEvent) => {
@@ -191,6 +195,34 @@ export function LocalLiterature({
   const refresh = useCallback(async () => {
     const ticket = ++generation.current;
     try {
+      if (Date.now() - collaborationSyncAt.current >= 30_000) {
+        const collaborationState = await collaboration.status().catch((reason) => {
+          if (isTauri() && alive.current) setError(errorMessage(reason));
+          return null;
+        });
+        if (
+          collaborationState?.enabled &&
+          collaborationState.authenticated &&
+          collaborationState.workspaceId
+        ) {
+          try {
+            if (!collaborationState.literatureBootstrapped) {
+              setImportProgress(t('正在初始化协作文献库…'));
+              await collaboration.bootstrapLiterature(project.id);
+              if (alive.current) setImportProgress('');
+            }
+            await collaboration.sync();
+            collaborationSyncAt.current = Date.now();
+            const result = await collaboration.applyInbox(project.id);
+            if (result.deferred && alive.current)
+              setError(t('有 {count} 项远端文献变更等待处理。', { count: result.deferred }));
+          } catch (reason) {
+            if (alive.current) setError(errorMessage(reason));
+          } finally {
+            if (alive.current) setImportProgress('');
+          }
+        }
+      }
       const next = await library.command(project.id, { op: 'scan' });
       if (alive.current && ticket === generation.current) {
         setScan(next);
@@ -338,6 +370,12 @@ export function LocalLiterature({
       protect();
       const next = await library.command(project.id, operation);
       setScan(next);
+      const operationEntity =
+        'id' in operation ? operation.id : 'path' in operation ? operation.path : operation.op;
+      void queueLiteratureMutation(operationEntity, operation.op, operation).catch((reason) => {
+        if (alive.current)
+          setError(t('协作变更暂未排队：{error}', { error: errorMessage(reason) }));
+      });
       if (operation.op === 'delete') {
         const remaining = new Set(next.papers.map((paper) => paper.id));
         const files = noteFiles(library);
@@ -535,6 +573,14 @@ export function LocalLiterature({
         for (const operation of operations) {
           const next = await library.command(project.id, operation);
           setScan(next);
+          void queueLiteratureMutation(
+            operation.path,
+            operation.copy ? 'copy' : 'move',
+            operation,
+          ).catch((reason) => {
+            if (alive.current)
+              setError(t('协作变更暂未排队：{error}', { error: errorMessage(reason) }));
+          });
           completed.push(operation.destination);
           if (!copy) remapTabs(operation.path, operation.destination);
         }
@@ -826,6 +872,29 @@ export function LocalLiterature({
                         );
                         const next = await library.importFile(project.id, folder, file);
                         completed++;
+                        // Large binaries go directly to OSS; metadata remains in
+                        // the small transactional outbox.
+                        let uploaded: { blob?: { id?: string } } | null = null;
+                        try {
+                          uploaded = (await collaboration.uploadFileIfEnabled(
+                            project.id,
+                            join(folder, file.name),
+                          )) as { blob?: { id?: string } } | null;
+                        } catch (reason) {
+                          if (alive.current)
+                            setError(
+                              t('文件已导入本地，但协作上传失败：{error}', {
+                                error: errorMessage(reason),
+                              }),
+                            );
+                        }
+                        void queueLiteratureMutation(join(folder, file.name), 'import', {
+                          path: join(folder, file.name),
+                          name: file.name,
+                          size: file.size,
+                          type: file.type,
+                          blobId: uploaded?.blob?.id ?? null,
+                        });
                         if (alive.current) setScan(next);
                       }
                     } catch (error) {

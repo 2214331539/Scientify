@@ -401,7 +401,23 @@ pub fn run() {
             collaboration::collaboration_enqueue,
             collaboration::collaboration_outbox,
             collaboration::collaboration_acknowledge,
+            collaboration::collaboration_retry_conflict,
             collaboration::collaboration_mark_conflict,
+            collaboration::collaboration_health,
+            collaboration::collaboration_send_code,
+            collaboration::collaboration_login,
+            collaboration::collaboration_logout,
+            collaboration::collaboration_access_token,
+            collaboration::collaboration_projects,
+            collaboration::collaboration_bind_project,
+            collaboration::collaboration_bootstrap_literature,
+            collaboration::collaboration_sync,
+            collaboration::collaboration_inbox,
+            collaboration::collaboration_discard_inbox,
+            collaboration::collaboration_apply_inbox,
+            collaboration::collaboration_upload_file,
+            collaboration::collaboration_download_blob,
+            collaboration::collaboration_delete_blob,
         ])
         .run(context)
         .expect("Scientify failed to start");

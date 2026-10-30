@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-bind-project"
+description = "Enables the collaboration_bind_project command without any pre-configured scope."
+commands.allow = ["collaboration_bind_project"]
+
+[[permission]]
+identifier = "deny-collaboration-bind-project"
+description = "Denies the collaboration_bind_project command without any pre-configured scope."
+commands.deny = ["collaboration_bind_project"]

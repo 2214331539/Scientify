@@ -133,7 +133,7 @@ pub async fn translation_window<R: Runtime>(
                 .filter(|pending| pending.owner == view.label())
                 .filter_map(|pending| pending.request.take())
                 .collect();
-            return serde_json::to_value(requests).map_err(|e| e.to_string());
+            serde_json::to_value(requests).map_err(|e| e.to_string())
         }
         Action::ConversationReply { id, result } => {
             let mut queue = state.conversations.lock().map_err(|e| e.to_string())?;
@@ -145,7 +145,7 @@ pub async fn translation_window<R: Runtime>(
                     let _ = pending.reply.send(result);
                 }
             }
-            return Ok(Value::Null);
+            Ok(Value::Null)
         }
     }
 }

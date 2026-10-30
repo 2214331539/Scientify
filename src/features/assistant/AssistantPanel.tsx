@@ -36,6 +36,7 @@ import {
   nativeCredentials,
   type CredentialBackend,
 } from '../../platform/credentials';
+import { collaboration } from '../../platform/collaboration';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { AIProtocol, ModelProfile } from '../../domain/workspace';
 import { hasPendingWork, initialAgentSession } from './agent-session';
@@ -113,15 +114,19 @@ export function AssistantPanel({
   const [settingsError, setSettingsError] = useState('');
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [officialEndpoint, setOfficialEndpoint] = useState('');
   const [menu, setMenu] = useState<AssistantMenu | null>(null);
   const pinnedToBottom = useRef(true);
 
   const [credential, setCredential] = useState({ slot: '', key: '', stored: false });
   const selectedSlot = credentialSlot(settings.provider, settings.endpoint);
+  const officialModel = settings.serviceId === 'scientify';
   // A key belongs to its endpoint even during an asynchronous session switch.
   const apiKey = credential.slot === selectedSlot ? credential.key : '';
   const keyStored = credential.slot === selectedSlot && credential.stored;
-  const credentialsReady = credential.slot === selectedSlot || settings.provider === 'ollama';
+  const credentialsReady = officialModel
+    ? credential.slot === selectedSlot && !!credential.key
+    : credential.slot === selectedSlot || settings.provider === 'ollama';
   // Keys read back once per provider endpoint; a second open of the dialog must
   // not wait on the disk again.
   const keyCache = useRef(new Map<string, string>());
@@ -339,8 +344,13 @@ export function AssistantPanel({
     [skillsAvailable, agent, skillKey, scope, domain, conversation.id, skillRoot, safeError],
   );
   const recallKey = useCallback(
-    async (provider: AIProtocol, endpoint: string) => {
+    async (provider: AIProtocol, endpoint: string, serviceId?: string) => {
       const slot = credentialSlot(provider, endpoint);
+      if (serviceId === 'scientify') {
+        const token = await collaboration.accessToken();
+        keyCache.current.set(slot, token);
+        return token;
+      }
       const remembered = keyCache.current.get(slot);
       if (remembered !== undefined) return remembered;
       if (credentials === nativeCredentials && !isTauri()) return '';
@@ -354,7 +364,7 @@ export function AssistantPanel({
   // instead of asking for it again.
   useEffect(() => {
     const ticket = ++keyTicket.current;
-    void recallKey(settings.provider, settings.endpoint)
+    void recallKey(settings.provider, settings.endpoint, settings.serviceId)
       .then((stored) => {
         if (ticket === keyTicket.current)
           setCredential({ slot: selectedSlot, key: stored, stored: !!stored });
@@ -367,13 +377,32 @@ export function AssistantPanel({
     return () => {
       ++keyTicket.current;
     };
-  }, [recallKey, settings.provider, settings.endpoint, selectedSlot, safeError]);
+  }, [
+    recallKey,
+    settings.provider,
+    settings.endpoint,
+    settings.serviceId,
+    selectedSlot,
+    safeError,
+  ]);
+  useEffect(() => {
+    void collaboration
+      .status()
+      .then((current) => setOfficialEndpoint(current.endpoint))
+      .catch((reason) => {
+        if (isTauri()) setError(safeError(reason));
+      });
+  }, [safeError]);
   useEffect(() => () => store.getState().setDirtySource(key, false), [store, key]);
 
   function openSettings() {
     ++profileRecall.current;
     setMenu(null);
-    setSettingsDraft(settings);
+    setSettingsDraft(
+      settings.serviceId === 'scientify' && officialEndpoint
+        ? { ...settings, endpoint: officialEndpoint }
+        : settings,
+    );
     setEditingProfileId(conversation.modelSelection?.profileId ?? 'legacy');
     setProfileName(
       profiles.find((profile) => profile.id === conversation.modelSelection?.profileId)?.name ??
@@ -453,7 +482,11 @@ export function AssistantPanel({
     };
     // Put the key in the existing machine-only slot before persisting the selection.
     try {
-      if (keyValue.trim())
+      if (value.serviceId === 'scientify') {
+        // The server access token is short-lived and stays in memory; never
+        // persist it in the provider credential store.
+        await collaboration.accessToken();
+      } else if (keyValue.trim())
         await credentials.save(
           { provider: value.provider, endpoint: value.endpoint },
           keyValue.trim(),
@@ -1225,7 +1258,7 @@ export function AssistantPanel({
       {showSettings && (
         <ModelSettingsDialog
           backend={backend}
-          loadKey={(value) => recallKey(value.provider, value.endpoint)}
+          loadKey={(value) => recallKey(value.provider, value.endpoint, value.serviceId)}
           value={settingsDraft}
           profiles={profiles}
           profileId={editingProfileId}
@@ -1239,7 +1272,7 @@ export function AssistantPanel({
             setSettingsDraft(next);
             setDraftKey('');
             try {
-              const stored = await recallKey(next.provider, next.endpoint);
+              const stored = await recallKey(next.provider, next.endpoint, next.serviceId);
               if (ticket === profileRecall.current) setDraftKey(stored);
             } catch (reason) {
               if (ticket === profileRecall.current) setSettingsError(safeError(reason));
@@ -1264,6 +1297,7 @@ export function AssistantPanel({
             ++profileRecall.current;
             setShowSettings(false);
           }}
+          officialEndpoint={officialEndpoint}
         />
       )}
       <AssistantTranscript

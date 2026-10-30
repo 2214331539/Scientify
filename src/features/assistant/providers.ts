@@ -9,6 +9,12 @@ export const modelServices: {
   endpoints: { name: string; url: string }[];
 }[] = [
   {
+    id: 'scientify',
+    name: 'Scientify 官方模型',
+    provider: 'openai',
+    endpoints: [{ name: '协作服务器', url: 'http://127.0.0.1:8081' }],
+  },
+  {
     id: 'openai',
     name: 'OpenAI',
     provider: 'openai',

@@ -2347,38 +2347,38 @@
     "Enter a complete HTTP or HTTPS URL."
   ],
   "删除": ["删除", "Delete"],
-  "笔记格式工具": ["笔记格式工具", "笔记格式工具"],
-  "粗体": ["粗体", "粗体"],
-  "斜体": ["斜体", "斜体"],
-  "插入 Markdown": ["插入 Markdown", "插入 Markdown"],
-  "插入图片": ["插入图片", "插入图片"],
-  "查找与替换": ["查找与替换", "查找与替换"],
-  "Markdown 源码": ["Markdown 源码", "Markdown 源码"],
-  "笔记标题目录": ["笔记标题目录", "笔记标题目录"],
-  "笔记标题导航": ["笔记标题导航", "笔记标题导航"],
-  "标题目录": ["标题目录", "标题目录"],
+  "笔记格式工具": ["笔记格式工具", "Note formatting tools"],
+  "粗体": ["粗体", "Bold"],
+  "斜体": ["斜体", "Italic"],
+  "插入 Markdown": ["插入 Markdown", "Insert Markdown"],
+  "插入图片": ["插入图片", "Insert image"],
+  "查找与替换": ["查找与替换", "Find and replace"],
+  "Markdown 源码": ["Markdown 源码", "Markdown source"],
+  "笔记标题目录": ["笔记标题目录", "Note outline"],
+  "笔记标题导航": ["笔记标题导航", "Note heading navigation"],
+  "标题目录": ["标题目录", "Heading outline"],
   "输入 Markdown 标题后将在此显示": [
     "输入 Markdown 标题后将在此显示",
-    "输入 Markdown 标题后将在此显示"
+    "Markdown headings will appear here"
   ],
-  "未命名标题": ["未命名标题", "未命名标题"],
-  "插入": ["插入", "插入"],
-  "标题": ["标题", "标题"],
-  "列表": ["列表", "列表"],
-  "列表项": ["列表项", "列表项"],
-  "任务列表": ["任务列表", "任务列表"],
-  "待办事项": ["待办事项", "待办事项"],
-  "引用": ["引用", "引用"],
-  "链接": ["链接", "链接"],
-  "链接文字": ["链接文字", "链接文字"],
-  "代码块": ["代码块", "代码块"],
-  "数学公式": ["数学公式", "数学公式"],
-  "表格": ["表格", "表格"],
-  "内容": ["内容", "内容"],
-  "分割线": ["分割线", "分割线"],
-  "文字": ["文字", "文字"],
-  "正在保存图片…": ["正在保存图片…", "正在保存图片…"],
-  "请求修改笔记": ["请求修改笔记", "请求修改笔记"],
+  "未命名标题": ["未命名标题", "Untitled heading"],
+  "插入": ["插入", "Insert"],
+  "标题": ["标题", "Heading"],
+  "列表": ["列表", "List"],
+  "列表项": ["列表项", "List item"],
+  "任务列表": ["任务列表", "Task list"],
+  "待办事项": ["待办事项", "To-do item"],
+  "引用": ["引用", "Quote"],
+  "链接": ["链接", "Link"],
+  "链接文字": ["链接文字", "Link text"],
+  "代码块": ["代码块", "Code block"],
+  "数学公式": ["数学公式", "Math formula"],
+  "表格": ["表格", "Table"],
+  "内容": ["内容", "Content"],
+  "分割线": ["分割线", "Divider"],
+  "文字": ["文字", "Text"],
+  "正在保存图片…": ["正在保存图片…", "Saving image…"],
+  "请求修改笔记": ["请求修改笔记", "Request note edit"],
   "在独立浮窗打开": ["在独立浮窗打开", "Open in floating window"],
   "无法保存翻译设置。": ["无法保存翻译设置。", "Could not save translation settings."],
   "正在载入翻译配置…": ["正在载入翻译配置…", "Loading translation settings…"],
@@ -2488,7 +2488,10 @@
     "Collaboration settings are available in the Scientify desktop app."
   ],
   "协作服务器地址过长。": ["协作服务器地址过长。", "The collaboration server address is too long."],
-  "协作服务器地址格式无效。": ["协作服务器地址格式无效。", "The collaboration server address is invalid."],
+  "协作服务器地址格式无效。": [
+    "协作服务器地址格式无效。",
+    "The collaboration server address is invalid."
+  ],
   "协作服务器地址必须使用 http 或 https。": [
     "协作服务器地址必须使用 http 或 https。",
     "The collaboration server address must use http or https."
@@ -2497,5 +2500,223 @@
     "协作服务器地址不能包含账号或密码。",
     "The collaboration server address cannot contain a username or password."
   ],
-  "协作配置文件格式无效。": ["协作配置文件格式无效。", "The collaboration configuration file is invalid."]
+  "协作配置文件格式无效。": [
+    "协作配置文件格式无效。",
+    "The collaboration configuration file is invalid."
+  ],
+  "登录后可以加入协作项目；本地变更会先进入离线队列，再由服务器同步。": [
+    "登录后可以加入协作项目；本地变更会先进入离线队列，再由服务器同步。",
+    "After signing in, you can join collaboration projects. Local changes enter the offline queue before syncing."
+  ],
+  "文献库已完成首次同步": [
+    "文献库已完成首次同步",
+    "The literature library has completed its initial sync."
+  ],
+  "打开文献页后将初始化本地文献库": [
+    "打开文献页后将初始化本地文献库",
+    "The local literature library will be initialized when you open the literature page."
+  ],
+  "待处理的同步变更": ["待处理的同步变更", "Sync changes that need attention"],
+  "本地变更冲突": ["本地变更冲突", "Local change conflict"],
+  "保留本地": ["保留本地", "Keep local"],
+  "重试本地变更": ["重试本地变更", "Retry local change"],
+  "以本地版本覆盖远端变更并重试？": [
+    "以本地版本覆盖远端变更并重试？",
+    "Overwrite the remote change with the local version and retry?"
+  ],
+  "忽略远端变更并保留本地？": [
+    "忽略远端变更并保留本地？",
+    "Ignore the remote change and keep the local version?"
+  ],
+  "远端变更待处理": ["远端变更待处理", "Remote change needs attention"],
+  "文献变更": ["文献变更", "Literature change"],
+  "打开文献页后重试": ["打开文献页后重试", "Retry by opening the literature page"],
+  "协作登录": ["协作登录", "Collaboration sign-in"],
+  "手机号": ["手机号", "Mobile number"],
+  "验证码": ["验证码", "Verification code"],
+  "获取验证码": ["获取验证码", "Get code"],
+  "登录协作服务器": ["登录协作服务器", "Sign in to collaboration"],
+  "退出登录": ["退出登录", "Sign out"],
+  "已登录：{phone}": ["已登录：{phone}", "Signed in: {phone}"],
+  "已登录": ["已登录", "Signed in"],
+  "已启用，尚未登录": ["已启用，尚未登录", "Enabled, not signed in"],
+  "协作项目": ["协作项目", "Collaboration projects"],
+  "立即同步": ["立即同步", "Sync now"],
+  "登录后还没有可加入的协作项目。": [
+    "登录后还没有可加入的协作项目。",
+    "No collaboration projects are available yet."
+  ],
+  "Scientify 官方模型": ["Scientify 官方模型", "Scientify hosted models"],
+  "协作服务器": ["协作服务器", "Collaboration server"],
+  "文件已导入本地，但协作上传失败：{error}": [
+    "文件已导入本地，但协作上传失败：{error}",
+    "The file was imported locally, but collaboration upload failed: {error}"
+  ],
+  "正在初始化协作文献库…": [
+    "正在初始化协作文献库…",
+    "Initializing the collaborative literature library…"
+  ],
+  "协作变更暂未排队：{error}": [
+    "协作变更暂未排队：{error}",
+    "The collaboration change was not queued: {error}"
+  ],
+  "有 {count} 项远端文献变更等待处理。": [
+    "有 {count} 项远端文献变更等待处理。",
+    "{count} remote literature changes are waiting to be handled."
+  ],
+  "确认": ["确认", "Confirm"],
+  "打开标题目录": ["打开标题目录", "Open table of contents"],
+  "PDF 标题目录": ["PDF 标题目录", "PDF table of contents"],
+  "此 PDF 没有可用的标题目录": [
+    "此 PDF 没有可用的标题目录",
+    "This PDF has no available table of contents"
+  ],
+  "工作区尚未载入。": ["工作区尚未载入。", "The workspace has not loaded yet."],
+  "待发送附件": ["待发送附件", "Pending attachment"],
+  "Permission": ["Permission", "Permission"],
+  "已截短": ["已截短", "Truncated"],
+  "本轮材料来源": ["本轮材料来源", "Sources for this turn"],
+  "工作区上下文": ["工作区上下文", "Workspace context"],
+  "附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭“附带材料”后不自动附带。": [
+    "附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭“附带材料”后不自动附带。",
+    "When current materials are attached, Scientify reads a limited summary and related files from this chat workspace. Turn off Attach materials to disable this."
+  ],
+  "上次发送的材料": ["上次发送的材料", "Materials sent last time"],
+  "发送后可在这里检查实际附带的来源。": [
+    "发送后可在这里检查实际附带的来源。",
+    "Review the actual attached sources here after sending."
+  ],
+  "Agent 返回了空线程标识。": [
+    "Agent 返回了空线程标识。",
+    "The Agent returned an empty thread ID."
+  ],
+  "Agent 返回了空 turn 标识。": [
+    "Agent 返回了空 turn 标识。",
+    "The Agent returned an empty turn ID."
+  ],
+  "每条消息最多附带 4 个文件。": [
+    "每条消息最多附带 4 个文件。",
+    "Each message can include up to 4 files."
+  ],
+  "个人收集箱没有可操作的目录，请先进入一个项目。": [
+    "个人收集箱没有可操作的目录，请先进入一个项目。",
+    "The personal collection has no actionable directory. Open a project first."
+  ],
+  "当前页面没有可操作的目录，请进入文献库或项目文件后再让 Agent 执行。": [
+    "当前页面没有可操作的目录，请进入文献库或项目文件后再让 Agent 执行。",
+    "The current page has no actionable directory. Open the literature library or project files before asking the Agent to act."
+  ],
+  "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。": [
+    "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。",
+    "The built-in Agent uses the OpenAI Responses protocol and does not support this provider’s native protocol yet."
+  ],
+  "当前会话工作区": ["当前会话工作区", "Current chat workspace"],
+  "Windows 沙箱配置已完成，请再次发送任务。": [
+    "Windows 沙箱配置已完成，请再次发送任务。",
+    "The Windows sandbox is configured. Send the task again."
+  ],
+  "Windows 沙箱配置未完成，请检查系统权限后重试。": [
+    "Windows 沙箱配置未完成，请检查系统权限后重试。",
+    "The Windows sandbox is not configured. Check system permissions and try again."
+  ],
+  "中止任务失败，请重试。": ["中止任务失败，请重试。", "Failed to stop the task. Try again."],
+  "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。": [
+    "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。",
+    "This historical chat keeps its original tools. Start a new chat to use browser search and page reading; the original chat remains available."
+  ],
+  "新建会话": ["新建会话", "New chat"],
+  "正在准备材料…": ["正在准备材料…", "Preparing materials…"],
+  "对话不存在。": ["对话不存在。", "Chat not found."],
+  "保存在本机数据目录，下次自动填入": [
+    "保存在本机数据目录，下次自动填入",
+    "Saved in the local data directory and filled in next time"
+  ],
+  "已读取本机保存的密钥。": ["已读取本机保存的密钥。", "Loaded the key saved on this device."],
+  "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。": [
+    "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。",
+    "The endpoint and model name are saved in workspace settings; the key stays in the local data directory and is not synced with the project."
+  ],
+  "快捷键": ["快捷键", "Shortcuts"],
+  "存在快捷键冲突，请先修改重复按键。": [
+    "存在快捷键冲突，请先修改重复按键。",
+    "Shortcut conflict detected. Change the duplicate key first."
+  ],
+  "像 VS Code、Typora 一样，在这里查看和编辑 Scientify 的快捷操作。输入框、代码编辑器和中文输入法会优先使用自己的快捷键。": [
+    "像 VS Code、Typora 一样，在这里查看和编辑 Scientify 的快捷操作。输入框、代码编辑器和中文输入法会优先使用自己的快捷键。",
+    "View and edit Scientify shortcuts here, like in VS Code or Typora. Inputs, code editors and Chinese IMEs take precedence over global shortcuts."
+  ],
+  "恢复默认": ["恢复默认", "Restore defaults"],
+  "全局": ["全局", "Global"],
+  "编辑器": ["编辑器", "Editor"],
+  "冲突": ["冲突", "Conflict"],
+  "启用 {name}": ["启用 {name}", "Enable {name}"],
+  "启用": ["启用", "Enable"],
+  "正在录入快捷键": ["正在录入快捷键", "Recording shortcut"],
+  "编辑 {name}": ["编辑 {name}", "Edit {name}"],
+  "请按组合键…": ["请按组合键…", "Press a key combination…"],
+  "清除 {name}": ["清除 {name}", "Clear {name}"],
+  "恢复 {name}": ["恢复 {name}", "Restore {name}"],
+  "保存快捷键": ["保存快捷键", "Save shortcuts"],
+  "默认实验": ["默认实验", "Default experiment"],
+  "导入指标将替换此记录的已有指标，继续？": [
+    "导入指标将替换此记录的已有指标，继续？",
+    "Imported metrics will replace the existing metrics for this record. Continue?"
+  ],
+  "Commit": ["Commit", "Commit"],
+  "当前版本不支持在文献区读取此文件。": [
+    "当前版本不支持在文献区读取此文件。",
+    "This file type cannot be read in the literature area yet."
+  ],
+  "在外部程序打开": ["在外部程序打开", "Open in an external application"],
+  "没有可显示的内容。": ["没有可显示的内容。", "There is no content to display."],
+  "纯文本": ["纯文本", "Plain text"],
+  "只读预览": ["只读预览", "Read-only preview"],
+  "打开 AI 助手": ["打开 AI 助手", "Open AI assistant"],
+  "显示或聚焦侧边栏 AI 助手。": [
+    "显示或聚焦侧边栏 AI 助手。",
+    "Show or focus the AI assistant sidebar."
+  ],
+  "打开笔记": ["打开笔记", "Open notes"],
+  "切换到当前项目的笔记工作区。": [
+    "切换到当前项目的笔记工作区。",
+    "Switch to the current project notes workspace."
+  ],
+  "打开文献库": ["打开文献库", "Open literature library"],
+  "切换到当前项目的文献工作区。": [
+    "切换到当前项目的文献工作区。",
+    "Switch to the current project literature workspace."
+  ],
+  "切换到当前项目的实验工作区。": [
+    "切换到当前项目的实验工作区。",
+    "Switch to the current project experiment workspace."
+  ],
+  "打开代码": ["打开代码", "Open code"],
+  "打开当前实验的代码文件。": [
+    "打开当前实验的代码文件。",
+    "Open the current experiment code file."
+  ],
+  "打开项目、文献和笔记搜索。": [
+    "打开项目、文献和笔记搜索。",
+    "Search projects, literature and notes."
+  ],
+  "新建 AI 会话": ["新建 AI 会话", "New AI chat"],
+  "在 AI 助手中创建独立会话。": [
+    "在 AI 助手中创建独立会话。",
+    "Create a separate chat in the AI assistant."
+  ],
+  "加粗": ["加粗", "Bold text"],
+  "在 Markdown 编辑器中加粗选中文本。": [
+    "在 Markdown 编辑器中加粗选中文本。",
+    "Bold the selected text in the Markdown editor."
+  ],
+  "在 Markdown 编辑器中设置斜体。": [
+    "在 Markdown 编辑器中设置斜体。",
+    "Italicize the selected text in the Markdown editor."
+  ],
+  "保存文件": ["保存文件", "Save file"],
+  "保存当前笔记或代码文件。": ["保存当前笔记或代码文件。", "Save the current note or code file."],
+  "在当前编辑器中查找文本。": ["在当前编辑器中查找文本。", "Find text in the current editor."],
+  "发送消息": ["发送消息", "Send message"],
+  "发送当前 AI 输入。": ["发送当前 AI 输入。", "Send the current AI input."],
+  "中止当前 AI 任务。": ["中止当前 AI 任务。", "Stop the current AI task."]
 }

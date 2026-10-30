@@ -42,7 +42,7 @@ const notes = mac
     `- Windows 安装包未签名，可能提示未知发布者。SHA256SUMS.txt 验证下载完整性，不替代发布者签名。\n` +
     `- 更新前备份 ScientifyData 及外部关联目录。Windows CI 检查前端/Rust，并验证隔离安装、重复安装与卸载后数据保留。\n\n` +
     `## 共同说明\n\n- 包含固定版本 Agent 和各平台第三方许可清单。\n` +
-    `- 本版本不包含云同步、在线团队协作或自动更新。两台电脑分别管理各自的本地数据。\n` +
+    `- 本版本包含协作客户端：登录、项目绑定、文献初始化同步和离线变更队列；使用前需要配置独立协作服务器。实验代码协作和自动更新尚未开放。\n` +
     `- 模型密钥保存在本机未加密凭据文件中，请勿分享整个数据目录；手动终端与实验按本机用户权限执行，AI 正式运行沿用引擎沙箱。\n`;
 writeFileSync(join(directory, `RELEASE_NOTES_${label}.md`), `${notes}\n`);
 console.log(`Release files staged: ${name}`);

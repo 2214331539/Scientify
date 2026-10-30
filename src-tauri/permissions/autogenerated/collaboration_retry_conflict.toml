@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-retry-conflict"
+description = "Enables the collaboration_retry_conflict command without any pre-configured scope."
+commands.allow = ["collaboration_retry_conflict"]
+
+[[permission]]
+identifier = "deny-collaboration-retry-conflict"
+description = "Denies the collaboration_retry_conflict command without any pre-configured scope."
+commands.deny = ["collaboration_retry_conflict"]

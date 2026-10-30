@@ -31,6 +31,7 @@ interface Props {
   onKeyChange(value: string): void;
   onSave(value: AISettings, key: string): Promise<void>;
   onClose(): void;
+  officialEndpoint?: string;
 }
 
 export function ModelSettingsDialog({
@@ -52,6 +53,7 @@ export function ModelSettingsDialog({
   onKeyChange,
   onSave,
   onClose,
+  officialEndpoint,
 }: Props) {
   const service = serviceFor(value);
   const [models, setModels] = useState<AIModel[]>([]);
@@ -309,7 +311,10 @@ export function ModelSettingsDialog({
                     const next = {
                       provider: item.provider,
                       serviceId: item.id,
-                      endpoint: item.endpoints[0]?.url ?? '',
+                      endpoint:
+                        item.id === 'scientify'
+                          ? officialEndpoint || item.endpoints[0]?.url || ''
+                          : (item.endpoints[0]?.url ?? ''),
                       model: '',
                     };
                     changeConnection(next);

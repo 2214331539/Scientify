@@ -166,9 +166,7 @@
   .sf-workspace-layout > .sf-dock-resize {
     display: none;
   }
-  .research-shell
-    .sf-workspace-layout
-    > :is(.sf-dock-shared-header, .sf-dock-assistant),
+  .research-shell .sf-workspace-layout > :is(.sf-dock-shared-header, .sf-dock-assistant),
   .research-shell .sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
     grid-area: auto;
     position: absolute;

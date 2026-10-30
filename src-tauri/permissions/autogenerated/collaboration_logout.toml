@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-logout"
+description = "Enables the collaboration_logout command without any pre-configured scope."
+commands.allow = ["collaboration_logout"]
+
+[[permission]]
+identifier = "deny-collaboration-logout"
+description = "Denies the collaboration_logout command without any pre-configured scope."
+commands.deny = ["collaboration_logout"]
