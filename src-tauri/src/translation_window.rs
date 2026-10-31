@@ -175,7 +175,7 @@ mod tests {
         let app = tauri::test::mock_builder()
             .manage(WindowState::default())
             .invoke_handler(tauri::generate_handler![translation_window])
-            .build(tauri::generate_context!())
+            .build(crate::app_context())
             .unwrap();
         let main = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()

@@ -2792,5 +2792,48 @@
   "应用远端变更前会检查本地文件版本": [
     "应用远端变更前会检查本地文件版本",
     "Local file versions are checked before applying remote changes"
-  ]
+  ],
+  "账号已连接 · 自动保存与同步已开启": [
+    "账号已连接 · 自动保存与同步已开启",
+    "Account connected · autosave and sync are on"
+  ],
+  "最近已同步": ["最近已同步", "Recently synced"],
+  "等待首次同步": ["等待首次同步", "Waiting for first sync"],
+  "手机号登录": ["手机号登录", "Sign in with phone"],
+  "未注册的手机号将自动创建 Scientify 账号。": [
+    "未注册的手机号将自动创建 Scientify 账号。",
+    "A new Scientify account will be created for an unregistered phone number."
+  ],
+  "请输入手机号": ["请输入手机号", "Enter your phone number"],
+  "6 位短信验证码": ["6 位短信验证码", "6-digit SMS code"],
+  "正在登录…": ["正在登录…", "Signing in…"],
+  "账号与协作数据在本机和服务端加密传输。": [
+    "账号与协作数据在本机和服务端加密传输。",
+    "Account and collaboration data are encrypted in transit."
+  ],
+  "同一账号，多端继续": ["同一账号，多端继续", "One account, continue anywhere"],
+  "让研究资料和团队进度自然流转": [
+    "让研究资料和团队进度自然流转",
+    "Keep research materials and team progress in sync"
+  ],
+  "多设备同步": ["多设备同步", "Multi-device sync"],
+  "在另一台电脑登录后取回协作项目与进度。": [
+    "在另一台电脑登录后取回协作项目与进度。",
+    "Sign in on another computer to restore collaboration projects and progress."
+  ],
+  "多人协同": ["多人协同", "Team collaboration"],
+  "按所有者、编辑者、审阅者和查看者分配权限。": [
+    "按所有者、编辑者、审阅者和查看者分配权限。",
+    "Assign owner, editor, reviewer and viewer permissions."
+  ],
+  "本地优先": ["本地优先", "Local-first"],
+  "断网时继续工作，恢复连接后自动合并变更。": [
+    "断网时继续工作，恢复连接后自动合并变更。",
+    "Keep working offline and merge changes when the connection returns."
+  ],
+  "高级：使用自托管协作服务": [
+    "高级：使用自托管协作服务",
+    "Advanced: use a self-hosted collaboration service"
+  ],
+  "待注册 · {role}": ["待注册 · {role}", "Pending sign-up · {role}"]
 }

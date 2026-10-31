@@ -35,6 +35,14 @@ CREATE TABLE IF NOT EXISTS project_members (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (project_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS project_invitations (
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  phone TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('editor', 'reviewer', 'viewer')),
+  invited_by TEXT NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (project_id, phone)
+);
 CREATE TABLE IF NOT EXISTS sync_operations (
   operation_id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

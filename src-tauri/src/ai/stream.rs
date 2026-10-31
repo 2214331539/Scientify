@@ -311,7 +311,7 @@ mod tests {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let app = tauri::test::mock_builder()
             .manage(ChatState::default())
-            .build(tauri::generate_context!())
+            .build(crate::app_context())
             .unwrap();
         let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
             .build()

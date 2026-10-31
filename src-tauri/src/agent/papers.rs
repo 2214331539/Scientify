@@ -501,7 +501,7 @@ mod tests {
                 agent_paper_source,
                 agent_paper_complete
             ])
-            .build(tauri::generate_context!())
+            .build(crate::app_context())
             .unwrap();
         let view = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
             .build()

@@ -347,7 +347,7 @@ mod tests {
                 storage,
                 legacy: temp.path().join("legacy"),
             })
-            .build(tauri::generate_context!())
+            .build(crate::app_context())
             .unwrap();
         let model = configuration(app.handle()).unwrap()["model"].clone();
         assert!(!model.as_str().unwrap().contains(&endpoint));
