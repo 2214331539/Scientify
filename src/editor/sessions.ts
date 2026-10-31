@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import type { EditorState } from '@codemirror/state';
-import type { FileBackend } from '../platform/research';
+import type { FileBackend, FileContent } from '../platform/research';
 import { errorMessage } from '../domain/errors';
 
 export type FileSnapshot = {
@@ -13,6 +13,10 @@ export type FileSnapshot = {
 export type EditorCommand =
   | { type: 'find' | 'replace' | 'toggleWrap' | 'undo' | 'redo' }
   | { type: 'reveal'; from: number; to: number };
+export type FileSavedHandler = (
+  file: FileContent,
+  previousVersion: string | null,
+) => void | Promise<void>;
 
 /** A file owns its buffer; navigation only holds references to this session. */
 export class FileSession {
@@ -31,6 +35,7 @@ export class FileSession {
   editorWrap = false;
   editorScroll = { top: 0, left: 0 };
   private editorCommand: EditorCommand | null = null;
+  private onSaved?: FileSavedHandler;
   get pendingEditorCommand() {
     return this.editorCommand;
   }
@@ -50,7 +55,13 @@ export class FileSession {
     readonly projectId: string,
     readonly path: string,
     readonly workspaceRoot?: string,
-  ) {}
+    onSaved?: FileSavedHandler,
+  ) {
+    this.onSaved = onSaved;
+  }
+  setOnSaved(handler?: FileSavedHandler) {
+    if (handler) this.onSaved = handler;
+  }
   getSnapshot = () => this.snapshot;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -106,6 +117,11 @@ export class FileSession {
         dirty: this.snapshot.content !== content,
         phase: 'ready',
       });
+      // Disk persistence is the save contract. Collaboration is a best-effort
+      // side effect and must never turn a successful local save into a failure.
+      void Promise.resolve(this.onSaved?.(file, version)).catch((error) =>
+        console.warn('Scientify collaboration outbox unavailable:', error),
+      );
       return true;
     } catch (error) {
       this.update({
@@ -184,14 +200,17 @@ export function getFileSession(
   projectId: string,
   path: string,
   workspaceRoot?: string,
+  onSaved?: FileSavedHandler,
 ) {
   const runtime = getFileRuntime(backend);
   const key = JSON.stringify([projectId, path, workspaceRoot ?? '']);
   let session = runtime.sessions.get(key);
   if (!session) {
-    session = new FileSession(backend, projectId, path, workspaceRoot);
+    session = new FileSession(backend, projectId, path, workspaceRoot, onSaved);
     session.subscribe(() => notifyFileRuntime(backend));
     runtime.sessions.set(key, session);
+  } else {
+    session.setOnSaved(onSaved);
   }
   return session;
 }

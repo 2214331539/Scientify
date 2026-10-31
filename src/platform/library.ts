@@ -1,7 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { FileBackend } from './research';
-import { collaboration } from './collaboration';
+import { collaboration, collaborationEntityId } from './collaboration';
 
 export type LibraryPaper = { id: string; path: string; notePath: string; fingerprint: string };
 export type LibraryEntry = {
@@ -62,10 +62,7 @@ export async function queueLiteratureMutation(
     domain: 'literature',
     // Outbox identifiers are deliberately path-free; the original relative
     // path stays in the payload and is validated by the local library.
-    entityId: encodeURIComponent(entityId)
-      .replace(/%/g, '_')
-      .replace(/[^A-Za-z0-9_-]/g, '_')
-      .slice(0, 160),
+    entityId: collaborationEntityId(entityId),
     baseRevision: 0,
     kind,
     payload,

@@ -3,10 +3,15 @@ import { Button, Input } from '../../components/primitives';
 import { t, translateError } from '../../i18n';
 import {
   collaboration,
+  collaborationStateEvent,
   type CollaborationInboxChange,
   type CollaborationOperation,
   type CollaborationState,
 } from '../../platform/collaboration';
+
+function notifyCollaborationStateChanged() {
+  window.dispatchEvent(new Event(collaborationStateEvent));
+}
 
 export function CollaborationPreferences() {
   const [state, setState] = useState<CollaborationState | null>(null);
@@ -16,7 +21,7 @@ export function CollaborationPreferences() {
   const [code, setCode] = useState('');
   const [projects, setProjects] = useState<Array<{ id: string; name: string; role: string }>>([]);
   const [conflictOperations, setConflictOperations] = useState<CollaborationOperation[]>([]);
-  const [deferredChanges, setDeferredChanges] = useState<CollaborationInboxChange[]>([]);
+  const [remoteChanges, setRemoteChanges] = useState<CollaborationInboxChange[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const refresh = useCallback(async () => {
@@ -34,16 +39,16 @@ export function CollaborationPreferences() {
           ]);
           setProjects(projectResult.projects);
           setConflictOperations(operations.filter((operation) => operation.status === 'conflict'));
-          setDeferredChanges(changes.filter((change) => Boolean(change.error)));
+          setRemoteChanges(changes);
         } catch {
           setProjects([]);
           setConflictOperations([]);
-          setDeferredChanges([]);
+          setRemoteChanges([]);
         }
       } else {
         setProjects([]);
         setConflictOperations([]);
-        setDeferredChanges([]);
+        setRemoteChanges([]);
       }
       setError('');
     } catch (reason) {
@@ -59,6 +64,7 @@ export function CollaborationPreferences() {
     try {
       const next = await collaboration.configure(endpoint, enabled);
       setState(next);
+      notifyCollaborationStateChanged();
     } catch (reason) {
       setError(translateError(String(reason)));
     } finally {
@@ -82,10 +88,11 @@ export function CollaborationPreferences() {
     try {
       const next = await collaboration.login(endpoint, phone, code);
       setState(next);
+      notifyCollaborationStateChanged();
       setEnabled(true);
       setProjects((await collaboration.projects()).projects);
       setConflictOperations([]);
-      setDeferredChanges([]);
+      setRemoteChanges([]);
     } catch (reason) {
       setError(translateError(String(reason)));
     } finally {
@@ -96,9 +103,10 @@ export function CollaborationPreferences() {
     setBusy(true);
     try {
       setState(await collaboration.logout());
+      notifyCollaborationStateChanged();
       setProjects([]);
       setConflictOperations([]);
-      setDeferredChanges([]);
+      setRemoteChanges([]);
     } catch (reason) {
       setError(translateError(String(reason)));
     } finally {
@@ -157,6 +165,19 @@ export function CollaborationPreferences() {
     setError('');
     try {
       setState(await collaboration.discardInbox(operationId));
+      await refresh();
+    } catch (reason) {
+      setError(translateError(String(reason)));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const applyRemote = async () => {
+    if (!state?.workspaceId) return;
+    setBusy(true);
+    setError('');
+    try {
+      await collaboration.applyInbox(state.workspaceId);
       await refresh();
     } catch (reason) {
       setError(translateError(String(reason)));
@@ -286,9 +307,16 @@ export function CollaborationPreferences() {
           </span>
         ) : null}
       </section>
-      {conflictOperations.length || deferredChanges.length ? (
+      {conflictOperations.length || remoteChanges.length ? (
         <section className="settings-collaboration-issues" aria-live="polite">
-          <h3>{t('待处理的同步变更')}</h3>
+          <div className="settings-collaboration-projects-heading">
+            <h3>{t('待处理的同步变更')}</h3>
+            {remoteChanges.length ? (
+              <Button variant="ghost" disabled={busy} onClick={() => void applyRemote()}>
+                {t('应用远端变更')}
+              </Button>
+            ) : null}
+          </div>
           {conflictOperations.map((operation) => (
             <div className="settings-collaboration-issue" key={operation.operationId}>
               <div>
@@ -320,18 +348,26 @@ export function CollaborationPreferences() {
               </div>
             </div>
           ))}
-          {deferredChanges.map((change, index) => (
+          {remoteChanges.map((change, index) => (
             <div
               className="settings-collaboration-issue"
               key={change.operationId ?? `${change.kind}-${change.entityId}-${index}`}
             >
               <div>
-                <strong>{t('远端变更待处理')}</strong>
+                <strong>
+                  {change.error
+                    ? t('远端变更存在冲突')
+                    : change.domain === 'code'
+                      ? t('远端代码变更')
+                      : t('远端变更待处理')}
+                </strong>
                 <span>{change.payload?.path ?? change.kind ?? t('文献变更')}</span>
                 {change.error ? <small>{change.error}</small> : null}
               </div>
               <div className="settings-collaboration-issue-actions">
-                <small className="muted">{t('打开文献页后重试')}</small>
+                <small className="muted">
+                  {change.error ? change.error : t('应用远端变更前会检查本地文件版本')}
+                </small>
                 {change.operationId ? (
                   <Button
                     variant="ghost"

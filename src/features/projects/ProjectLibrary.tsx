@@ -1,7 +1,6 @@
 import { t, locale, translateError } from '../../i18n';
 import { Button, Input, Badge } from '../../components/primitives';
 import { WindowControls } from '../../components/layout/WindowControls';
-import { FeaturePlaceholder } from '../../components/workspace/FeaturePlaceholder';
 import { ViewTransition } from '../../components/workspace/ViewTransition';
 import { Modal } from '../../components/Modal';
 import { useEffect, useState, type CSSProperties } from 'react';
@@ -12,6 +11,8 @@ import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/M
 import type { WorkspaceStore } from '../../stores/workspace';
 import { coverColor, coverInk, deleteProject } from './model';
 import { ProjectActions } from './ProjectActions';
+import { CollaborationWorkspace } from './CollaborationWorkspace';
+import type { CollaborationProject } from '../../platform/collaboration';
 import './project-library.css';
 
 function updated(project: Project) {
@@ -39,12 +40,14 @@ export function ProjectLibrary({
   onOpen,
   onNew,
   onEdit,
+  onOpenRemote,
 }: {
   store: WorkspaceStore;
   space: string;
   onOpen(id: string): void;
   onNew(): void;
   onEdit(project: Project): void;
+  onOpenRemote(project: CollaborationProject): Promise<void>;
 }) {
   const data = useStore(store, (s) => s.data)!;
   const busy = useStore(store, (s) => s.busy),
@@ -130,16 +133,7 @@ export function ProjectLibrary({
       }
     },
   });
-  if (space !== 'personal')
-    return (
-      <section className="launcher-library" aria-label={t('项目管理')}>
-        <header className="launcher-topbar" data-tauri-drag-region>
-          <span className="spacer" />
-          <WindowControls />
-        </header>
-        <FeaturePlaceholder feature="collaboration" />
-      </section>
-    );
+  if (space !== 'personal') return <CollaborationWorkspace onOpenProject={onOpenRemote} />;
   return (
     <section className="launcher-library" aria-label={t('项目管理')}>
       <header className="launcher-topbar" data-tauri-drag-region>

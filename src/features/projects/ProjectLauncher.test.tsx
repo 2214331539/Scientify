@@ -48,7 +48,7 @@ it('switches project views, filters records and provides a static profile with o
   data.projects.push(project('Alpha'), project('Beta'));
   const { user } = fixture(data);
   await screen.findByRole('button', { name: 'Alpha' });
-  expect(screen.getByLabelText('登录入口占位').tagName).toBe('DIV');
+  expect(screen.getByRole('button', { name: '登录协作' })).toBeTruthy();
   for (const name of ['全部项目', '已收藏', '已归档', '数据与备份', '关于 MVP'])
     expect(screen.queryByRole('button', { name })).toBeNull();
   expect(screen.queryByRole('combobox', { name: '项目排序' })).toBeNull();
@@ -66,17 +66,15 @@ it('switches project views, filters records and provides a static profile with o
   expect(localStorage.getItem('scientify.projects.view')).toBe('list');
 });
 
-it('shows a collaboration placeholder and preserves existing teams and projects without writes', async () => {
+it('shows the collaboration sign-in surface and preserves existing teams and projects without writes', async () => {
   const data = emptyWorkspace();
   data.teams.push({ id: 'team', name: 'Vision lab', color: '#657b71' });
   data.projects.push(project('Personal research'), project('Team research', 'team'));
   const { user, store, save } = fixture(data);
   await screen.findByRole('button', { name: 'Personal research' });
   await user.click(screen.getByRole('button', { name: '团队协作空间' }));
-  const placeholder = within(screen.getByRole('region', { name: '团队协作空间' }));
-  expect(placeholder.getByText('开发中')).toBeTruthy();
-  expect(placeholder.getByText('敬请期待')).toBeTruthy();
-  expect(screen.queryByRole('button', { name: '创建团队空间' })).toBeNull();
+  const collaboration = within(screen.getByRole('region', { name: '团队协作空间' }));
+  expect(collaboration.getByText('登录和协作同步需要在 Scientify 桌面应用中使用。')).toBeTruthy();
   expect(screen.queryByRole('button', { name: '新建项目' })).toBeNull();
   expect(screen.queryByRole('button', { name: /Vision lab/ })).toBeNull();
   expect(store.getState().data?.teams).toEqual(data.teams);

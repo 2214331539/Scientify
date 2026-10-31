@@ -1,8 +1,15 @@
 import { UserRound, UsersRound, Settings } from 'lucide-react';
+import { isTauri } from '@tauri-apps/api/core';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../../components/primitives';
 import { BrandMark } from '../../components/layout/BrandMark';
 import { AppearanceControls } from '../settings/Appearance';
 import { t } from '../../i18n';
+import {
+  collaboration,
+  collaborationStateEvent,
+  type CollaborationState,
+} from '../../platform/collaboration';
 import './project-library.css';
 
 export function ProjectSidebar({
@@ -17,6 +24,21 @@ export function ProjectSidebar({
   onSettings(): void;
 }) {
   const teamActive = space !== 'personal';
+  const [collaborationState, setCollaborationState] = useState<CollaborationState | null>(null);
+  const refreshCollaboration = useCallback(() => {
+    if (!isTauri()) return;
+    void collaboration
+      .status()
+      .then(setCollaborationState)
+      .catch(() => setCollaborationState(null));
+  }, []);
+  useEffect(() => {
+    refreshCollaboration();
+    window.addEventListener(collaborationStateEvent, refreshCollaboration);
+    return () => {
+      window.removeEventListener(collaborationStateEvent, refreshCollaboration);
+    };
+  }, [refreshCollaboration, space]);
   return (
     <aside className="launcher-sidebar" aria-label={t('项目空间')}>
       <div className="launcher-brand" data-tauri-drag-region>
@@ -46,12 +68,16 @@ export function ProjectSidebar({
         </Button>
       </nav>
       <footer className="launcher-sidebar-footer">
-        <div className="launcher-profile" aria-label={t('登录入口占位')}>
+        <button className="launcher-profile sf-button" type="button" onClick={onSettings}>
           <span className="launcher-avatar">
             <UserRound />
           </span>
-          <span>{t('登录')}</span>
-        </div>
+          <span>
+            {collaborationState?.authenticated
+              ? (collaborationState.phone ?? t('已登录'))
+              : t('登录协作')}
+          </span>
+        </button>
         <div className="launcher-utilities topbar-tools" aria-label={t('全局设置')}>
           <AppearanceControls />
           <span className="spacer" />

@@ -2718,5 +2718,79 @@
   "在当前编辑器中查找文本。": ["在当前编辑器中查找文本。", "Find text in the current editor."],
   "发送消息": ["发送消息", "Send message"],
   "发送当前 AI 输入。": ["发送当前 AI 输入。", "Send the current AI input."],
-  "中止当前 AI 任务。": ["中止当前 AI 任务。", "Stop the current AI task."]
+  "中止当前 AI 任务。": ["中止当前 AI 任务。", "Stop the current AI task."],
+  "协作项目无法载入，请重试。": [
+    "协作项目无法载入，请重试。",
+    "The collaboration project could not be loaded. Try again."
+  ],
+  "协作服务器设置已保存。": ["协作服务器设置已保存。", "Collaboration server settings saved."],
+  "验证码已发送，请查收短信。": [
+    "验证码已发送，请查收短信。",
+    "The verification code was sent by SMS."
+  ],
+  "已登录协作服务器。": ["已登录协作服务器。", "Signed in to the collaboration server."],
+  "协作项目已创建。": ["协作项目已创建。", "Collaboration project created."],
+  "成员邀请已发送。": ["成员邀请已发送。", "The member invitation was sent."],
+  "登录和协作同步需要在 Scientify 桌面应用中使用。": [
+    "登录和协作同步需要在 Scientify 桌面应用中使用。",
+    "Sign-in and collaboration sync require the Scientify desktop app."
+  ],
+  "登录后管理共享文献与项目成员": [
+    "登录后管理共享文献与项目成员",
+    "Manage shared literature and project members after signing in"
+  ],
+  "本地优先协作": ["本地优先协作", "Local-first collaboration"],
+  "你的协作项目": ["你的协作项目", "Your collaboration projects"],
+  "登录 Scientify 协作": ["登录 Scientify 协作", "Sign in to Scientify collaboration"],
+  "选择一个远程项目，绑定到本机工作区后继续阅读、编辑和运行。": [
+    "选择一个远程项目，绑定到本机工作区后继续阅读、编辑和运行。",
+    "Choose a remote project, bind it to this workspace, and continue reading, editing and running."
+  ],
+  "服务器只负责身份、成员和同步索引；论文文件与实验代码仍由你控制。": [
+    "服务器只负责身份、成员和同步索引；论文文件与实验代码仍由你控制。",
+    "The server handles identity, membership and sync indexes; you keep control of papers and experiment code."
+  ],
+  "已连接": ["已连接", "Connected"],
+  "未登录": ["未登录", "Signed out"],
+  "连接协作服务器": ["连接协作服务器", "Connect to collaboration server"],
+  "服务器地址和登录状态只保存在本机。": [
+    "服务器地址和登录状态只保存在本机。",
+    "The server address and sign-in state stay on this device."
+  ],
+  "保存连接": ["保存连接", "Save connection"],
+  "JWT 会在本机安全存储并自动刷新": [
+    "JWT 会在本机安全存储并自动刷新",
+    "JWT tokens are stored locally and refreshed automatically"
+  ],
+  "输入手机号": ["输入手机号", "Enter phone number"],
+  "短信验证码": ["短信验证码", "SMS verification code"],
+  "登录并继续": ["登录并继续", "Sign in and continue"],
+  "新建协作项目名称": ["新建协作项目名称", "New collaboration project name"],
+  "成员": ["成员", "Members"],
+  "正在打开…": ["正在打开…", "Opening…"],
+  "进入项目": ["进入项目", "Open project"],
+  "还没有协作项目，先创建一个项目。": [
+    "还没有协作项目，先创建一个项目。",
+    "No collaboration projects yet. Create one to get started."
+  ],
+  "项目成员": ["项目成员", "Project members"],
+  "选择项目查看成员": ["选择项目查看成员", "Select a project to view members"],
+  "暂无成员信息": ["暂无成员信息", "No member information"],
+  "邀请成员": ["邀请成员", "Invite members"],
+  "成员手机号": ["成员手机号", "Member phone number"],
+  "编辑者": ["编辑者", "Editor"],
+  "审阅者": ["审阅者", "Reviewer"],
+  "查看者": ["查看者", "Viewer"],
+  "邀请": ["邀请", "Invite"],
+  "成员列表会显示在这里。": ["成员列表会显示在这里。", "The member list will appear here."],
+  "登录协作": ["登录协作", "Sign in to collaboration"],
+  "协作服务连接正常。": ["协作服务连接正常。", "Collaboration service is healthy."],
+  "检查连接": ["检查连接", "Check connection"],
+  "应用远端变更": ["应用远端变更", "Apply remote changes"],
+  "远端变更存在冲突": ["远端变更存在冲突", "Remote change has a conflict"],
+  "远端代码变更": ["远端代码变更", "Remote code change"],
+  "应用远端变更前会检查本地文件版本": [
+    "应用远端变更前会检查本地文件版本",
+    "Local file versions are checked before applying remote changes"
+  ]
 }

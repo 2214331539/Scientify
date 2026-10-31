@@ -213,7 +213,7 @@ export function LocalLiterature({
             }
             await collaboration.sync();
             collaborationSyncAt.current = Date.now();
-            const result = await collaboration.applyInbox(project.id);
+            const result = await collaboration.applyInbox(project.id, 'literature');
             if (result.deferred && alive.current)
               setError(t('有 {count} 项远端文献变更等待处理。', { count: result.deferred }));
           } catch (reason) {

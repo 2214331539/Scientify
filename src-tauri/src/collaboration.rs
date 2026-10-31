@@ -10,7 +10,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 use tauri::{AppHandle, Manager, State, Webview};
 use uuid::Uuid;
 
@@ -37,6 +37,8 @@ pub struct CollaborationState {
     pub user_id: Option<String>,
     pub phone: Option<String>,
     pub literature_bootstrapped: bool,
+    /// Last accepted server revision for each `domain:entityId` pair.
+    pub entity_revisions: HashMap<String, u64>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -284,6 +286,10 @@ fn snapshot(state: &AppState) -> Result<CollaborationState, String> {
         current.phone = None;
     }
     Ok(current)
+}
+
+fn revision_key(domain: &str, entity_id: &str) -> String {
+    format!("{domain}:{entity_id}")
 }
 
 async fn request_json(
@@ -748,6 +754,79 @@ pub async fn collaboration_projects<R: tauri::Runtime>(
 }
 
 #[tauri::command]
+pub async fn collaboration_create_project<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let name = name.trim();
+    if name.is_empty() || name.len() > 160 {
+        return Err("协作项目名称无效。".into());
+    }
+    let current = read(&state)?;
+    auth_request(
+        &state,
+        &current.endpoint,
+        "/projects",
+        reqwest::Method::POST,
+        Some(json!({"name": name})),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn collaboration_project_members<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    if !valid_token(&project_id, 80) {
+        return Err("协作项目标识无效。".into());
+    }
+    let current = read(&state)?;
+    auth_request(
+        &state,
+        &current.endpoint,
+        &format!("/projects/{project_id}/members"),
+        reqwest::Method::GET,
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn collaboration_invite_member<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    project_id: String,
+    phone: String,
+    role: String,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    if !valid_token(&project_id, 80) {
+        return Err("协作项目标识无效。".into());
+    }
+    let phone = phone.trim();
+    if phone.is_empty() || phone.len() > 40 {
+        return Err("手机号无效。".into());
+    }
+    if !matches!(role.as_str(), "editor" | "reviewer" | "viewer") {
+        return Err("成员权限无效。".into());
+    }
+    let current = read(&state)?;
+    auth_request(
+        &state,
+        &current.endpoint,
+        &format!("/projects/{project_id}/members"),
+        reqwest::Method::POST,
+        Some(json!({"phone": phone, "role": role})),
+    )
+    .await
+}
+
+#[tauri::command]
 pub fn collaboration_bind_project<R: tauri::Runtime>(
     view: Webview<R>,
     state: State<'_, AppState>,
@@ -760,6 +839,7 @@ pub fn collaboration_bind_project<R: tauri::Runtime>(
     let mut current = read(&state)?;
     if current.workspace_id.as_deref() != Some(&project_id) {
         current.literature_bootstrapped = false;
+        current.entity_revisions.clear();
     }
     current.workspace_id = Some(project_id);
     current.sync_cursor = 0;
@@ -919,6 +999,18 @@ pub async fn collaboration_sync<R: tauri::Runtime>(
     if let Some(accepted) = result["accepted"].as_array() {
         for item in accepted {
             if let Some(id) = item["operationId"].as_str() {
+                if let Some(revision) = item["serverRevision"].as_u64() {
+                    if let Some(operation) = next_outbox
+                        .operations
+                        .iter()
+                        .find(|operation| operation.operation_id == id)
+                    {
+                        current.entity_revisions.insert(
+                            revision_key(&operation.domain, &operation.entity_id),
+                            revision,
+                        );
+                    }
+                }
                 next_outbox
                     .operations
                     .retain(|operation| operation.operation_id != id);
@@ -944,6 +1036,15 @@ pub async fn collaboration_sync<R: tauri::Runtime>(
     if let Some(changes) = result["changes"].as_array() {
         let mut inbox = read_inbox(&state)?;
         for change in changes {
+            if let (Some(domain), Some(entity_id), Some(revision)) = (
+                change["domain"].as_str(),
+                change["entityId"].as_str(),
+                change["serverRevision"].as_u64(),
+            ) {
+                current
+                    .entity_revisions
+                    .insert(revision_key(domain, entity_id), revision);
+            }
             let operation_id = change["operationId"].as_str();
             if operation_id.is_none()
                 || !inbox
@@ -996,8 +1097,14 @@ pub async fn collaboration_apply_inbox<R: tauri::Runtime>(
     view: Webview<R>,
     state: State<'_, AppState>,
     project_id: String,
+    domain: Option<String>,
 ) -> Result<Value, String> {
     trusted(&view)?;
+    if let Some(domain) = domain.as_deref() {
+        if !matches!(domain, "literature" | "code") {
+            return Err("协作变更领域无效。".into());
+        }
+    }
     let (current, _) = remote_project(&state)?;
     let changes = read_inbox(&state)?;
     if changes.is_empty() {
@@ -1006,10 +1113,16 @@ pub async fn collaboration_apply_inbox<R: tauri::Runtime>(
     let service = app.state::<crate::library::LibraryState>().service.clone();
     let mut deferred = Vec::new();
     let mut applied = 0u64;
+    let mut deferred_count = 0u64;
     let mut changed_files = false;
     for change in changes {
-        if change["domain"] != "literature" {
-            deferred.push(change_error(&change, "暂不支持此协作领域。"));
+        if domain
+            .as_deref()
+            .is_some_and(|expected| change["domain"] != expected)
+        {
+            // Keep other domains in the inbox. A domain-specific caller must
+            // not consume or silently apply work belonging to another pane.
+            deferred.push(change);
             continue;
         }
         // A client already applied its own operation locally. Removing it from
@@ -1019,61 +1132,96 @@ pub async fn collaboration_apply_inbox<R: tauri::Runtime>(
             continue;
         }
         let payload = &change["payload"];
-        let result = match change["kind"].as_str().unwrap_or_default() {
-            "note-upsert" => {
-                let id = payload["path"].as_str().ok_or("远端笔记缺少文献标识。")?;
-                let content = payload["content"].as_str().ok_or("远端笔记缺少正文。")?;
-                let local = service.note(&project_id, id)?;
-                if local.content == content {
-                    Ok(())
-                } else if local.content.is_empty() {
-                    service
-                        .save_note(&project_id, id, content, local.revision.as_deref(), None)
-                        .map(|_| ())
-                } else {
-                    Err("本地笔记已有不同内容，已保留本地版本。".into())
+        let result = match change["domain"].as_str() {
+            Some("literature") => match change["kind"].as_str().unwrap_or_default() {
+                "note-upsert" => {
+                    let id = payload["path"].as_str().ok_or("远端笔记缺少文献标识。")?;
+                    let content = payload["content"].as_str().ok_or("远端笔记缺少正文。")?;
+                    let local = service.note(&project_id, id)?;
+                    if local.content == content {
+                        Ok(())
+                    } else if local.content.is_empty() {
+                        service
+                            .save_note(&project_id, id, content, local.revision.as_deref(), None)
+                            .map(|_| ())
+                    } else {
+                        Err("本地笔记已有不同内容，已保留本地版本。".into())
+                    }
                 }
-            }
-            "import" => {
-                let path = payload["path"].as_str().ok_or("远端文件缺少路径。")?;
-                let blob_id = payload["blobId"]
-                    .as_str()
-                    .ok_or("远端文件缺少 OSS 标识。")?;
-                let target = service.external_path(&project_id, path)?;
-                if target.exists() {
-                    Err("本地已存在同名文件，已保留本地文件。".into())
-                } else {
-                    let bytes = download_blob(&state, &current.endpoint, blob_id).await?;
-                    if let Some(parent) = target.parent() {
-                        tokio::fs::create_dir_all(parent)
+                "import" => {
+                    let path = payload["path"].as_str().ok_or("远端文件缺少路径。")?;
+                    let blob_id = payload["blobId"]
+                        .as_str()
+                        .ok_or("远端文件缺少 OSS 标识。")?;
+                    let target = service.external_path(&project_id, path)?;
+                    if target.exists() {
+                        Err("本地已存在同名文件，已保留本地文件。".into())
+                    } else {
+                        let bytes = download_blob(&state, &current.endpoint, blob_id).await?;
+                        if let Some(parent) = target.parent() {
+                            tokio::fs::create_dir_all(parent)
+                                .await
+                                .map_err(|error| error.to_string())?;
+                        }
+                        tokio::fs::write(target, bytes)
                             .await
                             .map_err(|error| error.to_string())?;
+                        changed_files = true;
+                        Ok(())
                     }
-                    tokio::fs::write(target, bytes)
-                        .await
-                        .map_err(|error| error.to_string())?;
-                    changed_files = true;
-                    Ok(())
+                }
+                "mkdir" | "move" | "copy" | "delete" | "relink" => {
+                    let operation: scientify_core::library::Operation =
+                        serde_json::from_value(payload.clone())
+                            .map_err(|_| "远端文献操作格式无效。")?;
+                    service.operate(&project_id, operation).map(|_| ())
+                }
+                _ => Err("暂不支持此文献变更类型。".into()),
+            },
+            Some("code") if change["kind"].as_str() == Some("code-upsert") => {
+                let path = payload["path"].as_str().ok_or("远端代码变更缺少路径。")?;
+                let content = payload["content"]
+                    .as_str()
+                    .ok_or("远端代码变更缺少正文。")?;
+                let workspace_root = payload["workspaceRoot"].as_str();
+                let base_version = payload["baseVersion"].as_str();
+                let root =
+                    crate::git::resolve(&state.storage, &state.files, &project_id, workspace_root)?;
+                match state.files.read(&root, path) {
+                    Ok(local) if local.content == content => Ok(()),
+                    Ok(local) => {
+                        let expected =
+                            base_version.ok_or("远端代码变更缺少本地基线，已保留当前文件。")?;
+                        if local.version != expected {
+                            Err("本地代码已发生变化，已保留本地版本。".into())
+                        } else {
+                            state
+                                .files
+                                .write(&root, path, content, Some(&local.version))
+                                .map(|_| ())
+                        }
+                    }
+                    Err(_) if base_version.is_none() => {
+                        state.files.write(&root, path, content, None).map(|_| ())
+                    }
+                    Err(_) => Err("本地代码文件不存在或无法读取，已保留本地版本。".into()),
                 }
             }
-            "mkdir" | "move" | "copy" | "delete" | "relink" => {
-                let operation: scientify_core::library::Operation =
-                    serde_json::from_value(payload.clone())
-                        .map_err(|_| "远端文献操作格式无效。")?;
-                service.operate(&project_id, operation).map(|_| ())
-            }
-            _ => Err("暂不支持此文献变更类型。".into()),
+            _ => Err("暂不支持此协作领域或变更类型。".into()),
         };
         match result {
             Ok(()) => applied += 1,
-            Err(error) => deferred.push(change_error(&change, error)),
+            Err(error) => {
+                deferred_count += 1;
+                deferred.push(change_error(&change, error));
+            }
         }
     }
     if changed_files {
         service.operate(&project_id, scientify_core::library::Operation::Scan)?;
     }
     write_inbox(&state, &deferred)?;
-    Ok(json!({"applied": applied, "deferred": deferred.len()}))
+    Ok(json!({"applied": applied, "deferred": deferred_count}))
 }
 
 #[tauri::command]
@@ -1096,6 +1244,17 @@ pub fn collaboration_enqueue<R: tauri::Runtime>(
     operation.attempt_count = 0;
     operation.conflict_revision = None;
     operation.last_error = None;
+    // A user can save several times before the next sync tick. Keep only the
+    // latest pending snapshot for a code entity so one local editing session
+    // does not manufacture avoidable server conflicts.
+    if operation.domain == "code" && operation.kind == "code-upsert" {
+        outbox.operations.retain(|item| {
+            !(item.status == OperationStatus::Pending
+                && item.domain == operation.domain
+                && item.entity_id == operation.entity_id
+                && item.project_id == operation.project_id)
+        });
+    }
     outbox.operations.push(operation);
     write_outbox(&state, &outbox)?;
     snapshot(&state)

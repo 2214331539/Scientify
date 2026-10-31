@@ -65,6 +65,29 @@ it('keeps later input dirty when an earlier save finishes', async () => {
   expect(result.writeFile).toHaveBeenCalledWith('project-a', 'paper.md', 'First edit', 'v1');
 });
 
+it('runs the save side effect after local persistence without changing the save result', async () => {
+  const { result } = backend();
+  const onSaved = vi.fn();
+  const session = new FileSession(result, 'project-a', 'paper.md', undefined, onSaved);
+  await session.load();
+  session.edit('shared draft');
+  expect(await session.save()).toBe(true);
+  expect(onSaved).toHaveBeenCalledWith(
+    expect.objectContaining({ content: 'shared draft', version: 'v2' }),
+    'v1',
+  );
+});
+
+it('does not fail a local save when the collaboration side effect rejects', async () => {
+  const { result } = backend();
+  const onSaved = vi.fn().mockRejectedValue(new Error('offline'));
+  const session = new FileSession(result, 'project-a', 'paper.md', undefined, onSaved);
+  await session.load();
+  session.edit('offline draft');
+  expect(await session.save()).toBe(true);
+  expect(session.getSnapshot()).toMatchObject({ dirty: false, phase: 'ready' });
+});
+
 it('preserves the buffer and expected version on external modification conflict', async () => {
   const { result, externalEdit } = backend();
   const session = new FileSession(result, 'project-a', 'paper.md');

@@ -13,6 +13,8 @@ export type CollaborationState = {
   userId: string | null;
   phone: string | null;
   literatureBootstrapped: boolean;
+  /** Last server revision observed for each domain/entity pair. */
+  entityRevisions: Record<string, number>;
 };
 
 export type CollaborationOperation = {
@@ -40,6 +42,36 @@ export type CollaborationInboxChange = {
   payload?: { path?: string; [key: string]: unknown };
   error?: string;
 };
+
+export type CollaborationProject = {
+  id: string;
+  name: string;
+  ownerId?: string;
+  role: 'owner' | 'editor' | 'reviewer' | 'viewer' | string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CollaborationMember = {
+  id: string;
+  phone: string;
+  role: 'owner' | 'editor' | 'reviewer' | 'viewer' | string;
+  createdAt?: string;
+};
+
+export const collaborationStateEvent = 'scientify-collaboration-state-changed';
+
+/**
+ * Keep entity IDs opaque and path-free while remaining stable across clients.
+ * The original path/worktree stays in the operation payload where it can be
+ * validated by the local file service.
+ */
+export function collaborationEntityId(value: string): string {
+  return encodeURIComponent(value)
+    .replace(/%/g, '_')
+    .replace(/[^A-Za-z0-9_-]/g, '_')
+    .slice(0, 160);
+}
 
 export const collaboration = {
   status(): Promise<CollaborationState> {
@@ -90,9 +122,27 @@ export const collaboration = {
     if (!isTauri()) return Promise.reject(new Error('官方模型只能在 Scientify 桌面应用中使用。'));
     return invoke<string>('collaboration_access_token');
   },
-  projects(): Promise<{ projects: Array<{ id: string; name: string; role: string }> }> {
+  projects(): Promise<{ projects: CollaborationProject[] }> {
     if (!isTauri()) return Promise.reject(new Error('协作设置只能在 Scientify 桌面应用中使用。'));
-    return invoke('collaboration_projects');
+    return invoke<{ projects: CollaborationProject[] }>('collaboration_projects');
+  },
+  createProject(name: string): Promise<CollaborationProject> {
+    if (!isTauri()) return Promise.reject(new Error('协作项目只能在 Scientify 桌面应用中创建。'));
+    return invoke<CollaborationProject>('collaboration_create_project', { name });
+  },
+  members(projectId: string): Promise<{ members: CollaborationMember[] }> {
+    if (!isTauri()) return Promise.reject(new Error('项目成员只能在 Scientify 桌面应用中查看。'));
+    return invoke<{ members: CollaborationMember[] }>('collaboration_project_members', {
+      projectId,
+    });
+  },
+  inviteMember(
+    projectId: string,
+    phone: string,
+    role: 'editor' | 'reviewer' | 'viewer',
+  ): Promise<{ ok: true }> {
+    if (!isTauri()) return Promise.reject(new Error('项目成员只能在 Scientify 桌面应用中邀请。'));
+    return invoke<{ ok: true }>('collaboration_invite_member', { projectId, phone, role });
   },
   bindProject(projectId: string): Promise<CollaborationState> {
     if (!isTauri()) return Promise.reject(new Error('协作设置只能在 Scientify 桌面应用中使用。'));
@@ -116,9 +166,12 @@ export const collaboration = {
     if (!isTauri()) return Promise.reject(new Error('协作变更只能在 Scientify 桌面应用中处理。'));
     return invoke<CollaborationState>('collaboration_discard_inbox', { operationId });
   },
-  applyInbox(projectId: string): Promise<{ applied: number; deferred: number }> {
+  applyInbox(
+    projectId: string,
+    domain?: 'literature' | 'code',
+  ): Promise<{ applied: number; deferred: number }> {
     if (!isTauri()) return Promise.reject(new Error('协作变更只能在 Scientify 桌面应用中应用。'));
-    return invoke('collaboration_apply_inbox', { projectId });
+    return invoke('collaboration_apply_inbox', domain ? { projectId, domain } : { projectId });
   },
   uploadFile(projectId: string, path: string): Promise<unknown> {
     if (!isTauri())
@@ -148,11 +201,13 @@ export const collaboration = {
     if (!isTauri()) return;
     const current = await invoke<CollaborationState>('collaboration_status');
     if (!current.enabled || !current.authenticated || !current.workspaceId) return;
+    const revisionKey = `${input.domain}:${input.entityId}`;
     await invoke<CollaborationState>('collaboration_enqueue', {
       operation: {
         ...input,
         projectId: current.workspaceId,
         clientId: current.clientId,
+        baseRevision: current.entityRevisions?.[revisionKey] ?? input.baseRevision,
       },
     });
   },

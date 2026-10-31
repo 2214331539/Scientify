@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-invite-member"
+description = "Enables the collaboration_invite_member command without any pre-configured scope."
+commands.allow = ["collaboration_invite_member"]
+
+[[permission]]
+identifier = "deny-collaboration-invite-member"
+description = "Denies the collaboration_invite_member command without any pre-configured scope."
+commands.deny = ["collaboration_invite_member"]

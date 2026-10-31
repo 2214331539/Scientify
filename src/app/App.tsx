@@ -48,6 +48,13 @@ import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
 import { nativeResearch, type ResearchBackend } from '../platform/research';
 import { ViewTransition } from '../components/workspace/ViewTransition';
 import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/shortcuts';
+import {
+  collaboration,
+  collaborationStateEvent,
+  type CollaborationProject,
+} from '../platform/collaboration';
+
+const COLLABORATION_TEAM_ID = 'scientify-collaboration';
 
 type Dialog =
   { kind: 'project'; project?: Project } | { kind: 'data' | 'profile' | 'search' | 'about' } | null;
@@ -275,6 +282,27 @@ export function App({
   const [notesPlacement, setNotesPlacement] = useState(false);
   useCloseProtection(store, backend, windowMode === 'workspace');
   useEffect(() => {
+    if (windowMode !== 'workspace') return;
+    let disposed = false;
+    const syncCollaboration = async () => {
+      try {
+        const state = await collaboration.status();
+        if (!state.enabled || !state.authenticated || !state.workspaceId || disposed) return;
+        await collaboration.sync();
+        if (!disposed) window.dispatchEvent(new Event(collaborationStateEvent));
+      } catch {
+        // Background sync must not interrupt editing. The pending outbox and
+        // the next explicit sync action remain available to the user.
+      }
+    };
+    void syncCollaboration();
+    const timer = window.setInterval(() => void syncCollaboration(), 30_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [windowMode]);
+  useEffect(() => {
     if (!epoch || store.getState().dirty) return;
     const runtime = getFileRuntime(backend);
     runtime.sessions.clear();
@@ -464,6 +492,55 @@ export function App({
       setUI((s) => ({ ...s, projectId: id, space: p.space }));
       setSidebarExpanded(true);
     }
+  }
+
+  async function openRemoteProject(remote: CollaborationProject) {
+    const timestamp = new Date().toISOString();
+    const saved = await store.getState().update((workspaceData) => {
+      if (!workspaceData.teams.some((team) => team.id === COLLABORATION_TEAM_ID)) {
+        workspaceData.teams.push({
+          id: COLLABORATION_TEAM_ID,
+          name: '团队协作',
+          color: '#56746a',
+          description: 'Scientify collaboration projects',
+        });
+      }
+      const local = workspaceData.projects.find((project) => project.id === remote.id);
+      if (local) {
+        Object.assign(local, {
+          name: remote.name,
+          space: COLLABORATION_TEAM_ID,
+          updatedAt: remote.updatedAt ?? timestamp,
+          collaborationRole: remote.role,
+        });
+      } else {
+        workspaceData.projects.push({
+          id: remote.id,
+          name: remote.name,
+          question: '',
+          createdAt: remote.createdAt ?? timestamp,
+          updatedAt: remote.updatedAt ?? timestamp,
+          space: COLLABORATION_TEAM_ID,
+          color: '#56746a',
+          collaborationRole: remote.role,
+        });
+      }
+    });
+    if (!saved) throw new Error(store.getState().error ?? t('协作项目无法载入，请重试。'));
+    if (windowMode === 'projects') {
+      await launchWorkspace(remote.id);
+      return;
+    }
+    setUI((current) => ({
+      ...current,
+      projectId: remote.id,
+      space: COLLABORATION_TEAM_ID,
+      locations: {
+        ...current.locations,
+        [remote.id]: current.locations[remote.id] ?? locationDefault,
+      },
+    }));
+    setSidebarExpanded(true);
   }
   async function launchWorkspace(id: string, target?: SearchTarget | { source: WorkContext }) {
     if (launching) return;
@@ -760,6 +837,7 @@ export function App({
       onOpen={openProject}
       onNew={() => openDialog({ kind: 'project' })}
       onEdit={(p) => openDialog({ kind: 'project', project: p })}
+      onOpenRemote={openRemoteProject}
     />
   ) : workspace === 'overview' ? (
     <FeaturePlaceholder feature="overview" />

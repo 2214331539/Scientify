@@ -32,7 +32,8 @@ import {
 import { undoDepth, redoDepth } from '@codemirror/commands';
 import type { Project } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
-import type { ResearchBackend, ResearchFile } from '../../platform/research';
+import type { FileContent, ResearchBackend, ResearchFile } from '../../platform/research';
+import { collaboration, collaborationEntityId } from '../../platform/collaboration';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
   beginFileOperation,
@@ -114,6 +115,37 @@ export function FileWorkspace(props: FileWorkspaceProps) {
   const onDirtyChangeRef = useRef(onDirtyChange);
   onDirtyChangeRef.current = onDirtyChange;
   const dirty = hasUnsavedFileChanges(backend);
+  const onCodeSaved = useCallback(
+    async (file: FileContent, previousVersion: string | null) => {
+      if (mode !== 'experiments') return;
+      await collaboration.enqueueIfEnabled({
+        operationId: crypto.randomUUID(),
+        domain: 'code',
+        entityId: collaborationEntityId(`${workspaceRoot ?? 'base'}:${file.path}`),
+        baseRevision: 0,
+        kind: 'code-upsert',
+        payload: {
+          path: file.path,
+          workspaceRoot: workspaceRoot ?? null,
+          content: file.content,
+          baseVersion: previousVersion,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    },
+    [mode, workspaceRoot],
+  );
+  const getSession = useCallback(
+    (path: string) =>
+      getFileSession(
+        backend,
+        project.id,
+        path,
+        workspaceRoot,
+        mode === 'experiments' ? onCodeSaved : undefined,
+      ),
+    [backend, mode, onCodeSaved, project.id, workspaceRoot],
+  );
 
   const open = useCallback(
     (path: string) => {
@@ -196,13 +228,17 @@ export function FileWorkspace(props: FileWorkspaceProps) {
     setCreateError('');
     const finishOperation = beginFileOperation(backend);
     try {
-      await backend.writeFile(
+      const created = await backend.writeFile(
         project.id,
         path,
         createContent,
         null,
         ...(workspaceRoot ? [workspaceRoot] : []),
       );
+      if (mode === 'experiments')
+        void onCodeSaved(created, null).catch((error) =>
+          console.warn('Scientify collaboration outbox unavailable:', error),
+        );
       if (mounted.current && activeScope.current === scope) {
         open(path);
         setShowCreate(false);
@@ -230,9 +266,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
   if (mode === 'writing' && ['references', 'citations'].includes(view))
     return <ProjectReferences project={project} store={props.store} />;
 
-  const session = activePath
-    ? getFileSession(backend, project.id, activePath, workspaceRoot)
-    : null;
+  const session = activePath ? getSession(activePath) : null;
   return (
     <Panel
       className="sf-file-workspace"
@@ -260,7 +294,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
                 data-extension={path.split('.').pop()?.toLowerCase()}
               />
               <span>{fileName(path)}</span>
-              {getFileSession(backend, project.id, path, workspaceRoot).getSnapshot().dirty ? (
+              {getSession(path).getSnapshot().dirty ? (
                 <span className="sf-file-dirty" aria-label={t('未保存')}>
                   ●
                 </span>
@@ -272,9 +306,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
               className="sf-file-close"
               aria-label={t('关闭 {name}', { name: fileName(path) })}
               onClick={() =>
-                getFileSession(backend, project.id, path, workspaceRoot).getSnapshot().dirty
-                  ? setCloseTarget(path)
-                  : close(path)
+                getSession(path).getSnapshot().dirty ? setCloseTarget(path) : close(path)
               }
             >
               <X size={12} />
@@ -326,8 +358,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           <span>{t('“{name}” 尚未保存。', { name: fileName(closeTarget) })}</span>
           <Button
             onClick={async () => {
-              if (await getFileSession(backend, project.id, closeTarget, workspaceRoot).save())
-                close(closeTarget);
+              if (await getSession(closeTarget).save()) close(closeTarget);
             }}
           >
             {t('保存并关闭')}

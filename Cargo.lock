@@ -3561,7 +3561,7 @@ dependencies = [
 
 [[package]]
 name = "scientify"
-version = "0.3.0-alpha.2"
+version = "0.3.0-alpha.3"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -3596,7 +3596,7 @@ dependencies = [
 
 [[package]]
 name = "scientify-core"
-version = "0.3.0-alpha.2"
+version = "0.3.0-alpha.3"
 dependencies = [
  "atomicwrites",
  "chrono",

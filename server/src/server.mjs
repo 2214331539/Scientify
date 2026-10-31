@@ -168,13 +168,20 @@ async function proxyOfficialModel(response, config, input, path) {
 }
 
 async function syncProject(db, projectId, userId, input) {
-  await requireMember(db, projectId, userId, true);
+  const role = await requireMember(db, projectId, userId, false);
+  const writable = canWrite(role);
   const operations = Array.isArray(input.operations) ? input.operations.slice(0, 500) : [];
   return withTransaction(db, async (client) => {
     const accepted = [];
     const conflicts = [];
     for (const operation of operations) {
       if (!operation || typeof operation !== 'object') continue;
+      if (!writable) {
+        conflicts.push(
+          operationError(operation.operationId ?? '', '当前成员权限只能读取，不能提交协作变更。'),
+        );
+        continue;
+      }
       const required = ['operationId', 'clientId', 'domain', 'entityId', 'baseRevision', 'kind', 'payload', 'createdAt'];
       if (required.some((key) => operation[key] === undefined)) {
         conflicts.push(operationError(operation.operationId ?? '', '协作变更格式无效。'));
@@ -346,7 +353,15 @@ async function handle(request, response, { config, db }) {
       const input = await body(request, 16_384);
       const name = String(input.name ?? '').trim();
       if (!name || name.length > 160) throw Object.assign(new Error('项目名称无效。'), { status: 400 });
-      const project = { id: uuid(), name, ownerId: user.sub };
+      const timestamp = now().toISOString();
+      const project = {
+        id: uuid(),
+        name,
+        ownerId: user.sub,
+        role: 'owner',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
       await withTransaction(db, async (client) => {
         await client.query('INSERT INTO projects(id, name, owner_id) VALUES ($1, $2, $3)', [project.id, name, user.sub]);
         await client.query(
