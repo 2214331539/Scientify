@@ -7,23 +7,28 @@ use tauri_plugin_dialog::DialogExt;
 mod agent;
 mod ai;
 mod browser;
+mod collaboration;
 mod credentials;
 mod data_location;
+mod translation_window;
+mod tray;
+mod webview_profile;
+mod yita;
 pub use data_location::migrate_offline as migrate_storage_offline;
 mod code;
 mod experiments;
 mod git;
 mod local_process;
+#[cfg(unix)]
+mod unix_process;
 pub use experiments::runner::run as run_managed_experiment;
 #[cfg(test)]
 mod ipc_smoke;
 mod library;
 #[cfg(debug_assertions)]
 mod literature_smoke;
+mod notes;
 mod research;
-#[cfg(unix)]
-mod unix_process;
-mod webview_profile;
 mod windows;
 
 struct AppState {
@@ -81,7 +86,13 @@ async fn workspace_save<R: tauri::Runtime>(
         )?;
         app.state::<experiments::ExperimentState>()
             .protect(storage.load()?.as_ref(), Some(&workspace))?;
-        storage.save(workspace, expected_revision)
+        let saved = storage.save(workspace, expected_revision)?;
+        if ["model", "translation"].iter().any(|key| {
+            current.as_ref().map(|data| &data["settings"][key]) != Some(&saved["settings"][key])
+        }) {
+            yita::refresh(&app);
+        }
+        Ok(saved)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -190,6 +201,7 @@ async fn choose_directory(app: tauri::AppHandle) -> Result<Option<String>, Strin
 }
 
 // Generate native application metadata once, shared by production and IPC tests.
+#[cfg(test)]
 fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
     tauri::generate_context!()
 }
@@ -200,7 +212,7 @@ pub fn run() {
     let isolated_smoke = std::env::var_os("SCIENTIFY_NATIVE_SMOKE").is_some();
     #[cfg(not(debug_assertions))]
     let isolated_smoke = false;
-    let mut context = crate::app_context();
+    let mut context = tauri::generate_context!();
     // Resolve and migrate before WebView2 opens any profile in the old directory.
     context.config_mut().app.windows[0].create = false;
     let builder = if isolated_smoke {
@@ -221,7 +233,22 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(browser::BrowserState::default())
+        .manage(translation_window::WindowState::default())
+        .manage(yita::YitaState::default())
+        .manage(agent::papers::PaperState::default())
         .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                if let Some(chat) = window.app_handle().try_state::<ai::stream::ChatState>() {
+                    chat.close_owner(window.label());
+                }
+                window
+                    .app_handle()
+                    .state::<agent::papers::PaperState>()
+                    .close_owner(window.label());
+            }
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                yita::stop(window.app_handle());
+            }
             if window.label() == "workspace" && matches!(event, tauri::WindowEvent::Destroyed) {
                 browser::close_owner(window.app_handle(), "workspace");
                 if let Some(terminal) = window
@@ -251,6 +278,9 @@ pub fn run() {
                 std::io::Error::other(error)
             })?;
             let profile = location.container.join("ui-profile");
+            if let Err(error) = agent::scratch::Scratch::cleanup_expired(&location.container) {
+                eprintln!("Scientify 过期临时目录清理失败：{error}");
+            }
             app.manage(location);
             let legacy = app
                 .path()
@@ -258,6 +288,7 @@ pub fn run() {
                 .join("scientify-desktop-sample/workspace");
             app.manage(library::LibraryState::new(directory.clone()));
             app.manage(agent::AgentState::default());
+            app.manage(ai::stream::ChatState::default());
             app.manage(experiments::ExperimentState::new(
                 directory.join("experiments"),
             ));
@@ -282,12 +313,13 @@ pub fn run() {
                     literature_smoke::seed_ui(app.handle())?;
                 }
             }
-            webview_profile::window(
-                tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?,
-                profile,
-            )
-            .map_err(std::io::Error::other)?
-            .build()?;
+            tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                .data_directory(profile)
+                .build()?;
+            if !isolated_smoke {
+                tray::install(app.handle())?;
+            }
+            yita::refresh(app.handle());
             #[cfg(debug_assertions)]
             if isolated_smoke && std::env::var_os("SCIENTIFY_NATIVE_UI").is_none() {
                 literature_smoke::start(app.handle().clone());
@@ -301,10 +333,12 @@ pub fn run() {
             library::library_pdf,
             library::library_read_file,
             library::library_note,
+            notes::note_image,
             library::library_external,
-            library::library_import,
             library::library_import_bytes,
             browser::browser_command,
+            translation_window::translation_window,
+            yita::translation_service,
             windows::open_project_window,
             windows::workspace_window_ready,
             workspace_load,
@@ -341,13 +375,22 @@ pub fn run() {
             ai::research_ask_ai,
             ai::research_list_models,
             ai::research_test_model,
-            research::research_fetch_arxiv,
+            ai::verification::research_verify_model,
+            ai::stream::research_chat_stream,
+            ai::stream::research_chat_cancel,
             agent::agent_status,
             agent::agent_handshake,
             agent::agent_domains,
+            agent::materials::agent_context,
+            agent::skills::agent_skills,
+            agent::papers::agent_paper_ready,
+            agent::papers::agent_paper_stop,
+            agent::papers::agent_paper_source,
+            agent::papers::agent_paper_complete,
             agent::agent_start_thread,
             agent::agent_windows_sandbox_setup,
             agent::agent_start_turn,
+            agent::agent_steer,
             agent::agent_interrupt,
             agent::agent_events,
             agent::agent_respond,
@@ -355,22 +398,32 @@ pub fn run() {
             credentials::secret_save,
             credentials::secret_load,
             credentials::secret_clear,
+            collaboration::collaboration_status,
+            collaboration::collaboration_configure,
+            collaboration::collaboration_enqueue,
+            collaboration::collaboration_outbox,
+            collaboration::collaboration_acknowledge,
+            collaboration::collaboration_retry_conflict,
+            collaboration::collaboration_mark_conflict,
+            collaboration::collaboration_health,
+            collaboration::collaboration_send_code,
+            collaboration::collaboration_login,
+            collaboration::collaboration_logout,
+            collaboration::collaboration_access_token,
+            collaboration::collaboration_projects,
+            collaboration::collaboration_create_project,
+            collaboration::collaboration_project_members,
+            collaboration::collaboration_invite_member,
+            collaboration::collaboration_bind_project,
+            collaboration::collaboration_bootstrap_literature,
+            collaboration::collaboration_sync,
+            collaboration::collaboration_inbox,
+            collaboration::collaboration_discard_inbox,
+            collaboration::collaboration_apply_inbox,
+            collaboration::collaboration_upload_file,
+            collaboration::collaboration_download_blob,
+            collaboration::collaboration_delete_blob,
         ])
-        .build(context)
-        .expect("Scientify failed to start")
-        .run(move |app, event| {
-            // The native Quit menu must use the same save/task guard as closing
-            // the workspace. Once back at Projects, Quit exits the application.
-            #[cfg(target_os = "macos")]
-            if let (false, tauri::RunEvent::ExitRequested { api, .. }) = (isolated_smoke, event) {
-                if let Some(workspace) = app.get_webview_window("workspace") {
-                    api.prevent_exit();
-                    let _ = workspace.show();
-                    let _ = workspace.set_focus();
-                    let _ = workspace.close();
-                }
-            }
-            #[cfg(not(target_os = "macos"))]
-            let _ = (app, event);
-        });
+        .run(context)
+        .expect("Scientify failed to start");
 }

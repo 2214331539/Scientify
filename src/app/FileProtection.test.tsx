@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useSyncExternalStore } from 'react';
 import { emptyWorkspace, type Project } from '../domain/workspace';
@@ -17,6 +17,7 @@ import type { AgentBackend, AgentEvent } from '../platform/agent';
 const nativeWindow = vi.hoisted(() => ({
   close: undefined as undefined | ((event: { preventDefault(): void }) => Promise<void>),
   destroy: vi.fn(),
+  root: 'F:/old',
 }));
 vi.mock('@tauri-apps/api/core', () => ({
   isTauri: () => true,
@@ -26,7 +27,7 @@ vi.mock('@tauri-apps/api/core', () => ({
     if (command === 'code_git_diff') return '@@ -1 +1 @@\n-old\n+new\n';
     if (command === 'code_git_inspect')
       return {
-        root: 'F:/old',
+        root: nativeWindow.root,
         repository: true,
         branch: 'main',
         head: '123456',
@@ -72,12 +73,6 @@ beforeAll(() => {
   window.matchMedia = vi
     .fn()
     .mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() });
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
 });
 afterEach(() => {
   cleanup();
@@ -98,10 +93,12 @@ function setup() {
   };
   data.projects.push(project);
   let root = project.path;
+  nativeWindow.root = root ?? '';
   const workspace: WorkspaceBackend = {
     load: async () => ({ workspace: data, directory: 'data', legacyAvailable: false }),
     save: vi.fn(async (value) => {
       root = value.projects[0]?.path;
+      nativeWindow.root = root ?? '';
       return value;
     }),
     restore: vi.fn(async () => data),
@@ -126,7 +123,6 @@ function setup() {
     listModels: async () => [],
     testModel: async () => {},
     askAI: async () => '',
-    fetchArxiv: async () => '',
   };
   localStorage.setItem(
     'scientify.ui.v1',
@@ -134,7 +130,12 @@ function setup() {
       version: 1,
       projectId: 'p1',
       locations: {
-        p1: { workspace: 'writing', view: 'files', paths: { writing: 'paper.md' }, paperId: null },
+        p1: {
+          workspace: 'experiments',
+          view: 'files',
+          paths: { experiments: 'paper.md' },
+          paperId: null,
+        },
       },
     }),
   );
@@ -145,26 +146,30 @@ it('remembers the code view after opening a changed file and leaving the workspa
   const { store, backend } = setup();
   backend.gitStatus = vi.fn(async () => [{ path: 'paper.md', status: 'M' }]);
   const user = userEvent.setup();
-  render(<App store={store} backend={backend} />);
-  await screen.findByRole('textbox', { name: '编辑 paper.md' });
-  await user.click(screen.getByRole('button', { name: t('Experiments') }));
-  await user.click(screen.getByRole('button', { name: 'Git' }));
-  await user.click(await screen.findByRole('button', { name: '查看更改 paper.md' }));
-  await user.click(screen.getByRole('button', { name: t('打开文件') }));
+  await act(async () => {
+    render(<App store={store} backend={backend} />);
+  });
+  await screen.findByLabelText('编辑 paper.md');
+  await user.click(screen.getByLabelText(t('Experiments')));
+  await user.click(screen.getByLabelText('Git'));
+  await user.click(await screen.findByLabelText('查看更改 paper.md'));
+  await user.click(screen.getByLabelText(t('打开文件')));
+  expect(screen.getByLabelText(t('Code')).getAttribute('aria-current')).toBe('page');
+  await user.click(screen.getByLabelText(t('Overview')));
+  await user.click(screen.getByLabelText(t('Experiments')));
+  expect(screen.getByLabelText(t('Code')).getAttribute('aria-current')).toBe('page');
   expect(
-    (await screen.findByRole('button', { name: t('Code') })).getAttribute('aria-current'),
-  ).toBe('page');
-  await user.click(screen.getByRole('button', { name: t('Overview') }));
-  await user.click(screen.getByRole('button', { name: t('Experiments') }));
-  expect(screen.getByRole('button', { name: t('Code') }).getAttribute('aria-current')).toBe('page');
-  expect(await screen.findByRole('textbox', { name: '编辑 paper.md' })).toBeTruthy();
+    await within(screen.getByRole('main')).findByRole('textbox', { name: '编辑 paper.md' }),
+  ).toBeTruthy();
 });
 
 it('blocks native close and workspace replacement while a clean-looking file save is pending', async () => {
   const { store, backend, workspace } = setup();
-  render(<App store={store} backend={backend} />);
-  await screen.findByRole('textbox', { name: '编辑 paper.md' });
-  const session = getFileSession(backend, 'p1', 'paper.md');
+  await act(async () => {
+    render(<App store={store} backend={backend} />);
+  });
+  await screen.findByLabelText('编辑 paper.md');
+  const session = getFileSession(backend, 'p1', 'paper.md', 'F:/old');
   let complete!: (file: FileContent) => void;
   backend.writeFile = vi.fn(
     () =>
@@ -197,8 +202,10 @@ it('blocks native close and workspace replacement while a clean-looking file sav
 
 it('allows native close after an interrupted AI result is saved', async () => {
   const { store, backend } = setup();
-  render(<App store={store} backend={backend} />);
-  await screen.findByRole('textbox', { name: '编辑 paper.md' });
+  await act(async () => {
+    render(<App store={store} backend={backend} />);
+  });
+  await screen.findByLabelText('编辑 paper.md');
   const events: AgentEvent[] = [];
   const agent = {
     startThread: async () => ({ threadId: 'thread', cwd: 'F:/old' }),
@@ -246,41 +253,53 @@ it('allows native close after an interrupted AI result is saved', async () => {
 it('blocks directory changes with drafts and reloads the tree and editor after a clean rebind', async () => {
   const { store, backend } = setup();
   const user = userEvent.setup();
-  render(<App store={store} backend={backend} />);
-  await screen.findByRole('textbox', { name: '编辑 paper.md' });
-  const original = getFileSession(backend, 'p1', 'paper.md');
+  await act(async () => {
+    render(<App store={store} backend={backend} />);
+  });
+  await screen.findByLabelText('编辑 paper.md');
+  const original = getFileSession(backend, 'p1', 'paper.md', 'F:/old');
   await act(async () => {
     original.edit('dirty buffer');
   });
-  await user.click(screen.getByRole('button', { name: '切换项目' }));
-  await user.click(screen.getByRole('button', { name: '项目设置' }));
-  expect((screen.getByRole('button', { name: '选择目录' }) as HTMLButtonElement).disabled).toBe(
+  await user.click(screen.getByLabelText('切换项目'));
+  await user.click(
+    within(screen.getByLabelText('项目切换')).getByRole('button', { name: '项目设置' }),
+  );
+  let settings = within(screen.getByRole('dialog'));
+  expect((settings.getByRole('button', { name: '选择目录' }) as HTMLButtonElement).disabled).toBe(
     true,
   );
-  await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
+  await user.click(screen.getByLabelText('关闭弹窗'));
   await act(async () => {
     original.edit('# Old root');
   });
   const previousListings = vi.mocked(backend.listFiles).mock.calls.length;
-  await user.click(screen.getByRole('button', { name: '切换项目' }));
-  await user.click(screen.getByRole('button', { name: '项目设置' }));
-  await user.click(screen.getByRole('button', { name: '选择目录' }));
-  await user.click(screen.getByRole('button', { name: '保存项目' }));
+  await user.click(screen.getByLabelText('切换项目'));
+  await user.click(
+    within(screen.getByLabelText('项目切换')).getByRole('button', { name: '项目设置' }),
+  );
+  settings = within(screen.getByRole('dialog'));
+  await user.click(settings.getByRole('button', { name: '选择目录' }));
+  await user.click(settings.getByRole('button', { name: '保存项目' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  await waitFor(() => expect(codeContext.getState().roots.p1).toBe('F:/new'));
+  await user.click(await screen.findByRole('treeitem', { name: 'paper.md' }));
   await waitFor(() =>
     expect(
       (screen.getByRole('textbox', { name: '编辑 paper.md' }) as HTMLTextAreaElement).value,
     ).toBe('# New root'),
   );
-  expect(getFileSession(backend, 'p1', 'paper.md')).not.toBe(original);
+  expect(getFileSession(backend, 'p1', 'paper.md', 'F:/new')).not.toBe(original);
   expect(vi.mocked(backend.listFiles).mock.calls.length).toBeGreaterThan(previousListings);
 });
 
 it('opens the exact experiment source, remembers selection, and opens a recent note directly', async () => {
   const { store, backend } = setup();
   const user = userEvent.setup();
-  render(<App store={store} backend={backend} />);
-  await screen.findByRole('textbox', { name: '编辑 paper.md' });
+  await act(async () => {
+    render(<App store={store} backend={backend} />);
+  });
+  await screen.findByLabelText('编辑 paper.md');
   await act(async () => {
     await store.getState().update((draft) => {
       draft.runs.push(
@@ -336,15 +355,15 @@ it('opens the exact experiment source, remembers selection, and opens a recent n
   expect(JSON.parse(localStorage.getItem('scientify.ui.v2')!).locations.p1.runId).toBe('r-old');
   await user.click(screen.getByRole('button', { name: /Latest result/ }));
   expect(JSON.parse(localStorage.getItem('scientify.ui.v2')!).locations.p1.runId).toBe('r-new');
-  await user.click(screen.getByRole('button', { name: t('Overview') }));
-  await user.click(screen.getAllByRole('button', { name: /Insight note/ })[0]);
+  await user.click(screen.getByLabelText(t('Notes'), { selector: 'button' }));
+  await user.click(screen.getByRole('button', { name: /Insight note/ }));
   expect(((await screen.findByLabelText('笔记标题')) as HTMLInputElement).value).toBe(
     'Insight note',
   );
   expect((screen.getByLabelText('笔记正文') as HTMLTextAreaElement).value).toBe(
     'Keep the useful conclusion.',
   );
-  await user.click(screen.getByRole('button', { name: t('Experiments') }));
-  await user.click(screen.getByRole('button', { name: t('Runs') }));
+  await user.click(screen.getByLabelText(t('Experiments')));
+  await user.click(screen.getByLabelText(t('Runs')));
   expect(await screen.findByRole('heading', { name: 'Latest result' })).toBeTruthy();
 });

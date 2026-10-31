@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scientify · 动效样例尺寸检查</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f2f4f5;
+        color: #28373b;
+        font:
+          13px/1.5 'Segoe UI',
+          'Microsoft YaHei',
+          sans-serif;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 18px;
+      }
+      .samples {
+        display: flex;
+        align-items: flex-start;
+        gap: 24px;
+        overflow: auto;
+      }
+      figure {
+        flex: 0 0 auto;
+        margin: 0;
+      }
+      figcaption {
+        margin-bottom: 10px;
+      }
+      iframe {
+        display: block;
+        border: 1px solid #dce2e4;
+        border-radius: 8px;
+        background: #fff;
+      }
+      .mobile {
+        width: 390px;
+        height: 844px;
+      }
+      .tablet {
+        width: 768px;
+        height: 900px;
+      }
+      .desktop {
+        width: 1280px;
+        height: 800px;
+      }
+      a {
+        color: #277c68;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Scientify · 尺寸检查</h1>
+    <div class="samples">
+      <figure>
+        <figcaption>窄屏 · 390 × 844</figcaption>
+        <iframe class="mobile" title="窄屏动效体验" src="d-continuous.html"></iframe>
+      </figure>
+      <figure>
+        <figcaption>中等宽度 · 768 × 900</figcaption>
+        <iframe class="tablet" title="中等宽度动效体验" src="d-continuous.html"></iframe>
+      </figure>
+      <figure>
+        <figcaption>桌面 · 1280 × 800</figcaption>
+        <iframe class="desktop" title="桌面动效体验" src="d-continuous.html"></iframe>
+      </figure>
+    </div>
+    <p><a href="index.html">返回完整比较页</a></p>
+  </body>
+</html>

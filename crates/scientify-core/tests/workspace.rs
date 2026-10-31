@@ -15,6 +15,32 @@ fn fixture() -> Value {
 }
 
 #[test]
+fn model_profiles_and_detached_chat_snapshots_are_validated_without_secrets() {
+    let mut data = fixture();
+    let settings =
+        json!({"endpoint":"https://example.com/v1","provider":"openai","model":"test-model"});
+    let mut profile = settings.clone();
+    profile["id"] = json!("profile-a");
+    profile["name"] = json!("Service A");
+    data["settings"]["modelProfiles"] = json!([profile.clone()]);
+    data["settings"]["defaultModelProfileId"] = json!("profile-a");
+    data["sessions"] = json!([{"id":"chat-a","project":"p1","title":"Chat A","updatedAt":"now","messages":[],"context":[],"modelSelection":{"profileId":"removed-profile","settings":settings}}]);
+    let valid = validate(data.clone()).unwrap();
+    assert_eq!(
+        valid["sessions"][0]["modelSelection"]["profileId"],
+        "removed-profile"
+    );
+    data["sessions"][0]["modelSelection"]["settings"]["apiKey"] = json!("do-not-persist");
+    assert!(validate(data.clone()).is_err());
+    data["sessions"][0]["modelSelection"]["settings"]
+        .as_object_mut()
+        .unwrap()
+        .remove("apiKey");
+    data["settings"]["modelProfiles"] = json!([profile.clone(), profile]);
+    assert!(validate(data).is_err());
+}
+
+#[test]
 fn personal_inbox_only_accepts_notes_and_conversations() {
     let mut data = fixture();
     data["records"][0]["project"] = json!("__inbox__");
@@ -342,4 +368,30 @@ fn migration_rejects_directory_junctions_without_following_them() {
         fs::read_to_string(outside.join("private.txt")).unwrap(),
         "must not copy"
     );
+}
+
+#[test]
+fn web_sources_survive_storage_and_reject_invalid_imports() {
+    let directory = tempdir().unwrap();
+    let mut data = fixture();
+    data["webSources"] = json!({"groups":[{"id":"group-a","name":"Papers","order":0}],"items":[{"id":"source-a","title":"arXiv","url":"https://arxiv.org/","groupId":"group-a","order":0,"createdAt":"now","updatedAt":"now"}]});
+    let valid = validate(data.clone()).unwrap();
+    let path = directory.path().join("sources.json");
+    fs::write(&path, serde_json::to_vec(&valid).unwrap()).unwrap();
+    assert_eq!(
+        validate(serde_json::from_slice(&fs::read(path).unwrap()).unwrap()).unwrap()["webSources"],
+        data["webSources"]
+    );
+    for bad in [
+        json!("javascript:alert(1)"),
+        json!("https://user:password@example.org/"),
+        json!("https://"),
+    ] {
+        let mut broken = data.clone();
+        broken["webSources"]["items"][0]["url"] = bad;
+        assert!(validate(broken).is_err());
+    }
+    data["webSources"]["items"][0]["groupId"] = json!("missing");
+    assert!(validate(data).is_err());
+    assert!(validate(fixture()).is_ok());
 }

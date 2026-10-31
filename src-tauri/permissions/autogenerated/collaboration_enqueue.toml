@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-enqueue"
+description = "Enables the collaboration_enqueue command without any pre-configured scope."
+commands.allow = ["collaboration_enqueue"]
+
+[[permission]]
+identifier = "deny-collaboration-enqueue"
+description = "Denies the collaboration_enqueue command without any pre-configured scope."
+commands.deny = ["collaboration_enqueue"]

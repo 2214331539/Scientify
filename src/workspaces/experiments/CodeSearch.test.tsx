@@ -18,7 +18,6 @@ function backend(): ResearchBackend {
     askAI: vi.fn(),
     listModels: vi.fn(),
     testModel: vi.fn(),
-    fetchArxiv: vi.fn(),
   };
 }
 function submit(text: string) {

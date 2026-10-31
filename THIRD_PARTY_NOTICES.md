@@ -30,6 +30,16 @@ Exact versions and transitive dependencies are recorded in [pnpm-lock.yaml](pnpm
 
 ## References, contributions, and research material
 
+Scientify bundles Yita's actual Avalonia frontend, portable translation runtime,
+and Windows/macOS selection components from revision `487a6ead65703ab47abb850eb9f21583b4598344`
+of https://github.com/2214331539/Yita. The pinned source and integration changes
+are documented in [vendor/yita/README.scientify.md](vendor/yita/README.scientify.md).
+Yita retains its MIT license and InstantTranslate attribution. Native runtime,
+NuGet dependency and font notices are packaged under `yita/Licenses/` by
+[scripts/prepare-translation.mjs](scripts/prepare-translation.mjs).
+Scientify adds private host pipes, shared model access, scoped storage and AI
+assistant handoff; it does not relicense third-party source as Apache-2.0.
+
 Oleafly, VS Code, and other projects appear in design research or documentation as references. Mentioning or studying a project does not grant permission to copy its code under Scientify's license. Any contributed third-party code must identify its source, version, license, and modifications and satisfy its original obligations.
 
 Do not add copyrighted papers, private datasets, credentials, or user research directories to the repository. Examples must be original, public-domain, or explicitly licensed for redistribution, with attribution where required. Provider APIs and any separately downloaded model weights have their own terms.

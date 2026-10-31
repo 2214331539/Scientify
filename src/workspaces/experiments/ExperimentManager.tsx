@@ -16,11 +16,14 @@ import type { Experiment, Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { Button, Dropdown, Input, Textarea } from '../../components/primitives';
 import { Modal } from '../../components/Modal';
+import { ViewTransition } from '../../components/workspace/ViewTransition';
 import { confirmAction, requestText } from '../../components/prompts';
 import { t, locale, translateError } from '../../i18n';
+import { statusLabel } from './status';
 import { experimentsFor, experimentCatalog, registerExperiment } from './catalog';
-import { describeError, type Execution } from './runtime';
+import { type Execution } from './runtime';
 import { developmentStore } from './development';
+import { errorMessage } from '../../domain/errors';
 
 export function ExperimentManager({
   project,
@@ -101,7 +104,7 @@ export function ExperimentManager({
       });
       if (!ok) throw new Error(store.getState().error ?? t('保存失败'));
     } catch (reason) {
-      setError(describeError(reason));
+      setError(errorMessage(reason));
     } finally {
       setBusy(false);
     }
@@ -219,138 +222,140 @@ export function ExperimentManager({
         </Button>
       </header>
       {error && <p role="alert">{translateError(error)}</p>}
-      {layout === 'grid' ? (
-        <div className="sf-experiment-card-grid">
-          {visible.map((experiment) => {
-            const runs = runsOf(experiment);
-            const running = runs.filter((r) => r.status === 'running').length;
-            const terminals = development.terminals.filter(
-              (item) => item.experimentId === experiment.id && item.status === 'running',
-            ).length;
-            const environmentTasks = development.tasks.filter(
-              (item) => item.experimentId === experiment.id && item.status === 'running',
-            ).length;
-            const activeCount = running + terminals + environmentTasks;
-            return (
-              <article
-                key={experiment.id}
-                className={'sf-experiment-card' + (experiment.archived ? ' is-archived' : '')}
-              >
-                <header>
-                  <FlaskConical size={22} />
-                  <Button
-                    variant="ghost"
-                    disabled={experiment.archived}
-                    onClick={() => onOpen(experiment)}
-                  >
-                    <span title={experiment.name}>{experiment.name}</span>
-                  </Button>
-                </header>
-                <p className="sf-experiment-card-purpose">{experiment.purpose || t('默认实验')}</p>
-                <div className="sf-experiment-card-meta">
-                  <span>
-                    {experiment.python
-                      ? `Python ${experiment.python.version} · ${experiment.python.manager}`
-                      : t('未配置 Python')}
-                  </span>
-                  <span>
-                    {experiment.archived
-                      ? t('已归档')
-                      : activeCount
-                        ? t('{count} 个活动任务', { count: activeCount })
-                        : t('暂无活动任务')}
-                  </span>
-                </div>
-                <details>
-                  <summary className="sf-disclosure">
-                    <ChevronRight size={14} aria-hidden="true" />
-                    {t('实验详情')}
-                  </summary>
-                  <dl>
-                    <dt>{t('代码目录')}</dt>
-                    <dd>{experiment.root || project.path || project.repo || t('应用托管目录')}</dd>
-                    <dt>{t('当前解释器')}</dt>
-                    <dd>{experiment.python?.executable || t('未配置')}</dd>
-                    <dt>{t('最近运行')}</dt>
-                    <dd>{runs[0]?.name || '—'}</dd>
-                    <dt>{t('更新时间')}</dt>
-                    <dd>
-                      {experiment.updatedAt
-                        ? new Date(experiment.updatedAt).toLocaleDateString(locale())
-                        : '—'}
-                    </dd>
-                  </dl>
-                </details>
-                <footer>{actions(experiment)}</footer>
-              </article>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="sf-experiment-table-scroll">
-          <table className="sf-experiment-table">
-            <thead>
-              <tr>
-                {['实验', '代码目录', 'Python', '最近运行', '更新时间', '操作'].map((label) => (
-                  <th key={label} scope="col">
-                    {t(label)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((experiment) => {
-                const runs = executions
-                  .filter(
-                    (run) =>
-                      run.experimentId === experiment.id ||
-                      (!run.experimentId &&
-                        (experiment.root
-                          ? run.workspaceRoot === experiment.root
-                          : run.project === project.id)),
-                  )
-                  .sort((a, b) => b.startedAt - a.startedAt);
-                const latest = runs.find((run) => run.status === 'running') ?? runs[0];
-                return (
-                  <tr key={experiment.id} className={experiment.archived ? 'is-archived' : ''}>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        disabled={experiment.archived}
-                        onClick={() => onOpen(experiment)}
-                      >
-                        <span title={experiment.name}>{experiment.name}</span>
-                      </Button>
-                      {experiment.purpose && <small>{experiment.purpose}</small>}
-                    </td>
-                    <td title={experiment.root || project.path || project.repo}>
-                      <span>
-                        {experiment.root || project.path || project.repo || t('应用托管目录')}
-                      </span>
-                    </td>
-                    <td>
+      <ViewTransition viewKey={layout} className="sf-view-stack--flow">
+        {layout === 'grid' ? (
+          <div className="sf-experiment-card-grid">
+            {visible.map((experiment) => {
+              const runs = runsOf(experiment);
+              const running = runs.filter((r) => r.status === 'running').length;
+              const terminals = development.terminals.filter(
+                (item) => item.experimentId === experiment.id && item.status === 'running',
+              ).length;
+              const environmentTasks = development.tasks.filter(
+                (item) => item.experimentId === experiment.id && item.status === 'running',
+              ).length;
+              const activeCount = running + terminals + environmentTasks;
+              return (
+                <article
+                  key={experiment.id}
+                  className={'sf-experiment-card' + (experiment.archived ? ' is-archived' : '')}
+                >
+                  <header>
+                    <FlaskConical size={22} />
+                    <Button
+                      variant="ghost"
+                      disabled={experiment.archived}
+                      onClick={() => onOpen(experiment)}
+                    >
+                      <span title={experiment.name}>{experiment.name}</span>
+                    </Button>
+                  </header>
+                  <p className="sf-experiment-card-purpose">
+                    {experiment.purpose || t('默认实验')}
+                  </p>
+                  <div className="sf-experiment-card-meta">
+                    <span>
                       {experiment.python
-                        ? `${experiment.python.version} · ${experiment.python.manager}`
-                        : t('未配置')}
-                    </td>
-                    <td>
-                      {latest
-                        ? `${latest.name} · ${t(latest.status === 'running' ? '运行中' : latest.status === 'completed' ? '已完成' : latest.status === 'failed' ? '失败' : '已结束')}`
-                        : '—'}
-                    </td>
-                    <td>
-                      {experiment.updatedAt
-                        ? new Date(experiment.updatedAt).toLocaleDateString(locale())
-                        : '—'}
-                    </td>
-                    <td>{actions(experiment)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                        ? `Python ${experiment.python.version} · ${experiment.python.manager}`
+                        : t('未配置 Python')}
+                    </span>
+                    <span>
+                      {experiment.archived
+                        ? t('已归档')
+                        : activeCount
+                          ? t('{count} 个活动任务', { count: activeCount })
+                          : t('暂无活动任务')}
+                    </span>
+                  </div>
+                  <details>
+                    <summary className="sf-disclosure">
+                      <ChevronRight size={14} aria-hidden="true" />
+                      {t('实验详情')}
+                    </summary>
+                    <dl>
+                      <dt>{t('代码目录')}</dt>
+                      <dd>
+                        {experiment.root || project.path || project.repo || t('应用托管目录')}
+                      </dd>
+                      <dt>{t('当前解释器')}</dt>
+                      <dd>{experiment.python?.executable || t('未配置')}</dd>
+                      <dt>{t('最近运行')}</dt>
+                      <dd>{runs[0]?.name || '—'}</dd>
+                      <dt>{t('更新时间')}</dt>
+                      <dd>
+                        {experiment.updatedAt
+                          ? new Date(experiment.updatedAt).toLocaleDateString(locale())
+                          : '—'}
+                      </dd>
+                    </dl>
+                  </details>
+                  <footer>{actions(experiment)}</footer>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="sf-experiment-table-scroll">
+            <table className="sf-experiment-table">
+              <thead>
+                <tr>
+                  {['实验', '代码目录', 'Python', '最近运行', '更新时间', '操作'].map((label) => (
+                    <th key={label} scope="col">
+                      {t(label)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((experiment) => {
+                  const runs = executions
+                    .filter(
+                      (run) =>
+                        run.experimentId === experiment.id ||
+                        (!run.experimentId &&
+                          (experiment.root
+                            ? run.workspaceRoot === experiment.root
+                            : run.project === project.id)),
+                    )
+                    .sort((a, b) => b.startedAt - a.startedAt);
+                  const latest = runs.find((run) => run.status === 'running') ?? runs[0];
+                  return (
+                    <tr key={experiment.id} className={experiment.archived ? 'is-archived' : ''}>
+                      <td>
+                        <Button
+                          variant="ghost"
+                          disabled={experiment.archived}
+                          onClick={() => onOpen(experiment)}
+                        >
+                          <span title={experiment.name}>{experiment.name}</span>
+                        </Button>
+                        {experiment.purpose && <small>{experiment.purpose}</small>}
+                      </td>
+                      <td title={experiment.root || project.path || project.repo}>
+                        <span>
+                          {experiment.root || project.path || project.repo || t('应用托管目录')}
+                        </span>
+                      </td>
+                      <td>
+                        {experiment.python
+                          ? `${experiment.python.version} · ${experiment.python.manager}`
+                          : t('未配置')}
+                      </td>
+                      <td>{latest ? `${latest.name} · ${statusLabel(latest.status)}` : '—'}</td>
+                      <td>
+                        {experiment.updatedAt
+                          ? new Date(experiment.updatedAt).toLocaleDateString(locale())
+                          : '—'}
+                      </td>
+                      <td>{actions(experiment)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </ViewTransition>
       {!visible.length && <p className="sf-git-empty">{t('暂无实验')}</p>}
       {creating && (
         <ExperimentForm
@@ -394,7 +399,7 @@ function ExperimentForm({
         await registerExperiment(store, project.id, name, purpose, source, directory || undefined),
       );
     } catch (reason) {
-      setError(describeError(reason));
+      setError(errorMessage(reason));
     } finally {
       setSaving(false);
     }
@@ -459,7 +464,7 @@ function ExperimentForm({
                         setDirty(true);
                       }
                     } catch (reason) {
-                      setError(describeError(reason));
+                      setError(errorMessage(reason));
                     }
                   }}
                 >

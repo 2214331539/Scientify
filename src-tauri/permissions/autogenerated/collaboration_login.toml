@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-login"
+description = "Enables the collaboration_login command without any pre-configured scope."
+commands.allow = ["collaboration_login"]
+
+[[permission]]
+identifier = "deny-collaboration-login"
+description = "Denies the collaboration_login command without any pre-configured scope."
+commands.deny = ["collaboration_login"]

@@ -2,6 +2,7 @@ import { t, translateError } from '../../i18n';
 import { Button, Input } from '../../components/primitives';
 import { Panel } from '../../components/layout/Panel';
 import { TreeView, type TreeItem } from '../../components/workspace/TreeView';
+import { useActiveView } from '../../components/workspace/ViewTransition';
 import {
   lazy,
   Suspense,
@@ -31,7 +32,8 @@ import {
 import { undoDepth, redoDepth } from '@codemirror/commands';
 import type { Project } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
-import type { ResearchBackend, ResearchFile } from '../../platform/research';
+import type { FileContent, ResearchBackend, ResearchFile } from '../../platform/research';
+import { collaboration, collaborationEntityId } from '../../platform/collaboration';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
   beginFileOperation,
@@ -41,12 +43,13 @@ import {
   notifyFileRuntime,
   type FileSession,
 } from '../../editor/sessions';
+import MarkdownPreview from './MarkdownPreview';
+import { errorMessage } from '../../domain/errors';
 import './files.css';
 
 const CodeEditor = lazy(() =>
   import('../../editor/CodeEditor').then((module) => ({ default: module.CodeEditor })),
 );
-const MarkdownPreview = lazy(() => import('./MarkdownPreview'));
 
 type Mode = 'experiments' | 'writing' | 'files';
 type FileWorkspaceProps = {
@@ -64,7 +67,6 @@ type FileWorkspaceProps = {
   onCreateHandled?: () => void;
 };
 const fileName = (path: string) => path.split('/').pop() || path;
-const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const resourceEvent = 'scientify-project-files-changed';
 
 function useRuntime(backend: ResearchBackend) {
@@ -84,8 +86,10 @@ function useRuntime(backend: ResearchBackend) {
 }
 
 export function FileWorkspace(props: FileWorkspaceProps) {
+  const viewActive = useActiveView();
   const { project, backend, mode, view, onContext, onDirtyChange, onActivePathChange } = props;
   const runtime = useRuntime(backend);
+  const shortcuts = useStore(props.store, (state) => state.data?.settings.shortcuts);
   const workspaceRoot = props.workspaceRoot;
   const scope = JSON.stringify([project.id, mode, workspaceRoot ?? '']);
   const activeScope = useRef(scope);
@@ -111,6 +115,37 @@ export function FileWorkspace(props: FileWorkspaceProps) {
   const onDirtyChangeRef = useRef(onDirtyChange);
   onDirtyChangeRef.current = onDirtyChange;
   const dirty = hasUnsavedFileChanges(backend);
+  const onCodeSaved = useCallback(
+    async (file: FileContent, previousVersion: string | null) => {
+      if (mode !== 'experiments') return;
+      await collaboration.enqueueIfEnabled({
+        operationId: crypto.randomUUID(),
+        domain: 'code',
+        entityId: collaborationEntityId(`${workspaceRoot ?? 'base'}:${file.path}`),
+        baseRevision: 0,
+        kind: 'code-upsert',
+        payload: {
+          path: file.path,
+          workspaceRoot: workspaceRoot ?? null,
+          content: file.content,
+          baseVersion: previousVersion,
+        },
+        createdAt: new Date().toISOString(),
+      });
+    },
+    [mode, workspaceRoot],
+  );
+  const getSession = useCallback(
+    (path: string) =>
+      getFileSession(
+        backend,
+        project.id,
+        path,
+        workspaceRoot,
+        mode === 'experiments' ? onCodeSaved : undefined,
+      ),
+    [backend, mode, onCodeSaved, project.id, workspaceRoot],
+  );
 
   const open = useCallback(
     (path: string) => {
@@ -153,6 +188,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
     props.onCreateHandled?.();
   }, [props.createRequest, props.onCreateHandled]);
   useEffect(() => {
+    if (!viewActive) return;
     if (view === 'versions' || ['references', 'citations'].includes(view) || !activePath)
       onContextRef.current({
         projectId: project.id,
@@ -168,7 +204,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
                   ? t('Files')
                   : t('Code'),
       });
-  }, [activePath, project.id, mode, view]);
+  }, [activePath, project.id, mode, view, viewActive]);
 
   function close(path: string) {
     const next = (runtime.tabs.get(scope) ?? []).filter((item) => item !== path);
@@ -192,13 +228,17 @@ export function FileWorkspace(props: FileWorkspaceProps) {
     setCreateError('');
     const finishOperation = beginFileOperation(backend);
     try {
-      await backend.writeFile(
+      const created = await backend.writeFile(
         project.id,
         path,
         createContent,
         null,
         ...(workspaceRoot ? [workspaceRoot] : []),
       );
+      if (mode === 'experiments')
+        void onCodeSaved(created, null).catch((error) =>
+          console.warn('Scientify collaboration outbox unavailable:', error),
+        );
       if (mounted.current && activeScope.current === scope) {
         open(path);
         setShowCreate(false);
@@ -206,7 +246,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
       }
       window.dispatchEvent(new CustomEvent(resourceEvent, { detail: project.id }));
     } catch (error) {
-      if (mounted.current && activeScope.current === scope) setCreateError(errorText(error));
+      if (mounted.current && activeScope.current === scope) setCreateError(errorMessage(error));
     } finally {
       finishOperation();
       if (mounted.current && activeScope.current === scope) setCreating(false);
@@ -226,9 +266,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
   if (mode === 'writing' && ['references', 'citations'].includes(view))
     return <ProjectReferences project={project} store={props.store} />;
 
-  const session = activePath
-    ? getFileSession(backend, project.id, activePath, workspaceRoot)
-    : null;
+  const session = activePath ? getSession(activePath) : null;
   return (
     <Panel
       className="sf-file-workspace"
@@ -256,7 +294,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
                 data-extension={path.split('.').pop()?.toLowerCase()}
               />
               <span>{fileName(path)}</span>
-              {getFileSession(backend, project.id, path, workspaceRoot).getSnapshot().dirty ? (
+              {getSession(path).getSnapshot().dirty ? (
                 <span className="sf-file-dirty" aria-label={t('未保存')}>
                   ●
                 </span>
@@ -268,9 +306,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
               className="sf-file-close"
               aria-label={t('关闭 {name}', { name: fileName(path) })}
               onClick={() =>
-                getFileSession(backend, project.id, path, workspaceRoot).getSnapshot().dirty
-                  ? setCloseTarget(path)
-                  : close(path)
+                getSession(path).getSnapshot().dirty ? setCloseTarget(path) : close(path)
               }
             >
               <X size={12} />
@@ -322,8 +358,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           <span>{t('“{name}” 尚未保存。', { name: fileName(closeTarget) })}</span>
           <Button
             onClick={async () => {
-              if (await getFileSession(backend, project.id, closeTarget, workspaceRoot).save())
-                close(closeTarget);
+              if (await getSession(closeTarget).save()) close(closeTarget);
             }}
           >
             {t('保存并关闭')}
@@ -344,6 +379,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           session={session}
           project={project}
           mode={mode}
+          shortcuts={shortcuts}
           onContext={onContext}
           onCreate={(content) => {
             setCreateContent(content ?? '');
@@ -365,7 +401,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
             <FilePlus2 size={15} />
             {t('新建文件')}
           </Button>
-          <span>{project.path}</span>
+          <span>{workspaceRoot || project.path}</span>
         </div>
       )}
     </Panel>
@@ -376,15 +412,18 @@ function FileDocument({
   session,
   project,
   mode,
+  shortcuts,
   onContext,
   onCreate,
 }: {
   session: FileSession;
   project: Project;
   mode: Mode;
+  shortcuts?: import('../../platform/shortcuts').ShortcutSettings;
   onContext: (value: WorkContext) => void;
   onCreate: (content?: string) => void;
 }) {
+  const viewActive = useActiveView();
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [layout, setLayout] = useState<'source' | 'split' | 'preview'>('split');
   const [wide, setWide] = useState(false);
@@ -407,6 +446,7 @@ function FileDocument({
     if (session.pendingEditorCommand) setLayout('source');
   }, [session, snapshot]);
   useEffect(() => {
+    if (!viewActive) return;
     onContextRef.current({
       projectId: project.id,
       workspace: mode,
@@ -417,7 +457,7 @@ function FileDocument({
       text: snapshot.content.slice(0, 24000),
       selection,
     });
-  }, [project.id, mode, session, snapshot.content, selection]);
+  }, [project.id, mode, session, snapshot.content, selection, viewActive]);
   useEffect(() => {
     const element = canvas.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
@@ -559,7 +599,7 @@ function FileDocument({
                       ).content,
                     );
                   } catch (error) {
-                    setCompareError(errorText(error));
+                    setCompareError(errorMessage(error));
                   }
                 }}
               >
@@ -613,15 +653,14 @@ function FileDocument({
               <Suspense fallback={<div className="sf-file-loading">{t('正在加载编辑器…')}</div>}>
                 <CodeEditor
                   session={session}
+                  shortcuts={shortcuts}
                   onSelection={setSelection}
                   onCursor={(line, column) => setCursor({ line, column })}
                 />
               </Suspense>
             ) : null}
             {isMarkdown && actualLayout !== 'source' ? (
-              <Suspense fallback={<div className="sf-file-loading">{t('正在加载预览…')}</div>}>
-                <MarkdownPreview content={deferredText} />
-              </Suspense>
+              <MarkdownPreview content={deferredText} />
             ) : null}
           </>
         )}
@@ -730,7 +769,7 @@ export function FileResources({
       })
       .catch((reason) => {
         if (alive) {
-          setError(errorText(reason));
+          setError(errorMessage(reason));
           setPhase('error');
         }
       });
@@ -869,7 +908,7 @@ function GitChanges({
       })
       .catch((reason) => {
         if (alive) {
-          setError(errorText(reason));
+          setError(errorMessage(reason));
           setState('error');
         }
       });

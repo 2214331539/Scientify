@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-access-token"
+description = "Enables the collaboration_access_token command without any pre-configured scope."
+commands.allow = ["collaboration_access_token"]
+
+[[permission]]
+identifier = "deny-collaboration-access-token"
+description = "Denies the collaboration_access_token command without any pre-configured scope."
+commands.deny = ["collaboration_access_token"]

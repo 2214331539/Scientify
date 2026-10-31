@@ -18,6 +18,16 @@ it('updates localized controls on a memoized message without rewriting its conte
   expect(screen.getByText('科研内容保留').tagName).toBe('STRONG');
 });
 
+it('renders Markdown during streaming and keeps its layout when the turn completes', () => {
+  const view = render(
+    <ChatMessageView role="assistant" text="**结论**\n\n```python\nscore = 1\n```" streaming />,
+  );
+  const strong = screen.getByText('结论');
+  expect(strong.tagName).toBe('STRONG');
+  view.rerender(<ChatMessageView role="assistant" text="**结论**\n\n```python\nscore = 1\n```" />);
+  expect(screen.getByText('结论')).toBe(strong);
+});
+
 it('copies the original Markdown including code via keyboard and reports success', async () => {
   const user = userEvent.setup();
   const copy = vi.spyOn(navigator.clipboard, 'writeText');

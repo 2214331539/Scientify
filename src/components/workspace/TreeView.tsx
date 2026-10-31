@@ -16,6 +16,8 @@ interface Props {
   items: TreeItem[];
   label: string;
   selectedId?: string | null;
+  selectedIds?: ReadonlySet<string>;
+  onSelectionChange?: (ids: Set<string>, activeId: string) => void;
   dropTargetId?: string | null;
   collapsed: ReadonlySet<string>;
   onToggle: (id: string) => void;
@@ -23,11 +25,13 @@ interface Props {
   onContextMenu?: (id: string, event: MouseEvent<HTMLButtonElement>) => void;
 }
 
-/** Selection opens a resource; focus and disclosure only navigate the hierarchy. */
+/** Plain activation opens; modifier selection and keyboard navigation keep the editor stable. */
 export function TreeView({
   items,
   label,
   selectedId,
+  selectedIds,
+  onSelectionChange,
   dropTargetId,
   collapsed,
   onToggle,
@@ -36,6 +40,7 @@ export function TreeView({
 }: Props) {
   const [focused, setFocused] = useState<string | null>(null);
   const elements = useRef(new Map<string, HTMLButtonElement>());
+  const anchor = useRef<string | null>(null);
   const visible: {
     item: TreeItem;
     parent?: string;
@@ -58,8 +63,33 @@ export function TreeView({
     setFocused(id);
     elements.current.get(id)?.focus();
   };
+  function select(id: string, range: boolean, toggle: boolean) {
+    if (!onSelectionChange) return;
+    let next = new Set<string>();
+    if (range) {
+      const start = visible.findIndex((row) => row.item.id === (anchor.current ?? selectedId));
+      const end = visible.findIndex((row) => row.item.id === id);
+      if (toggle) next = new Set(selectedIds);
+      for (const row of visible.slice(
+        Math.min(start < 0 ? end : start, end),
+        Math.max(start, end) + 1,
+      ))
+        next.add(row.item.id);
+    } else {
+      anchor.current = id;
+      next = toggle ? new Set(selectedIds) : new Set();
+      if (toggle && next.has(id)) next.delete(id);
+      else next.add(id);
+    }
+    onSelectionChange(next, id);
+  }
   return (
-    <div role="tree" aria-label={label} className="sf-tree">
+    <div
+      role="tree"
+      aria-label={label}
+      aria-multiselectable={onSelectionChange ? true : undefined}
+      className="sf-tree"
+    >
       {visible.map(({ item, depth, position, size }) => {
         const folder = item.children !== undefined;
         const expanded = folder && !collapsed.has(item.id);
@@ -83,11 +113,16 @@ export function TreeView({
             aria-posinset={position + 1}
             aria-setsize={size}
             aria-expanded={folder ? expanded : undefined}
-            aria-selected={selectedId === item.id}
+            aria-selected={selectedIds ? selectedIds.has(item.id) : selectedId === item.id}
             tabIndex={item.id === tabStop ? 0 : -1}
             style={{ paddingLeft: 8 + depth * 16 }}
             onFocus={() => setFocused(item.id)}
-            onClick={() => (folder ? onToggle(item.id) : onOpen(item.id))}
+            onClick={(event) => {
+              select(item.id, event.shiftKey, event.ctrlKey || event.metaKey);
+              if (onSelectionChange && (event.shiftKey || event.ctrlKey || event.metaKey)) return;
+              if (folder) onToggle(item.id);
+              else onOpen(item.id);
+            }}
             onContextMenu={(event) => {
               if (!onContextMenu) return;
               event.preventDefault();
@@ -96,10 +131,29 @@ export function TreeView({
             }}
             onKeyDown={(event) => {
               const index = visible.findIndex((row) => row.item.id === item.id);
-              if (event.key === 'ArrowDown') focus(visible[index + 1]?.item.id);
-              else if (event.key === 'ArrowUp') focus(visible[index - 1]?.item.id);
-              else if (event.key === 'Home') focus(visible[0]?.item.id);
-              else if (event.key === 'End') focus(visible.at(-1)?.item.id);
+              if (
+                onSelectionChange &&
+                (event.ctrlKey || event.metaKey) &&
+                event.key.toLowerCase() === 'a'
+              ) {
+                event.preventDefault();
+                onSelectionChange(new Set(visible.map((row) => row.item.id)), item.id);
+                return;
+              }
+              if (
+                onSelectionChange &&
+                event.key === ' ' &&
+                (event.ctrlKey || event.metaKey || event.shiftKey)
+              ) {
+                event.preventDefault();
+                select(item.id, event.shiftKey, event.ctrlKey || event.metaKey);
+                return;
+              }
+              let destination: string | undefined;
+              if (event.key === 'ArrowDown') destination = visible[index + 1]?.item.id;
+              else if (event.key === 'ArrowUp') destination = visible[index - 1]?.item.id;
+              else if (event.key === 'Home') destination = visible[0]?.item.id;
+              else if (event.key === 'End') destination = visible.at(-1)?.item.id;
               else if (event.key === 'ArrowRight') {
                 if (folder && !expanded) onToggle(item.id);
                 else if (folder) focus(item.children?.[0]?.id);
@@ -107,6 +161,10 @@ export function TreeView({
                 if (expanded) onToggle(item.id);
                 else focus(visible[index]?.parent);
               } else return;
+              if (destination) {
+                focus(destination);
+                if (event.shiftKey) select(destination, true, event.ctrlKey || event.metaKey);
+              }
               event.preventDefault();
             }}
           >

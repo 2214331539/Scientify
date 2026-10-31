@@ -1,0 +1,389 @@
+.collaboration-workspace {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--sf-surface-canvas);
+}
+
+.collaboration-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 82px;
+  padding: 15px 28px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  user-select: none;
+}
+
+.collaboration-heading,
+.collaboration-toolbar,
+.collaboration-card-actions,
+.collaboration-card-heading,
+.collaboration-account,
+.collaboration-project-actions,
+.collaboration-invite-heading {
+  display: flex;
+  align-items: center;
+}
+
+.collaboration-heading {
+  gap: 12px;
+  min-width: 0;
+}
+.collaboration-heading .brand-mark {
+  width: 28px;
+  height: 31px;
+}
+.collaboration-heading > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.collaboration-heading strong {
+  font-size: 15px;
+  font-weight: 650;
+}
+.collaboration-heading span {
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.collaboration-toolbar {
+  gap: 8px;
+}
+.collaboration-card-actions {
+  gap: 6px;
+}
+.collaboration-toolbar .sf-button {
+  min-height: 34px;
+}
+
+.collaboration-content {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 44px 48px 64px;
+  overflow: auto;
+}
+
+.collaboration-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.collaboration-hero h1 {
+  margin: 5px 0 8px;
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -0.02em;
+}
+.collaboration-hero p {
+  max-width: 640px;
+  margin: 0;
+  line-height: 1.65;
+}
+.eyebrow {
+  color: var(--sf-accent);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.collaboration-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 999px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.collaboration-status-chip span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sf-text-muted);
+}
+.collaboration-status-chip[data-status='on'] {
+  color: var(--sf-text-secondary);
+  border-color: color-mix(in srgb, var(--sf-accent) 40%, var(--sf-border-subtle));
+}
+.collaboration-status-chip[data-status='on'] span {
+  background: var(--sf-accent);
+}
+
+.collaboration-card {
+  padding: 20px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 10px;
+  background: var(--sf-surface-raised);
+  box-shadow: 0 8px 24px rgb(20 35 30 / 4%);
+}
+.collaboration-card-heading {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.collaboration-card-heading h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+.collaboration-card-heading p {
+  margin: 4px 0 0;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.collaboration-card-heading > svg {
+  color: var(--sf-text-muted);
+}
+.collaboration-connection {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.collaboration-connection label,
+.collaboration-login-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.collaboration-connection > label {
+  max-width: 560px;
+}
+.collaboration-login-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.collaboration-login-fields label {
+  flex: 1 1 180px;
+}
+.collaboration-login-fields > .sf-button {
+  min-height: 38px;
+}
+.collaboration-code-input {
+  display: flex;
+  gap: 7px;
+}
+.collaboration-code-input .sf-input {
+  min-width: 0;
+  flex: 1;
+}
+.collaboration-code-input .sf-button {
+  flex: 0 0 auto;
+}
+.collaboration-account {
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: var(--sf-surface-sunken);
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.collaboration-account svg {
+  width: 16px;
+  color: var(--sf-accent);
+}
+.collaboration-account small {
+  margin-left: auto;
+  color: var(--sf-text-muted);
+}
+
+.collaboration-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.75fr);
+  gap: 20px;
+  align-items: start;
+}
+.collaboration-projects,
+.collaboration-members {
+  min-height: 300px;
+}
+.collaboration-create-project {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.collaboration-create-project .sf-input {
+  min-width: 0;
+  flex: 1;
+}
+.collaboration-project-list {
+  display: grid;
+  gap: 8px;
+}
+.collaboration-project-list article {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition:
+    background-color var(--sf-motion-feedback) var(--sf-ease-standard),
+    border-color var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.collaboration-project-list article:hover,
+.collaboration-project-list article.active {
+  border-color: var(--sf-border-subtle);
+  background: var(--sf-surface-sunken);
+}
+.collaboration-project-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--sf-accent) 10%, var(--sf-surface-sunken));
+  color: var(--sf-accent);
+}
+.collaboration-project-icon svg {
+  width: 16px;
+}
+.collaboration-project-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.collaboration-project-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.collaboration-project-info span {
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.collaboration-project-actions {
+  gap: 5px;
+}
+.collaboration-project-actions .sf-button {
+  min-height: 30px;
+  padding-inline: 9px;
+  font-size: 11px;
+}
+.collaboration-list-empty,
+.collaboration-members-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 140px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+.collaboration-members-empty svg {
+  width: 25px;
+  opacity: 0.45;
+}
+.collaboration-member-list {
+  display: grid;
+  gap: 7px;
+}
+.collaboration-member {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.collaboration-member small {
+  color: var(--sf-text-muted);
+}
+.collaboration-invite {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.collaboration-invite-heading {
+  gap: 7px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.collaboration-invite-heading svg {
+  width: 15px;
+  color: var(--sf-accent);
+}
+.collaboration-invite .sf-select {
+  width: 100%;
+}
+.collaboration-notice,
+.collaboration-error {
+  margin: 16px 0 0;
+  font-size: 12px;
+}
+.collaboration-notice {
+  color: var(--sf-accent);
+}
+.collaboration-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  flex: 1;
+  padding: 48px;
+  color: var(--sf-text-muted);
+  text-align: center;
+}
+.collaboration-empty svg {
+  width: 34px;
+  height: 34px;
+  opacity: 0.5;
+}
+.collaboration-empty h1 {
+  margin: 0;
+  color: var(--sf-text-primary);
+  font-size: 20px;
+}
+.collaboration-empty p {
+  margin: 0;
+}
+
+@media (max-width: 820px) {
+  .collaboration-content {
+    padding: 30px 24px 48px;
+  }
+  .collaboration-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .collaboration-topbar {
+    padding-inline: 16px;
+  }
+  .collaboration-content {
+    padding-inline: 16px;
+  }
+  .collaboration-hero {
+    flex-direction: column;
+  }
+  .collaboration-login-fields {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .collaboration-project-list article {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+  .collaboration-project-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+  .collaboration-account {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .collaboration-account small {
+    flex-basis: 100%;
+    margin-left: 25px;
+  }
+}

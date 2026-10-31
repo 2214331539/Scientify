@@ -221,6 +221,9 @@ dialog {
 dialog::backdrop {
   background: rgb(10 14 13 / 38%);
 }
+dialog.prompt-dialog {
+  width: min(400px, calc(100vw - 40px));
+}
 .dialog-heading {
   display: flex;
   align-items: center;

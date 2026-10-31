@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import type { FileContent, ResearchBackend } from '../platform/research';
+import type { FileContent, FileBackend } from '../platform/research';
 import {
   beginFileOperation,
   FileSession,
@@ -11,21 +11,13 @@ import {
 
 function backend() {
   let disk = { path: 'paper.md', content: '# Original', version: 'v1' };
-  const result: ResearchBackend = {
-    listFiles: async () => [],
+  const result: FileBackend = {
     readFile: vi.fn(async () => ({ ...disk })),
     writeFile: vi.fn(async (_projectId, path, content, expectedVersion) => {
       if (expectedVersion !== disk.version) throw new Error('文件已被外部修改，请比较后重试');
       disk = { path, content, version: 'v2' };
       return { ...disk };
     }),
-    importPdf: async () => null,
-    readPdf: async () => new Uint8Array(),
-    gitStatus: async () => [],
-    listModels: async () => [],
-    testModel: async () => {},
-    askAI: async () => '',
-    fetchArxiv: async () => '',
   };
   return {
     result,
@@ -71,6 +63,29 @@ it('keeps later input dirty when an earlier save finishes', async () => {
     phase: 'ready',
   });
   expect(result.writeFile).toHaveBeenCalledWith('project-a', 'paper.md', 'First edit', 'v1');
+});
+
+it('runs the save side effect after local persistence without changing the save result', async () => {
+  const { result } = backend();
+  const onSaved = vi.fn();
+  const session = new FileSession(result, 'project-a', 'paper.md', undefined, onSaved);
+  await session.load();
+  session.edit('shared draft');
+  expect(await session.save()).toBe(true);
+  expect(onSaved).toHaveBeenCalledWith(
+    expect.objectContaining({ content: 'shared draft', version: 'v2' }),
+    'v1',
+  );
+});
+
+it('does not fail a local save when the collaboration side effect rejects', async () => {
+  const { result } = backend();
+  const onSaved = vi.fn().mockRejectedValue(new Error('offline'));
+  const session = new FileSession(result, 'project-a', 'paper.md', undefined, onSaved);
+  await session.load();
+  session.edit('offline draft');
+  expect(await session.save()).toBe(true);
+  expect(session.getSnapshot()).toMatchObject({ dirty: false, phase: 'ready' });
 });
 
 it('preserves the buffer and expected version on external modification conflict', async () => {

@@ -1,0 +1,14 @@
+:is(.sf-markdown, .sf-markdown-preview) .katex {
+  font-size: 1.08em;
+}
+:is(.sf-markdown, .sf-markdown-preview) .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 4px;
+  margin-block: 12px;
+}
+:is(.sf-markdown, .sf-markdown-preview) .katex-error {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

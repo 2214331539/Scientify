@@ -9,12 +9,14 @@ use super::AppState;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tauri::State;
 
 const FILE: &str = "credentials.json";
 const NOTE: &str = "本文件保存模型服务商的 API 密钥，未加密。请勿提交到版本库或分享给他人。";
 const MAX_KEY: usize = 4096;
 const MAX_ENTRIES: usize = 200;
+static WRITES: Mutex<()> = Mutex::new(());
 
 #[derive(Serialize, Deserialize)]
 struct Store {
@@ -54,6 +56,7 @@ fn path(directory: &Path) -> PathBuf {
 }
 
 fn read(directory: &Path) -> Result<Store, String> {
+    scientify_core::research::reject_links(&path(directory))?;
     match std::fs::read(path(directory)) {
         Ok(bytes) => {
             let mut store: Store = serde_json::from_slice(&bytes)
@@ -67,21 +70,47 @@ fn read(directory: &Path) -> Result<Store, String> {
 }
 
 fn write(directory: &Path, store: &Store) -> Result<(), String> {
+    scientify_core::research::reject_links(directory)?;
     std::fs::create_dir_all(directory).map_err(|e| format!("无法创建数据目录：{e}"))?;
     let target = path(directory);
     let pending = target.with_extension("pending.json");
+    scientify_core::research::reject_links(&target)?;
+    scientify_core::research::reject_links(&pending)?;
     let text = serde_json::to_vec_pretty(store).map_err(|e| format!("无法写入凭据：{e}"))?;
     std::fs::write(&pending, text).map_err(|e| format!("无法写入凭据：{e}"))?;
     std::fs::rename(&pending, &target).map_err(|e| format!("无法写入凭据：{e}"))
+}
+
+// Serialize the entire read-modify-write operation across both native windows.
+fn update(
+    directory: &Path,
+    edit: impl FnOnce(&mut Store) -> Result<bool, String>,
+) -> Result<(), String> {
+    let _guard = WRITES.lock().map_err(|e| e.to_string())?;
+    let mut data = read(directory)?;
+    if edit(&mut data)? {
+        write(directory, &data)?;
+    }
+    Ok(())
 }
 
 fn store(project: &State<'_, AppState>) -> Result<PathBuf, String> {
     Ok(project.storage.directory().to_path_buf())
 }
 
+pub(crate) fn load_for_model(
+    directory: &Path,
+    provider: &str,
+    endpoint: &str,
+) -> Result<Option<String>, String> {
+    Ok(read(directory)?
+        .credentials
+        .remove(&slot(provider, endpoint)?))
+}
+
 #[tauri::command]
-pub async fn secret_save(
-    view: tauri::Webview,
+pub async fn secret_save<R: tauri::Runtime>(
+    view: tauri::Webview<R>,
     state: State<'_, AppState>,
     provider: String,
     endpoint: String,
@@ -94,17 +123,18 @@ pub async fn secret_save(
     }
     let slot = slot(&provider, &endpoint)?;
     let directory = store(&state)?;
-    let mut data = read(&directory)?;
-    if data.credentials.len() >= MAX_ENTRIES && !data.credentials.contains_key(&slot) {
-        return Err("已保存的模型凭据过多，请先清理不再使用的服务商。".into());
-    }
-    data.credentials.insert(slot, key.to_string());
-    write(&directory, &data)
+    update(&directory, |data| {
+        if data.credentials.len() >= MAX_ENTRIES && !data.credentials.contains_key(&slot) {
+            return Err("已保存的模型凭据过多，请先清理不再使用的服务商。".into());
+        }
+        data.credentials.insert(slot, key.to_string());
+        Ok(true)
+    })
 }
 
 #[tauri::command]
-pub async fn secret_load(
-    view: tauri::Webview,
+pub async fn secret_load<R: tauri::Runtime>(
+    view: tauri::Webview<R>,
     state: State<'_, AppState>,
     provider: String,
     endpoint: String,
@@ -124,11 +154,9 @@ pub async fn secret_clear(
     super::library::trusted(&view)?;
     let slot = slot(&provider, &endpoint)?;
     let directory = store(&state)?;
-    let mut data = read(&directory)?;
-    if data.credentials.remove(&slot).is_none() {
-        return Ok(());
-    }
-    write(&directory, &data)
+    update(&directory, |data| {
+        Ok(data.credentials.remove(&slot).is_some())
+    })
 }
 
 #[cfg(test)]
@@ -202,5 +230,34 @@ mod tests {
             Err(message) => assert!(message.contains("无法解析")),
         }
         let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn simultaneous_window_updates_keep_all_provider_keys_and_clear_only_the_requested_slot() {
+        let directory = tempfile::tempdir().unwrap();
+        let barrier = std::sync::Barrier::new(8);
+        std::thread::scope(|scope| {
+            for index in 0..8 {
+                let barrier = &barrier;
+                let root = directory.path();
+                scope.spawn(move || {
+                    barrier.wait();
+                    update(root, |data| {
+                        data.credentials
+                            .insert(format!("provider-{index}"), format!("test-{index}"));
+                        Ok(true)
+                    })
+                    .unwrap();
+                });
+            }
+        });
+        assert_eq!(read(directory.path()).unwrap().credentials.len(), 8);
+        update(directory.path(), |data| {
+            Ok(data.credentials.remove("provider-3").is_some())
+        })
+        .unwrap();
+        let remaining = read(directory.path()).unwrap();
+        assert_eq!(remaining.credentials.len(), 7);
+        assert!(!remaining.credentials.contains_key("provider-3"));
     }
 }

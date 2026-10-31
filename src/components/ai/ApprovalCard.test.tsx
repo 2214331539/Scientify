@@ -47,6 +47,25 @@ describe('ApprovalCard', () => {
     expect(screen.queryByRole('group', { name: '请求修改文件' })).not.toBeNull();
   });
 
+  it('asks again for every Git action and note edit', () => {
+    for (const method of [
+      'scientify/git/requestApproval',
+      'scientify/notes/requestApproval',
+    ] as const) {
+      render(<ApprovalCard event={request(method, {})} onDecide={vi.fn()} />);
+      expect(screen.queryByRole('button', { name: '允许' })).not.toBeNull();
+      expect(screen.queryByRole('button', { name: '本会话允许' })).toBeNull();
+      cleanup();
+    }
+    render(
+      <ApprovalCard
+        event={request('item/commandExecution/requestApproval', {})}
+        onDecide={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: '本会话允许' })).not.toBeNull();
+  });
+
   it('offers the permission profile response for a permission request', async () => {
     const onDecide = vi.fn();
     render(

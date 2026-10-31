@@ -1,18 +1,10 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 import { useState } from 'react';
 import { Button, Input } from './primitives';
 import { Modal } from './Modal';
 
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(cleanup);
 
 it('restores focus to the trigger after the dialog is unmounted', async () => {

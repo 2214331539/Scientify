@@ -5,12 +5,9 @@ import { Button, Dropdown } from '../../components/primitives';
 import { Modal } from '../../components/Modal';
 import { t, translateError } from '../../i18n';
 import { ExecutionPanel } from '../../workspaces/experiments/ExecutionPanel';
-import {
-  executionStore,
-  experimentApi,
-  openExecution,
-  describeError,
-} from '../../workspaces/experiments/runtime';
+import { statusLabel } from '../../workspaces/experiments/status';
+import { executionStore, experimentApi, openExecution } from '../../workspaces/experiments/runtime';
+import { errorMessage } from '../../domain/errors';
 import '../../workspaces/experiments/experiments.css';
 
 export function AssistantRuns({
@@ -79,7 +76,7 @@ export function AssistantRuns({
                   try {
                     await experimentApi.stop(run.id);
                   } catch (reason) {
-                    setError(describeError(reason));
+                    setError(errorMessage(reason));
                     setStopping((s) => s.filter((id) => id !== run.id));
                   }
                 }}
@@ -90,19 +87,7 @@ export function AssistantRuns({
           </div>
           <div className="sf-ai-run-meta">
             <code>{run.id.slice(0, 8)}</code>
-            <span>
-              {t(
-                run.status === 'running'
-                  ? '运行中'
-                  : run.status === 'completed'
-                    ? '已完成'
-                    : run.status === 'cancelled'
-                      ? '已取消'
-                      : run.status === 'interrupted'
-                        ? '已中断'
-                        : '失败',
-              )}
-            </span>
+            <span>{statusLabel(run.status)}</span>
             {run.exitCode !== null ? (
               <span>
                 {t('退出码')}: {run.exitCode}

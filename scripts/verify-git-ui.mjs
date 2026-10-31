@@ -1,12 +1,7 @@
-import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
-const require = createRequire(resolve('.test-tools/package.json'));
-const { chromium } = require('playwright');
-const browser = await chromium.launch({
-  executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  headless: true,
-});
+import { launchUiBrowser } from './ui-test-browser.mjs';
+const browser = await launchUiBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 940 } });
 const directory = resolve('.test-artifacts/git-ui');
 await mkdir(directory, { recursive: true });
@@ -25,6 +20,7 @@ try {
       question: '',
       space: 'personal',
       createdAt: '2026-10-02',
+      path: 'F:/fixture/main',
     };
     const data = {
       schema: 3,
@@ -63,6 +59,7 @@ try {
           [project.id]: {
             workspace: 'overview',
             view: 'overview',
+            views: { experiments: 'files' },
             paths: { experiments: 'train.py' },
             paperId: null,
           },
@@ -76,6 +73,7 @@ try {
   });
   await page.goto(process.env.SCIENTIFY_UI_URL || 'http://127.0.0.1:1420', {
     waitUntil: 'domcontentloaded',
+    timeout: 120000,
   });
   await page.getByRole('button', { name: '实验', exact: true }).waitFor();
   await page.evaluate(async () => {
@@ -87,8 +85,16 @@ try {
         .find((entry) => new URL(entry.name).pathname === path)?.name ?? path;
     const { gitApi } = await import(window.__gitModuleUrl('/src/platform/git.ts'));
     const { browserResearch } = await import(window.__gitModuleUrl('/src/platform/browser.ts'));
+    const { experimentCatalog } = await import(
+      window.__gitModuleUrl('/src/workspaces/experiments/catalog.ts')
+    );
     const root = 'F:/fixture/main';
     const other = 'F:/fixture/new-loss';
+    experimentCatalog.prepare = async (_project, source, directory) => ({
+      id: 'worktree-new-loss',
+      root: directory,
+      source,
+    });
     const tree = (path, branch) => ({
       root: path,
       branch,
@@ -353,24 +359,23 @@ try {
   await git.getByRole('button', { name: 'Worktree', exact: true }).click();
   await page.screenshot({ path: join(directory, 'Worktrees-light.png') });
   await git.getByRole('button', { name: '打开', exact: true }).click();
-  await page.getByLabel('当前 worktree', { exact: true }).selectOption('F:/fixture/new-loss');
-  await page.getByRole('button', { name: '代码', exact: true }).click();
+  await page.getByLabel('当前实验', { exact: true }).selectOption('worktree-new-loss');
   await page.getByRole('treeitem', { name: 'train.py', exact: true }).click();
   await page.locator('.cm-content:visible').filter({ hasText: 'new-loss' }).waitFor();
   await page.locator('.cm-content:visible').click();
   await page.keyboard.press('Control+End');
   await page.keyboard.insertText('# independent draft');
-  await page.getByLabel('当前 worktree', { exact: true }).selectOption('F:/fixture/main');
+  await page.getByLabel('当前实验', { exact: true }).selectOption('git-fixture');
   await page.locator('.cm-content:visible').filter({ hasText: 'print("main")' }).waitFor();
   check(
     !(await page.locator('.cm-content:visible').innerText()).includes('independent draft'),
     'Worktree switch never reuses another directory buffer',
   );
-  await page.getByLabel('当前 worktree', { exact: true }).selectOption('F:/fixture/new-loss');
+  await page.getByLabel('当前实验', { exact: true }).selectOption('worktree-new-loss');
   await page.locator('.cm-content:visible').filter({ hasText: 'independent draft' }).waitFor();
   check(true, 'Worktree draft survives switching back');
   await page.getByRole('button', { name: '保存全部', exact: true }).click();
-  await page.getByLabel('当前 worktree', { exact: true }).selectOption('F:/fixture/main');
+  await page.getByLabel('当前实验', { exact: true }).selectOption('git-fixture');
   await page.getByRole('button', { name: 'Git', exact: true }).click();
   for (const language of ['zh-CN', 'en']) {
     for (const theme of ['light', 'dark']) {
@@ -428,7 +433,7 @@ try {
   check(errors.length === 0, 'No browser runtime errors: ' + errors.join('; '));
   await writeFile(
     join(directory, 'report.json'),
-    JSON.stringify({ date: '2026-10-02', fixtureOnly: true, checks, errors }, null, 2),
+    JSON.stringify({ date: new Date().toISOString(), fixtureOnly: true, checks, errors }, null, 2),
   );
   console.log(`Git UI fixture checks passed: ${checks.length}`);
 } catch (error) {

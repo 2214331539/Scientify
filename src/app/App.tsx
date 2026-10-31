@@ -14,23 +14,19 @@ import { TopBar } from '../components/layout/TopBar';
 import { BrandMark } from '../components/layout/BrandMark';
 import { WorkspaceRail } from '../components/navigation/WorkspaceRail';
 import { workspaceItems, secondaryViews as secondary } from '../components/navigation/workspaces';
-import { WorkspaceFrame } from '../components/workspace/WorkspaceFrame';
-import type { ResumeTarget } from '../workspaces/overview/home-model';
-import { ProjectForm, TeamForm } from '../features/projects/ProjectForm';
+import { FeaturePlaceholder } from '../components/workspace/FeaturePlaceholder';
+import { ProjectForm } from '../features/projects/ProjectForm';
 import { confirmAction } from '../components/prompts';
 import { ProjectLibrary } from '../features/projects/ProjectLibrary';
 import { ProjectSidebar } from '../features/projects/ProjectSidebar';
 import { WindowControls } from '../components/layout/WindowControls';
 import { SettingsDialog } from '../features/settings/Settings';
 import { SearchDialog, type SearchTarget } from '../features/search/SearchDialog';
-import { Overview } from '../workspaces/overview/Overview';
-import { LiteratureWorkspace } from '../workspaces/literature/LiteratureWorkspace';
-import type { LiteratureSession } from '../workspaces/literature/tabs';
 import { LocalLiterature } from '../workspaces/literature/LocalLiterature';
 import { nativeLibrary, noteFiles } from '../platform/library';
 import { flushPaperNotes, notesDirty, notesPending } from '../workspaces/literature/local-session';
 import { browserLayout } from '../platform/browser-pane';
-import { FileResources, FileWorkspace } from '../workspaces/files/FileWorkspace';
+import { installPaperService } from '../platform/paper-service';
 import { ExperimentWorkspace } from '../workspaces/experiments/ExperimentWorkspace';
 import { useExecutions } from '../workspaces/experiments/runtime';
 import { useDevelopmentRuntime } from '../workspaces/experiments/development';
@@ -46,23 +42,27 @@ import {
   notifyFileRuntime,
 } from '../editor/sessions';
 import { Modal } from '../components/Modal';
-import type { Project, Team } from '../domain/workspace';
+import type { Project } from '../domain/workspace';
 import type { WorkContext, WorkspaceId } from '../domain/context';
 import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
 import { nativeResearch, type ResearchBackend } from '../platform/research';
-import { animateWorkspaceNavigation } from '../platform/view-transition';
+import { ViewTransition } from '../components/workspace/ViewTransition';
+import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/shortcuts';
+import {
+  collaboration,
+  collaborationStateEvent,
+  type CollaborationProject,
+} from '../platform/collaboration';
+
+const COLLABORATION_TEAM_ID = 'scientify-collaboration';
 
 type Dialog =
-  | { kind: 'project'; project?: Project }
-  | { kind: 'team'; team?: Team }
-  | { kind: 'data' | 'profile' | 'search' | 'about' }
-  | null;
+  { kind: 'project'; project?: Project } | { kind: 'data' | 'profile' | 'search' | 'about' } | null;
 type Location = {
-  legacyLiterature?: boolean;
-  literatureSession?: LiteratureSession;
   workspace: WorkspaceId;
   view: string;
   paperId: string | null;
+  browserId?: string;
   runId?: string | null;
   paths: Partial<Record<WorkspaceId, string | null>>;
   views?: Partial<Record<WorkspaceId, string>>;
@@ -88,6 +88,8 @@ const defaults: UISession = {
   rightWidth: 340,
 };
 const locationDefault: Location = { workspace: 'overview', view: '', paperId: null, paths: {} };
+const MIN_DOCK_WIDTH = 280;
+const MIN_CENTRAL_WIDTH = 320;
 function readSession(storageKey = 'scientify.ui.v2'): UISession {
   try {
     const value = JSON.parse(
@@ -116,9 +118,13 @@ function readSession(storageKey = 'scientify.ui.v2'): UISession {
               ];
             }),
         ),
+        dock: value.dock === 'notes' ? 'notes' : 'assistant',
         dockOpen: value.dock === 'notes' && value.dockOpen === true,
         leftWidth: Math.max(180, Math.min(300, Number(value.leftWidth) || 240)),
-        rightWidth: Math.max(300, Math.min(480, Number(value.rightWidth) || 340)),
+        rightWidth: Math.max(
+          MIN_DOCK_WIDTH,
+          Number.isFinite(Number(value.rightWidth)) ? Number(value.rightWidth) || 340 : 340,
+        ),
       };
   } catch {
     /* UI preferences are optional. */
@@ -240,6 +246,10 @@ export function App({
 }) {
   const experiments = useExecutions(store, windowMode !== 'projects');
   useDevelopmentRuntime(store, windowMode !== 'projects');
+  useEffect(() => {
+    if (windowMode !== 'workspace') return;
+    return installPaperService((reason) => store.setState({ error: String(reason) }));
+  }, [windowMode, store]);
   const preferences = usePreferences();
   const epoch = useStore(store, (s) => s.epoch);
   const data = useStore(store, (s) => s.data),
@@ -268,8 +278,30 @@ export function App({
   });
   const [pendingNote, setPendingNote] = useState<{ scope: string; id: string } | null>(null);
   const [launching, setLaunching] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const notesLayerRef = useRef<HTMLElement>(null);
+  const [notesPlacement, setNotesPlacement] = useState(false);
   useCloseProtection(store, backend, windowMode === 'workspace');
+  useEffect(() => {
+    if (windowMode !== 'workspace') return;
+    let disposed = false;
+    const syncCollaboration = async () => {
+      try {
+        const state = await collaboration.status();
+        if (!state.enabled || !state.authenticated || !state.workspaceId || disposed) return;
+        await collaboration.sync();
+        if (!disposed) window.dispatchEvent(new Event(collaborationStateEvent));
+      } catch {
+        // Background sync must not interrupt editing. The pending outbox and
+        // the next explicit sync action remain available to the user.
+      }
+    };
+    void syncCollaboration();
+    const timer = window.setInterval(() => void syncCollaboration(), 30_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [windowMode]);
   useEffect(() => {
     if (!epoch || store.getState().dirty) return;
     const runtime = getFileRuntime(backend);
@@ -312,11 +344,21 @@ export function App({
   }, []);
   useLayoutEffect(() => {
     const media = matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => applyAppearance(preferences, media.matches);
+    const apply = () => {
+      applyAppearance(preferences, media.matches);
+      if (isTauri()) {
+        void invoke('translation_service', {
+          action: {
+            type: 'appearance',
+            dark: preferences.theme === 'dark' || (preferences.theme === 'system' && media.matches),
+          },
+        }).catch((reason) => store.setState({ error: translateError(String(reason)) }));
+      }
+    };
     apply();
     media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
-  }, [preferences]);
+  }, [preferences, store]);
   useEffect(() => {
     if (!isTauri() || windowMode === 'browser') return;
     void getCurrentWindow()
@@ -345,16 +387,6 @@ export function App({
         : s;
     });
   }, [data]);
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        if (!document.querySelector('dialog[open]')) setDialog({ kind: 'search' });
-      }
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, []);
   const project = data?.projects.find((p) => p.id === ui.projectId);
   const location = project ? (ui.locations[project.id] ?? locationDefault) : locationDefault;
   const workspace = workspaceItems.some((w) => w.id === location.workspace)
@@ -363,10 +395,6 @@ export function App({
   const view = secondary[workspace].some((v) => v.id === location.view)
     ? location.view
     : (secondary[workspace][0]?.id ?? '');
-  useLayoutEffect(
-    () => animateWorkspaceNavigation(contentRef.current),
-    [project?.id, workspace, view, phase],
-  );
   const effectiveContext: WorkContext =
     context.projectId === project?.id && context.workspace === (project ? workspace : 'projects')
       ? context
@@ -376,7 +404,15 @@ export function App({
           title: project?.name ?? t('项目管理'),
           text: project?.question,
         };
-  const receiveContext = useCallback((next: WorkContext) => setContext(next), []);
+  const activeLocation = useRef({ projectId: project?.id, workspace });
+  activeLocation.current = { projectId: project?.id, workspace };
+  const receiveContext = useCallback((next: WorkContext) => {
+    if (
+      next.projectId === activeLocation.current.projectId &&
+      next.workspace === activeLocation.current.workspace
+    )
+      setContext(next);
+  }, []);
   const patchLocation = useCallback((patch: Partial<Location>) => {
     setUI((s) => {
       if (!s.projectId) return s;
@@ -409,6 +445,43 @@ export function App({
     if (tool === 'notes' && workspace === 'notes') return;
     setUI((s) => ({ ...s, dock: tool, dockOpen: s.dock !== tool || !s.dockOpen }));
   }
+  useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing) return;
+      const shortcut = eventToShortcut(event);
+      if (!shortcut) return;
+      const settings = data?.settings.shortcuts;
+      const command = [
+        'app.openAssistant',
+        'app.openNotes',
+        'app.openLiterature',
+        'app.openExperiments',
+        'app.openCode',
+        'app.focusSearch',
+        'app.newConversation',
+      ].find((value) => {
+        const binding = bindingFor(settings, value as Parameters<typeof bindingFor>[1]);
+        return binding?.enabled !== false && binding?.keys === shortcut;
+      });
+      if (!command || (isEditableTarget(event.target) && command !== 'app.focusSearch')) return;
+      if (document.querySelector('dialog[open]') && command !== 'app.focusSearch') return;
+      event.preventDefault();
+      if (command === 'app.focusSearch') {
+        if (!document.querySelector('dialog[open]')) setDialog({ kind: 'search' });
+      } else if (command === 'app.openAssistant') openTool('assistant');
+      else if (command === 'app.openNotes') navigate('notes');
+      else if (command === 'app.openLiterature') navigate('literature');
+      else if (command === 'app.openExperiments') navigate('experiments');
+      else if (command === 'app.openCode') {
+        patchLocation({ workspace: 'experiments', view: 'files' });
+      } else if (command === 'app.newConversation') {
+        openTool('assistant');
+        window.dispatchEvent(new CustomEvent('scientify-new-conversation'));
+      }
+    };
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, [data?.settings.shortcuts, navigate, openTool, patchLocation, workspace]);
   function openProject(id: string) {
     if (windowMode === 'projects') {
       void launchWorkspace(id);
@@ -419,6 +492,55 @@ export function App({
       setUI((s) => ({ ...s, projectId: id, space: p.space }));
       setSidebarExpanded(true);
     }
+  }
+
+  async function openRemoteProject(remote: CollaborationProject) {
+    const timestamp = new Date().toISOString();
+    const saved = await store.getState().update((workspaceData) => {
+      if (!workspaceData.teams.some((team) => team.id === COLLABORATION_TEAM_ID)) {
+        workspaceData.teams.push({
+          id: COLLABORATION_TEAM_ID,
+          name: '团队协作',
+          color: '#56746a',
+          description: 'Scientify collaboration projects',
+        });
+      }
+      const local = workspaceData.projects.find((project) => project.id === remote.id);
+      if (local) {
+        Object.assign(local, {
+          name: remote.name,
+          space: COLLABORATION_TEAM_ID,
+          updatedAt: remote.updatedAt ?? timestamp,
+          collaborationRole: remote.role,
+        });
+      } else {
+        workspaceData.projects.push({
+          id: remote.id,
+          name: remote.name,
+          question: '',
+          createdAt: remote.createdAt ?? timestamp,
+          updatedAt: remote.updatedAt ?? timestamp,
+          space: COLLABORATION_TEAM_ID,
+          color: '#56746a',
+          collaborationRole: remote.role,
+        });
+      }
+    });
+    if (!saved) throw new Error(store.getState().error ?? t('协作项目无法载入，请重试。'));
+    if (windowMode === 'projects') {
+      await launchWorkspace(remote.id);
+      return;
+    }
+    setUI((current) => ({
+      ...current,
+      projectId: remote.id,
+      space: COLLABORATION_TEAM_ID,
+      locations: {
+        ...current.locations,
+        [remote.id]: current.locations[remote.id] ?? locationDefault,
+      },
+    }));
+    setSidebarExpanded(true);
   }
   async function launchWorkspace(id: string, target?: SearchTarget | { source: WorkContext }) {
     if (launching) return;
@@ -492,7 +614,6 @@ export function App({
                     target.workspace === 'literature' ? 'local' : '',
                 },
                 paperId: target.workspace === 'literature' ? (target.resourceId ?? null) : null,
-                legacyLiterature: target.workspace === 'literature' && !!target.resourceId,
               },
             },
           }
@@ -588,8 +709,6 @@ export function App({
             },
             ...(run ? { runId: run.id } : {}),
             paperId: w === 'literature' ? (source.resourceId ?? null) : null,
-            legacyLiterature:
-              w === 'literature' && data.papers.some((p) => p.id === source.resourceId),
             paths: run
               ? (s.locations[source.projectId!]?.paths ?? {})
               : { ...(s.locations[source.projectId!]?.paths ?? {}), [w]: source.path ?? null },
@@ -638,9 +757,30 @@ export function App({
       }));
     };
     window.addEventListener('scientify-open-source', open);
+    const openBrowser = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId: string; tabId: string }>).detail;
+      const target = data?.projects.find((p) => p.id === detail?.projectId);
+      if (!target || typeof detail?.tabId !== 'string') return;
+      setUI((s) => ({
+        ...s,
+        projectId: target.id,
+        space: target.space,
+        locations: {
+          ...s.locations,
+          [target.id]: {
+            ...(s.locations[target.id] ?? locationDefault),
+            workspace: 'literature',
+            view: 'subscriptions',
+            browserId: detail.tabId,
+          },
+        },
+      }));
+    };
+    window.addEventListener('scientify-open-browser', openBrowser);
     window.addEventListener('scientify-open-run', openRun);
     return () => {
       window.removeEventListener('scientify-open-source', open);
+      window.removeEventListener('scientify-open-browser', openBrowser);
       window.removeEventListener('scientify-open-run', openRun);
     };
   }, [data, windowMode]);
@@ -653,53 +793,27 @@ export function App({
     else setDialog(next);
   }
   const ready = phase === 'ready' && data;
-  const workspaceLabel = project
-    ? (workspaceItems.find((item) => item.id === workspace)?.label ?? t('Workspace'))
-    : t('项目管理');
-  function resume(target: ResumeTarget) {
-    if (target.noteId) {
-      patchLocation({ workspace: 'notes', view: '' });
-      setPendingNote({ scope: project!.id, id: target.noteId });
-      return;
-    }
-    patchLocation({
-      workspace: target.workspace,
-      view: target.runId ? 'runs' : target.workspace === 'literature' ? 'local' : 'files',
-      ...(target.paperId ? { paperId: target.paperId, legacyLiterature: true } : {}),
-      ...(target.runId ? { runId: target.runId } : {}),
-      ...(target.path ? { paths: { ...location.paths, [target.workspace]: target.path } } : {}),
-    });
-  }
   const notesWorkspace = !!ready && !!project && workspace === 'notes';
-  const sidebar =
-    project &&
-    (workspace === 'files' ||
-      workspace === 'writing' ||
-      (workspace === 'experiments' && view !== 'runs')) ? (
-      <FileResources
-        project={project}
-        backend={backend}
-        mode={workspace === 'writing' ? 'writing' : workspace === 'files' ? 'files' : 'experiments'}
-        view={view}
-        activePath={location.paths?.[workspace]}
-        onOpen={openFile}
-      />
-    ) : undefined;
+  if (notesWorkspace && !notesPlacement) setNotesPlacement(true);
+  const hasResourceSidebar = workspace === 'experiments' && view !== 'runs';
   const inlineDockOpen =
-    ui.dockOpen && windowWidth > 900 && (!notesWorkspace || ui.dock === 'assistant');
+    ui.dockOpen && windowWidth > 900 && (!notesWorkspace || ui.dock !== 'notes');
   const rightWidth = Math.min(
     ui.rightWidth,
     Math.max(
-      300,
+      MIN_DOCK_WIDTH,
       windowWidth -
         WORKSPACE_RAIL_WIDTH -
-        (workspace === 'literature' || (sidebar && sidebarExpanded) ? 180 : 0) -
-        382,
+        (workspace === 'literature' || (hasResourceSidebar && sidebarExpanded) ? 180 : 0) -
+        MIN_CENTRAL_WIDTH,
     ),
   );
   const maxResourceWidth = Math.max(
     180,
-    Math.min(300, windowWidth - WORKSPACE_RAIL_WIDTH - (inlineDockOpen ? rightWidth : 0) - 382),
+    Math.min(
+      300,
+      windowWidth - WORKSPACE_RAIL_WIDTH - (inlineDockOpen ? rightWidth : 0) - MIN_CENTRAL_WIDTH,
+    ),
   );
   const resourceWidth = Math.min(ui.leftWidth, maxResourceWidth);
   const content = !ready ? (
@@ -723,31 +837,18 @@ export function App({
       onOpen={openProject}
       onNew={() => openDialog({ kind: 'project' })}
       onEdit={(p) => openDialog({ kind: 'project', project: p })}
-      onNewTeam={() => openDialog({ kind: 'team' })}
-      onEditTeam={(team) => openDialog({ kind: 'team', team })}
+      onOpenRemote={openRemoteProject}
     />
   ) : workspace === 'overview' ? (
-    <Overview
-      key={project.id}
-      project={project}
-      store={store}
-      onNavigate={navigate}
-      onResume={resume}
-      lastPaths={location.paths}
-      lastPaperId={location.paperId}
-      onEdit={() => openDialog({ kind: 'project', project })}
-      onNotes={(id) => {
-        navigate('notes');
-        if (id) setPendingNote({ scope: project.id, id });
-      }}
-    />
-  ) : workspace === 'literature' && windowMode !== 'browser' && !location.legacyLiterature ? (
+    <FeaturePlaceholder feature="overview" />
+  ) : workspace === 'literature' ? (
     <LocalLiterature
       key={project.id}
       project={project}
       store={store}
       backend={backend}
       requestedPaper={location.paperId}
+      requestedBrowser={location.browserId}
       view={view}
       onView={(view) => patchLocation({ view })}
       width={resourceWidth}
@@ -762,47 +863,7 @@ export function App({
         />
       }
       onContext={receiveContext}
-      onLegacy={() => patchLocation({ legacyLiterature: true })}
     />
-  ) : workspace === 'literature' ? (
-    <div className="legacy-literature-view">
-      {windowMode !== 'browser' && (
-        <Button variant="ghost" onClick={() => patchLocation({ legacyLiterature: false })}>
-          {t('返回本地目录')}
-        </Button>
-      )}
-      <LiteratureWorkspace
-        key={project.id}
-        project={project}
-        store={store}
-        backend={backend}
-        view={view}
-        onView={(view) => patchLocation({ view })}
-        selectedPaper={location.paperId}
-        session={location.literatureSession}
-        onSessionChange={(literatureSession) =>
-          patchLocation({
-            literatureSession,
-            paperId:
-              literatureSession.tabs.find((tab) => tab.id === literatureSession.activeId)
-                ?.paperId ?? null,
-          })
-        }
-        width={resourceWidth}
-        resize={
-          <ResizeHandle
-            value={resourceWidth}
-            min={180}
-            max={maxResourceWidth}
-            side="left"
-            label={t('调整资源宽度')}
-            onChange={(leftWidth) => setUI((s) => ({ ...s, leftWidth }))}
-          />
-        }
-        onContext={receiveContext}
-        onTool={openTool}
-      />
-    </div>
   ) : workspace === 'notes' ? null : workspace === 'experiments' ? (
     <ExperimentWorkspace
       key={project.id}
@@ -849,38 +910,43 @@ export function App({
       }
     />
   ) : (
-    <WorkspaceFrame
-      label={t(workspaceLabel)}
-      views={secondary[workspace]}
-      view={view}
-      onView={(view) => patchLocation({ view })}
-      sidebar={sidebar}
-      sidebarOpen={sidebarExpanded}
-      onSidebarToggle={() => setSidebarExpanded((v) => !v)}
-      width={resourceWidth}
-      resize={
-        <ResizeHandle
-          value={resourceWidth}
-          min={180}
-          max={maxResourceWidth}
-          side="left"
-          label={t('调整资源宽度')}
-          onChange={(leftWidth) => setUI((s) => ({ ...s, leftWidth }))}
-        />
-      }
-    >
-      <FileWorkspace
-        key={`${project.id}:${workspace}`}
-        project={project}
-        store={store}
-        backend={backend}
-        mode={workspace === 'writing' ? 'writing' : workspace === 'files' ? 'files' : 'experiments'}
-        view={view}
-        activePath={location.paths?.[workspace]}
-        onActivePathChange={openFile}
-        onContext={receiveContext}
-      />
-    </WorkspaceFrame>
+    <FeaturePlaceholder feature="writing" />
+  );
+  const central = (
+    <main className="central-area" aria-hidden={notesWorkspace || undefined} inert={notesWorkspace}>
+      {!project && !ready && (
+        <header className="launcher-topbar" data-tauri-drag-region>
+          <span className="spacer" />
+          <WindowControls />
+        </header>
+      )}
+      {error && ready && !dialog && (
+        <div className="inline-error" role="alert">
+          <span>{translateError(error)}</span>
+          <Button
+            variant="ghost"
+            iconOnly
+            className="icon-button"
+            aria-label={t('关闭提示')}
+            onClick={() => store.getState().clearMessage()}
+          >
+            <X />
+          </Button>
+        </div>
+      )}
+      <div className="workspace-content" data-workspace={workspace} data-view={view}>
+        <ViewTransition
+          key={`${epoch}:${project?.id ?? 'launcher'}:${phase}`}
+          viewKey={project ? workspace : ui.space}
+          external={project ? { key: 'notes', ref: notesLayerRef } : undefined}
+          onSettled={() => {
+            if (!notesWorkspace) setNotesPlacement(false);
+          }}
+        >
+          {content}
+        </ViewTransition>
+      </div>
+    </main>
   );
   return (
     <AppShell
@@ -952,9 +1018,6 @@ export function App({
               onClose={() => setDialog(null)}
             />
           ) : null}
-          {dialog?.kind === 'team' ? (
-            <TeamForm store={store} team={dialog.team} onClose={() => setDialog(null)} />
-          ) : null}
           {dialog && ['profile', 'data', 'about'].includes(dialog.kind) ? (
             <SettingsDialog
               store={store}
@@ -973,52 +1036,23 @@ export function App({
       {!project && (
         <ProjectSidebar
           space={ui.space}
-          store={store}
           ready={!!ready}
           onSpace={(space) => setUI((s) => ({ ...s, space }))}
-          onNewTeam={() => openDialog({ kind: 'team' })}
           onSettings={() => openDialog({ kind: 'profile' })}
-          onEditTeam={(team) => openDialog({ kind: 'team', team })}
         />
       )}
-      <main className="central-area" hidden={notesWorkspace}>
-        {!project && !ready && (
-          <header className="launcher-topbar" data-tauri-drag-region>
-            <span className="spacer" />
-            <WindowControls />
-          </header>
-        )}
-        {error && ready && !dialog && (
-          <div className="inline-error" role="alert">
-            <span>{translateError(error)}</span>
-            <Button
-              variant="ghost"
-              iconOnly
-              className="icon-button"
-              aria-label={t('关闭提示')}
-              onClick={() => store.getState().clearMessage()}
-            >
-              <X />
-            </Button>
-          </div>
-        )}
-        <div
-          className="workspace-content"
-          ref={contentRef}
-          data-workspace={workspace}
-          data-view={view}
-        >
-          {content}
-        </div>
-      </main>
+      {(!ready || !project) && central}
       {ready && (
         <GlobalDock
           key={epoch}
           store={store}
           backend={backend}
           tool={ui.dock}
-          open={!!project && ui.dockOpen}
-          notesWorkspace={notesWorkspace}
+          open={ui.dockOpen}
+          notesWorkspace={notesPlacement && !!project}
+          workspaceContent={project ? central : undefined}
+          notesLayerRef={notesLayerRef}
+          notesWorkspaceActive={notesWorkspace}
           context={effectiveContext}
           onNoteContext={receiveContext}
           onToolChange={openTool}
@@ -1031,18 +1065,15 @@ export function App({
           resizeHandle={
             <ResizeHandle
               value={rightWidth}
-              min={300}
+              min={MIN_DOCK_WIDTH}
               max={Math.max(
-                300,
-                Math.min(
-                  480,
-                  windowWidth -
-                    WORKSPACE_RAIL_WIDTH -
-                    (workspace === 'literature' || (sidebar && sidebarExpanded)
-                      ? resourceWidth
-                      : 0) -
-                    382,
-                ),
+                MIN_DOCK_WIDTH,
+                windowWidth -
+                  WORKSPACE_RAIL_WIDTH -
+                  (workspace === 'literature' || (hasResourceSidebar && sidebarExpanded)
+                    ? resourceWidth
+                    : 0) -
+                  MIN_CENTRAL_WIDTH,
               )}
               side="right"
               label={t('调整辅助栏宽度')}

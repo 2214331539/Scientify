@@ -2,8 +2,8 @@
   "name": "Scientify",
   "short_name": "Scientify",
   "display": "standalone",
-  "background_color": "#f7f8fa",
-  "theme_color": "#f7f8fa",
+  "background_color": "#111A17",
+  "theme_color": "#111A17",
   "icons": [
     {
       "src": "icon-192.png",

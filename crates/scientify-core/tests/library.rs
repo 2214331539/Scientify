@@ -11,6 +11,59 @@ fn fixture() -> (tempfile::TempDir, LocalLibrary, std::path::PathBuf) {
 }
 
 #[test]
+fn agent_paper_reads_do_not_bind_files_or_create_notes_or_text() {
+    let (_temp, lib, root) = fixture();
+    let root = root.canonicalize().unwrap();
+    fs::create_dir(root.join("nested")).unwrap();
+    fs::write(root.join("nested/b.PDF"), b"%PDF-1.4 second").unwrap();
+    fs::write(root.join("user.txt"), b"preserve").unwrap();
+    let index = root.join(".scientify/library.json");
+    let before = fs::read(&index).ok();
+    let papers = lib.papers("project", &root, ".").unwrap();
+    assert_eq!(papers.len(), 2);
+    assert_eq!(lib.papers("project", &root, "nested").unwrap().len(), 1);
+    let source = lib.paper_source("project", &root, "nested/b.PDF").unwrap();
+    assert_eq!(
+        lib.paper_bytes("project", &root, &source.path, &source.version)
+            .unwrap(),
+        b"%PDF-1.4 second"
+    );
+    assert_eq!(fs::read(&index).ok(), before);
+    assert!(!root.join("a.notes.md").exists());
+    assert_eq!(fs::read_dir(root.join("nested")).unwrap().count(), 1);
+    assert_eq!(fs::read(root.join("user.txt")).unwrap(), b"preserve");
+}
+
+#[test]
+fn agent_paper_access_rejects_cross_root_traversal_private_files_and_replaced_bytes() {
+    let (temp, lib, root) = fixture();
+    let root = root.canonicalize().unwrap();
+    for path in [
+        "../a.pdf",
+        ".scientify/a.pdf",
+        ".git/a.pdf",
+        "C:/a.pdf",
+        "a.notes.md",
+    ] {
+        assert!(lib.paper_source("project", &root, path).is_err(), "{path}");
+    }
+    assert!(lib.papers("project", &root, "../").is_err());
+    assert!(lib.paper_source("other", &root, "a.pdf").is_err());
+    let source = lib.paper_source("project", &root, "a.pdf").unwrap();
+    fs::write(root.join("a.pdf"), b"%PDF-1.4 replaced content").unwrap();
+    assert!(lib
+        .paper_bytes("project", &root, "a.pdf", &source.version)
+        .unwrap_err()
+        .contains("document_changed"));
+    fs::remove_file(root.join("a.pdf")).unwrap();
+    assert!(lib.paper_source("project", &root, "a.pdf").is_err());
+    let other = temp.path().join("other");
+    fs::create_dir(&other).unwrap();
+    lib.mount("project", &other).unwrap();
+    assert!(lib.papers("project", &root, ".").is_err());
+}
+
+#[test]
 fn dropped_files_use_the_target_folder_and_never_replace_existing_files_or_notes() {
     let (_t, lib, root) = fixture();
     fs::create_dir(root.join("Reading")).unwrap();

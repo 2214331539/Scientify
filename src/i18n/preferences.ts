@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { emit, listen } from '@tauri-apps/api/event';
+import { applyMotion } from '../platform/motion';
 
 export type Language = 'zh-CN' | 'en';
 export type Theme = 'light' | 'dark' | 'system';
@@ -112,6 +113,7 @@ function subscribe(listener: () => void) {
 export const usePreferences = () => useSyncExternalStore(subscribe, getPreferences, getPreferences);
 
 export function applyAppearance(prefs: Preferences, systemDark: boolean) {
+  applyMotion(document.documentElement);
   document.documentElement.classList.toggle(
     'dark',
     prefs.theme === 'dark' || (prefs.theme === 'system' && systemDark),

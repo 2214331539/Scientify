@@ -1,6 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { ResearchBackend } from './research';
+import type { FileBackend } from './research';
+import { collaboration, collaborationEntityId } from './collaboration';
 
 export type LibraryPaper = { id: string; path: string; notePath: string; fingerprint: string };
 export type LibraryEntry = {
@@ -41,13 +42,32 @@ export interface LibraryBackend {
     copy?: string,
   ): Promise<LibraryNote>;
   external(projectId: string, path: string, open: boolean): Promise<void>;
-  import(projectId: string, migrate: boolean): Promise<LibraryScan | null>;
   importFile(projectId: string, folder: string, file: File): Promise<LibraryScan>;
   changed(callback: (projectId: string, error?: string) => void): Promise<() => void>;
 }
 export function localCommand<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) return Promise.reject(new Error('请在桌面应用中使用本地文献目录和内嵌浏览器。'));
   return invoke<T>(name, args);
+}
+
+/** Persist a literature mutation locally first, then add it to the offline outbox. */
+export async function queueLiteratureMutation(
+  entityId: string,
+  kind: string,
+  payload: unknown,
+): Promise<void> {
+  if (!isTauri()) return;
+  await collaboration.enqueueIfEnabled({
+    operationId: crypto.randomUUID(),
+    domain: 'literature',
+    // Outbox identifiers are deliberately path-free; the original relative
+    // path stays in the payload and is validated by the local library.
+    entityId: collaborationEntityId(entityId),
+    baseRevision: 0,
+    kind,
+    payload,
+    createdAt: new Date().toISOString(),
+  });
 }
 export const nativeLibrary: LibraryBackend = {
   choose: (projectId) => localCommand('library_choose', { projectId }),
@@ -61,7 +81,6 @@ export const nativeLibrary: LibraryBackend = {
   saveNote: (projectId, id, content, revision, copy) =>
     localCommand('library_note', { projectId, id, content, revision, copy: copy ?? null }),
   external: (projectId, path, open) => localCommand('library_external', { projectId, path, open }),
-  import: (projectId, migrate) => localCommand('library_import', { projectId, migrate }),
   importFile: async (projectId, folder, file) => {
     if (file.size > 150 * 1024 * 1024) throw new Error('文件名无效或文件超过 150 MiB。');
     if (!isTauri()) throw new Error('请在桌面应用中使用本地文献目录和内嵌浏览器。');
@@ -81,16 +100,12 @@ export const nativeLibrary: LibraryBackend = {
       : Promise.resolve(() => {}),
 };
 
-const adapters = new WeakMap<LibraryBackend, ResearchBackend>();
+const adapters = new WeakMap<LibraryBackend, FileBackend>();
 /** Reuse the proven file buffer/conflict runtime for adjacent paper notes. */
-export function noteFiles(library: LibraryBackend): ResearchBackend {
+export function noteFiles(library: LibraryBackend): FileBackend {
   let adapter = adapters.get(library);
   if (adapter) return adapter;
-  const unsupported = async () => {
-    throw new Error('该操作不适用于论文笔记。');
-  };
   adapter = {
-    listFiles: async () => [],
     readFile: async (project, id) => {
       const note = await library.note(project, id);
       return { path: id, content: note.content, version: note.revision ?? 'missing' };
@@ -102,15 +117,13 @@ export function noteFiles(library: LibraryBackend): ResearchBackend {
         content,
         revision === 'missing' ? null : revision,
       );
+      void queueLiteratureMutation(id, 'note-upsert', {
+        path: id,
+        content,
+        revision: note.revision,
+      }).catch((error) => console.warn('Scientify collaboration outbox unavailable:', error));
       return { path: id, content: note.content, version: note.revision ?? 'missing' };
     },
-    importPdf: unsupported,
-    readPdf: unsupported,
-    gitStatus: unsupported,
-    askAI: unsupported,
-    listModels: unsupported,
-    testModel: unsupported,
-    fetchArxiv: unsupported,
   };
   adapters.set(library, adapter);
   return adapter;

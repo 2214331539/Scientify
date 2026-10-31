@@ -1,4 +1,25 @@
+import { validateWebSources } from './web-sources';
+import type { ShortcutSettings } from '../platform/shortcuts';
 export type Entity = { id: string; [key: string]: unknown };
+/** Wire protocols a model service can speak. */
+export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini';
+export type ModelSettings = {
+  endpoint: string;
+  model: string;
+  provider: AIProtocol;
+  serviceId?: string;
+  modelCatalog?: string[];
+  verification?: {
+    model: string;
+    checkedAt: string;
+    endpoint?: string;
+    provider?: ModelSettings['provider'];
+    chat: boolean;
+    agent: boolean;
+    agentError?: string | null;
+  };
+};
+export type ModelProfile = ModelSettings & { id: string; name: string };
 export type Team = Entity & { name: string; color: string; description?: string };
 export type Project = Entity & {
   name: string;
@@ -37,6 +58,28 @@ export type Experiment = Entity & {
   runConfigurations?: unknown;
   python?: { executable: string; version: string; prefix: string; manager: string };
 };
+export type WebSource = {
+  id: string;
+  title: string;
+  url: string;
+  groupId?: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+};
+export type WebSources = {
+  groups: { id: string; name: string; order: number }[];
+  items: WebSource[];
+};
+export type TranslationSettings = {
+  enabled: boolean;
+  sourceLanguage: string;
+  targetLanguage: string;
+  style: 'natural' | 'literal' | 'academic' | 'concise';
+  contextEnabled: boolean;
+  hotkey: string;
+  popupScale: number;
+};
 export type Workspace = {
   [key: string]: unknown;
   schema: 3;
@@ -51,6 +94,7 @@ export type Workspace = {
   tasks: Task[];
   sessions: (Entity & { project: string })[];
   subscriptions: Entity[];
+  webSources?: WebSources;
   trash: Entity[];
   recent: { key: string }[];
   activity: Entity[];
@@ -58,14 +102,19 @@ export type Workspace = {
     [key: string]: unknown;
     theme: string;
     name: string;
+    modelProfiles?: ModelProfile[];
+    defaultModelProfileId?: string;
     model: {
       endpoint: string;
       model: string;
-      provider?: 'ollama' | 'openai' | 'anthropic' | 'gemini';
+      provider?: AIProtocol;
       serviceId?: string;
       modelCatalog?: string[];
       recentModels?: string[];
+      verification?: ModelSettings['verification'];
     };
+    shortcuts?: ShortcutSettings;
+    translation?: TranslationSettings;
   };
   navigation: {
     [key: string]: unknown;
@@ -97,6 +146,15 @@ export function emptyWorkspace(): Workspace {
       theme: 'system',
       name: '',
       model: { endpoint: 'http://127.0.0.1:11434', model: '' },
+      translation: {
+        enabled: true,
+        sourceLanguage: 'auto',
+        targetLanguage: 'zh-CN',
+        style: 'academic',
+        contextEnabled: true,
+        hotkey: 'Alt+Shift+T',
+        popupScale: 1,
+      },
     },
     navigation: { tabs: ['home'], active: 'home', expanded: [], panel: null },
   };
@@ -104,6 +162,7 @@ export function emptyWorkspace(): Workspace {
 
 /** Legacy projects retain their existing directory, configurations and chat history. */
 export function normalizeExperiments(data: Workspace): Workspace {
+  validateWebSources(data.webSources);
   data.experiments ??= [];
   for (const project of data.projects) {
     if (project.experimentsInitialized === true) continue;

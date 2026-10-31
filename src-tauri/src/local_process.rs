@@ -36,7 +36,7 @@ impl OwnedChild {
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
-            command.creation_flags(0x08000000 | 0x00000004);
+            command.creation_flags(crate::experiments::runner::job::CREATION_FLAGS);
         }
         #[cfg(unix)]
         {

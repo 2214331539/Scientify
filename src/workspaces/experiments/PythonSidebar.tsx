@@ -13,7 +13,8 @@ import {
   type EnvironmentTask,
   type Interpreter,
 } from './development';
-import { describeError } from './runtime';
+import { statusLabel } from './status';
+import { errorMessage } from '../../domain/errors';
 
 export function PythonSidebar({
   projectId,
@@ -64,7 +65,7 @@ export function PythonSidebar({
     try {
       return await operation();
     } catch (e) {
-      if (epoch === generation.current) setError(describeError(e));
+      if (epoch === generation.current) setError(errorMessage(e));
     } finally {
       if (epoch === generation.current) setBusy(false);
     }
@@ -100,7 +101,7 @@ export function PythonSidebar({
         }
       })
       .catch((e) => {
-        if (alive) setError(describeError(e));
+        if (alive) setError(errorMessage(e));
       });
     return () => {
       alive = false;
@@ -115,7 +116,7 @@ export function PythonSidebar({
         if (alive) setLog(value);
       })
       .catch((e) => {
-        if (alive) setError(describeError(e));
+        if (alive) setError(errorMessage(e));
       });
     return () => {
       alive = false;
@@ -386,16 +387,7 @@ export function PythonSidebar({
                 onClick={() => setLogId(task.id)}
               >
                 <span>
-                  {task.kind} ·{' '}
-                  {t(
-                    task.status === 'running'
-                      ? '运行中'
-                      : task.status === 'completed'
-                        ? '已完成'
-                        : task.status === 'cancelled'
-                          ? '已取消'
-                          : '失败',
-                  )}
+                  {task.kind} · {statusLabel(task.status)}
                 </span>
               </Button>
               {task.status === 'running' && (
@@ -406,7 +398,7 @@ export function PythonSidebar({
                   onClick={() =>
                     void developmentApi
                       .python(projectId, experiment.id, { action: 'stop', id: task.id })
-                      .catch((e) => setError(describeError(e)))
+                      .catch((e) => setError(errorMessage(e)))
                   }
                 >
                   <Square size={13} />

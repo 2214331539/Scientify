@@ -8,6 +8,12 @@ use std::{path::PathBuf, time::Duration};
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
+/// The folder a project works in: its `path`, or the linked Git `repo` when no path is set.
+pub(crate) fn configured_root(project: &serde_json::Value) -> Option<&str> {
+    let set = |key: &str| project[key].as_str().filter(|path| !path.trim().is_empty());
+    set("path").or_else(|| set("repo"))
+}
+
 pub(crate) fn project_root(
     storage: &Storage,
     files: &ResearchFiles,
@@ -18,16 +24,7 @@ pub(crate) fn project_root(
         .as_array()
         .and_then(|ps| ps.iter().find(|p| p["id"].as_str() == Some(id)))
         .ok_or("项目不存在，请返回项目管理重新打开。")?;
-    let repository = project["repo"]
-        .as_str()
-        .filter(|path| !path.trim().is_empty());
-    files.project_root(
-        id,
-        project["path"]
-            .as_str()
-            .filter(|path| !path.trim().is_empty())
-            .or(repository),
-    )
+    files.project_root(id, configured_root(project))
 }
 
 #[tauri::command]
@@ -222,7 +219,7 @@ pub(crate) fn git_command(root: &std::path::Path) -> Result<std::process::Comman
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000 | 0x00000004);
+        command.creation_flags(crate::experiments::runner::job::CREATION_FLAGS);
     }
     Ok(command)
 }
@@ -440,65 +437,6 @@ pub async fn research_git_diff(
     })
     .await
     .map_err(|e| e.to_string())?
-}
-
-fn client(timeout: u64) -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(timeout))
-        .connect_timeout(Duration::from_secs(10))
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .map_err(|_| "网络客户端初始化失败。".into())
-}
-
-async fn response_bytes(mut response: reqwest::Response, limit: usize) -> Result<Vec<u8>, String> {
-    if !response.status().is_success() {
-        return Err(format!(
-            "服务返回 HTTP {}，请检查服务地址、模型名称和访问凭据。",
-            response.status().as_u16()
-        ));
-    }
-    if response.content_length().is_some_and(|n| n > limit as u64) {
-        return Err("服务响应超过大小限制。".into());
-    }
-    let mut bytes = Vec::new();
-    while let Some(chunk) = response
-        .chunk()
-        .await
-        .map_err(|_| "读取服务响应失败或超时，请稍后重试。")?
-    {
-        if bytes.len() + chunk.len() > limit {
-            return Err("服务响应超过大小限制。".into());
-        }
-        bytes.extend_from_slice(&chunk);
-    }
-    Ok(bytes)
-}
-
-#[tauri::command]
-pub async fn research_fetch_arxiv(query: String) -> Result<String, String> {
-    let query = query.trim();
-    if query.is_empty() || query.chars().count() > 200 {
-        return Err("订阅关键词应为 1–200 个字符。".into());
-    }
-    let response = client(25)?
-        .get("https://export.arxiv.org/api/query")
-        .query(&[
-            ("search_query", format!("all:{query}")),
-            ("start", "0".into()),
-            ("max_results", "20".into()),
-            ("sortBy", "submittedDate".into()),
-            ("sortOrder", "descending".into()),
-        ])
-        .header(
-            reqwest::header::USER_AGENT,
-            "Scientify/0.3 (local research workspace)",
-        )
-        .send()
-        .await
-        .map_err(|_| "无法连接 arXiv，网络异常或服务暂时不可用。")?;
-    String::from_utf8(response_bytes(response, 2 * 1024 * 1024).await?)
-        .map_err(|_| "arXiv 响应不是有效 UTF-8。".into())
 }
 
 #[cfg(test)]

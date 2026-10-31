@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-status"
+description = "Enables the collaboration_status command without any pre-configured scope."
+commands.allow = ["collaboration_status"]
+
+[[permission]]
+identifier = "deny-collaboration-status"
+description = "Denies the collaboration_status command without any pre-configured scope."
+commands.deny = ["collaboration_status"]

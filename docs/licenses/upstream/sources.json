@@ -1,4 +1,9 @@
 {
+  "cargo:eventsource-stream@0.2.3": {
+    "file": "Apache-2.0.txt",
+    "source": "https://github.com/jpopesculian/eventsource-stream/tree/3d46f1c758f9ee4681e9da0427556d24c53f9c01",
+    "licenseSource": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
   "cargo:alloc-stdlib@0.2.4": {
     "file": "alloc-stdlib-0.2.4.txt",
     "source": "https://raw.githubusercontent.com/dropbox/rust-alloc-no-stdlib/ae42d22078b98549e987d2f03d12df7b984fde47/LICENSE"
@@ -55,6 +60,14 @@
   "npm:saxes@6.0.0": {
     "file": "saxes-6.0.0.txt",
     "source": "https://raw.githubusercontent.com/lddubeau/saxes/211fa0ebec9b628affc09219199639887174bfc3/LICENSE"
+  },
+  "npm:remark-math@6.0.0": {
+    "file": "remark-math-MIT.txt",
+    "source": "https://raw.githubusercontent.com/remarkjs/remark-math/d5d0660b150810a535bbb07eac6cc96a4510aa24/license"
+  },
+  "npm:rehype-katex@7.0.1": {
+    "file": "remark-math-MIT.txt",
+    "source": "https://raw.githubusercontent.com/remarkjs/remark-math/88a9497e1ede93b958237c85edbf5651faeca7af/license"
   },
   "npm:stackback@0.0.2": {
     "file": "stackback-0.0.2.txt",

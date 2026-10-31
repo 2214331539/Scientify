@@ -54,7 +54,7 @@ fn execute(request: &Path) -> Result<i32, String> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000 | 0x00000004);
+        command.creation_flags(job::CREATION_FLAGS);
     }
     #[cfg(unix)]
     {
@@ -112,6 +112,9 @@ pub(crate) mod job {
             }
         }
     }
+    /// Flags for a child that `Job::attach` will own: no console window, and
+    /// suspended until it has joined the job and its thread is resumed.
+    pub const CREATION_FLAGS: u32 = CREATE_NO_WINDOW.0 | CREATE_SUSPENDED.0;
     pub struct Job(Owned);
     impl Job {
         pub fn attach_pty(handle: std::os::windows::io::RawHandle) -> Result<Self, String> {

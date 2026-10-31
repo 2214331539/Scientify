@@ -7,7 +7,7 @@ import { Columns2, Plus, Square, Trash2 } from 'lucide-react';
 import { Button, Dropdown } from '../../components/primitives';
 import { t } from '../../i18n';
 import { developmentApi, developmentStore, openTerminal, type TerminalInfo } from './development';
-import { describeError } from './runtime';
+import { errorMessage } from '../../domain/errors';
 import '@xterm/xterm/css/xterm.css';
 import './development.css';
 
@@ -62,13 +62,13 @@ function controller(info: TerminalInfo, onError: (error: string) => void) {
           cols: terminal.cols,
           rows: terminal.rows,
         })
-        .catch((e) => onError(describeError(e)));
+        .catch((e) => onError(errorMessage(e)));
     },
   };
   const input = terminal.onData((data) => {
     void developmentApi
       .terminal(info.project, { action: 'input', id: info.id, data })
-      .catch((e) => onError(describeError(e)));
+      .catch((e) => onError(errorMessage(e)));
   });
   async function poll() {
     if (polling) {
@@ -102,7 +102,7 @@ function controller(info: TerminalInfo, onError: (error: string) => void) {
         terminal.options.disableStdin = true;
       }
     } catch (reason) {
-      if (alive) onError(describeError(reason));
+      if (alive) onError(errorMessage(reason));
     } finally {
       polling = false;
       if (alive) timer = setTimeout(() => void poll(), pending ? 0 : 500);
@@ -197,7 +197,7 @@ export function TerminalPanel({
         onActive(info.id);
       }
     } catch (e) {
-      onError(describeError(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -211,7 +211,7 @@ export function TerminalPanel({
         terminals: data.terminals.filter((item) => item.id !== info.id),
       }));
     } catch (e) {
-      onError(describeError(e));
+      onError(errorMessage(e));
     }
   }
   return (
@@ -274,7 +274,7 @@ export function TerminalPanel({
             if (current)
               void developmentApi
                 .terminal(projectId, { action: 'input', id: current.id, data: '\x03' })
-                .catch((e) => onError(describeError(e)));
+                .catch((e) => onError(errorMessage(e)));
           }}
         >
           <Square size={14} />

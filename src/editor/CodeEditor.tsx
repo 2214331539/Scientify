@@ -25,6 +25,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import type { FileSession } from './sessions';
+import { bindingFor, shortcutToCodeMirror, type ShortcutSettings } from '../platform/shortcuts';
 
 const theme = EditorView.theme({
   '&': {
@@ -68,10 +69,12 @@ export function CodeEditor({
   session,
   onSelection,
   onCursor,
+  shortcuts,
 }: {
   session: FileSession;
   onSelection: (text: string) => void;
   onCursor?: (line: number, column: number) => void;
+  shortcuts?: ShortcutSettings;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -81,6 +84,7 @@ export function CodeEditor({
   selectionCallback.current = onSelection;
   const cursorCallback = useRef(onCursor);
   cursorCallback.current = onCursor;
+  const shortcutsKeymap = useRef(new Compartment());
   useEffect(() => {
     if (!host.current) return;
     const path = session.path.toLowerCase();
@@ -92,6 +96,27 @@ export function CodeEditor({
           ? markdown()
           : [];
     const wrap = new Compartment();
+    const customBinding = (
+      command: Parameters<typeof bindingFor>[1],
+      fallback: string,
+      run: (view: EditorView) => boolean,
+    ) => {
+      const current = bindingFor(shortcuts, command);
+      const key = shortcutToCodeMirror(
+        current?.enabled === false ? '' : (current?.keys ?? fallback),
+      );
+      return key ? { key, run } : null;
+    };
+    const customKeymap = [
+      customBinding('editor.save', 'Mod+S', () => {
+        void session.save();
+        return true;
+      }),
+      customBinding('editor.find', 'Mod+F', (view) => {
+        openSearchPanel(view);
+        return true;
+      }),
+    ].filter((item): item is NonNullable<typeof item> => !!item);
     let synchronizing = false;
     const extensions = [
       lineNumbers(),
@@ -109,34 +134,30 @@ export function CodeEditor({
         'aria-label': t('编辑 {path}', { path: session.path }),
         spellcheck: 'false',
       }),
-      keymap.of([
-        {
-          key: 'Mod-s',
-          run: () => {
-            void session.save();
-            return true;
+      shortcutsKeymap.current.of(
+        keymap.of([
+          ...customKeymap,
+          {
+            key: 'Mod-h',
+            run: (view) => {
+              openSearchPanel(view);
+              view.dom.querySelector<HTMLInputElement>('[name="replace"]')?.focus();
+              return true;
+            },
           },
-        },
-        {
-          key: 'Mod-h',
-          run: (view) => {
-            openSearchPanel(view);
-            view.dom.querySelector<HTMLInputElement>('[name="replace"]')?.focus();
-            return true;
+          {
+            key: 'Alt-z',
+            run: () => {
+              session.requestEditorCommand({ type: 'toggleWrap' });
+              return true;
+            },
           },
-        },
-        {
-          key: 'Alt-z',
-          run: () => {
-            session.requestEditorCommand({ type: 'toggleWrap' });
-            return true;
-          },
-        },
-        ...defaultKeymap,
-        ...historyKeymap,
-        ...searchKeymap,
-        indentWithTab,
-      ]),
+          ...defaultKeymap,
+          ...historyKeymap,
+          ...searchKeymap,
+          indentWithTab,
+        ]),
+      ),
       EditorView.updateListener.of((update) => {
         session.editorState = update.state;
         if (update.docChanged && !synchronizing) session.edit(update.state.doc.toString());
@@ -216,6 +237,42 @@ export function CodeEditor({
       viewRef.current = null;
     };
   }, [session]);
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const custom = (
+      command: Parameters<typeof bindingFor>[1],
+      fallback: string,
+      run: (view: EditorView) => boolean,
+    ) => {
+      const current = bindingFor(shortcuts, command);
+      const key = shortcutToCodeMirror(
+        current?.enabled === false ? '' : (current?.keys ?? fallback),
+      );
+      return key ? { key, run } : null;
+    };
+    const bindings = [
+      custom('editor.save', 'Mod+S', () => {
+        void session.save();
+        return true;
+      }),
+      custom('editor.find', 'Mod+F', (current) => {
+        openSearchPanel(current);
+        return true;
+      }),
+    ].filter((item): item is NonNullable<typeof item> => !!item);
+    view.dispatch({
+      effects: shortcutsKeymap.current.reconfigure(
+        keymap.of([
+          ...bindings,
+          ...defaultKeymap,
+          ...historyKeymap,
+          ...searchKeymap,
+          indentWithTab,
+        ]),
+      ),
+    });
+  }, [shortcuts, session]);
   useEffect(() => {
     viewRef.current?.dispatch({
       effects: phrases.current.reconfigure(EditorState.phrases.of(searchPhrases())),

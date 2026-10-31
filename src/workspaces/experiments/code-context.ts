@@ -4,7 +4,7 @@ import { useStore } from 'zustand';
 import { useCallback, useEffect, useState } from 'react';
 import { gitApi, type GitSnapshot } from '../../platform/git';
 import type { Project, Experiment } from '../../domain/workspace';
-import { describeError } from './runtime';
+import { errorMessage } from '../../domain/errors';
 // Selection is navigation state. Persisted native conversations own their original cwd.
 function rememberedRoots(key = 'scientify.code.worktrees.v1'): Record<string, string> {
   try {
@@ -108,7 +108,7 @@ export function useCodeWorkspace(project: Project, experiment?: Experiment) {
       .catch((e) => {
         if (alive) {
           setLoaded(null);
-          setError(describeError(e));
+          setError(errorMessage(e));
         }
       })
       .finally(() => {

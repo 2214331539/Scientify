@@ -19,18 +19,74 @@ const server = createServer(async (request, response) => {
   for await (const chunk of request) body += chunk;
   const input = JSON.parse(body);
   const data = values(input.input);
+  if (
+    process.env.SCIENTIFY_FIXTURE_REQUIRE_SKILL &&
+    sequence === 0 &&
+    !data.some(
+      (part) =>
+        part.type === 'input_text' &&
+        typeof part.text === 'string' &&
+        part.text.includes(process.env.SCIENTIFY_FIXTURE_REQUIRE_SKILL),
+    )
+  ) {
+    response.writeHead(400, { 'Content-Type': 'application/json' });
+    response.end(
+      JSON.stringify({ error: { message: 'Fixture did not receive selected skill instructions' } }),
+    );
+    return;
+  }
+  if (
+    process.env.SCIENTIFY_FIXTURE_REQUIRE_IMAGE &&
+    sequence === 0 &&
+    !data.some(
+      (part) =>
+        part.type === 'input_image' &&
+        typeof part.image_url === 'string' &&
+        part.image_url.startsWith('data:image/png;base64,'),
+    )
+  ) {
+    response.writeHead(400, { 'Content-Type': 'application/json' });
+    response.end(
+      JSON.stringify({
+        error: { message: 'Fixture did not receive the image in the Responses request' },
+      }),
+    );
+    return;
+  }
   const snapshot = data.filter((v) => v.run?.id).at(-1);
   if (snapshot?.run.status === 'failed')
     throw new Error(`Fixture run failed: ${snapshot.run.error}; ${snapshot.log}`);
   const id = `fixture-${++sequence}`;
   let item;
   if (toolName !== 'scientify_start_run') {
-    const reply = data.find((value) => typeof value.output === 'string' || typeof value.error === 'string');
+    const reply = data.find(
+      (value) => typeof value.output === 'string' || typeof value.error === 'string',
+    );
     if (!reply) {
-      if (!values(input.tools).some((value) => value.name === toolName)) throw new Error('Missing Git tool');
-      item = { type: 'function_call', id: `fc-${sequence}`, call_id: `call-${sequence}`, name: toolName, arguments: JSON.stringify(command), status: 'completed' };
+      if (!values(input.tools).some((value) => value.name === toolName))
+        throw new Error('Missing requested tool');
+      item = {
+        type: 'function_call',
+        id: `fc-${sequence}`,
+        call_id: `call-${sequence}`,
+        name: toolName,
+        arguments: JSON.stringify(command),
+        status: 'completed',
+      };
     } else {
-      item = { type: 'message', id: `message-${sequence}`, role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: `Git result received: ${JSON.stringify(reply)}`, annotations: [] }] };
+      item = {
+        type: 'message',
+        id: `message-${sequence}`,
+        role: 'assistant',
+        status: 'completed',
+        content: [
+          {
+            type: 'output_text',
+            text: `Tool result received: ${JSON.stringify(reply)}`,
+            annotations: [],
+          },
+        ],
+      };
     }
   } else if (!snapshot) {
     if (!values(input.tools).some((v) => v.name === 'scientify_start_run'))

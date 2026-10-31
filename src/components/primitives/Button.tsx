@@ -58,17 +58,3 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     </>
   );
 });
-
-export const IconButton = forwardRef<HTMLButtonElement, ButtonProps & { label: string }>(
-  function IconButton({ label, ...props }, ref) {
-    return (
-      <Button
-        {...props}
-        ref={ref}
-        iconOnly
-        aria-label={props['aria-label'] || label}
-        tooltip={props.tooltip || label}
-      />
-    );
-  },
-);

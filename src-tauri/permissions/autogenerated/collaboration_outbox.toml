@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-outbox"
+description = "Enables the collaboration_outbox command without any pre-configured scope."
+commands.allow = ["collaboration_outbox"]
+
+[[permission]]
+identifier = "deny-collaboration-outbox"
+description = "Denies the collaboration_outbox command without any pre-configured scope."
+commands.deny = ["collaboration_outbox"]

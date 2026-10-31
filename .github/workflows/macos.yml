@@ -51,6 +51,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -64,10 +67,16 @@ jobs:
           git fetch origin main --tags
           node scripts/check-release.mjs '${{ inputs.tag }}'
       - run: pnpm install --frozen-lockfile
+      - name: Prepare bundled translation
+        run: pnpm prepare:translation
       - run: pnpm run build
       - run: pnpm check
       - run: pnpm test --maxWorkers=2
       - run: node --test scripts/platform.test.mjs
+      - name: Yita macOS tests
+        run: |
+          dotnet test vendor/yita/tests/Yita.Native.Mac.Tests -c Release
+          dotnet test vendor/yita/tests/Yita.Desktop.Tests -c Release
       - run: cargo fmt --all --check
       - run: cargo test --workspace --locked -- --test-threads=1
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings

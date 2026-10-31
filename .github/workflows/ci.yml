@@ -31,6 +31,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -39,14 +42,24 @@ jobs:
           cache-on-failure: true
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Prepare bundled translation
+        run: pnpm prepare:translation
       - name: Prepare assets and build frontend
         run: pnpm run build
+      - name: Formatting
+        run: pnpm format:check
       - name: Type checking
         run: pnpm check
       - name: Release platform mapping
         run: node --test scripts/platform.test.mjs
       - name: Frontend tests
         run: pnpm test --maxWorkers=2
+      - name: Install UI test browser
+        run: pnpm exec playwright install chromium
+      - name: Browser integration tests
+        run: pnpm test:ui
+        env:
+          SCIENTIFY_BROWSER_CHANNEL: chromium
       - name: Rust formatting
         run: cargo fmt --all --check
       - name: Rust tests
