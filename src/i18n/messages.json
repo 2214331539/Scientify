@@ -1,4 +1,124 @@
 {
+  "翻译": ["翻译", "Translate"],
+  "源语言": ["源语言", "Source language"],
+  "目标语言": ["目标语言", "Target language"],
+  "翻译风格": ["翻译风格", "Translation style"],
+  "原文": ["原文", "Original"],
+  "译文": ["译文", "Translation"],
+  "在这里输入或粘贴需要翻译的内容…": [
+    "在这里输入或粘贴需要翻译的内容…",
+    "Type or paste text to translate…"
+  ],
+  "正在流式翻译…": ["正在流式翻译…", "Translating…"],
+  "译文会显示在这里": ["译文会显示在这里", "Your translation will appear here"],
+  "重新翻译": ["重新翻译", "Translate again"],
+  "中止": ["中止", "Stop"],
+  "发送到 AI": ["发送到 AI", "Send to AI"],
+  "解释": ["解释", "Explain"],
+  "交换语言": ["交换语言", "Swap languages"],
+  "固定翻译浮窗": ["固定翻译浮窗", "Pin translator"],
+  "取消固定": ["取消固定", "Unpin translator"],
+  "选中文本或粘贴内容": ["选中文本或粘贴内容", "Select text or paste content"],
+  "启用翻译浮窗": ["启用翻译浮窗", "Enable translator popup"],
+  "翻译浮窗复用当前 AI 模型配置，但不会读取或修改工作区文件。": [
+    "翻译浮窗复用当前 AI 模型配置，但不会读取或修改工作区文件。",
+    "The translator reuses the current AI model without reading or modifying workspace files."
+  ],
+  "在 AI、笔记旁打开翻译工具，选中文本后可直接翻译。": [
+    "在 AI、笔记旁打开翻译工具，选中文本后可直接翻译。",
+    "Open the translator beside AI and Notes to translate selected text."
+  ],
+  "默认语言": ["默认语言", "Default languages"],
+  "翻译浮窗首次打开时使用的语言组合。": [
+    "翻译浮窗首次打开时使用的语言组合。",
+    "Languages used when the translator opens."
+  ],
+  "学术风格会优先保留术语、公式和 Markdown 结构。": [
+    "学术风格会优先保留术语、公式和 Markdown 结构。",
+    "Academic style preserves terminology, formulas and Markdown structure."
+  ],
+  "使用当前页面上下文": ["使用当前页面上下文", "Use current page context"],
+  "将论文标题、页码和当前路径作为翻译提示，不会上传整篇文献。": [
+    "将论文标题、页码和当前路径作为翻译提示，不会上传整篇文献。",
+    "Use the paper title, page and path as hints without uploading the whole paper."
+  ],
+  "全局快捷键": ["全局快捷键", "Global shortcut"],
+  "应用快捷键": ["应用快捷键", "Apply shortcut"],
+  "Windows 支持系统选区；其他平台暂支持应用内选区。": [
+    "Windows 支持系统选区；其他平台暂支持应用内选区。",
+    "Windows supports system selections; other platforms currently support in-app selections."
+  ],
+  "按下此快捷键可读取当前应用的选中文本并打开翻译浮窗。": [
+    "按下此快捷键可读取当前应用的选中文本并打开翻译浮窗。",
+    "Use this shortcut to read the current app's selection and open the translator."
+  ],
+  "执行权限": ["执行权限", "Execution permissions"],
+  "询问": ["询问", "Ask"],
+  "完全允许": ["完全允许", "Full access"],
+  "设置当前会话的执行权限": ["设置当前会话的执行权限", "Set permissions for this chat"],
+  "选择当前工作区可用的技能": [
+    "选择当前工作区可用的技能",
+    "Choose a skill available in this workspace"
+  ],
+  "选择模型或配置连接": ["选择模型或配置连接", "Choose a model or configure a connection"],
+  "新建独立会话": ["新建独立会话", "Start a separate chat"],
+  "中止当前任务": ["中止当前任务", "Stop the current task"],
+  "选择技能": ["选择技能", "Choose a skill"],
+  "快捷命令": ["快捷命令", "Commands"],
+  "可用技能": ["可用技能", "Available skills"],
+  "刷新技能": ["刷新技能", "Refresh skills"],
+  "正在读取技能…": ["正在读取技能…", "Loading skills…"],
+  "请在项目中使用支持 Agent 的连接以选择技能。": [
+    "请在项目中使用支持 Agent 的连接以选择技能。",
+    "Open a project with an Agent-compatible connection to select skills."
+  ],
+  "每条消息最多选择 4 个技能。": [
+    "每条消息最多选择 4 个技能。",
+    "Select up to 4 skills per message."
+  ],
+  "没有匹配的可用技能。技能需先安装到工作区 .agents/skills 或 Scientify 的 Codex 数据目录。": [
+    "没有匹配的可用技能。技能需先安装到工作区 .agents/skills 或 Scientify 的 Codex 数据目录。",
+    "No matching skills. Install skills in the workspace .agents/skills folder or Scientify's Codex data directory."
+  ],
+  "↑ ↓ 选择 · Enter 确认 · Esc 关闭": [
+    "↑ ↓ 选择 · Enter 确认 · Esc 关闭",
+    "↑ ↓ Select · Enter Confirm · Esc Close"
+  ],
+  "待发送技能": ["待发送技能", "Skills for the next message"],
+  "移除技能 {name}": ["移除技能 {name}", "Remove skill {name}"],
+  "本轮技能": ["本轮技能", "Skills used in this turn"],
+  "当前任务或保存结束后可切换权限": [
+    "当前任务或保存结束后可切换权限",
+    "Change permissions after the current task and save finish"
+  ],
+  "仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。": [
+    "仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。",
+    "Applies to this chat from the next turn. Chat-only connections cannot execute local actions."
+  ],
+  "在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。": [
+    "在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。",
+    "Run in the workspace sandbox; ask for escalations and Git writes."
+  ],
+  "取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。": [
+    "取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。",
+    "Disable the execution sandbox; allow files outside the workspace and network access without execution approvals."
+  ],
+  "权限保存失败，请重试。": [
+    "权限保存失败，请重试。",
+    "Permissions could not be saved. Try again."
+  ],
+  "技能需要内置 Agent 执行，当前连接仅支持聊天。请更换连接或移除技能。": [
+    "技能需要内置 Agent 执行，当前连接仅支持聊天。请更换连接或移除技能。",
+    "Skills require the built-in Agent. Change the chat-only connection or remove the selected skills."
+  ],
+  "请等待当前任务结束后再切换权限。": [
+    "请等待当前任务结束后再切换权限。",
+    "Wait for the current task to finish before changing permissions."
+  ],
+  "技能已移除、停用或不属于当前工作区，请重新选择：{name}": [
+    "技能已移除、停用或不属于当前工作区，请重新选择：{name}",
+    "This skill was removed, disabled, or is unavailable in this workspace. Select it again: {name}"
+  ],
   "实验管理": ["实验管理", "Experiments"],
   "当前实验": ["当前实验", "Current experiment"],
   "实验": ["实验", "Experiment"],
@@ -21,28 +141,73 @@
   "关联已有目录 / worktree": ["关联已有目录 / worktree", "Link existing folder / worktree"],
   "创建实验": ["创建实验", "Create experiment"],
   "已结束": ["已结束", "Finished"],
-  "请先停止此实验的 AI 和运行任务。": ["请先停止此实验的 AI 和运行任务。", "Stop this experiment's AI and runs first."],
-  "移除实验登记？磁盘文件、Git 提交、AI 对话和运行记录会保留。": ["移除实验登记？磁盘文件、Git 提交、AI 对话和运行记录会保留。", "Remove the experiment registration? Files, Git commits, chats and run history will be kept."],
+  "请先停止此实验的 AI 和运行任务。": [
+    "请先停止此实验的 AI 和运行任务。",
+    "Stop this experiment's AI and runs first."
+  ],
+  "移除实验登记？磁盘文件、Git 提交、AI 对话和运行记录会保留。": [
+    "移除实验登记？磁盘文件、Git 提交、AI 对话和运行记录会保留。",
+    "Remove the experiment registration? Files, Git commits, chats and run history will be kept."
+  ],
   "实验不存在。": ["实验不存在。", "Experiment not found."],
-  "此材料的实验已移除或归档，请先恢复实验登记。": ["此材料的实验已移除或归档，请先恢复实验登记。", "This material's experiment was removed or archived. Restore its registration first."],
-  "此实验已归档，请恢复后再执行。": ["此实验已归档，请恢复后再执行。", "This experiment is archived. Restore it before executing."],
-  "该目录与已登记实验的目录相同或相互包含，请选择独立目录。": ["该目录与已登记实验的目录相同或相互包含，请选择独立目录。", "This folder overlaps a registered experiment. Choose an independent folder."],
-  "所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。": ["所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。", "This experiment is inside a Git repository. Register its repository root to manage the entire repository."],
-  "此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。": ["此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。", "This worktree is registered as an experiment. Remove that registration before deleting the worktree folder."],
+  "此材料的实验已移除或归档，请先恢复实验登记。": [
+    "此材料的实验已移除或归档，请先恢复实验登记。",
+    "This material's experiment was removed or archived. Restore its registration first."
+  ],
+  "此实验已归档，请恢复后再执行。": [
+    "此实验已归档，请恢复后再执行。",
+    "This experiment is archived. Restore it before executing."
+  ],
+  "该目录与已登记实验的目录相同或相互包含，请选择独立目录。": [
+    "该目录与已登记实验的目录相同或相互包含，请选择独立目录。",
+    "This folder overlaps a registered experiment. Choose an independent folder."
+  ],
+  "所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。": [
+    "所选实验目录位于 Git 仓库内部；请在实验管理中关联仓库根目录来操作完整仓库。",
+    "This experiment is inside a Git repository. Register its repository root to manage the entire repository."
+  ],
+  "此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。": [
+    "此 worktree 已登记为实验，请先在实验管理中移除登记，再删除 worktree 目录。",
+    "This worktree is registered as an experiment. Remove that registration before deleting the worktree folder."
+  ],
   "数据存储位置": ["数据存储位置", "Data storage location"],
   "更改位置": ["更改位置", "Change location"],
   "取消迁移": ["取消迁移", "Cancel move"],
   "下次启动迁移到": ["下次启动迁移到", "Move on next launch to"],
-  "应用数据保存在本机。已关联的项目和文献目录保留原位置。": ["应用数据保存在本机。已关联的项目和文献目录保留原位置。", "App data is stored locally. Linked project and literature folders stay in their current locations."],
-  "选择空文件夹。保存并退出应用后，下次启动将迁移数据、托管代码、AI 历史和浏览缓存。": ["选择空文件夹。保存并退出应用后，下次启动将迁移数据、托管代码、AI 历史和浏览缓存。", "Choose an empty folder. Save and exit; the next launch moves data, managed code, AI history and browser profiles."],
-  "请先保存内容并结束任务，再更改数据位置。": ["请先保存内容并结束任务，再更改数据位置。", "Save your work and finish active tasks before changing storage location."],
-  "请在 Scientify 桌面版更改数据位置。": ["请在 Scientify 桌面版更改数据位置。", "Change storage location in the Scientify desktop app."],
-  "开发版使用隔离数据目录，请在正式版更改存储位置。": ["开发版使用隔离数据目录，请在正式版更改存储位置。", "Development builds use isolated data. Change storage location in a release build."],
+  "应用数据保存在本机。已关联的项目和文献目录保留原位置。": [
+    "应用数据保存在本机。已关联的项目和文献目录保留原位置。",
+    "App data is stored locally. Linked project and literature folders stay in their current locations."
+  ],
+  "选择空文件夹。保存并退出应用后，下次启动将迁移数据、托管代码、AI 历史和浏览缓存。": [
+    "选择空文件夹。保存并退出应用后，下次启动将迁移数据、托管代码、AI 历史和浏览缓存。",
+    "Choose an empty folder. Save and exit; the next launch moves data, managed code, AI history and browser profiles."
+  ],
+  "请先保存内容并结束任务，再更改数据位置。": [
+    "请先保存内容并结束任务，再更改数据位置。",
+    "Save your work and finish active tasks before changing storage location."
+  ],
+  "请在 Scientify 桌面版更改数据位置。": [
+    "请在 Scientify 桌面版更改数据位置。",
+    "Change storage location in the Scientify desktop app."
+  ],
+  "开发版使用隔离数据目录，请在正式版更改存储位置。": [
+    "开发版使用隔离数据目录，请在正式版更改存储位置。",
+    "Development builds use isolated data. Change storage location in a release build."
+  ],
   "文献任务": ["文献任务", "Literature tasks"],
   "实验代码任务": ["实验代码任务", "Experiment code tasks"],
-  "本地科研工作区 · 文献 / 笔记 / 实验 / 论文": ["本地科研工作区 · 文献 / 笔记 / 实验 / 论文", "Local research workspace · Literature / Notes / Experiments / Paper"],
-  "已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。": ["已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。", "Available: local literature and PDF reading, notes, code editing, Git diffs, parallel experiments, logs and results, Markdown preview, and a global AI assistant that operates within workspaces."],
-  "后续接入：代码版本管理、LaTeX 编译、自动订阅更新与 PDF 批注。模型服务在 AI 助手中配置。": ["后续接入：代码版本管理、LaTeX 编译、自动订阅更新与 PDF 批注。模型服务在 AI 助手中配置。", "Planned: code version management, LaTeX compilation, subscription updates and PDF annotations. Configure model providers in the AI assistant."],
+  "本地科研工作区 · 文献 / 笔记 / 实验 / 论文": [
+    "本地科研工作区 · 文献 / 笔记 / 实验 / 论文",
+    "Local research workspace · Literature / Notes / Experiments / Paper"
+  ],
+  "已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。": [
+    "已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。",
+    "Available: local literature and PDF reading, notes, code editing, Git diffs, parallel experiments, logs and results, Markdown preview, and a global AI assistant that operates within workspaces."
+  ],
+  "后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。": [
+    "后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。",
+    "Planned: LaTeX compilation, PDF annotations and more literature tools. Configure model providers in the AI assistant."
+  ],
   "AI 实验": ["AI 实验", "AI experiment"],
   "关联实验运行": ["关联实验运行", "Linked experiment runs"],
   "打开实验运行": ["打开实验运行", "Open experiment run"],
@@ -51,120 +216,161 @@
   "运行详情视图": ["运行详情视图", "Run detail view"],
   "结果文件": ["结果文件", "Result files"],
   "运行信息": ["运行信息", "Run information"],
-  "执行权限": ["执行权限", "Execution permissions"],
   "工作区沙箱 · 网络关闭": ["工作区沙箱 · 网络关闭", "Workspace sandbox · Network disabled"],
   "旧版用户权限运行": ["旧版用户权限运行", "Legacy user-permission run"],
   "来源会话": ["来源会话", "Source conversation"],
   "来源任务": ["来源任务", "Source turn"],
-  "Git 仓库与代码目录不同，请在对应目录打开文件。": ["Git 仓库与代码目录不同，请在对应目录打开文件。", "The Git repository differs from the code directory. Open this file in its repository."],
-  "运行前保存此项目的 {count} 个未保存文件？保存失败时不会启动。": ["运行前保存此项目的 {count} 个未保存文件？保存失败时不会启动。","Save {count} unsaved project files before running? A failed save prevents launch."],
-  "文件保存失败，请处理冲突后再运行。": ["文件保存失败，请处理冲突后再运行。","File save failed. Resolve the conflict before running."],
-  "运行本地程序 {program}？参数：{args}。程序具有当前用户权限，多次运行共享项目文件。": ["运行本地程序 {program}？参数：{args}。程序具有当前用户权限，多次运行共享项目文件。","Run {program} locally with arguments {args}? The program uses your user permissions. Runs share project files."],
-  "后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。": ["后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。","Background tasks are running or have unsaved results. Stop tasks in Experiments or the AI assistant and save results before closing."],
-  "运行配置": ["运行配置","Run configuration"],
-  "选择运行配置": ["选择运行配置","Select configuration"],
-  "新建运行配置": ["新建运行配置","New run configuration"],
-  "环境与依赖": ["环境与依赖","Environment & dependencies"],
-  "保存当前文件": ["保存当前文件","Save current file"],
-  "编辑运行配置": ["编辑运行配置","Edit run configuration"],
-  "本地执行仅在桌面应用可用": ["本地执行仅在桌面应用可用","Local execution requires the desktop app"],
-  "查看运行输出": ["查看运行输出","Select run output"],
-  "尚无本地运行": ["尚无本地运行","No local runs yet"],
-  "应用托管目录": ["应用托管目录","App-managed directory"],
-  "可执行程序": ["可执行程序","Executable"],
-  "工作目录": ["工作目录","Working directory"],
-  "参数": ["参数","Arguments"],
-  "以上为配置值，不表示环境检测已通过。运行时会验证路径和程序。": ["以上为配置值，不表示环境检测已通过。运行时会验证路径和程序。","These are configured values, not verified environment results. Paths and the executable are checked at launch."],
-  "产物目录由 SCIENTIFY_RUN_DIR 提供，脚本需显式将结果写入该目录。": ["产物目录由 SCIENTIFY_RUN_DIR 提供，脚本需显式将结果写入该目录。","The script must write results to the directory provided by SCIENTIFY_RUN_DIR."],
-  "请切换到对应项目查看运行详情。": ["请切换到对应项目查看运行详情。","Switch to the corresponding project for run details."],
-  "查看": ["查看","View"],
-  "暂无后台实验任务": ["暂无后台实验任务","No background experiment tasks"],
-  "请输入名称和可执行程序。": ["请输入名称和可执行程序。","Enter a name and executable."],
-  "项目不存在": ["项目不存在","Project not found"],
-  "保存失败": ["保存失败","Save failed"],
-  "配置名称": ["配置名称","Configuration name"],
-  "参数（JSON 数组）": ["参数（JSON 数组）","Arguments (JSON array)"],
-  "工作目录（相对项目根目录）": ["工作目录（相对项目根目录）","Working directory (relative to project root)"],
-  "删除此运行配置？已有运行记录不会删除。": ["删除此运行配置？已有运行记录不会删除。","Delete this configuration? Existing runs will be preserved."],
-  "删除配置": ["删除配置","Delete configuration"],
-  "保存配置": ["保存配置","Save configuration"],
-  "搜索实验记录": ["搜索实验记录","Search experiment records"],
-  "搜索运行…": ["搜索运行…","Search runs…"],
-  "筛选实验状态": ["筛选实验状态","Filter run status"],
-  "失败": ["失败","Failed"],
-  "已取消": ["已取消","Cancelled"],
-  "已中断": ["已中断","Interrupted"],
-  "手动记录": ["手动记录","Manual record"],
-  "本地运行": ["本地运行","Local run"],
-  "比较": ["比较","Compare"],
-  "运行比较": ["运行比较","Run comparison"],
-  "字段": ["字段","Field"],
-  "运行": ["运行","Run"],
-  "来源": ["来源","Source"],
-  "更新时间": ["更新时间","Updated"],
-  "比较 {name}": ["比较 {name}","Compare {name}"],
-  "再次运行": ["再次运行","Run again"],
-  "退出码": ["退出码","Exit code"],
-  "刷新运行输出": ["刷新运行输出","Refresh run output"],
-  "只读运行日志": ["只读运行日志","Read-only run log"],
-  "暂无输出": ["暂无输出","No output yet"],
-  "平台": ["平台","Platform"],
-  "Git 提交": ["Git 提交","Git commit"],
-  "未记录": ["未记录","Not recorded"],
-  "启动时变更": ["启动时变更","Changes at launch"],
-  "导入指标": ["导入指标","Import metrics"],
-  "暂无运行产物": ["暂无运行产物","No run artifacts"],
-  "修改的文件": ["修改的文件","Changed files"],
-  "刷新 Git 差异": ["刷新 Git 差异","Refresh Git diff"],
-  "打开文件": ["打开文件","Open file"],
-  "工作区": ["工作区","Working tree"],
-  "文件版本差异": ["文件版本差异","File version diff"],
-  "暂无文本差异": ["暂无文本差异","No text diff"],
-  "环境与版本": ["环境与版本","Environment & version"],
-  "产物": ["产物","Artifacts"],
-  "日志": ["日志","Logs"],
-  "结果": ["结果","Results"],
-  "启动中…": ["启动中…","Starting…"],
-  "停止中…": ["停止中…","Stopping…"],
-  "执行状态（只读）": ["执行状态（只读）","Execution status (read only)"],
-  "参数必须是 JSON 字符串数组。": ["参数必须是 JSON 字符串数组。","Arguments must be a JSON array of strings."],
-  "指标文件需为 JSON 对象，字段值为有限数字。": ["指标文件需为 JSON 对象，字段值为有限数字。","Metrics must be a JSON object with finite numeric values."],
-  "指标文件需包含 1 至 100 项指标。": ["指标文件需包含 1 至 100 项指标。","The file must contain 1 to 100 metrics."],
-  "必须使用工作区内的相对路径。": ["必须使用工作区内的相对路径。","Use a relative path inside the workspace."],
-  "请选择可执行程序。": ["请选择可执行程序。","Select an executable."],
-  "找不到可执行程序，请填写绝对路径或检查 PATH。": ["找不到可执行程序，请填写绝对路径或检查 PATH。","Executable not found. Enter an absolute path or check PATH."],
-  "可执行程序不存在。": ["可执行程序不存在。","Executable not found."],
-  "运行配置无效。": ["运行配置无效。","Invalid run configuration."],
-  "工作目录不存在。": ["工作目录不存在。","Working directory not found."],
-  "最多同时运行 8 个实验，请等待或停止已有任务。": ["最多同时运行 8 个实验，请等待或停止已有任务。","At most 8 experiments can run concurrently. Wait or stop an existing run."],
-  "实验仍在运行，请停止后再删除项目、更换目录或恢复数据。": ["实验仍在运行，请停止后再删除项目、更换目录或恢复数据。","Stop running experiments before deleting the project, changing its directory, or restoring data."],
-  "运行记录不存在。": ["运行记录不存在。","Run not found."],
-  "应用上次退出时运行未完成；未自动重新执行。": ["应用上次退出时运行未完成；未自动重新执行。","The run was unfinished when the app last exited. It was not restarted."],
-  "日志超过 64 MiB，已停止运行以保护磁盘空间。": ["日志超过 64 MiB，已停止运行以保护磁盘空间。","The log exceeded 64 MiB. The run was stopped to protect disk space."],
-  "外观与语言": [
-    "外观与语言",
-    "Appearance & language"
+  "Git 仓库与代码目录不同，请在对应目录打开文件。": [
+    "Git 仓库与代码目录不同，请在对应目录打开文件。",
+    "The Git repository differs from the code directory. Open this file in its repository."
   ],
-  "界面语言": [
-    "界面语言",
-    "Language"
+  "运行前保存此项目的 {count} 个未保存文件？保存失败时不会启动。": [
+    "运行前保存此项目的 {count} 个未保存文件？保存失败时不会启动。",
+    "Save {count} unsaved project files before running? A failed save prevents launch."
   ],
-  "界面主题": [
-    "界面主题",
-    "Theme"
+  "文件保存失败，请处理冲突后再运行。": [
+    "文件保存失败，请处理冲突后再运行。",
+    "File save failed. Resolve the conflict before running."
   ],
-  "跟随系统": [
-    "跟随系统",
-    "System"
+  "运行本地程序 {program}？参数：{args}。程序具有当前用户权限，多次运行共享项目文件。": [
+    "运行本地程序 {program}？参数：{args}。程序具有当前用户权限，多次运行共享项目文件。",
+    "Run {program} locally with arguments {args}? The program uses your user permissions. Runs share project files."
   ],
-  "浅色": [
-    "浅色",
-    "Light"
+  "后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。": [
+    "后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。",
+    "Background tasks are running or have unsaved results. Stop tasks in Experiments or the AI assistant and save results before closing."
   ],
-  "深色": [
-    "深色",
-    "Dark"
+  "运行配置": ["运行配置", "Run configuration"],
+  "选择运行配置": ["选择运行配置", "Select configuration"],
+  "新建运行配置": ["新建运行配置", "New run configuration"],
+  "环境与依赖": ["环境与依赖", "Environment & dependencies"],
+  "保存当前文件": ["保存当前文件", "Save current file"],
+  "编辑运行配置": ["编辑运行配置", "Edit run configuration"],
+  "本地执行仅在桌面应用可用": [
+    "本地执行仅在桌面应用可用",
+    "Local execution requires the desktop app"
   ],
+  "查看运行输出": ["查看运行输出", "Select run output"],
+  "尚无本地运行": ["尚无本地运行", "No local runs yet"],
+  "应用托管目录": ["应用托管目录", "App-managed directory"],
+  "可执行程序": ["可执行程序", "Executable"],
+  "工作目录": ["工作目录", "Working directory"],
+  "参数": ["参数", "Arguments"],
+  "以上为配置值，不表示环境检测已通过。运行时会验证路径和程序。": [
+    "以上为配置值，不表示环境检测已通过。运行时会验证路径和程序。",
+    "These are configured values, not verified environment results. Paths and the executable are checked at launch."
+  ],
+  "产物目录由 SCIENTIFY_RUN_DIR 提供，脚本需显式将结果写入该目录。": [
+    "产物目录由 SCIENTIFY_RUN_DIR 提供，脚本需显式将结果写入该目录。",
+    "The script must write results to the directory provided by SCIENTIFY_RUN_DIR."
+  ],
+  "请切换到对应项目查看运行详情。": [
+    "请切换到对应项目查看运行详情。",
+    "Switch to the corresponding project for run details."
+  ],
+  "查看": ["查看", "View"],
+  "暂无后台实验任务": ["暂无后台实验任务", "No background experiment tasks"],
+  "请输入名称和可执行程序。": ["请输入名称和可执行程序。", "Enter a name and executable."],
+  "项目不存在": ["项目不存在", "Project not found"],
+  "保存失败": ["保存失败", "Save failed"],
+  "配置名称": ["配置名称", "Configuration name"],
+  "参数（JSON 数组）": ["参数（JSON 数组）", "Arguments (JSON array)"],
+  "工作目录（相对项目根目录）": [
+    "工作目录（相对项目根目录）",
+    "Working directory (relative to project root)"
+  ],
+  "删除此运行配置？已有运行记录不会删除。": [
+    "删除此运行配置？已有运行记录不会删除。",
+    "Delete this configuration? Existing runs will be preserved."
+  ],
+  "删除配置": ["删除配置", "Delete configuration"],
+  "保存配置": ["保存配置", "Save configuration"],
+  "搜索实验记录": ["搜索实验记录", "Search experiment records"],
+  "搜索运行…": ["搜索运行…", "Search runs…"],
+  "筛选实验状态": ["筛选实验状态", "Filter run status"],
+  "失败": ["失败", "Failed"],
+  "已取消": ["已取消", "Cancelled"],
+  "已中断": ["已中断", "Interrupted"],
+  "手动记录": ["手动记录", "Manual record"],
+  "本地运行": ["本地运行", "Local run"],
+  "比较": ["比较", "Compare"],
+  "运行比较": ["运行比较", "Run comparison"],
+  "字段": ["字段", "Field"],
+  "运行": ["运行", "Run"],
+  "来源": ["来源", "Source"],
+  "更新时间": ["更新时间", "Updated"],
+  "比较 {name}": ["比较 {name}", "Compare {name}"],
+  "再次运行": ["再次运行", "Run again"],
+  "退出码": ["退出码", "Exit code"],
+  "刷新运行输出": ["刷新运行输出", "Refresh run output"],
+  "只读运行日志": ["只读运行日志", "Read-only run log"],
+  "暂无输出": ["暂无输出", "No output yet"],
+  "平台": ["平台", "Platform"],
+  "Git 提交": ["Git 提交", "Git commit"],
+  "未记录": ["未记录", "Not recorded"],
+  "启动时变更": ["启动时变更", "Changes at launch"],
+  "导入指标": ["导入指标", "Import metrics"],
+  "暂无运行产物": ["暂无运行产物", "No run artifacts"],
+  "修改的文件": ["修改的文件", "Changed files"],
+  "刷新 Git 差异": ["刷新 Git 差异", "Refresh Git diff"],
+  "打开文件": ["打开文件", "Open file"],
+  "工作区": ["工作区", "Working tree"],
+  "文件版本差异": ["文件版本差异", "File version diff"],
+  "暂无文本差异": ["暂无文本差异", "No text diff"],
+  "环境与版本": ["环境与版本", "Environment & version"],
+  "产物": ["产物", "Artifacts"],
+  "日志": ["日志", "Logs"],
+  "结果": ["结果", "Results"],
+  "启动中…": ["启动中…", "Starting…"],
+  "停止中…": ["停止中…", "Stopping…"],
+  "执行状态（只读）": ["执行状态（只读）", "Execution status (read only)"],
+  "参数必须是 JSON 字符串数组。": [
+    "参数必须是 JSON 字符串数组。",
+    "Arguments must be a JSON array of strings."
+  ],
+  "指标文件需为 JSON 对象，字段值为有限数字。": [
+    "指标文件需为 JSON 对象，字段值为有限数字。",
+    "Metrics must be a JSON object with finite numeric values."
+  ],
+  "指标文件需包含 1 至 100 项指标。": [
+    "指标文件需包含 1 至 100 项指标。",
+    "The file must contain 1 to 100 metrics."
+  ],
+  "必须使用工作区内的相对路径。": [
+    "必须使用工作区内的相对路径。",
+    "Use a relative path inside the workspace."
+  ],
+  "请选择可执行程序。": ["请选择可执行程序。", "Select an executable."],
+  "找不到可执行程序，请填写绝对路径或检查 PATH。": [
+    "找不到可执行程序，请填写绝对路径或检查 PATH。",
+    "Executable not found. Enter an absolute path or check PATH."
+  ],
+  "可执行程序不存在。": ["可执行程序不存在。", "Executable not found."],
+  "运行配置无效。": ["运行配置无效。", "Invalid run configuration."],
+  "工作目录不存在。": ["工作目录不存在。", "Working directory not found."],
+  "最多同时运行 8 个实验，请等待或停止已有任务。": [
+    "最多同时运行 8 个实验，请等待或停止已有任务。",
+    "At most 8 experiments can run concurrently. Wait or stop an existing run."
+  ],
+  "实验仍在运行，请停止后再删除项目、更换目录或恢复数据。": [
+    "实验仍在运行，请停止后再删除项目、更换目录或恢复数据。",
+    "Stop running experiments before deleting the project, changing its directory, or restoring data."
+  ],
+  "运行记录不存在。": ["运行记录不存在。", "Run not found."],
+  "应用上次退出时运行未完成；未自动重新执行。": [
+    "应用上次退出时运行未完成；未自动重新执行。",
+    "The run was unfinished when the app last exited. It was not restarted."
+  ],
+  "日志超过 64 MiB，已停止运行以保护磁盘空间。": [
+    "日志超过 64 MiB，已停止运行以保护磁盘空间。",
+    "The log exceeded 64 MiB. The run was stopped to protect disk space."
+  ],
+  "外观与语言": ["外观与语言", "Appearance & language"],
+  "界面语言": ["界面语言", "Language"],
+  "界面主题": ["界面主题", "Theme"],
+  "跟随系统": ["跟随系统", "System"],
+  "浅色": ["浅色", "Light"],
+  "深色": ["深色", "Dark"],
   "仍有未保存的内容。确认放弃这些修改并返回项目管理？": [
     "仍有未保存的内容。确认放弃这些修改并返回项目管理？",
     "Discard unsaved changes and return to Projects?"
@@ -173,150 +379,46 @@
     "仍有未保存的内容。确认放弃这些修改并退出？",
     "Discard unsaved changes and quit?"
   ],
-  "项目管理": [
-    "项目管理",
-    "Project management"
-  ],
+  "项目管理": ["项目管理", "Project management"],
   "请先保存当前修改，并等待操作完成后再打开项目。": [
     "请先保存当前修改，并等待操作完成后再打开项目。",
     "Save your changes and wait for pending operations before opening a project."
   ],
-  "文献资源": [
-    "文献资源",
-    "Literature resources"
-  ],
-  "工作区未能载入": [
-    "工作区未能载入",
-    "Could not load the workspace"
-  ],
-  "重新载入": [
-    "重新载入",
-    "Reload"
-  ],
-  "数据与备份": [
-    "数据与备份",
-    "Data & backups"
-  ],
-  "正在打开工作区…": [
-    "正在打开工作区…",
-    "Opening workspace…"
-  ],
-  "调整资源宽度": [
-    "调整资源宽度",
-    "Resize resources"
-  ],
-  "正在保存…": [
-    "正在保存…",
-    "Saving…"
-  ],
-  "操作未完成": [
-    "操作未完成",
-    "Operation incomplete"
-  ],
-  "有未保存内容": [
-    "有未保存内容",
-    "Unsaved changes"
-  ],
-  "已保存": [
-    "已保存",
-    "Saved"
-  ],
-  "浏览器预览 · 独立数据": [
-    "浏览器预览 · 独立数据",
-    "Browser preview · Separate data"
-  ],
-  "本地工作区": [
-    "本地工作区",
-    "Local workspace"
-  ],
-  "正在打开项目": [
-    "正在打开项目",
-    "Opening project"
-  ],
-  "正在准备工作区…": [
-    "正在准备工作区…",
-    "Preparing workspace…"
-  ],
-  "Scientify · 第一轮 MVP": [
-    "Scientify · 第一轮 MVP",
-    "Scientify · MVP"
-  ],
-  "已支持：项目管理、文献元信息与 PDF 阅读、arXiv 手动订阅、代码编辑与保存、Git 状态、实验记录、Markdown 预览、笔记和模型提问。": [
-    "已支持：项目管理、文献元信息与 PDF 阅读、arXiv 手动订阅、代码编辑与保存、Git 状态、实验记录、Markdown 预览、笔记和模型提问。",
-    "Available: projects, literature metadata, PDF reading, manual arXiv feeds, code editing, Git status, experiment records, Markdown preview, notes and AI assistance."
-  ],
-  "后续接入：实验执行、Git 提交、LaTeX 编译、自动订阅更新、PDF 批注与实时翻译。AI 需要自行配置模型，首版返回完整回答。": [
-    "后续接入：实验执行、Git 提交、LaTeX 编译、自动订阅更新、PDF 批注与实时翻译。AI 需要自行配置模型，首版返回完整回答。",
-    "Planned: experiment execution, Git commits, LaTeX compilation, automatic feed updates, PDF annotations and translation. Configure your own AI model; responses are currently returned in full."
-  ],
+  "文献资源": ["文献资源", "Literature resources"],
+  "工作区未能载入": ["工作区未能载入", "Could not load the workspace"],
+  "重新载入": ["重新载入", "Reload"],
+  "数据与备份": ["数据与备份", "Data & backups"],
+  "正在打开工作区…": ["正在打开工作区…", "Opening workspace…"],
+  "调整资源宽度": ["调整资源宽度", "Resize resources"],
+  "正在保存…": ["正在保存…", "Saving…"],
+  "操作未完成": ["操作未完成", "Operation incomplete"],
+  "有未保存内容": ["有未保存内容", "Unsaved changes"],
+  "已保存": ["已保存", "Saved"],
+  "浏览器预览 · 独立数据": ["浏览器预览 · 独立数据", "Browser preview · Separate data"],
+  "本地工作区": ["本地工作区", "Local workspace"],
+  "正在打开项目": ["正在打开项目", "Opening project"],
+  "正在准备工作区…": ["正在准备工作区…", "Preparing workspace…"],
+  "Scientify · 第一轮 MVP": ["Scientify · 第一轮 MVP", "Scientify · MVP"],
   "JSON 导出包含元数据，不包含 PDF 和源码；备份请保留完整数据目录及关联项目文件夹。": [
     "JSON 导出包含元数据，不包含 PDF 和源码；备份请保留完整数据目录及关联项目文件夹。",
     "JSON exports include metadata, but not PDFs or source files. Back up the complete data directory and linked project folders."
   ],
-  "项目空间": [
-    "项目空间",
-    "Project spaces"
-  ],
-  "个人项目空间": [
-    "个人项目空间",
-    "Personal projects"
-  ],
-  "创建团队空间": [
-    "创建团队空间",
-    "Create team space"
-  ],
-  "团队项目空间": [
-    "团队项目空间",
-    "Team projects"
-  ],
-  "全局设置": [
-    "全局设置",
-    "Global settings"
-  ],
-  "个人信息与偏好": [
-    "个人信息与偏好",
-    "Profile & preferences"
-  ],
-  "关于 MVP": [
-    "关于 MVP",
-    "About MVP"
-  ],
-  "关于 Scientify": [
-    "关于 Scientify",
-    "About Scientify"
-  ],
-  "关闭提示": [
-    "关闭提示",
-    "Dismiss message"
-  ],
-  "调整辅助栏宽度": [
-    "调整辅助栏宽度",
-    "Resize assistant panel"
-  ],
-  "向 AI 提问": [
-    "向 AI 提问",
-    "Ask AI"
-  ],
-  "模型设置": [
-    "模型设置",
-    "Model settings"
-  ],
-  "发送": [
-    "发送",
-    "Send"
-  ],
-  "对话": [
-    "对话",
-    "Chat"
-  ],
-  "切换到 Agent 模式": [
-    "切换到 Agent 模式",
-    "Switch to Agent mode"
-  ],
-  "切换到对话模式": [
-    "切换到对话模式",
-    "Switch to chat mode"
-  ],
+  "项目空间": ["项目空间", "Project spaces"],
+  "个人项目空间": ["个人项目空间", "Personal projects"],
+  "创建团队空间": ["创建团队空间", "Create team space"],
+  "团队项目空间": ["团队项目空间", "Team projects"],
+  "全局设置": ["全局设置", "Global settings"],
+  "个人信息与偏好": ["个人信息与偏好", "Profile & preferences"],
+  "关于 MVP": ["关于 MVP", "About MVP"],
+  "关于 Scientify": ["关于 Scientify", "About Scientify"],
+  "关闭提示": ["关闭提示", "Dismiss message"],
+  "调整辅助栏宽度": ["调整辅助栏宽度", "Resize assistant panel"],
+  "向 AI 提问": ["向 AI 提问", "Ask AI"],
+  "模型设置": ["模型设置", "Model settings"],
+  "发送": ["发送", "Send"],
+  "对话": ["对话", "Chat"],
+  "切换到 Agent 模式": ["切换到 Agent 模式", "Switch to Agent mode"],
+  "切换到对话模式": ["切换到对话模式", "Switch to chat mode"],
   "Agent 模式：可读取和修改当前工作区文件": [
     "Agent 模式：可读取和修改当前工作区文件",
     "Agent mode: can read and modify files in the current workspace"
@@ -325,10 +427,7 @@
     "对话模式：只回答问题，不修改文件",
     "Chat mode: answers questions without modifying files"
   ],
-  "发送 · Ctrl + Enter": [
-    "发送 · Ctrl + Enter",
-    "Send · Ctrl + Enter"
-  ],
+  "发送 · Ctrl + Enter": ["发送 · Ctrl + Enter", "Send · Ctrl + Enter"],
   "请解释当前材料中的关键概念与结论。": [
     "请解释当前材料中的关键概念与结论。",
     "Explain the key concepts and conclusions in this material."
@@ -345,18 +444,12 @@
     "请分析当前实验材料中的结果、问题与后续验证方向。",
     "Analyze the results, issues and next validation steps in this experiment."
   ],
-  "发送时附带当前材料": [
-    "发送时附带当前材料",
-    "Include current material when sending"
-  ],
+  "发送时附带当前材料": ["发送时附带当前材料", "Include current material when sending"],
   "打开包含正文或选中文字的材料": [
     "打开包含正文或选中文字的材料",
     "Open a document or select some text"
   ],
-  "在 Paper 或 Notes 中打开文字": [
-    "在 Paper 或 Notes 中打开文字",
-    "Open text in Paper or Notes"
-  ],
+  "在 Paper 或 Notes 中打开文字": ["在 Paper 或 Notes 中打开文字", "Open text in Paper or Notes"],
   "在 Experiments 中打开代码或实验记录": [
     "在 Experiments 中打开代码或实验记录",
     "Open code or a run in Experiments"
@@ -365,114 +458,39 @@
     "先勾选 Attach 附带当前材料",
     "Enable Attach to include the current material"
   ],
-  "填入问题后由你发送": [
-    "填入问题后由你发送",
-    "Prepare a prompt for you to send"
-  ],
-  "Scientify 项目管理": [
-    "Scientify 项目管理",
-    "Scientify Projects"
-  ],
-  "切换项目": [
-    "切换项目",
-    "Switch project"
-  ],
-  "项目切换": [
-    "项目切换",
-    "Project switcher"
-  ],
-  "筛选项目": [
-    "筛选项目",
-    "Filter projects"
-  ],
-  "项目设置": [
-    "项目设置",
-    "Project settings"
-  ],
-  "新建项目": [
-    "新建项目",
-    "New project"
-  ],
-  "全局搜索": [
-    "全局搜索",
-    "Global search"
-  ],
-  "AI 助手": [
-    "AI 助手",
-    "AI assistant"
-  ],
-  "研究笔记": [
-    "研究笔记",
-    "Research notes"
-  ],
-  "窗口操作失败，请重试": [
-    "窗口操作失败，请重试",
-    "Window operation failed. Try again."
-  ],
-  "窗口控制": [
-    "窗口控制",
-    "Window controls"
-  ],
-  "最小化窗口": [
-    "最小化窗口",
-    "Minimize window"
-  ],
-  "还原窗口": [
-    "还原窗口",
-    "Restore window"
-  ],
-  "最大化窗口": [
-    "最大化窗口",
-    "Maximize window"
-  ],
-  "关闭窗口": [
-    "关闭窗口",
-    "Close window"
-  ],
-  "放弃尚未保存的修改？": [
-    "放弃尚未保存的修改？",
-    "Discard unsaved changes?"
-  ],
-  "关闭弹窗": [
-    "关闭弹窗",
-    "Close dialog"
-  ],
-  "工作区导航": [
-    "工作区导航",
-    "Workspace navigation"
-  ],
-  "一级导航": [
-    "一级导航",
-    "Primary navigation"
-  ],
-  "收起资源": [
-    "收起资源",
-    "Collapse resources"
-  ],
-  "展开资源": [
-    "展开资源",
-    "Expand resources"
-  ],
-  "二级导航": [
-    "二级导航",
-    "Secondary navigation"
-  ],
+  "填入问题后由你发送": ["填入问题后由你发送", "Prepare a prompt for you to send"],
+  "Scientify 项目管理": ["Scientify 项目管理", "Scientify Projects"],
+  "切换项目": ["切换项目", "Switch project"],
+  "项目切换": ["项目切换", "Project switcher"],
+  "筛选项目": ["筛选项目", "Filter projects"],
+  "项目设置": ["项目设置", "Project settings"],
+  "新建项目": ["新建项目", "New project"],
+  "全局搜索": ["全局搜索", "Global search"],
+  "AI 助手": ["AI 助手", "AI assistant"],
+  "研究笔记": ["研究笔记", "Research notes"],
+  "窗口操作失败，请重试": ["窗口操作失败，请重试", "Window operation failed. Try again."],
+  "窗口控制": ["窗口控制", "Window controls"],
+  "最小化窗口": ["最小化窗口", "Minimize window"],
+  "还原窗口": ["还原窗口", "Restore window"],
+  "最大化窗口": ["最大化窗口", "Maximize window"],
+  "关闭窗口": ["关闭窗口", "Close window"],
+  "放弃尚未保存的修改？": ["放弃尚未保存的修改？", "Discard unsaved changes?"],
+  "关闭弹窗": ["关闭弹窗", "Close dialog"],
+  "工作区导航": ["工作区导航", "Workspace navigation"],
+  "一级导航": ["一级导航", "Primary navigation"],
+  "收起资源": ["收起资源", "Collapse resources"],
+  "展开资源": ["展开资源", "Expand resources"],
+  "二级导航": ["二级导航", "Secondary navigation"],
   "读取期间产生了新编辑，已保留当前缓冲，请重新读取。": [
     "读取期间产生了新编辑，已保留当前缓冲，请重新读取。",
     "Edits were made while reading. Your buffer was preserved; reload again."
   ],
-  "[已隐藏密钥]": [
-    "[已隐藏密钥]",
-    "[key hidden]"
-  ],
+  "[已隐藏密钥]": ["[已隐藏密钥]", "[key hidden]"],
   "模型配置已保存；密钥仅在本次打开的应用中使用。": [
     "模型配置已保存；密钥仅在本次打开的应用中使用。",
     "Model settings saved. The API key is only kept for this app session."
   ],
-  "模型配置保存失败": [
-    "模型配置保存失败",
-    "Could not save model settings"
-  ],
+  "模型配置保存失败": ["模型配置保存失败", "Could not save model settings"],
   "对话保存失败，内容仍保留在当前面板。": [
     "对话保存失败，内容仍保留在当前面板。",
     "Could not save the conversation. Its contents remain in this panel."
@@ -485,54 +503,24 @@
     "请先填写模型名称与服务地址。",
     "Enter the model name and endpoint first."
   ],
-  "AI 研究笔记": [
-    "AI 研究笔记",
-    "AI research note"
-  ],
+  "AI 研究笔记": ["AI 研究笔记", "AI research note"],
   "回答已保存到当前范围的研究笔记。": [
     "回答已保存到当前范围的研究笔记。",
     "Answer saved to the research notes in this scope."
   ],
-  "笔记保存失败，请重试。": [
-    "笔记保存失败，请重试。",
-    "Could not save the note. Try again."
-  ],
-  "AI 助手内容": [
-    "AI 助手内容",
-    "AI assistant content"
-  ],
+  "笔记保存失败，请重试。": ["笔记保存失败，请重试。", "Could not save the note. Try again."],
+  "AI 助手内容": ["AI 助手内容", "AI assistant content"],
   "等待当前请求或保存完成": [
     "等待当前请求或保存完成",
     "Wait for the current request or save to finish"
   ],
-  "先发送或清空当前草稿": [
-    "先发送或清空当前草稿",
-    "Send or clear the current draft first"
-  ],
-  "当前 AI 对话": [
-    "当前 AI 对话",
-    "Current AI conversation"
-  ],
-  "历史对话": [
-    "历史对话",
-    "Conversation history"
-  ],
-  "对话操作": [
-    "对话操作",
-    "Conversation actions"
-  ],
-  "重命名对话": [
-    "重命名对话",
-    "Rename conversation"
-  ],
-  "删除对话": [
-    "删除对话",
-    "Delete conversation"
-  ],
-  "删除对话“{name}”？": [
-    "删除对话“{name}”？",
-    "Delete conversation “{name}”?"
-  ],
+  "先发送或清空当前草稿": ["先发送或清空当前草稿", "Send or clear the current draft first"],
+  "当前 AI 对话": ["当前 AI 对话", "Current AI conversation"],
+  "历史对话": ["历史对话", "Conversation history"],
+  "对话操作": ["对话操作", "Conversation actions"],
+  "重命名对话": ["重命名对话", "Rename conversation"],
+  "删除对话": ["删除对话", "Delete conversation"],
+  "删除对话“{name}”？": ["删除对话“{name}”？", "Delete conversation “{name}”?"],
   "对话重命名失败，请重试。": [
     "对话重命名失败，请重试。",
     "Could not rename the conversation. Try again."
@@ -541,194 +529,65 @@
     "对话删除失败，请重试。",
     "Could not delete the conversation. Try again."
   ],
-  "新建 AI 对话": [
-    "新建 AI 对话",
-    "New AI conversation"
-  ],
+  "新建 AI 对话": ["新建 AI 对话", "New AI conversation"],
   "先发送或清空草稿，并保存对话": [
     "先发送或清空草稿，并保存对话",
     "Send or clear the draft and save the conversation first"
   ],
-  "模型提供方": [
-    "模型提供方",
-    "Provider"
-  ],
-  "Ollama 本地模型": [
-    "Ollama 本地模型",
-    "Ollama local model"
-  ],
-  "OpenAI 兼容服务": [
-    "OpenAI 兼容服务",
-    "OpenAI-compatible service"
-  ],
-  "服务地址": [
-    "服务地址",
-    "Endpoint"
-  ],
-  "模型名称": [
-    "模型名称",
-    "Model name"
-  ],
-  "填写服务中的模型名称": [
-    "填写服务中的模型名称",
-    "Enter a model available at this endpoint"
-  ],
-  "API 密钥": [
-    "API 密钥",
-    "API key"
-  ],
-  "仅在本次应用会话中使用": [
-    "仅在本次应用会话中使用",
-    "Used only in this app session"
-  ],
+  "模型提供方": ["模型提供方", "Provider"],
+  "Ollama 本地模型": ["Ollama 本地模型", "Ollama local model"],
+  "OpenAI 兼容服务": ["OpenAI 兼容服务", "OpenAI-compatible service"],
+  "服务地址": ["服务地址", "Endpoint"],
+  "模型名称": ["模型名称", "Model name"],
+  "填写服务中的模型名称": ["填写服务中的模型名称", "Enter a model available at this endpoint"],
+  "API 密钥": ["API 密钥", "API key"],
+  "仅在本次应用会话中使用": ["仅在本次应用会话中使用", "Used only in this app session"],
   "只保存地址和模型名称。密钥不写入工作区。": [
     "只保存地址和模型名称。密钥不写入工作区。",
     "Only the endpoint and model name are saved. The key is never written to the workspace."
   ],
-  "保存模型配置": [
-    "保存模型配置",
-    "Save model settings"
-  ],
-  "你": [
-    "你",
-    "You"
-  ],
-  "已存为笔记": [
-    "已存为笔记",
-    "Saved as note"
-  ],
-  "保存为笔记": [
-    "保存为笔记",
-    "Save as note"
-  ],
-  "正在等待模型回答…": [
-    "正在等待模型回答…",
-    "Waiting for the model…"
-  ],
-  "重试本次请求": [
-    "重试本次请求",
-    "Retry request"
-  ],
-  "重试保存对话": [
-    "重试保存对话",
-    "Retry saving conversation"
-  ],
-  "保留对话，继续提问": [
-    "保留对话，继续提问",
-    "Keep conversation and continue"
-  ],
-  "新对话": [
-    "新对话",
-    "New conversation"
-  ],
-  "当前没有可提取的正文。": [
-    "当前没有可提取的正文。",
-    "No text is available to extract."
-  ],
-  "未命名文献": [
-    "未命名文献",
-    "Untitled paper"
-  ],
-  "未读": [
-    "未读",
-    "Unread"
-  ],
-  "未命名图片": [
-    "未命名图片",
-    "Untitled image"
-  ],
-  "未命名笔记": [
-    "未命名笔记",
-    "Untitled note"
-  ],
+  "保存模型配置": ["保存模型配置", "Save model settings"],
+  "你": ["你", "You"],
+  "已存为笔记": ["已存为笔记", "Saved as note"],
+  "保存为笔记": ["保存为笔记", "Save as note"],
+  "正在等待模型回答…": ["正在等待模型回答…", "Waiting for the model…"],
+  "重试本次请求": ["重试本次请求", "Retry request"],
+  "重试保存对话": ["重试保存对话", "Retry saving conversation"],
+  "保留对话，继续提问": ["保留对话，继续提问", "Keep conversation and continue"],
+  "新对话": ["新对话", "New conversation"],
+  "当前没有可提取的正文。": ["当前没有可提取的正文。", "No text is available to extract."],
+  "未命名文献": ["未命名文献", "Untitled paper"],
+  "未读": ["未读", "Unread"],
+  "未命名图片": ["未命名图片", "Untitled image"],
+  "未命名笔记": ["未命名笔记", "Untitled note"],
   "笔记尚未写入本机，请重试保存。": [
     "笔记尚未写入本机，请重试保存。",
     "The note has not been saved locally. Try saving again."
   ],
-  "研究笔记内容": [
-    "研究笔记内容",
-    "Research note content"
-  ],
-  "返回笔记列表": [
-    "返回笔记列表",
-    "Back to notes"
-  ],
-  "个人收集箱": [
-    "个人收集箱",
-    "Personal inbox"
-  ],
-  "项目笔记": [
-    "项目笔记",
-    "Project notes"
-  ],
-  "新建笔记": [
-    "新建笔记",
-    "New note"
-  ],
-  "笔记标题": [
-    "笔记标题",
-    "Note title"
-  ],
-  "已保存到本机": [
-    "已保存到本机",
-    "Saved locally"
-  ],
-  "保存失败，草稿保留": [
-    "保存失败，草稿保留",
-    "Save failed; draft preserved"
-  ],
-  "未保存": [
-    "未保存",
-    "Unsaved"
-  ],
-  "编辑笔记": [
-    "编辑笔记",
-    "Edit note"
-  ],
-  "预览 Markdown": [
-    "预览 Markdown",
-    "Preview Markdown"
-  ],
-  "重试保存": [
-    "重试保存",
-    "Retry save"
-  ],
-  "还没有正文。": [
-    "还没有正文。",
-    "No content yet."
-  ],
-  "笔记正文": [
-    "笔记正文",
-    "Note content"
-  ],
+  "研究笔记内容": ["研究笔记内容", "Research note content"],
+  "返回笔记列表": ["返回笔记列表", "Back to notes"],
+  "个人收集箱": ["个人收集箱", "Personal inbox"],
+  "项目笔记": ["项目笔记", "Project notes"],
+  "新建笔记": ["新建笔记", "New note"],
+  "笔记标题": ["笔记标题", "Note title"],
+  "已保存到本机": ["已保存到本机", "Saved locally"],
+  "保存失败，草稿保留": ["保存失败，草稿保留", "Save failed; draft preserved"],
+  "未保存": ["未保存", "Unsaved"],
+  "编辑笔记": ["编辑笔记", "Edit note"],
+  "预览 Markdown": ["预览 Markdown", "Preview Markdown"],
+  "重试保存": ["重试保存", "Retry save"],
+  "还没有正文。": ["还没有正文。", "No content yet."],
+  "笔记正文": ["笔记正文", "Note content"],
   "来源暂不可定位，摘录仍保留": [
     "来源暂不可定位，摘录仍保留",
     "Source unavailable; excerpt preserved"
   ],
-  "添加当前来源": [
-    "添加当前来源",
-    "Attach current source"
-  ],
-  "保存": [
-    "保存",
-    "Save"
-  ],
-  "搜索笔记": [
-    "搜索笔记",
-    "Search notes"
-  ],
-  "没有匹配的笔记": [
-    "没有匹配的笔记",
-    "No matching notes"
-  ],
-  "暂无笔记": [
-    "暂无笔记",
-    "No notes yet"
-  ],
-  "空白笔记": [
-    "空白笔记",
-    "Empty note"
-  ],
+  "添加当前来源": ["添加当前来源", "Attach current source"],
+  "保存": ["保存", "Save"],
+  "搜索笔记": ["搜索笔记", "Search notes"],
+  "没有匹配的笔记": ["没有匹配的笔记", "No matching notes"],
+  "暂无笔记": ["暂无笔记", "No notes yet"],
+  "空白笔记": ["空白笔记", "Empty note"],
   "项目不存在，请重新载入。": [
     "项目不存在，请重新载入。",
     "Project not found. Reload the workspace."
@@ -737,210 +596,69 @@
     "请先保存或丢弃所有文件修改，并等待文件写入完成，再更改项目目录。",
     "Save or discard all file edits and wait for pending writes before changing the project directory."
   ],
-  "编辑项目": [
-    "编辑项目",
-    "Edit project"
-  ],
-  "新建科研项目": [
-    "新建科研项目",
-    "New research project"
-  ],
-  "项目名称": [
-    "项目名称",
-    "Project name"
-  ],
+  "编辑项目": ["编辑项目", "Edit project"],
+  "新建科研项目": ["新建科研项目", "New research project"],
+  "项目名称": ["项目名称", "Project name"],
   "例如：小样本学习中的表征泛化": [
     "例如：小样本学习中的表征泛化",
     "For example: Representation generalization in few-shot learning"
   ],
-  "研究问题": [
-    "研究问题",
-    "Research question"
-  ],
+  "研究问题": ["研究问题", "Research question"],
   "这个项目希望回答什么问题？": [
     "这个项目希望回答什么问题？",
     "What question does this project aim to answer?"
   ],
-  "所属空间": [
-    "所属空间",
-    "Space"
-  ],
-  "我的工作空间": [
-    "我的工作空间",
-    "My workspace"
-  ],
-  "研究方向": [
-    "研究方向",
-    "Research area"
-  ],
-  "研究领域或关键词": [
-    "研究领域或关键词",
-    "Research area or keywords"
-  ],
-  "项目目录": [
-    "项目目录",
-    "Project directory"
-  ],
-  "尚未关联本地目录": [
-    "尚未关联本地目录",
-    "No local directory linked"
-  ],
-  "选择目录": [
-    "选择目录",
-    "Choose directory"
-  ],
-  "清除": [
-    "清除",
-    "Clear"
-  ],
-  "Git 仓库目录": [
-    "Git 仓库目录",
-    "Git repository directory"
-  ],
-  "可单独关联 Git 仓库": [
-    "可单独关联 Git 仓库",
-    "Optionally link a separate Git repository"
-  ],
-  "选择仓库": [
-    "选择仓库",
-    "Choose repository"
-  ],
+  "所属空间": ["所属空间", "Space"],
+  "我的工作空间": ["我的工作空间", "My workspace"],
+  "研究方向": ["研究方向", "Research area"],
+  "研究领域或关键词": ["研究领域或关键词", "Research area or keywords"],
+  "项目目录": ["项目目录", "Project directory"],
+  "尚未关联本地目录": ["尚未关联本地目录", "No local directory linked"],
+  "选择目录": ["选择目录", "Choose directory"],
+  "清除": ["清除", "Clear"],
+  "Git 仓库目录": ["Git 仓库目录", "Git repository directory"],
+  "可单独关联 Git 仓库": ["可单独关联 Git 仓库", "Optionally link a separate Git repository"],
+  "选择仓库": ["选择仓库", "Choose repository"],
   "存在未保存文件或文件正在写入，暂时不能更改目录。": [
     "存在未保存文件或文件正在写入，暂时不能更改目录。",
     "Save pending edits and wait for file writes before changing directories."
   ],
-  "项目颜色": [
-    "项目颜色",
-    "Project color"
-  ],
-  "保存在本机工作区": [
-    "保存在本机工作区",
-    "Saved in the local workspace"
-  ],
-  "保存项目": [
-    "保存项目",
-    "Save project"
-  ],
-  "团队信息": [
-    "团队信息",
-    "Team details"
-  ],
-  "团队名称": [
-    "团队名称",
-    "Team name"
-  ],
-  "团队介绍": [
-    "团队介绍",
-    "Team description"
-  ],
+  "项目颜色": ["项目颜色", "Project color"],
+  "保存在本机工作区": ["保存在本机工作区", "Saved in the local workspace"],
+  "保存项目": ["保存项目", "Save project"],
+  "团队信息": ["团队信息", "Team details"],
+  "团队名称": ["团队名称", "Team name"],
+  "团队介绍": ["团队介绍", "Team description"],
   "团队空间用于本机项目分类，成员邀请与在线协作尚未开放。": [
     "团队空间用于本机项目分类，成员邀请与在线协作尚未开放。",
     "Team spaces organize local projects. Member invitations and online collaboration are not available yet."
   ],
-  "保存团队": [
-    "保存团队",
-    "Save team"
-  ],
-  "个人空间": [
-    "个人空间",
-    "Personal space"
-  ],
-  "团队项目": [
-    "团队项目",
-    "Team projects"
-  ],
-  "全部项目": [
-    "全部项目",
-    "All projects"
-  ],
-  "已收藏": [
-    "已收藏",
-    "Favorites"
-  ],
-  "已归档": [
-    "已归档",
-    "Archived"
-  ],
-  "搜索项目…": [
-    "搜索项目…",
-    "Search projects…"
-  ],
-  "搜索项目": [
-    "搜索项目",
-    "Search projects"
-  ],
-  "项目排序": [
-    "项目排序",
-    "Sort projects"
-  ],
-  "最近更新": [
-    "最近更新",
-    "Recently updated"
-  ],
-  "名称": [
-    "名称",
-    "Name"
-  ],
-  "取消收藏": [
-    "取消收藏",
-    "Remove from favorites"
-  ],
-  "收藏": [
-    "收藏",
-    "Favorite"
-  ],
-  "编辑": [
-    "编辑",
-    "Edit"
-  ],
-  "恢复": [
-    "恢复",
-    "Restore"
-  ],
-  "归档": [
-    "归档",
-    "Archive"
-  ],
-  "没有符合条件的项目": [
-    "没有符合条件的项目",
-    "No matching projects"
-  ],
-  "暂无项目": [
-    "暂无项目",
-    "No projects yet"
-  ],
-  "清除筛选": [
-    "清除筛选",
-    "Clear filters"
-  ],
-  "已归档项目": [
-    "已归档项目",
-    "Archived project"
-  ],
-  "项目": [
-    "项目",
-    "Project"
-  ],
-  "未关联项目": [
-    "未关联项目",
-    "No linked project"
-  ],
-  "来源项目不存在": [
-    "来源项目不存在",
-    "Source project no longer exists"
-  ],
-  "文献": [
-    "文献",
-    "Literature"
-  ],
-  "搜索工作区": [
-    "搜索工作区",
-    "Search workspace"
-  ],
-  "搜索项目、文献和笔记": [
-    "搜索项目、文献和笔记",
-    "Search projects, papers and notes"
-  ],
+  "保存团队": ["保存团队", "Save team"],
+  "个人空间": ["个人空间", "Personal space"],
+  "团队项目": ["团队项目", "Team projects"],
+  "全部项目": ["全部项目", "All projects"],
+  "已收藏": ["已收藏", "Favorites"],
+  "已归档": ["已归档", "Archived"],
+  "搜索项目…": ["搜索项目…", "Search projects…"],
+  "搜索项目": ["搜索项目", "Search projects"],
+  "项目排序": ["项目排序", "Sort projects"],
+  "最近更新": ["最近更新", "Recently updated"],
+  "名称": ["名称", "Name"],
+  "取消收藏": ["取消收藏", "Remove from favorites"],
+  "收藏": ["收藏", "Favorite"],
+  "编辑": ["编辑", "Edit"],
+  "恢复": ["恢复", "Restore"],
+  "归档": ["归档", "Archive"],
+  "没有符合条件的项目": ["没有符合条件的项目", "No matching projects"],
+  "暂无项目": ["暂无项目", "No projects yet"],
+  "清除筛选": ["清除筛选", "Clear filters"],
+  "已归档项目": ["已归档项目", "Archived project"],
+  "项目": ["项目", "Project"],
+  "未关联项目": ["未关联项目", "No linked project"],
+  "来源项目不存在": ["来源项目不存在", "Source project no longer exists"],
+  "文献": ["文献", "Literature"],
+  "搜索工作区": ["搜索工作区", "Search workspace"],
+  "搜索项目、文献和笔记": ["搜索项目、文献和笔记", "Search projects, papers and notes"],
   "项目、文献题名、作者或笔记正文": [
     "项目、文献题名、作者或笔记正文",
     "Project, paper title, author or note content"
@@ -949,10 +667,7 @@
     "项目、文献与笔记 · 不含 PDF 全文和磁盘文件",
     "Projects, papers and notes · Excludes PDF full text and files on disk"
   ],
-  "输入关键词": [
-    "输入关键词",
-    "Enter a search term"
-  ],
+  "输入关键词": ["输入关键词", "Enter a search term"],
   "仅显示前 30 项，请缩小关键词范围。": [
     "仅显示前 30 项，请缩小关键词范围。",
     "Showing the first 30 results. Refine your search."
@@ -961,18 +676,9 @@
     "工作区记录与附件均保存在本机。开发版与正式版使用独立数据目录。",
     "Workspace records and attachments are stored locally. Development and release builds use separate data directories."
   ],
-  "当前目录": [
-    "当前目录",
-    "Current directory"
-  ],
-  "尚未载入": [
-    "尚未载入",
-    "Not loaded"
-  ],
-  "迁移 Electron 数据": [
-    "迁移 Electron 数据",
-    "Migrate Electron data"
-  ],
+  "当前目录": ["当前目录", "Current directory"],
+  "尚未载入": ["尚未载入", "Not loaded"],
+  "迁移 Electron 数据": ["迁移 Electron 数据", "Migrate Electron data"],
   "先关闭旧应用。复制整个工作区及附件，保留旧目录。仅支持迁入空的新工作区。": [
     "先关闭旧应用。复制整个工作区及附件，保留旧目录。仅支持迁入空的新工作区。",
     "Close the old app first. Copy the complete workspace and attachments into an empty new workspace; the original directory is preserved."
@@ -981,18 +687,12 @@
     "请先关闭 Electron 版 Scientify。将复制整个旧工作区到新目录，原数据保持不变。继续迁移？",
     "Close the Electron version of Scientify first. Copy the old workspace to the new directory, preserving the original data?"
   ],
-  "复制旧数据": [
-    "复制旧数据",
-    "Copy legacy data"
-  ],
+  "复制旧数据": ["复制旧数据", "Copy legacy data"],
   "未检测到默认目录中的 Electron 工作区。": [
     "未检测到默认目录中的 Electron 工作区。",
     "No Electron workspace was found in the default directory."
   ],
-  "JSON 导入与导出": [
-    "JSON 导入与导出",
-    "JSON import & export"
-  ],
+  "JSON 导入与导出": ["JSON 导入与导出", "JSON import & export"],
   "JSON 包含记录与附件索引，不含附件文件。跨电脑迁移需另行复制完整数据目录。": [
     "JSON 包含记录与附件索引，不含附件文件。跨电脑迁移需另行复制完整数据目录。",
     "JSON includes records and attachment references, but not attachment files. Copy the complete data directory when moving to another computer."
@@ -1001,18 +701,9 @@
     "导入会替换当前记录，并保存导入前备份。JSON 不包含附件二进制。继续选择文件？",
     "Import will replace current records and create a backup first. JSON does not contain attachment files. Choose a file?"
   ],
-  "导入": [
-    "导入",
-    "Import"
-  ],
-  "导出": [
-    "导出",
-    "Export"
-  ],
-  "恢复最近备份": [
-    "恢复最近备份",
-    "Restore latest backup"
-  ],
+  "导入": ["导入", "Import"],
+  "导出": ["导出", "Export"],
+  "恢复最近备份": ["恢复最近备份", "Restore latest backup"],
   "恢复上一次保存内容，并另存当前主文件。": [
     "恢复上一次保存内容，并另存当前主文件。",
     "Restore the previous save and preserve a copy of the current main file."
@@ -1021,26 +712,17 @@
     "恢复最近一次备份？当前主文件会另存保留。",
     "Restore the latest backup? A copy of the current main file will be preserved."
   ],
-  "恢复备份": [
-    "恢复备份",
-    "Restore backup"
-  ],
+  "恢复备份": ["恢复备份", "Restore backup"],
   "请先保存或清空未保存的内容，再进行数据导入、导出与恢复。": [
     "请先保存或清空未保存的内容，再进行数据导入、导出与恢复。",
     "Save or discard unsaved content before importing, exporting or restoring data."
   ],
-  "显示名称": [
-    "显示名称",
-    "Display name"
-  ],
+  "显示名称": ["显示名称", "Display name"],
   "这是本地个人资料，无需登录。": [
     "这是本地个人资料，无需登录。",
     "This is a local profile. No sign-in required."
   ],
-  "保存偏好": [
-    "保存偏好",
-    "Save profile"
-  ],
+  "保存偏好": ["保存偏好", "Save profile"],
   "浏览器预览数据无法读取，请先导出浏览器存储进行恢复。": [
     "浏览器预览数据无法读取，请先导出浏览器存储进行恢复。",
     "Preview data could not be read. Export browser storage before attempting recovery."
@@ -1053,14 +735,8 @@
     "预览数据已在其他标签页更新，请保留草稿后重新载入。",
     "Preview data was changed in another tab. Preserve your draft before reloading."
   ],
-  "暂无可恢复的预览备份。": [
-    "暂无可恢复的预览备份。",
-    "No preview backup is available."
-  ],
-  "工作区版本超过上限。": [
-    "工作区版本超过上限。",
-    "Workspace revision limit exceeded."
-  ],
+  "暂无可恢复的预览备份。": ["暂无可恢复的预览备份。", "No preview backup is available."],
+  "工作区版本超过上限。": ["工作区版本超过上限。", "Workspace revision limit exceeded."],
   "复制旧数据需要在桌面应用中完成。": [
     "复制旧数据需要在桌面应用中完成。",
     "Copy legacy data using the desktop app."
@@ -1077,18 +753,9 @@
     "请使用项目内的相对文件路径。",
     "Use a path relative to the project directory."
   ],
-  "附件写入被取消。": [
-    "附件写入被取消。",
-    "Attachment write was cancelled."
-  ],
-  "文件不存在。": [
-    "文件不存在。",
-    "File not found."
-  ],
-  "文本文件超过 2 MiB。": [
-    "文本文件超过 2 MiB。",
-    "Text file exceeds 2 MiB."
-  ],
+  "附件写入被取消。": ["附件写入被取消。", "Attachment write was cancelled."],
+  "文件不存在。": ["文件不存在。", "File not found."],
+  "文本文件超过 2 MiB。": ["文本文件超过 2 MiB。", "Text file exceeds 2 MiB."],
   "文件已修改，请保留草稿后重新读取，不会覆盖现有文件。": [
     "文件已修改，请保留草稿后重新读取，不会覆盖现有文件。",
     "The file has changed. Preserve your draft and reload; the existing file has not been overwritten."
@@ -1113,194 +780,64 @@
     "AI 请求通过桌面后端发送。请启动桌面应用并配置模型。",
     "AI requests use the desktop backend. Start the desktop app and configure a model."
   ],
-  "订阅更新通过桌面后端获取，请在桌面应用中更新。": [
-    "订阅更新通过桌面后端获取，请在桌面应用中更新。",
-    "Feed updates use the desktop backend. Update them in the desktop app."
-  ],
   "请通过 pnpm start 启动 Scientify 桌面应用。浏览器预览没有本地数据访问能力。": [
     "请通过 pnpm start 启动 Scientify 桌面应用。浏览器预览没有本地数据访问能力。",
     "Start Scientify with pnpm start. Browser preview cannot access desktop data."
   ],
-  "PDF 阅读工具": [
-    "PDF 阅读工具",
-    "PDF tools"
-  ],
-  "上一页": [
-    "上一页",
-    "Previous page"
-  ],
-  "页码": [
-    "页码",
-    "Page number"
-  ],
-  "下一页": [
-    "下一页",
-    "Next page"
-  ],
-  "缩小": [
-    "缩小",
-    "Zoom out"
-  ],
-  "缩小 PDF": [
-    "缩小 PDF",
-    "Zoom PDF out"
-  ],
-  "放大": [
-    "放大",
-    "Zoom in"
-  ],
-  "放大 PDF": [
-    "放大 PDF",
-    "Zoom PDF in"
-  ],
-  "适应宽度": [
-    "适应宽度",
-    "Fit width"
-  ],
-  "询问选中内容": [
-    "询问选中内容",
-    "Ask about selection"
-  ],
-  "询问当前页": [
-    "询问当前页",
-    "Ask about this page"
-  ],
-  "提问": [
-    "提问",
-    "Ask"
-  ],
-  "记笔记": [
-    "记笔记",
-    "Take note"
-  ],
-  "正在读取 PDF…": [
-    "正在读取 PDF…",
-    "Loading PDF…"
-  ],
-  "选择原文可提问或记笔记": [
-    "选择原文可提问或记笔记",
-    "Select text to ask AI or take notes"
-  ],
+  "PDF 阅读工具": ["PDF 阅读工具", "PDF tools"],
+  "上一页": ["上一页", "Previous page"],
+  "页码": ["页码", "Page number"],
+  "下一页": ["下一页", "Next page"],
+  "缩小": ["缩小", "Zoom out"],
+  "缩小 PDF": ["缩小 PDF", "Zoom PDF out"],
+  "放大": ["放大", "Zoom in"],
+  "放大 PDF": ["放大 PDF", "Zoom PDF in"],
+  "适应宽度": ["适应宽度", "Fit width"],
+  "询问选中内容": ["询问选中内容", "Ask about selection"],
+  "询问当前页": ["询问当前页", "Ask about this page"],
+  "提问": ["提问", "Ask"],
+  "记笔记": ["记笔记", "Take note"],
+  "正在读取 PDF…": ["正在读取 PDF…", "Loading PDF…"],
+  "选择原文可提问或记笔记": ["选择原文可提问或记笔记", "Select text to ask AI or take notes"],
   "本页没有可提取文本，可能为扫描页。": [
     "本页没有可提取文本，可能为扫描页。",
     "No extractable text on this page. It may be a scanned page."
   ],
-  "辅助工具切换": [
-    "辅助工具切换",
-    "Switch assistant tools"
-  ],
-  "收起辅助栏": [
-    "收起辅助栏",
-    "Close assistant panel"
-  ],
-  "全局辅助工具": [
-    "全局辅助工具",
-    "Global assistant tools"
-  ],
+  "辅助工具切换": ["辅助工具切换", "Switch assistant tools"],
+  "收起辅助栏": ["收起辅助栏", "Close assistant panel"],
+  "全局辅助工具": ["全局辅助工具", "Global assistant tools"],
   "已复制旧工作区，原始数据保持不变": [
     "已复制旧工作区，原始数据保持不变",
     "Legacy workspace copied; original data preserved"
   ],
-  "工作区已载入": [
-    "工作区已载入",
-    "Workspace loaded"
-  ],
+  "工作区已载入": ["工作区已载入", "Workspace loaded"],
   "已导出 JSON。附件二进制请另行备份整个数据目录。": [
     "已导出 JSON。附件二进制请另行备份整个数据目录。",
     "JSON exported. Back up the complete data directory to include attachment files."
   ],
-  "计划中": [
-    "计划中",
-    "Planned"
-  ],
-  "进行中": [
-    "进行中",
-    "Running"
-  ],
-  "已完成": [
-    "已完成",
-    "Completed"
-  ],
-  "未成功": [
-    "未成功",
-    "Failed"
-  ],
-  "实验记录": [
-    "实验记录",
-    "Experiment records"
-  ],
-  "未填写": [
-    "未填写",
-    "Not set"
-  ],
-  "实验记录工作区": [
-    "实验记录工作区",
-    "Experiment records workspace"
-  ],
-  "新建记录": [
-    "新建记录",
-    "New record"
-  ],
-  "实验记录列表": [
-    "实验记录列表",
-    "Experiment records"
-  ],
-  "未命名实验": [
-    "未命名实验",
-    "Untitled experiment"
-  ],
-  "编辑记录": [
-    "编辑记录",
-    "Edit record"
-  ],
-  "实验方案": [
-    "实验方案",
-    "Experiment protocol"
-  ],
-  "尚未记录实验方案": [
-    "尚未记录实验方案",
-    "No protocol recorded"
-  ],
-  "配置与参数": [
-    "配置与参数",
-    "Configuration & parameters"
-  ],
-  "尚未记录配置": [
-    "尚未记录配置",
-    "No configuration recorded"
-  ],
-  "指标": [
-    "指标",
-    "Metrics"
-  ],
-  "指标名称": [
-    "指标名称",
-    "Metric name"
-  ],
-  "数值": [
-    "数值",
-    "Value"
-  ],
-  "尚未记录指标": [
-    "尚未记录指标",
-    "No metrics recorded"
-  ],
-  "结果与结论": [
-    "结果与结论",
-    "Results & conclusions"
-  ],
-  "尚未记录结论": [
-    "尚未记录结论",
-    "No conclusions recorded"
-  ],
-  "暂无实验记录": [
-    "暂无实验记录",
-    "No experiment records yet"
-  ],
-  "请输入实验名称。": [
-    "请输入实验名称。",
-    "Enter an experiment name."
-  ],
+  "计划中": ["计划中", "Planned"],
+  "进行中": ["进行中", "Running"],
+  "已完成": ["已完成", "Completed"],
+  "未成功": ["未成功", "Failed"],
+  "实验记录": ["实验记录", "Experiment records"],
+  "未填写": ["未填写", "Not set"],
+  "实验记录工作区": ["实验记录工作区", "Experiment records workspace"],
+  "新建记录": ["新建记录", "New record"],
+  "实验记录列表": ["实验记录列表", "Experiment records"],
+  "未命名实验": ["未命名实验", "Untitled experiment"],
+  "编辑记录": ["编辑记录", "Edit record"],
+  "实验方案": ["实验方案", "Experiment protocol"],
+  "尚未记录实验方案": ["尚未记录实验方案", "No protocol recorded"],
+  "配置与参数": ["配置与参数", "Configuration & parameters"],
+  "尚未记录配置": ["尚未记录配置", "No configuration recorded"],
+  "指标": ["指标", "Metrics"],
+  "指标名称": ["指标名称", "Metric name"],
+  "数值": ["数值", "Value"],
+  "尚未记录指标": ["尚未记录指标", "No metrics recorded"],
+  "结果与结论": ["结果与结论", "Results & conclusions"],
+  "尚未记录结论": ["尚未记录结论", "No conclusions recorded"],
+  "暂无实验记录": ["暂无实验记录", "No experiment records yet"],
+  "请输入实验名称。": ["请输入实验名称。", "Enter an experiment name."],
   "每项指标需有名称，数值应为有限数字，也可以留空。": [
     "每项指标需有名称，数值应为有限数字，也可以留空。",
     "Each metric needs a name and a finite numeric value, or leave its value blank."
@@ -1309,198 +846,72 @@
     "保存未完成，请稍后重试。当前输入已保留。",
     "Save did not complete. Your input has been preserved; try again."
   ],
-  "编辑实验记录": [
-    "编辑实验记录",
-    "Edit experiment record"
-  ],
-  "新建实验记录": [
-    "新建实验记录",
-    "New experiment record"
-  ],
-  "实验名称": [
-    "实验名称",
-    "Experiment name"
-  ],
+  "编辑实验记录": ["编辑实验记录", "Edit experiment record"],
+  "新建实验记录": ["新建实验记录", "New experiment record"],
+  "实验名称": ["实验名称", "Experiment name"],
   "例如：不同学习率对收敛速度的影响": [
     "例如：不同学习率对收敛速度的影响",
     "For example: How learning rate affects convergence"
   ],
-  "状态（手动标记）": [
-    "状态（手动标记）",
-    "Status (manual)"
-  ],
+  "状态（手动标记）": ["状态（手动标记）", "Status (manual)"],
   "研究问题、变量与对照方法": [
     "研究问题、变量与对照方法",
     "Research question, variables and controls"
   ],
-  "记录命令、环境与超参数": [
-    "记录命令、环境与超参数",
-    "Commands, environment and hyperparameters"
-  ],
-  "添加指标": [
-    "添加指标",
-    "Add metric"
-  ],
-  "数值（可留空）": [
-    "数值（可留空）",
-    "Value (optional)"
-  ],
+  "记录命令、环境与超参数": ["记录命令、环境与超参数", "Commands, environment and hyperparameters"],
+  "添加指标": ["添加指标", "Add metric"],
+  "数值（可留空）": ["数值（可留空）", "Value (optional)"],
   "观察结果、解释与下一步验证": [
     "观察结果、解释与下一步验证",
     "Observations, interpretation and next validation steps"
   ],
-  "正在保存到本机…": [
-    "正在保存到本机…",
-    "Saving locally…"
-  ],
-  "有未保存修改": [
-    "有未保存修改",
-    "Unsaved changes"
-  ],
-  "仅保存记录，不执行代码": [
-    "仅保存记录，不执行代码",
-    "Saves records only; does not execute code"
-  ],
-  "取消": [
-    "取消",
-    "Cancel"
-  ],
-  "保存中…": [
-    "保存中…",
-    "Saving…"
-  ],
-  "保存实验记录": [
-    "保存实验记录",
-    "Save experiment record"
-  ],
-  "Git 版本变更": [
-    "Git 版本变更",
-    "Git changes"
-  ],
-  "项目引用": [
-    "项目引用",
-    "Project references"
-  ],
+  "正在保存到本机…": ["正在保存到本机…", "Saving locally…"],
+  "有未保存修改": ["有未保存修改", "Unsaved changes"],
+  "仅保存记录，不执行代码": ["仅保存记录，不执行代码", "Saves records only; does not execute code"],
+  "取消": ["取消", "Cancel"],
+  "保存中…": ["保存中…", "Saving…"],
+  "保存实验记录": ["保存实验记录", "Save experiment record"],
+  "Git 版本变更": ["Git 版本变更", "Git changes"],
+  "项目引用": ["项目引用", "Project references"],
   "请输入项目内相对路径，例如 notes/idea.md。": [
     "请输入项目内相对路径，例如 notes/idea.md。",
     "Enter a project-relative path, such as notes/idea.md."
   ],
-  "论文文件工作区": [
-    "论文文件工作区",
-    "Paper workspace"
-  ],
-  "项目文件工作区": [
-    "项目文件工作区",
-    "Project files workspace"
-  ],
-  "实验文件工作区": [
-    "实验文件工作区",
-    "Experiment files workspace"
-  ],
-  "打开的文件": [
-    "打开的文件",
-    "Open files"
-  ],
-  "新建文件": [
-    "新建文件",
-    "New file"
-  ],
-  "副本路径": [
-    "副本路径",
-    "Copy path"
-  ],
-  "文件路径": [
-    "文件路径",
-    "File path"
-  ],
-  "paper.md 或 main.tex": [
-    "paper.md 或 main.tex",
-    "paper.md or main.tex"
-  ],
-  "创建中…": [
-    "创建中…",
-    "Creating…"
-  ],
-  "创建": [
-    "创建",
-    "Create"
-  ],
-  "保存并关闭": [
-    "保存并关闭",
-    "Save and close"
-  ],
-  "关闭标签，保留草稿": [
-    "关闭标签，保留草稿",
-    "Close tab, keep draft"
-  ],
-  "保存 (Ctrl+S)": [
-    "保存 (Ctrl+S)",
-    "Save (Ctrl+S)"
-  ],
-  "重新读取文件": [
-    "重新读取文件",
-    "Reload file"
-  ],
-  "重新读取磁盘文件": [
-    "重新读取磁盘文件",
-    "Reload file from disk"
-  ],
-  "稿件显示模式": [
-    "稿件显示模式",
-    "Document layout"
-  ],
+  "论文文件工作区": ["论文文件工作区", "Paper workspace"],
+  "项目文件工作区": ["项目文件工作区", "Project files workspace"],
+  "实验文件工作区": ["实验文件工作区", "Experiment files workspace"],
+  "打开的文件": ["打开的文件", "Open files"],
+  "新建文件": ["新建文件", "New file"],
+  "副本路径": ["副本路径", "Copy path"],
+  "文件路径": ["文件路径", "File path"],
+  "paper.md 或 main.tex": ["paper.md 或 main.tex", "paper.md or main.tex"],
+  "创建中…": ["创建中…", "Creating…"],
+  "创建": ["创建", "Create"],
+  "保存并关闭": ["保存并关闭", "Save and close"],
+  "关闭标签，保留草稿": ["关闭标签，保留草稿", "Close tab, keep draft"],
+  "保存 (Ctrl+S)": ["保存 (Ctrl+S)", "Save (Ctrl+S)"],
+  "重新读取文件": ["重新读取文件", "Reload file"],
+  "重新读取磁盘文件": ["重新读取磁盘文件", "Reload file from disk"],
+  "稿件显示模式": ["稿件显示模式", "Document layout"],
   "中央区域宽度达到 960px 后可分栏": [
     "中央区域宽度达到 960px 后可分栏",
     "Split view requires a workspace width of at least 960px"
   ],
-  "源码": [
-    "源码",
-    "Source"
-  ],
-  "分栏": [
-    "分栏",
-    "Split"
-  ],
-  "预览": [
-    "预览",
-    "Preview"
-  ],
+  "源码": ["源码", "Source"],
+  "分栏": ["分栏", "Split"],
+  "预览": ["预览", "Preview"],
   "重新读取会丢弃当前未保存编辑。": [
     "重新读取会丢弃当前未保存编辑。",
     "Reloading will discard unsaved edits."
   ],
-  "丢弃编辑并重新读取": [
-    "丢弃编辑并重新读取",
-    "Discard edits and reload"
-  ],
-  "保留编辑": [
-    "保留编辑",
-    "Keep edits"
-  ],
-  "当前编辑已保留。": [
-    "当前编辑已保留。",
-    "Your edits have been preserved."
-  ],
-  "查看磁盘内容": [
-    "查看磁盘内容",
-    "View disk contents"
-  ],
-  "另存副本": [
-    "另存副本",
-    "Save a copy"
-  ],
-  "重试": [
-    "重试",
-    "Retry"
-  ],
-  "磁盘版本 · 只读": [
-    "磁盘版本 · 只读",
-    "Disk version · Read only"
-  ],
-  "关闭磁盘内容": [
-    "关闭磁盘内容",
-    "Close disk contents"
-  ],
+  "丢弃编辑并重新读取": ["丢弃编辑并重新读取", "Discard edits and reload"],
+  "保留编辑": ["保留编辑", "Keep edits"],
+  "当前编辑已保留。": ["当前编辑已保留。", "Your edits have been preserved."],
+  "查看磁盘内容": ["查看磁盘内容", "View disk contents"],
+  "另存副本": ["另存副本", "Save a copy"],
+  "重试": ["重试", "Retry"],
+  "磁盘版本 · 只读": ["磁盘版本 · 只读", "Disk version · Read only"],
+  "关闭磁盘内容": ["关闭磁盘内容", "Close disk contents"],
   "可将所需内容复制回编辑器；“重新读取”会丢弃当前未保存编辑。": [
     "可将所需内容复制回编辑器；“重新读取”会丢弃当前未保存编辑。",
     "Copy any needed content into the editor. Reloading discards unsaved edits."
@@ -1513,78 +924,27 @@
     "文件未能打开，请检查项目目录后重试。",
     "Could not open the file. Check the project directory and try again."
   ],
-  "正在读取文件…": [
-    "正在读取文件…",
-    "Reading file…"
-  ],
-  "正在加载编辑器…": [
-    "正在加载编辑器…",
-    "Loading editor…"
-  ],
-  "正在加载预览…": [
-    "正在加载预览…",
-    "Loading preview…"
-  ],
-  "纯文本 / 源码": [
-    "纯文本 / 源码",
-    "Plain text / source"
-  ],
+  "正在读取文件…": ["正在读取文件…", "Reading file…"],
+  "正在加载编辑器…": ["正在加载编辑器…", "Loading editor…"],
+  "正在加载预览…": ["正在加载预览…", "Loading preview…"],
+  "纯文本 / 源码": ["纯文本 / 源码", "Plain text / source"],
   "选区可用于 AI 提问或研究笔记": [
     "选区可用于 AI 提问或研究笔记",
     "Use selected text for AI questions or research notes"
   ],
-  "项目文件": [
-    "项目文件",
-    "Project files"
-  ],
-  "论文文件": [
-    "论文文件",
-    "Paper files"
-  ],
-  "资源管理器": [
-    "资源管理器",
-    "Explorer"
-  ],
-  "刷新项目文件": [
-    "刷新项目文件",
-    "Refresh project files"
-  ],
-  "筛选项目文件": [
-    "筛选项目文件",
-    "Filter project files"
-  ],
-  "筛选文件…": [
-    "筛选文件…",
-    "Filter files…"
-  ],
-  "正在读取…": [
-    "正在读取…",
-    "Loading…"
-  ],
-  "没有匹配的文件": [
-    "没有匹配的文件",
-    "No matching files"
-  ],
-  "暂无文件": [
-    "暂无文件",
-    "No files yet"
-  ],
-  "本机项目目录": [
-    "本机项目目录",
-    "Local project directory"
-  ],
-  "版本变更": [
-    "版本变更",
-    "Changes"
-  ],
-  "刷新": [
-    "刷新",
-    "Refresh"
-  ],
-  "正在读取 Git 状态…": [
-    "正在读取 Git 状态…",
-    "Reading Git status…"
-  ],
+  "项目文件": ["项目文件", "Project files"],
+  "论文文件": ["论文文件", "Paper files"],
+  "资源管理器": ["资源管理器", "Explorer"],
+  "刷新项目文件": ["刷新项目文件", "Refresh project files"],
+  "筛选项目文件": ["筛选项目文件", "Filter project files"],
+  "筛选文件…": ["筛选文件…", "Filter files…"],
+  "正在读取…": ["正在读取…", "Loading…"],
+  "没有匹配的文件": ["没有匹配的文件", "No matching files"],
+  "暂无文件": ["暂无文件", "No files yet"],
+  "本机项目目录": ["本机项目目录", "Local project directory"],
+  "版本变更": ["版本变更", "Changes"],
+  "刷新": ["刷新", "Refresh"],
+  "正在读取 Git 状态…": ["正在读取 Git 状态…", "Reading Git status…"],
   "当前 MVP 提供 Git 状态查看；初始化仓库和提交请使用现有 Git 工具。": [
     "当前 MVP 提供 Git 状态查看；初始化仓库和提交请使用现有 Git 工具。",
     "Git status is available. Use your existing Git tools to initialize repositories and commit changes."
@@ -1597,546 +957,142 @@
     "还没有关联文献。请先到文献区添加论文。",
     "No linked papers. Add papers in Literature first."
   ],
-  "Markdown 预览": [
-    "Markdown 预览",
-    "Markdown preview"
-  ],
-  "未命名": [
-    "未命名",
-    "Untitled"
-  ],
-  "*尚无内容*": [
-    "*尚无内容*",
-    "*No content yet*"
-  ],
-  "文献订阅": [
-    "文献订阅",
-    "Literature subscriptions"
-  ],
-  "项目文献": [
-    "项目文献",
-    "Project literature"
-  ],
-  "关闭文献": [
-    "关闭文献",
-    "Close paper"
-  ],
-  "关闭错误": [
-    "关闭错误",
-    "Dismiss error"
-  ],
-  "返回列表": [
-    "返回列表",
-    "Back to list"
-  ],
-  "返回文献列表": [
-    "返回文献列表",
-    "Back to papers"
-  ],
-  "阅读状态": [
-    "阅读状态",
-    "Reading status"
-  ],
-  "阅读中": [
-    "阅读中",
-    "Reading"
-  ],
-  "已读": [
-    "已读",
-    "Read"
-  ],
-  "信息": [
-    "信息",
-    "Details"
-  ],
-  "正在打开阅读器…": [
-    "正在打开阅读器…",
-    "Opening reader…"
-  ],
-  "摘要": [
-    "摘要",
-    "Abstract"
-  ],
-  "备注": [
-    "备注",
-    "Notes"
-  ],
-  "未附加 PDF": [
-    "未附加 PDF",
-    "No PDF attached"
-  ],
-  "附加 PDF": [
-    "附加 PDF",
-    "Attach PDF"
-  ],
-  "询问这篇文献": [
-    "询问这篇文献",
-    "Ask about this paper"
-  ],
-  "打开研究笔记": [
-    "打开研究笔记",
-    "Open research notes"
-  ],
-  "搜索文献": [
-    "搜索文献",
-    "Search literature"
-  ],
-  "搜索文献…": [
-    "搜索文献…",
-    "Search literature…"
-  ],
-  "筛选阅读状态": [
-    "筛选阅读状态",
-    "Filter reading status"
-  ],
-  "全部状态": [
-    "全部状态",
-    "All statuses"
-  ],
-  "文献信息": [
-    "文献信息",
-    "Paper details"
-  ],
-  "正在导入…": [
-    "正在导入…",
-    "Importing…"
-  ],
-  "导入 PDF": [
-    "导入 PDF",
-    "Import PDF"
-  ],
-  "标题 / 作者": [
-    "标题 / 作者",
-    "Title / author"
-  ],
-  "状态": [
-    "状态",
-    "Status"
-  ],
-  "全文": [
-    "全文",
-    "Full text"
-  ],
-  "没有匹配的文献": [
-    "没有匹配的文献",
-    "No matching papers"
-  ],
-  "暂无文献": [
-    "暂无文献",
-    "No papers yet"
-  ],
-  "收录文献": [
-    "收录文献",
-    "Add paper"
-  ],
-  "文献不存在": [
-    "文献不存在",
-    "Paper not found"
-  ],
-  "保存失败，请重试。": [
-    "保存失败，请重试。",
-    "Save failed. Try again."
-  ],
-  "文献标题": [
-    "文献标题",
-    "Paper title"
-  ],
-  "作者": [
-    "作者",
-    "Authors"
-  ],
-  "年份": [
-    "年份",
-    "Year"
-  ],
-  "本地 PDF": [
-    "本地 PDF",
-    "Local PDF"
-  ],
-  "尚未附加全文": [
-    "尚未附加全文",
-    "No full text attached"
-  ],
-  "更换 PDF": [
-    "更换 PDF",
-    "Replace PDF"
-  ],
+  "Markdown 预览": ["Markdown 预览", "Markdown preview"],
+  "未命名": ["未命名", "Untitled"],
+  "*尚无内容*": ["*尚无内容*", "*No content yet*"],
+  "文献订阅": ["文献订阅", "Literature subscriptions"],
+  "项目文献": ["项目文献", "Project literature"],
+  "关闭文献": ["关闭文献", "Close paper"],
+  "关闭错误": ["关闭错误", "Dismiss error"],
+  "返回列表": ["返回列表", "Back to list"],
+  "返回文献列表": ["返回文献列表", "Back to papers"],
+  "阅读状态": ["阅读状态", "Reading status"],
+  "阅读中": ["阅读中", "Reading"],
+  "已读": ["已读", "Read"],
+  "信息": ["信息", "Details"],
+  "正在打开阅读器…": ["正在打开阅读器…", "Opening reader…"],
+  "摘要": ["摘要", "Abstract"],
+  "备注": ["备注", "Notes"],
+  "未附加 PDF": ["未附加 PDF", "No PDF attached"],
+  "附加 PDF": ["附加 PDF", "Attach PDF"],
+  "询问这篇文献": ["询问这篇文献", "Ask about this paper"],
+  "打开研究笔记": ["打开研究笔记", "Open research notes"],
+  "搜索文献": ["搜索文献", "Search literature"],
+  "搜索文献…": ["搜索文献…", "Search literature…"],
+  "筛选阅读状态": ["筛选阅读状态", "Filter reading status"],
+  "全部状态": ["全部状态", "All statuses"],
+  "文献信息": ["文献信息", "Paper details"],
+  "正在导入…": ["正在导入…", "Importing…"],
+  "导入 PDF": ["导入 PDF", "Import PDF"],
+  "标题 / 作者": ["标题 / 作者", "Title / author"],
+  "状态": ["状态", "Status"],
+  "全文": ["全文", "Full text"],
+  "没有匹配的文献": ["没有匹配的文献", "No matching papers"],
+  "暂无文献": ["暂无文献", "No papers yet"],
+  "收录文献": ["收录文献", "Add paper"],
+  "文献不存在": ["文献不存在", "Paper not found"],
+  "保存失败，请重试。": ["保存失败，请重试。", "Save failed. Try again."],
+  "文献标题": ["文献标题", "Paper title"],
+  "作者": ["作者", "Authors"],
+  "年份": ["年份", "Year"],
+  "本地 PDF": ["本地 PDF", "Local PDF"],
+  "尚未附加全文": ["尚未附加全文", "No full text attached"],
+  "更换 PDF": ["更换 PDF", "Replace PDF"],
   "文件复制到本地资料目录": [
     "文件复制到本地资料目录",
     "Files are copied to the local library directory"
   ],
-  "保存文献": [
-    "保存文献",
-    "Save paper"
-  ],
-  "保存更新失败。": [
-    "保存更新失败。",
-    "Could not save the update."
-  ],
-  "选择订阅主题": [
-    "选择订阅主题",
-    "Select subscription topic"
-  ],
-  "暂无主题": [
-    "暂无主题",
-    "No topics"
-  ],
-  "正在更新…": [
-    "正在更新…",
-    "Updating…"
-  ],
-  "更新订阅": [
-    "更新订阅",
-    "Update subscription"
-  ],
-  "订阅关键词…": [
-    "订阅关键词…",
-    "Subscription keywords…"
-  ],
-  "订阅关键词": [
-    "订阅关键词",
-    "Subscription keywords"
-  ],
-  "添加主题": [
-    "添加主题",
-    "Add topic"
-  ],
-  "订阅文献": [
-    "订阅文献",
-    "Subscription papers"
-  ],
-  "已收录 · 打开": [
-    "已收录 · 打开",
-    "Added · Open"
-  ],
-  "加入文献库": [
-    "加入文献库",
-    "Add to library"
-  ],
-  "暂无更新": [
-    "暂无更新",
-    "No updates"
-  ],
-  "暂无订阅": [
-    "暂无订阅",
-    "No subscriptions"
-  ],
-  "最新": [
-    "最新",
-    "Latest"
-  ],
-  "更新于": [
-    "更新于",
-    "Updated"
-  ],
-  "继续工作": [
-    "继续工作",
-    "Continue working"
-  ],
-  "暂无工作记录": [
-    "暂无工作记录",
-    "No work history yet"
-  ],
-  "暂无最近活动": [
-    "暂无最近活动",
-    "No recent activity"
-  ],
-  "新增待办": [
-    "新增待办",
-    "New task"
-  ],
-  "添加下一步…": [
-    "添加下一步…",
-    "Add next step…"
-  ],
-  "添加": [
-    "添加",
-    "Add"
-  ],
-  "Projects": [
-    "项目",
-    "Projects"
-  ],
-  "Overview": [
-    "概览",
-    "Overview"
-  ],
-  "Literature": [
-    "文献",
-    "Literature"
-  ],
-  "Notes": [
-    "笔记",
-    "Notes"
-  ],
-  "Experiments": [
-    "实验",
-    "Experiments"
-  ],
-  "Paper": [
-    "论文",
-    "Paper"
-  ],
-  "Files": [
-    "文件",
-    "Files"
-  ],
-  "Library": [
-    "文献库",
-    "Library"
-  ],
-  "Subscriptions": [
-    "订阅",
-    "Subscriptions"
-  ],
-  "Code": [
-    "代码",
-    "Code"
-  ],
-  "Runs": [
-    "实验记录",
-    "Runs"
-  ],
-  "Changes": [
-    "变更",
-    "Changes"
-  ],
-  "Manuscript": [
-    "稿件",
-    "Manuscript"
-  ],
-  "References": [
-    "参考文献",
-    "References"
-  ],
-  "All files": [
-    "全部文件",
-    "All files"
-  ],
-  "All papers": [
-    "全部文献",
-    "All papers"
-  ],
-  "Workspace": [
-    "工作区",
-    "Workspace"
-  ],
-  "Collection": [
-    "文献集合",
-    "Collection"
-  ],
-  "Topics": [
-    "主题",
-    "Topics"
-  ],
-  "Spaces": [
-    "空间",
-    "Spaces"
-  ],
-  "My projects": [
-    "我的项目",
-    "My projects"
-  ],
-  "Teams": [
-    "团队",
-    "Teams"
-  ],
-  "Search": [
-    "搜索",
-    "Search"
-  ],
-  "All projects": [
-    "全部项目",
-    "All projects"
-  ],
-  "Find project…": [
-    "查找项目…",
-    "Find project…"
-  ],
-  "AI Assistant": [
-    "AI 助手",
-    "AI Assistant"
-  ],
-  "Research Notes": [
-    "研究笔记",
-    "Research Notes"
-  ],
-  "Ask about this project...": [
-    "就当前项目提问…",
-    "Ask about this project..."
-  ],
-  "Select model": [
-    "选择模型",
-    "Select model"
-  ],
-  "Context attached": [
-    "已附带材料",
-    "Context attached"
-  ],
-  "Context off": [
-    "不附带材料",
-    "Context off"
-  ],
-  "Explain": [
-    "解释",
-    "Explain"
-  ],
-  "Summarize": [
-    "总结",
-    "Summarize"
-  ],
-  "Improve writing": [
-    "改进写作",
-    "Improve writing"
-  ],
-  "Analyze experiment": [
-    "分析实验",
-    "Analyze experiment"
-  ],
-  "Context": [
-    "上下文",
-    "Context"
-  ],
-  "Personal": [
-    "个人",
-    "Personal"
-  ],
-  "No open file": [
-    "未打开文件",
-    "No open file"
-  ],
-  "None": [
-    "无",
-    "None"
-  ],
-  "Selection": [
-    "选中文字",
-    "Selection"
-  ],
-  "Excerpt": [
-    "正文摘录",
-    "Excerpt"
-  ],
-  "Actions": [
-    "操作",
-    "Actions"
-  ],
-  "Attach": [
-    "附带材料",
-    "Attach"
-  ],
-  "Project": [
-    "项目",
-    "Project"
-  ],
-  "Current file": [
-    "当前文件",
-    "Current file"
-  ],
-  "Selected text": [
-    "选中文字",
-    "Selected text"
-  ],
-  "chars": [
-    "字符",
-    "chars"
-  ],
-  "Conversation": [
-    "对话",
-    "Conversation"
-  ],
-  "New": [
-    "新建",
-    "New"
-  ],
-  "No conversation yet.": [
-    "暂无对话",
-    "No conversation yet."
-  ],
-  "Write a note…": [
-    "记录研究笔记…",
-    "Write a note…"
-  ],
-  "Notes workspace": [
-    "笔记工作区",
-    "Notes workspace"
-  ],
-  "Added paper": [
-    "添加文献",
-    "Added paper"
-  ],
-  "Updated paper": [
-    "更新文献",
-    "Updated paper"
-  ],
-  "Created note": [
-    "创建笔记",
-    "Created note"
-  ],
-  "Modified note": [
-    "修改笔记",
-    "Modified note"
-  ],
-  "Recorded experiment": [
-    "记录实验",
-    "Recorded experiment"
-  ],
-  "Updated experiment": [
-    "更新实验",
-    "Updated experiment"
-  ],
-  "Continue working": [
-    "继续工作",
-    "Continue working"
-  ],
-  "Recent activity": [
-    "最近活动",
-    "Recent activity"
-  ],
-  "Next steps": [
-    "下一步",
-    "Next steps"
-  ],
-  "Last updated": [
-    "最近更新",
-    "Last updated"
-  ],
+  "保存文献": ["保存文献", "Save paper"],
+  "保存更新失败。": ["保存更新失败。", "Could not save the update."],
+  "选择订阅主题": ["选择订阅主题", "Select subscription topic"],
+  "暂无主题": ["暂无主题", "No topics"],
+  "正在更新…": ["正在更新…", "Updating…"],
+  "已收录 · 打开": ["已收录 · 打开", "Added · Open"],
+  "加入文献库": ["加入文献库", "Add to library"],
+  "暂无更新": ["暂无更新", "No updates"],
+  "暂无订阅": ["暂无订阅", "No subscriptions"],
+  "最新": ["最新", "Latest"],
+  "更新于": ["更新于", "Updated"],
+  "继续工作": ["继续工作", "Continue working"],
+  "暂无工作记录": ["暂无工作记录", "No work history yet"],
+  "暂无最近活动": ["暂无最近活动", "No recent activity"],
+  "新增待办": ["新增待办", "New task"],
+  "添加下一步…": ["添加下一步…", "Add next step…"],
+  "添加": ["添加", "Add"],
+  "Projects": ["项目", "Projects"],
+  "Overview": ["概览", "Overview"],
+  "Literature": ["文献", "Literature"],
+  "Notes": ["笔记", "Notes"],
+  "Experiments": ["实验", "Experiments"],
+  "Paper": ["论文", "Paper"],
+  "Files": ["文件", "Files"],
+  "Library": ["文献库", "Library"],
+  "Subscriptions": ["订阅", "Subscriptions"],
+  "Code": ["代码", "Code"],
+  "Runs": ["实验记录", "Runs"],
+  "Changes": ["变更", "Changes"],
+  "Manuscript": ["稿件", "Manuscript"],
+  "References": ["参考文献", "References"],
+  "All files": ["全部文件", "All files"],
+  "All papers": ["全部文献", "All papers"],
+  "Workspace": ["工作区", "Workspace"],
+  "Collection": ["文献集合", "Collection"],
+  "Topics": ["主题", "Topics"],
+  "Spaces": ["空间", "Spaces"],
+  "My projects": ["我的项目", "My projects"],
+  "Teams": ["团队", "Teams"],
+  "Search": ["搜索", "Search"],
+  "All projects": ["全部项目", "All projects"],
+  "Find project…": ["查找项目…", "Find project…"],
+  "AI Assistant": ["AI 助手", "AI Assistant"],
+  "Research Notes": ["研究笔记", "Research Notes"],
+  "Ask about this project...": ["就当前项目提问…", "Ask about this project..."],
+  "Select model": ["选择模型", "Select model"],
+  "Context attached": ["已附带材料", "Context attached"],
+  "Context off": ["不附带材料", "Context off"],
+  "Explain": ["解释", "Explain"],
+  "Summarize": ["总结", "Summarize"],
+  "Improve writing": ["改进写作", "Improve writing"],
+  "Analyze experiment": ["分析实验", "Analyze experiment"],
+  "Context": ["上下文", "Context"],
+  "Personal": ["个人", "Personal"],
+  "No open file": ["未打开文件", "No open file"],
+  "None": ["无", "None"],
+  "Selection": ["选中文字", "Selection"],
+  "Excerpt": ["正文摘录", "Excerpt"],
+  "Actions": ["操作", "Actions"],
+  "Attach": ["附带材料", "Attach"],
+  "Project": ["项目", "Project"],
+  "Current file": ["当前文件", "Current file"],
+  "Selected text": ["选中文字", "Selected text"],
+  "chars": ["字符", "chars"],
+  "Conversation": ["对话", "Conversation"],
+  "New": ["新建", "New"],
+  "No conversation yet.": ["暂无对话", "No conversation yet."],
+  "Write a note…": ["记录研究笔记…", "Write a note…"],
+  "Notes workspace": ["笔记工作区", "Notes workspace"],
+  "Added paper": ["添加文献", "Added paper"],
+  "Updated paper": ["更新文献", "Updated paper"],
+  "Created note": ["创建笔记", "Created note"],
+  "Modified note": ["修改笔记", "Modified note"],
+  "Recorded experiment": ["记录实验", "Recorded experiment"],
+  "Updated experiment": ["更新实验", "Updated experiment"],
+  "Continue working": ["继续工作", "Continue working"],
+  "Recent activity": ["最近活动", "Recent activity"],
+  "Next steps": ["下一步", "Next steps"],
+  "Last updated": ["最近更新", "Last updated"],
   "Project workspace · Literature / Notes / Experiments / Paper / Files": [
     "科研工作区 · 文献 / 笔记 / 实验 / 论文 / 文件",
     "Project workspace · Literature / Notes / Experiments / Paper / Files"
   ],
-  "{count} 个项目": [
-    "{count} 个项目",
-    "{count} projects"
-  ],
-  "{count} 篇文献": [
-    "{count} 篇文献",
-    "{count} papers"
-  ],
-  "{count} 篇笔记": [
-    "{count} 篇笔记",
-    "{count} notes"
-  ],
-  "{count} 条 · 手动记录": [
-    "{count} 条 · 手动记录",
-    "{count} records · Manual"
-  ],
-  "手动记录 · {status}": [
-    "手动记录 · {status}",
-    "Manual record · {status}"
-  ],
-  "{count} 行": [
-    "{count} 行",
-    "{count} lines"
-  ],
-  "Ctrl+S 保存 ·": [
-    "Ctrl+S 保存 ·",
-    "Ctrl+S to save ·"
-  ],
-  "已选 {count} 字符": [
-    "已选 {count} 字符",
-    "{count} characters selected"
-  ],
+  "{count} 个项目": ["{count} 个项目", "{count} projects"],
+  "{count} 篇文献": ["{count} 篇文献", "{count} papers"],
+  "{count} 篇笔记": ["{count} 篇笔记", "{count} notes"],
+  "{count} 条 · 手动记录": ["{count} 条 · 手动记录", "{count} records · Manual"],
+  "手动记录 · {status}": ["手动记录 · {status}", "Manual record · {status}"],
+  "{count} 行": ["{count} 行", "{count} lines"],
+  "Ctrl+S 保存 ·": ["Ctrl+S 保存 ·", "Ctrl+S to save ·"],
+  "已选 {count} 字符": ["已选 {count} 字符", "{count} characters selected"],
   "已选择 {count} 字，可提问或关联到笔记": [
     "已选择 {count} 字，可提问或关联到笔记",
     "{count} characters selected. Ask AI or attach to a note."
@@ -2145,86 +1101,32 @@
     "{count} 个变更 · 状态来自项目 Git 仓库",
     "{count} changes · From the project Git repository"
   ],
-  "来源 · {count}": [
-    "来源 · {count}",
-    "Sources · {count}"
-  ],
-  "来源：{source}": [
-    "来源：{source}",
-    "Source: {source}"
-  ],
-  "添加来源：{title}": [
-    "添加来源：{title}",
-    "Attach source: {title}"
-  ],
-  " · 第 {page} 页": [
-    " · 第 {page} 页",
-    " · Page {page}"
-  ],
-  "{title} 第 {page} 页": [
-    "{title} 第 {page} 页",
-    "{title}, page {page}"
-  ],
-  "指标 {index} 名称": [
-    "指标 {index} 名称",
-    "Metric {index} name"
-  ],
-  "指标 {index} 数值": [
-    "指标 {index} 数值",
-    "Metric {index} value"
-  ],
-  "删除指标 {index}": [
-    "删除指标 {index}",
-    "Delete metric {index}"
-  ],
-  "关闭 {name}": [
-    "关闭 {name}",
-    "Close {name}"
-  ],
-  "编辑 {path}": [
-    "编辑 {path}",
-    "Edit {path}"
-  ],
-  "“{name}” 尚未保存。": [
-    "“{name}” 尚未保存。",
-    "“{name}” has unsaved changes."
-  ],
-  "{label} 资源": [
-    "{label} 资源",
-    "{label} resources"
-  ],
-  "{label} 工作区": [
-    "{label} 工作区",
-    "{label} workspace"
-  ],
-  "{title}搜索结果": [
-    "{title}搜索结果",
-    "{title} search results"
-  ],
-  "没有找到“{query}”相关内容。": [
-    "没有找到“{query}”相关内容。",
-    "No results for “{query}”."
-  ],
-  "最新 {count} / 20 篇": [
-    "最新 {count} / 20 篇",
-    "Latest {count} / 20 papers"
-  ],
+  "来源 · {count}": ["来源 · {count}", "Sources · {count}"],
+  "来源：{source}": ["来源：{source}", "Source: {source}"],
+  "添加来源：{title}": ["添加来源：{title}", "Attach source: {title}"],
+  " · 第 {page} 页": [" · 第 {page} 页", " · Page {page}"],
+  "{title} 第 {page} 页": ["{title} 第 {page} 页", "{title}, page {page}"],
+  "指标 {index} 名称": ["指标 {index} 名称", "Metric {index} name"],
+  "指标 {index} 数值": ["指标 {index} 数值", "Metric {index} value"],
+  "删除指标 {index}": ["删除指标 {index}", "Delete metric {index}"],
+  "关闭 {name}": ["关闭 {name}", "Close {name}"],
+  "编辑 {path}": ["编辑 {path}", "Edit {path}"],
+  "“{name}” 尚未保存。": ["“{name}” 尚未保存。", "“{name}” has unsaved changes."],
+  "{label} 资源": ["{label} 资源", "{label} resources"],
+  "{label} 工作区": ["{label} 工作区", "{label} workspace"],
+  "{title}搜索结果": ["{title}搜索结果", "{title} search results"],
+  "没有找到“{query}”相关内容。": ["没有找到“{query}”相关内容。", "No results for “{query}”."],
+  "最新 {count} / 20 篇": ["最新 {count} / 20 篇", "Latest {count} / 20 papers"],
   "状态与结果由你手动记录 · 更新于": [
     "状态与结果由你手动记录 · 更新于",
     "Status and results are recorded manually · Updated"
   ],
-  "[图片：{alt}]": [
-    "[图片：{alt}]",
-    "[Image: {alt}]"
-  ],
+  "[图片：{alt}]": ["[图片：{alt}]", "[Image: {alt}]"],
   "[图片：{alt} · 外部图片不自动加载]": [
     "[图片：{alt} · 外部图片不自动加载]",
     "[Image: {alt} · External images are not loaded automatically]"
   ],
-  "请先保存项目。": [
-    "请先保存项目。",
-    "Save the project first."
-  ],
+  "请先保存项目。": ["请先保存项目。", "Save the project first."],
   "项目不存在，请返回项目管理重新打开。": [
     "项目不存在，请返回项目管理重新打开。",
     "Project not found. Return to Projects and open it again."
@@ -2233,10 +1135,7 @@
     "Git 返回的文件名不是 UTF-8，暂时无法显示。",
     "Git returned non-UTF-8 file names that cannot be displayed."
   ],
-  "Git 状态格式无法识别。": [
-    "Git 状态格式无法识别。",
-    "Unrecognized Git status format."
-  ],
+  "Git 状态格式无法识别。": ["Git 状态格式无法识别。", "Unrecognized Git status format."],
   "Git 变更超过 10000 项，请缩小项目范围。": [
     "Git 变更超过 10000 项，请缩小项目范围。",
     "More than 10,000 Git changes. Choose a smaller project directory."
@@ -2249,26 +1148,14 @@
     "无法启动 Git，请确认已安装 Git 并加入 PATH。",
     "Could not start Git. Install Git and add it to PATH."
   ],
-  "Git 输出不可用。": [
-    "Git 输出不可用。",
-    "Git output is unavailable."
-  ],
-  "Git 输出超过 2 MiB 限制。": [
-    "Git 输出超过 2 MiB 限制。",
-    "Git output exceeds 2 MiB."
-  ],
-  "无法读取 Git 进程状态。": [
-    "无法读取 Git 进程状态。",
-    "Could not read Git process status."
-  ],
+  "Git 输出不可用。": ["Git 输出不可用。", "Git output is unavailable."],
+  "Git 输出超过 2 MiB 限制。": ["Git 输出超过 2 MiB 限制。", "Git output exceeds 2 MiB."],
+  "无法读取 Git 进程状态。": ["无法读取 Git 进程状态。", "Could not read Git process status."],
   "Git 状态查询超时，请在终端检查此仓库。": [
     "Git 状态查询超时，请在终端检查此仓库。",
     "Git status timed out. Check this repository in a terminal."
   ],
-  "Git 输出读取失败。": [
-    "Git 输出读取失败。",
-    "Could not read Git output."
-  ],
+  "Git 输出读取失败。": ["Git 输出读取失败。", "Could not read Git output."],
   "所选目录不是 Git 仓库根目录，请在项目设置中选择仓库目录。": [
     "所选目录不是 Git 仓库根目录，请在项目设置中选择仓库目录。",
     "The selected directory is not a Git root. Choose the repository in project settings."
@@ -2293,14 +1180,8 @@
     "此项目不是可读取的 Git 仓库，或 Git 权限/配置不允许访问。",
     "The repository is unreadable or access is blocked by Git permissions or configuration."
   ],
-  "模型服务地址过长。": [
-    "模型服务地址过长。",
-    "Model endpoint is too long."
-  ],
-  "模型服务地址格式无效。": [
-    "模型服务地址格式无效。",
-    "Invalid model endpoint URL."
-  ],
+  "模型服务地址过长。": ["模型服务地址过长。", "Model endpoint is too long."],
+  "模型服务地址格式无效。": ["模型服务地址格式无效。", "Invalid model endpoint URL."],
   "模型服务必须使用 HTTP(S)，地址不能包含密码、查询参数或片段。": [
     "模型服务必须使用 HTTP(S)，地址不能包含密码、查询参数或片段。",
     "Use an HTTP(S) model endpoint without credentials, query parameters or fragments."
@@ -2309,18 +1190,12 @@
     "带 API Key 的远程模型服务必须使用 HTTPS。",
     "Remote model services using an API key require HTTPS."
   ],
-  "网络客户端初始化失败。": [
-    "网络客户端初始化失败。",
-    "Could not initialize the network client."
-  ],
+  "网络客户端初始化失败。": ["网络客户端初始化失败。", "Could not initialize the network client."],
   "服务返回 HTTP {status}，请检查服务地址、模型名称和访问凭据。": [
     "服务返回 HTTP {status}，请检查服务地址、模型名称和访问凭据。",
     "Service returned HTTP {status}. Check the endpoint, model name and credentials."
   ],
-  "服务响应超过大小限制。": [
-    "服务响应超过大小限制。",
-    "Service response exceeds the size limit."
-  ],
+  "服务响应超过大小限制。": ["服务响应超过大小限制。", "Service response exceeds the size limit."],
   "读取服务响应失败或超时，请稍后重试。": [
     "读取服务响应失败或超时，请稍后重试。",
     "Failed or timed out reading the service response. Try again later."
@@ -2329,18 +1204,12 @@
     "已有模型请求正在执行，请等待当前回答完成。",
     "A model request is already running. Wait for it to finish."
   ],
-  "请配置有效的模型名称。": [
-    "请配置有效的模型名称。",
-    "Configure a valid model name."
-  ],
+  "请配置有效的模型名称。": ["请配置有效的模型名称。", "Configure a valid model name."],
   "对话超过 50 条或 256 KiB 上下文限制，请新建对话或减少上下文。": [
     "对话超过 50 条或 256 KiB 上下文限制，请新建对话或减少上下文。",
     "Conversation exceeds 50 messages or 256 KiB of context. Start a new conversation or reduce the context."
   ],
-  "API Key 长度无效。": [
-    "API Key 长度无效。",
-    "Invalid API key length."
-  ],
+  "API Key 长度无效。": ["API Key 长度无效。", "Invalid API key length."],
   "模型请求超时，请检查服务或缩小上下文。": [
     "模型请求超时，请检查服务或缩小上下文。",
     "Model request timed out. Check the service or reduce the context."
@@ -2357,38 +1226,14 @@
     "模型没有返回文本回答，请检查模型是否支持对话。",
     "The model returned no text. Check that it supports chat."
   ],
-  "订阅关键词应为 1–200 个字符。": [
-    "订阅关键词应为 1–200 个字符。",
-    "Subscription keywords must be 1–200 characters."
-  ],
-  "无法连接 arXiv，网络异常或服务暂时不可用。": [
-    "无法连接 arXiv，网络异常或服务暂时不可用。",
-    "Could not connect to arXiv. Check the network or try again later."
-  ],
-  "arXiv 响应不是有效 UTF-8。": [
-    "arXiv 响应不是有效 UTF-8。",
-    "The arXiv response is not valid UTF-8."
-  ],
-  "工作区尚未载入": [
-    "工作区尚未载入",
-    "Workspace has not loaded"
-  ],
+  "工作区尚未载入": ["工作区尚未载入", "Workspace has not loaded"],
   "项目不存在，请刷新项目列表。": [
     "项目不存在，请刷新项目列表。",
     "Project not found. Refresh the project list."
   ],
-  "导航参数过长。": [
-    "导航参数过长。",
-    "Navigation parameters are too long."
-  ],
-  "工作区窗口不存在": [
-    "工作区窗口不存在",
-    "The workspace window does not exist."
-  ],
-  "文件操作失败：{error}": [
-    "文件操作失败：{error}",
-    "File operation failed: {error}"
-  ],
+  "导航参数过长。": ["导航参数过长。", "Navigation parameters are too long."],
+  "工作区窗口不存在": ["工作区窗口不存在", "The workspace window does not exist."],
+  "文件操作失败：{error}": ["文件操作失败：{error}", "File operation failed: {error}"],
   "文件路径不能包含符号链接或目录联接。": [
     "文件路径不能包含符号链接或目录联接。",
     "File paths cannot contain symbolic links or directory junctions."
@@ -2397,18 +1242,12 @@
     "文件路径必须是项目内的相对路径。",
     "File paths must be relative to the project directory."
   ],
-  "目录层级超过 32 层。": [
-    "目录层级超过 32 层。",
-    "Directory nesting exceeds 32 levels."
-  ],
+  "目录层级超过 32 层。": ["目录层级超过 32 层。", "Directory nesting exceeds 32 levels."],
   "文件路径包含不支持的名称或越界片段。": [
     "文件路径包含不支持的名称或越界片段。",
     "File path contains unsupported names or out-of-bounds segments."
   ],
-  "文件路径无效。": [
-    "文件路径无效。",
-    "Invalid file path."
-  ],
+  "文件路径无效。": ["文件路径无效。", "Invalid file path."],
   "所选对象不是普通文件。": [
     "所选对象不是普通文件。",
     "The selected object is not a regular file."
@@ -2421,10 +1260,7 @@
     "读取期间文件大小超过限制。",
     "File grew beyond the size limit while reading."
   ],
-  "项目标识无效。": [
-    "项目标识无效。",
-    "Invalid project ID."
-  ],
+  "项目标识无效。": ["项目标识无效。", "Invalid project ID."],
   "项目目录必须是绝对路径，请在项目设置中重新选择。": [
     "项目目录必须是绝对路径，请在项目设置中重新选择。",
     "Project directory must be an absolute path. Select it again in project settings."
@@ -2473,34 +1309,19 @@
     "选择的文件不是有效的 PDF 文件。",
     "The selected file is not a valid PDF."
   ],
-  "文件名称无效。": [
-    "文件名称无效。",
-    "Invalid file name."
-  ],
-  "PDF 资产标识无效。": [
-    "PDF 资产标识无效。",
-    "Invalid PDF asset identifier."
-  ],
+  "文件名称无效。": ["文件名称无效。", "Invalid file name."],
+  "PDF 资产标识无效。": ["PDF 资产标识无效。", "Invalid PDF asset identifier."],
   "工作区不能包含符号链接或目录联接。": [
     "工作区不能包含符号链接或目录联接。",
     "Workspace paths cannot contain symbolic links or directory junctions."
   ],
-  "工作区超过 64 MiB。": [
-    "工作区超过 64 MiB。",
-    "Workspace exceeds 64 MiB."
-  ],
+  "工作区超过 64 MiB。": ["工作区超过 64 MiB。", "Workspace exceeds 64 MiB."],
   "数据目录必须是绝对路径。": [
     "数据目录必须是绝对路径。",
     "Data directory must be an absolute path."
   ],
-  "数据目录无父目录。": [
-    "数据目录无父目录。",
-    "Data directory has no parent."
-  ],
-  "数据目录无效。": [
-    "数据目录无效。",
-    "Invalid data directory."
-  ],
+  "数据目录无父目录。": ["数据目录无父目录。", "Data directory has no parent."],
+  "数据目录无效。": ["数据目录无效。", "Invalid data directory."],
   "该数据目录正在被另一个 Scientify 进程使用。": [
     "该数据目录正在被另一个 Scientify 进程使用。",
     "Another Scientify process is using this data directory."
@@ -2513,10 +1334,7 @@
     "提交的工作区版本必须递增一次。",
     "The workspace revision must increase by exactly one."
   ],
-  "导出路径无效。": [
-    "导出路径无效。",
-    "Invalid export path."
-  ],
+  "导出路径无效。": ["导出路径无效。", "Invalid export path."],
   "请将导出文件保存到工作区数据目录之外。": [
     "请将导出文件保存到工作区数据目录之外。",
     "Save the export outside the workspace data directory."
@@ -2545,14 +1363,8 @@
     "这不是受支持的 Scientify 工作区文件。",
     "This is not a supported Scientify workspace file."
   ],
-  "工作区格式无效。": [
-    "工作区格式无效。",
-    "Invalid workspace format."
-  ],
-  "记录标识无效。": [
-    "记录标识无效。",
-    "Invalid record identifier."
-  ],
+  "工作区格式无效。": ["工作区格式无效。", "Invalid workspace format."],
+  "记录标识无效。": ["记录标识无效。", "Invalid record identifier."],
   "工作区包含重复的记录标识。": [
     "工作区包含重复的记录标识。",
     "Workspace contains duplicate record identifiers."
@@ -2561,114 +1373,39 @@
     "部分记录的所属项目不存在。",
     "Some records reference missing projects."
   ],
-  "文献的项目归属不完整。": [
-    "文献的项目归属不完整。",
-    "Paper project references are incomplete."
-  ],
-  "文献笔记或摘录格式无效。": [
-    "文献笔记或摘录格式无效。",
-    "Invalid paper note or excerpt format."
-  ],
-  "实验指标格式不正确。": [
-    "实验指标格式不正确。",
-    "Invalid experiment metric format."
-  ],
+  "文献的项目归属不完整。": ["文献的项目归属不完整。", "Paper project references are incomplete."],
+  "文献笔记或摘录格式无效。": ["文献笔记或摘录格式无效。", "Invalid paper note or excerpt format."],
+  "实验指标格式不正确。": ["实验指标格式不正确。", "Invalid experiment metric format."],
   "实验指标包含无效数值。": [
     "实验指标包含无效数值。",
     "Experiment metrics contain invalid values."
   ],
-  "对话上下文格式无效。": [
-    "对话上下文格式无效。",
-    "Invalid conversation context format."
-  ],
-  "对话格式无效。": [
-    "对话格式无效。",
-    "Invalid conversation format."
-  ],
-  "对话内容无效。": [
-    "对话内容无效。",
-    "Invalid conversation content."
-  ],
-  "团队标识无效。": [
-    "团队标识无效。",
-    "Invalid team identifier."
-  ],
-  "团队信息无效。": [
-    "团队信息无效。",
-    "Invalid team details."
-  ],
-  "项目所属团队不存在。": [
-    "项目所属团队不存在。",
-    "The project's team does not exist."
-  ],
-  "工作区版本信息无效。": [
-    "工作区版本信息无效。",
-    "Invalid workspace revision."
-  ],
-  "工作区 {key} 格式无效。": [
-    "工作区 {key} 格式无效。",
-    "Invalid workspace {key} format."
-  ],
-  "模型设置格式无效。": [
-    "模型设置格式无效。",
-    "Invalid model settings format."
-  ],
-  "工作区设置格式无效。": [
-    "工作区设置格式无效。",
-    "Invalid workspace settings format."
-  ],
-  "工作区导航格式无效。": [
-    "工作区导航格式无效。",
-    "Invalid workspace navigation format."
-  ],
-  "最近访问格式无效。": [
-    "最近访问格式无效。",
-    "Invalid recent history format."
-  ],
-  "回收站数据无效。": [
-    "回收站数据无效。",
-    "Invalid trash data."
-  ],
+  "对话上下文格式无效。": ["对话上下文格式无效。", "Invalid conversation context format."],
+  "对话格式无效。": ["对话格式无效。", "Invalid conversation format."],
+  "对话内容无效。": ["对话内容无效。", "Invalid conversation content."],
+  "团队标识无效。": ["团队标识无效。", "Invalid team identifier."],
+  "团队信息无效。": ["团队信息无效。", "Invalid team details."],
+  "项目所属团队不存在。": ["项目所属团队不存在。", "The project's team does not exist."],
+  "工作区版本信息无效。": ["工作区版本信息无效。", "Invalid workspace revision."],
+  "工作区 {key} 格式无效。": ["工作区 {key} 格式无效。", "Invalid workspace {key} format."],
+  "模型设置格式无效。": ["模型设置格式无效。", "Invalid model settings format."],
+  "工作区设置格式无效。": ["工作区设置格式无效。", "Invalid workspace settings format."],
+  "工作区导航格式无效。": ["工作区导航格式无效。", "Invalid workspace navigation format."],
+  "最近访问格式无效。": ["最近访问格式无效。", "Invalid recent history format."],
+  "回收站数据无效。": ["回收站数据无效。", "Invalid trash data."],
   "工作区 JSON 无法读取：{error}": [
     "工作区 JSON 无法读取：{error}",
     "Could not read workspace JSON: {error}"
   ],
-  "切换为浅色": [
-    "切换为浅色",
-    "Switch to light mode"
-  ],
-  "切换为深色": [
-    "切换为深色",
-    "Switch to dark mode"
-  ],
-  "切换为英文": [
-    "切换为英文",
-    "Switch to English"
-  ],
-  "切换为中文": [
-    "切换为中文",
-    "Switch to Chinese"
-  ],
-  "设置": [
-    "设置",
-    "Settings"
-  ],
-  "设置分类": [
-    "设置分类",
-    "Settings categories"
-  ],
-  "通用": [
-    "通用",
-    "General"
-  ],
-  "外观": [
-    "外观",
-    "Appearance"
-  ],
-  "个人资料": [
-    "个人资料",
-    "Profile"
-  ],
+  "切换为浅色": ["切换为浅色", "Switch to light mode"],
+  "切换为深色": ["切换为深色", "Switch to dark mode"],
+  "切换为英文": ["切换为英文", "Switch to English"],
+  "切换为中文": ["切换为中文", "Switch to Chinese"],
+  "设置": ["设置", "Settings"],
+  "设置分类": ["设置分类", "Settings categories"],
+  "通用": ["通用", "General"],
+  "外观": ["外观", "Appearance"],
+  "个人资料": ["个人资料", "Profile"],
   "仅切换界面语言，不修改研究内容。": [
     "仅切换界面语言，不修改研究内容。",
     "Changes the interface language only. Research content stays unchanged."
@@ -2681,230 +1418,89 @@
     "顶栏按钮可直接切换亮暗。",
     "Use the top bar button to switch between light and dark."
   ],
-  "文献标签页": [
-    "文献标签页",
-    "Literature tabs"
-  ],
-  "新建文献标签页": [
-    "新建文献标签页",
-    "New literature tab"
-  ],
-  "空白页 {index}": [
-    "空白页 {index}",
-    "New tab {index}"
-  ],
-  "文献呈现区": [
-    "文献呈现区",
-    "Literature viewer"
-  ],
-  "从左侧打开文献": [
-    "从左侧打开文献",
-    "Open a paper from the sidebar"
-  ],
+  "文献标签页": ["文献标签页", "Literature tabs"],
+  "新建文献标签页": ["新建文献标签页", "New literature tab"],
+  "空白页 {index}": ["空白页 {index}", "New tab {index}"],
+  "文献呈现区": ["文献呈现区", "Literature viewer"],
+  "从左侧打开文献": ["从左侧打开文献", "Open a paper from the sidebar"],
   "请先保存论文笔记，再操作文件。": [
     "请先保存论文笔记，再操作文件。",
     "Save paper notes before changing files."
   ],
-  "浏览器新页": [
-    "浏览器新页",
-    "New browser tab"
-  ],
-  "新建文件夹": [
-    "新建文件夹",
-    "New folder"
-  ],
-  "本地文献目录": [
-    "本地文献目录",
-    "Local literature directory"
-  ],
-  "打开浏览器": [
-    "打开浏览器",
-    "Open browser"
-  ],
-  "消息推荐": [
-    "消息推荐",
-    "Recommendations"
-  ],
-  "尚未启用": [
-    "尚未启用",
-    "Not enabled yet"
-  ],
-  "个人信息源": [
-    "个人信息源",
-    "Personal sources"
-  ],
-  "打开文献文件夹": [
-    "打开文献文件夹",
-    "Open literature folder"
-  ],
-  "文献库": [
-    "文献库",
-    "Library"
-  ],
-  "更多操作": [
-    "更多操作",
-    "More actions"
-  ],
-  "搜索文件名和路径": [
-    "搜索文件名和路径",
-    "Search file names and paths"
-  ],
+  "浏览器新页": ["浏览器新页", "New browser tab"],
+  "新建文件夹": ["新建文件夹", "New folder"],
+  "本地文献目录": ["本地文献目录", "Local literature directory"],
+  "打开浏览器": ["打开浏览器", "Open browser"],
+  "消息推荐": ["消息推荐", "Recommendations"],
+  "尚未启用": ["尚未启用", "Not enabled yet"],
+  "个人信息源": ["个人信息源", "Personal sources"],
+  "打开文献文件夹": ["打开文献文件夹", "Open literature folder"],
+  "文献库": ["文献库", "Library"],
+  "更多操作": ["更多操作", "More actions"],
+  "搜索文件名和路径": ["搜索文件名和路径", "Search file names and paths"],
   "选择真实目录，PDF 与笔记保存在原位置。": [
     "选择真实目录，PDF 与笔记保存在原位置。",
     "Choose a local folder. PDFs and notes stay in that folder."
   ],
-  "重新关联": [
-    "重新关联",
-    "Relink"
-  ],
-  "移除失联记录": [
-    "移除失联记录",
-    "Remove missing record"
-  ],
+  "重新关联": ["重新关联", "Relink"],
+  "移除失联记录": ["移除失联记录", "Remove missing record"],
   "移除“{name}”的失联记录？不会删除仍存在的文件。": [
     "移除“{name}”的失联记录？不会删除仍存在的文件。",
     "Remove the missing record for “{name}”? Existing files will not be deleted."
   ],
-  "旧资料": [
-    "旧资料",
-    "Legacy library"
-  ],
-  "调整论文笔记宽度": [
-    "调整论文笔记宽度",
-    "Resize paper notes"
-  ],
-  "论文笔记": [
-    "论文笔记",
-    "Paper notes"
-  ],
-  "论文笔记标签": [
-    "论文笔记标签",
-    "Paper note tabs"
-  ],
-  "重命名": [
-    "重命名",
-    "Rename"
-  ],
-  "剪切": [
-    "剪切",
-    "Cut"
-  ],
-  "复制": [
-    "复制",
-    "Copy"
-  ],
-  "移动到": [
-    "移动到",
-    "Move to"
-  ],
-  "粘贴": [
-    "粘贴",
-    "Paste"
-  ],
-  "打开论文笔记": [
-    "打开论文笔记",
-    "Open paper note"
-  ],
-  "在文件管理器中显示": [
-    "在文件管理器中显示",
-    "Show in file manager"
-  ],
+  "旧资料": ["旧资料", "Legacy library"],
+  "调整论文笔记宽度": ["调整论文笔记宽度", "Resize paper notes"],
+  "论文笔记": ["论文笔记", "Paper notes"],
+  "论文笔记标签": ["论文笔记标签", "Paper note tabs"],
+  "重命名": ["重命名", "Rename"],
+  "剪切": ["剪切", "Cut"],
+  "复制": ["复制", "Copy"],
+  "移动到": ["移动到", "Move to"],
+  "粘贴": ["粘贴", "Paste"],
+  "打开论文笔记": ["打开论文笔记", "Open paper note"],
+  "在文件管理器中显示": ["在文件管理器中显示", "Show in file manager"],
   "将所选项目及关联笔记移入系统回收站？文件夹包括全部子内容。": [
     "将所选项目及关联笔记移入系统回收站？文件夹包括全部子内容。",
     "Move this item and its paired notes to the system recycle bin? Folders include all descendants."
   ],
-  "移入回收站": [
-    "移入回收站",
-    "Move to recycle bin"
-  ],
-  "显示笔记文件": [
-    "显示笔记文件",
-    "Show note files"
-  ],
+  "移入回收站": ["移入回收站", "Move to recycle bin"],
+  "显示笔记文件": ["显示笔记文件", "Show note files"],
   "复制当前项目旧附件和笔记，保留原记录；重复迁移会产生副本。继续？": [
     "复制当前项目旧附件和笔记，保留原记录；重复迁移会产生副本。继续？",
     "Copy this project’s legacy attachments and notes, preserving original records? Repeated migration creates copies."
   ],
-  "迁移旧文献": [
-    "迁移旧文献",
-    "Migrate legacy papers"
-  ],
+  "迁移旧文献": ["迁移旧文献", "Migrate legacy papers"],
   "解除目录关联不会删除文件，是否继续？": [
     "解除目录关联不会删除文件，是否继续？",
     "Detach this folder? Files will remain on disk."
   ],
-  "解除目录关联": [
-    "解除目录关联",
-    "Detach folder"
-  ],
-  "相对路径": [
-    "相对路径",
-    "Relative path"
-  ],
-  "原论文已移除": [
-    "原论文已移除",
-    "Original PDF missing"
-  ],
-  "论文笔记正文": [
-    "论文笔记正文",
-    "Paper note content"
-  ],
-  "摘录选文": [
-    "摘录选文",
-    "Quote selection"
-  ],
-  "后退": [
-    "后退",
-    "Back"
-  ],
-  "前进": [
-    "前进",
-    "Forward"
-  ],
-  "停止": [
-    "停止",
-    "Stop"
-  ],
-  "网址或搜索词": [
-    "网址或搜索词",
-    "Address or search terms"
-  ],
-  "输入网址或搜索词": [
-    "输入网址或搜索词",
-    "Enter an address or search terms"
-  ],
-  "打开": [
-    "打开",
-    "Open"
-  ],
-  "在系统浏览器打开": [
-    "在系统浏览器打开",
-    "Open in system browser"
-  ],
+  "解除目录关联": ["解除目录关联", "Detach folder"],
+  "相对路径": ["相对路径", "Relative path"],
+  "原论文已移除": ["原论文已移除", "Original PDF missing"],
+  "论文笔记正文": ["论文笔记正文", "Paper note content"],
+  "摘录选文": ["摘录选文", "Quote selection"],
+  "后退": ["后退", "Back"],
+  "前进": ["前进", "Forward"],
+  "停止": ["停止", "Stop"],
+  "网址或搜索词": ["网址或搜索词", "Address or search terms"],
+  "输入网址或搜索词": ["输入网址或搜索词", "Enter an address or search terms"],
+  "打开": ["打开", "Open"],
+  "在系统浏览器打开": ["在系统浏览器打开", "Open in system browser"],
   "论文笔记尚未保存，请重试或处理冲突后退出。": [
     "论文笔记尚未保存，请重试或处理冲突后退出。",
     "Paper notes are not saved. Retry or resolve the conflict before closing."
   ],
-  "返回本地目录": [
-    "返回本地目录",
-    "Back to local directory"
-  ],
+  "返回本地目录": ["返回本地目录", "Back to local directory"],
   "请在桌面应用中使用本地文献目录和内嵌浏览器。": [
     "请在桌面应用中使用本地文献目录和内嵌浏览器。",
     "Use the desktop app for local literature folders and the embedded browser."
   ],
-  "请等待当前保存完成。": [
-    "请等待当前保存完成。",
-    "Wait for the current save to finish."
-  ],
+  "请等待当前保存完成。": ["请等待当前保存完成。", "Wait for the current save to finish."],
   "文献文件操作失败：{detail}": [
     "文献文件操作失败：{detail}",
     "Literature file operation failed: {detail}"
   ],
-  "文献路径无效。": [
-    "文献路径无效。",
-    "Invalid literature path."
-  ],
+  "文献路径无效。": ["文献路径无效。", "Invalid literature path."],
   "文件名包含保留名称或越界片段。": [
     "文件名包含保留名称或越界片段。",
     "The filename contains a reserved name or escapes the folder."
@@ -2917,10 +1513,7 @@
     "读取时文件超过大小限制。",
     "The file exceeded the size limit while reading."
   ],
-  "不是有效的 PDF 文件。": [
-    "不是有效的 PDF 文件。",
-    "This is not a valid PDF file."
-  ],
+  "不是有效的 PDF 文件。": ["不是有效的 PDF 文件。", "This is not a valid PDF file."],
   "PDF 在读取时发生变化，请重试。": [
     "PDF 在读取时发生变化，请重试。",
     "The PDF changed while reading. Please retry."
@@ -2929,26 +1522,17 @@
     "文献根目录映射损坏，已停止修改。",
     "The library root mapping is damaged. Changes have been stopped."
   ],
-  "文献根目录映射无效。": [
-    "文献根目录映射无效。",
-    "Invalid library root mapping."
-  ],
+  "文献根目录映射无效。": ["文献根目录映射无效。", "Invalid library root mapping."],
   "文献根目录必须为绝对路径。": [
     "文献根目录必须为绝对路径。",
     "The library root must be an absolute path."
   ],
-  "文献根目录不是文件夹。": [
-    "文献根目录不是文件夹。",
-    "The library root is not a folder."
-  ],
+  "文献根目录不是文件夹。": ["文献根目录不是文件夹。", "The library root is not a folder."],
   "请选择 Scientify 数据目录之外的独立文献文件夹。": [
     "请选择 Scientify 数据目录之外的独立文献文件夹。",
     "Choose a separate literature folder outside the Scientify data directory."
   ],
-  "文件不在文献目录内。": [
-    "文件不在文献目录内。",
-    "The file is outside the literature folder."
-  ],
+  "文件不在文献目录内。": ["文件不在文献目录内。", "The file is outside the literature folder."],
   "上次文件操作未完成，请保留 .scientify/operation.json 并恢复文件后再操作。": [
     "上次文件操作未完成，请保留 .scientify/operation.json 并恢复文件后再操作。",
     "The previous file operation did not finish. Keep .scientify/operation.json and recover the files before continuing."
@@ -2965,10 +1549,7 @@
     "文献索引包含无效或重复绑定。",
     "The literature index contains invalid or duplicate bindings."
   ],
-  "文献目录超过 32 层。": [
-    "文献目录超过 32 层。",
-    "The literature folder exceeds 32 levels."
-  ],
+  "文献目录超过 32 层。": ["文献目录超过 32 层。", "The literature folder exceeds 32 levels."],
   "文献目录超过 10000 项，请缩小范围。": [
     "文献目录超过 10000 项，请缩小范围。",
     "The literature folder exceeds 10,000 entries. Choose a smaller folder."
@@ -2989,22 +1570,13 @@
     "PDF 已移除，笔记仍保留：{path}",
     "PDF missing; its note has been kept: {path}"
   ],
-  "请选择 PDF 文件。": [
-    "请选择 PDF 文件。",
-    "Choose a PDF file."
-  ],
+  "请选择 PDF 文件。": ["请选择 PDF 文件。", "Choose a PDF file."],
   "已有其他文献绑定到该笔记路径。": [
     "已有其他文献绑定到该笔记路径。",
     "Another paper is already linked to this note path."
   ],
-  "请先打开文献文件夹。": [
-    "请先打开文献文件夹。",
-    "Open a literature folder first."
-  ],
-  "文献绑定不存在。": [
-    "文献绑定不存在。",
-    "The paper binding no longer exists."
-  ],
+  "请先打开文献文件夹。": ["请先打开文献文件夹。", "Open a literature folder first."],
+  "文献绑定不存在。": ["文献绑定不存在。", "The paper binding no longer exists."],
   "笔记应为不超过 2 MiB 的 UTF-8 文本。": [
     "笔记应为不超过 2 MiB 的 UTF-8 文本。",
     "Notes must be UTF-8 text up to 2 MiB."
@@ -3021,10 +1593,7 @@
     "同名目标已存在，不会覆盖。",
     "The destination already exists and will not be overwritten."
   ],
-  "目标文件夹不存在。": [
-    "目标文件夹不存在。",
-    "The destination folder does not exist."
-  ],
+  "目标文件夹不存在。": ["目标文件夹不存在。", "The destination folder does not exist."],
   "目标路径已存在文献绑定，请先重新关联缺失文献。": [
     "目标路径已存在文献绑定，请先重新关联缺失文献。",
     "The destination has a paper binding. Relink the missing paper first."
@@ -3037,10 +1606,7 @@
     "目标 PDF 已绑定其他笔记。",
     "The destination PDF is already linked to another note."
   ],
-  "原文献绑定不存在。": [
-    "原文献绑定不存在。",
-    "The original paper binding does not exist."
-  ],
+  "原文献绑定不存在。": ["原文献绑定不存在。", "The original paper binding does not exist."],
   "不能将普通文件改名为关联笔记。": [
     "不能将普通文件改名为关联笔记。",
     "A regular file cannot be renamed to a bound note."
@@ -3061,10 +1627,7 @@
     "目标笔记已存在，不会覆盖或重新绑定。",
     "The destination note exists and will not be overwritten or relinked."
   ],
-  "不支持的文献操作。": [
-    "不支持的文献操作。",
-    "Unsupported literature operation."
-  ],
+  "不支持的文献操作。": ["不支持的文献操作。", "Unsupported literature operation."],
   "回收失败且回退未完成：{detail}；恢复包：{path}": [
     "回收失败且回退未完成：{detail}；恢复包：{path}",
     "Recycling failed and rollback is incomplete: {detail}; recovery package: {path}"
@@ -3073,74 +1636,41 @@
     "文件夹包含内部元数据，不支持移动或复制。",
     "The folder contains internal metadata and cannot be moved or copied."
   ],
-  "不支持特殊文件。": [
-    "不支持特殊文件。",
-    "Special files are not supported."
-  ],
-  "地址过长。": [
-    "地址过长。",
-    "The address is too long."
-  ],
+  "不支持特殊文件。": ["不支持特殊文件。", "Special files are not supported."],
+  "地址过长。": ["地址过长。", "The address is too long."],
   "仅允许 HTTP 或 HTTPS 网页。": [
     "仅允许 HTTP 或 HTTPS 网页。",
     "Only HTTP and HTTPS pages are allowed."
   ],
-  "网页地址无效。": [
-    "网页地址无效。",
-    "Invalid web address."
-  ],
+  "网页地址无效。": ["网页地址无效。", "Invalid web address."],
   "该地址不允许在内嵌浏览器中打开。": [
     "该地址不允许在内嵌浏览器中打开。",
     "This address cannot be opened in the embedded browser."
   ],
-  "网页标签不存在。": [
-    "网页标签不存在。",
-    "The browser tab no longer exists."
-  ],
+  "网页标签不存在。": ["网页标签不存在。", "The browser tab no longer exists."],
   "最多同时打开 16 个网页标签。": [
     "最多同时打开 16 个网页标签。",
     "Up to 16 browser tabs can be open at once."
   ],
-  "数据目录无效": [
-    "数据目录无效",
-    "Invalid data directory."
-  ],
+  "数据目录无效": ["数据目录无效", "Invalid data directory."],
   "已阻止非网页或应用内部地址。": [
     "已阻止非网页或应用内部地址。",
     "Blocked a non-web or internal application address."
   ],
-  "下载未完成。": [
-    "下载未完成。",
-    "The download did not complete."
-  ],
+  "下载未完成。": ["下载未完成。", "The download did not complete."],
   "网页加载失败，可刷新或在系统浏览器打开。": [
     "网页加载失败，可刷新或在系统浏览器打开。",
     "The page failed to load. Refresh or open it in your system browser."
   ],
-  "请输入网址。": [
-    "请输入网址。",
-    "Enter a web address."
-  ],
-  "网页尚未打开。": [
-    "网页尚未打开。",
-    "No page has been opened yet."
-  ],
-  "无效的浏览器操作。": [
-    "无效的浏览器操作。",
-    "Invalid browser operation."
-  ],
+  "请输入网址。": ["请输入网址。", "Enter a web address."],
+  "网页尚未打开。": ["网页尚未打开。", "No page has been opened yet."],
+  "无效的浏览器操作。": ["无效的浏览器操作。", "Invalid browser operation."],
   "当前浏览器导航仅支持 Windows。": [
     "当前浏览器导航仅支持 Windows。",
     "Native browser navigation is currently available on Windows."
   ],
-  "网页不能调用应用接口。": [
-    "网页不能调用应用接口。",
-    "Webpages cannot call application APIs."
-  ],
-  "项目不存在。": [
-    "项目不存在。",
-    "The project does not exist."
-  ],
+  "网页不能调用应用接口。": ["网页不能调用应用接口。", "Webpages cannot call application APIs."],
+  "项目不存在。": ["项目不存在。", "The project does not exist."],
   "该文件类型不允许直接执行，请在文件管理器中打开。": [
     "该文件类型不允许直接执行，请在文件管理器中打开。",
     "This file type cannot be launched directly. Open it in the file manager."
@@ -3149,18 +1679,9 @@
     "该操作不适用于论文笔记。",
     "This operation does not apply to paper notes."
   ],
-  "文献目录工具": [
-    "文献目录工具",
-    "Literature directory tools"
-  ],
-  "复制到 {folder}": [
-    "复制到 {folder}",
-    "Copy to {folder}"
-  ],
-  "导入文件 {current}/{total}": [
-    "导入文件 {current}/{total}",
-    "Importing {current}/{total}"
-  ],
+  "文献目录工具": ["文献目录工具", "Literature directory tools"],
+  "复制到 {folder}": ["复制到 {folder}", "Copy to {folder}"],
+  "导入文件 {current}/{total}": ["导入文件 {current}/{total}", "Importing {current}/{total}"],
   "已导入 {count} 个文件。{error}": [
     "已导入 {count} 个文件。{error}",
     "Imported {count} files. {error}"
@@ -3173,142 +1694,43 @@
     "文件名无效或文件超过 150 MiB。",
     "Invalid filename or file larger than 150 MiB."
   ],
-  "缺少拖入文件信息。": [
-    "缺少拖入文件信息。",
-    "Missing dropped-file information."
-  ],
-  "拖入文件信息无效。": [
-    "拖入文件信息无效。",
-    "Invalid dropped-file information."
-  ],
-  "拖入文件内容无效。": [
-    "拖入文件内容无效。",
-    "Invalid dropped-file contents."
-  ],
-  "切换为连续滚动": [
-    "切换为连续滚动",
-    "Switch to continuous scrolling"
-  ],
-  "切换为分页阅览": [
-    "切换为分页阅览",
-    "Switch to paged reading"
-  ],
-  "连续滚动": [
-    "连续滚动",
-    "Continuous"
-  ],
-  "分页阅览": [
-    "分页阅览",
-    "Paged"
-  ],
-  "PDF 阅读区域": [
-    "PDF 阅读区域",
-    "PDF reading area"
-  ],
-  "团队协作空间": [
-    "团队协作空间",
-    "Team spaces"
-  ],
-  "登录入口占位": [
-    "登录入口占位",
-    "Account placeholder"
-  ],
-  "登录": [
-    "登录",
-    "Sign in"
-  ],
-  "空间导航": [
-    "空间导航",
-    "Space navigation"
-  ],
-  "项目操作 {name}": [
-    "项目操作 {name}",
-    "Actions for {name}"
-  ],
-  "项目操作": [
-    "项目操作",
-    "Project actions"
-  ],
-  "删除项目": [
-    "删除项目",
-    "Delete project"
-  ],
-  "今天": [
-    "今天",
-    "today"
-  ],
-  "昨天": [
-    "昨天",
-    "yesterday"
-  ],
-  "{count} 天前": [
-    "{count} 天前",
-    "{count} days ago"
-  ],
-  "更新于{date}": [
-    "更新于{date}",
-    "Updated {date}"
-  ],
-  "项目显示方式": [
-    "项目显示方式",
-    "Project view"
-  ],
-  "网格视图": [
-    "网格视图",
-    "Grid view"
-  ],
-  "列表视图": [
-    "列表视图",
-    "List view"
-  ],
-  "项目网格": [
-    "项目网格",
-    "Project grid"
-  ],
-  "项目列表": [
-    "项目列表",
-    "Project list"
-  ],
-  "研究项目": [
-    "研究项目",
-    "Research project"
-  ],
-  "搜索团队": [
-    "搜索团队",
-    "Search teams"
-  ],
-  "搜索团队…": [
-    "搜索团队…",
-    "Search teams…"
-  ],
-  "编辑团队": [
-    "编辑团队",
-    "Edit team"
-  ],
-  "暂无团队空间": [
-    "暂无团队空间",
-    "No team spaces"
-  ],
+  "缺少拖入文件信息。": ["缺少拖入文件信息。", "Missing dropped-file information."],
+  "拖入文件信息无效。": ["拖入文件信息无效。", "Invalid dropped-file information."],
+  "拖入文件内容无效。": ["拖入文件内容无效。", "Invalid dropped-file contents."],
+  "切换为连续滚动": ["切换为连续滚动", "Switch to continuous scrolling"],
+  "切换为分页阅览": ["切换为分页阅览", "Switch to paged reading"],
+  "连续滚动": ["连续滚动", "Continuous"],
+  "分页阅览": ["分页阅览", "Paged"],
+  "PDF 阅读区域": ["PDF 阅读区域", "PDF reading area"],
+  "团队协作空间": ["团队协作空间", "Team spaces"],
+  "登录入口占位": ["登录入口占位", "Account placeholder"],
+  "登录": ["登录", "Sign in"],
+  "空间导航": ["空间导航", "Space navigation"],
+  "项目操作 {name}": ["项目操作 {name}", "Actions for {name}"],
+  "项目操作": ["项目操作", "Project actions"],
+  "删除项目": ["删除项目", "Delete project"],
+  "今天": ["今天", "today"],
+  "昨天": ["昨天", "yesterday"],
+  "{count} 天前": ["{count} 天前", "{count} days ago"],
+  "更新于{date}": ["更新于{date}", "Updated {date}"],
+  "项目显示方式": ["项目显示方式", "Project view"],
+  "网格视图": ["网格视图", "Grid view"],
+  "列表视图": ["列表视图", "List view"],
+  "项目网格": ["项目网格", "Project grid"],
+  "项目列表": ["项目列表", "Project list"],
+  "研究项目": ["研究项目", "Research project"],
+  "搜索团队": ["搜索团队", "Search teams"],
+  "搜索团队…": ["搜索团队…", "Search teams…"],
+  "编辑团队": ["编辑团队", "Edit team"],
+  "暂无团队空间": ["暂无团队空间", "No team spaces"],
   "创建团队空间，集中管理团队项目。": [
     "创建团队空间，集中管理团队项目。",
     "Create a team space to organize its projects."
   ],
-  "编辑团队 {name}": [
-    "编辑团队 {name}",
-    "Edit team {name}"
-  ],
-  "删除团队 {name}": [
-    "删除团队 {name}",
-    "Delete team {name}"
-  ],
-  "没有符合条件的团队": [
-    "没有符合条件的团队",
-    "No matching teams"
-  ],
-  "删除团队空间": [
-    "删除团队空间",
-    "Delete team space"
-  ],
+  "编辑团队 {name}": ["编辑团队 {name}", "Edit team {name}"],
+  "删除团队 {name}": ["删除团队 {name}", "Delete team {name}"],
+  "没有符合条件的团队": ["没有符合条件的团队", "No matching teams"],
+  "删除团队空间": ["删除团队空间", "Delete team space"],
   "删除“{name}”及其项目记录？本地文件和文献附件将保留。": [
     "删除“{name}”及其项目记录？本地文件和文献附件将保留。",
     "Delete “{name}” and its project records? Local files and paper attachments will be kept."
@@ -3321,30 +1743,15 @@
     "请先保存当前修改，再删除项目或团队。",
     "Save your changes before deleting a project or team."
   ],
-  "确认删除": [
-    "确认删除",
-    "Confirm deletion"
-  ],
+  "确认删除": ["确认删除", "Confirm deletion"],
   "团队不存在，请重新载入。": [
     "团队不存在，请重新载入。",
     "The team no longer exists. Reload the workspace."
   ],
-  "确认操作": [
-    "确认操作",
-    "Confirm action"
-  ],
-  "重命名 / 编辑": [
-    "重命名 / 编辑",
-    "Rename / edit"
-  ],
-  "团队操作 {name}": [
-    "团队操作 {name}",
-    "Team actions: {name}"
-  ],
-  "文献操作": [
-    "文献操作",
-    "Literature actions"
-  ],
+  "确认操作": ["确认操作", "Confirm action"],
+  "重命名 / 编辑": ["重命名 / 编辑", "Rename / edit"],
+  "团队操作 {name}": ["团队操作 {name}", "Team actions: {name}"],
+  "文献操作": ["文献操作", "Literature actions"],
   "将文件夹“{name}”及其全部内容、关联笔记移入系统回收站？": [
     "将文件夹“{name}”及其全部内容、关联笔记移入系统回收站？",
     "Move folder “{name}”, all its contents and linked notes to the system recycle bin?"
@@ -3389,138 +1796,45 @@
     "SCIENTIFY_BROWSER_PROXY 必须是无凭据的 http://host:port 或 socks5://host:port。",
     "SCIENTIFY_BROWSER_PROXY must be http://host:port or socks5://host:port without credentials."
   ],
-  "查看当前材料": [
-    "查看当前材料",
-    "View current context"
-  ],
-  "当前材料": [
-    "当前材料",
-    "Current context"
-  ],
-  "对话选项": [
-    "对话选项",
-    "Chat options"
-  ],
-  "选择模型": [
-    "选择模型",
-    "Select model"
-  ],
-  "配置其他模型": [
-    "配置其他模型",
-    "Configure another model"
-  ],
-  "对话消息": [
-    "对话消息",
-    "Chat messages"
-  ],
-  "从一个问题开始": [
-    "从一个问题开始",
-    "Start with a question"
-  ],
+  "查看当前材料": ["查看当前材料", "View current context"],
+  "当前材料": ["当前材料", "Current context"],
+  "对话选项": ["对话选项", "Chat options"],
+  "选择模型": ["选择模型", "Select model"],
+  "配置其他模型": ["配置其他模型", "Configure another model"],
+  "对话消息": ["对话消息", "Chat messages"],
+  "从一个问题开始": ["从一个问题开始", "Start with a question"],
   "发送 · Enter；Shift + Enter 换行": [
     "发送 · Enter；Shift + Enter 换行",
     "Send · Enter; Shift + Enter for a new line"
   ],
-  "中止任务": [
-    "中止任务",
-    "Stop task"
-  ],
-  "中止本次会话": [
-    "中止本次会话",
-    "Stop this turn"
-  ],
-  "正在处理": [
-    "正在处理",
-    "Working"
-  ],
-  "OpenAI 兼容": [
-    "OpenAI 兼容",
-    "OpenAI compatible"
-  ],
-  "服务连接": [
-    "服务连接",
-    "Connection"
-  ],
-  "聊天模型": [
-    "聊天模型",
-    "Chat model"
-  ],
+  "中止任务": ["中止任务", "Stop task"],
+  "中止本次会话": ["中止本次会话", "Stop this turn"],
+  "正在处理": ["正在处理", "Working"],
+  "OpenAI 兼容": ["OpenAI 兼容", "OpenAI compatible"],
+  "服务连接": ["服务连接", "Connection"],
+  "聊天模型": ["聊天模型", "Chat model"],
   "保存后返回对话，聊天草稿会保留。": [
     "保存后返回对话，聊天草稿会保留。",
     "Save to return to chat. Your draft is kept."
   ],
-  "默认": [
-    "默认",
-    "Default"
-  ],
-  "通义千问": [
-    "通义千问",
-    "Qwen"
-  ],
-  "中国内地": [
-    "中国内地",
-    "Mainland China"
-  ],
-  "国际": [
-    "国际",
-    "International"
-  ],
-  "硅基流动": [
-    "硅基流动",
-    "SiliconFlow"
-  ],
-  "本地": [
-    "本地",
-    "Local"
-  ],
-  "自定义服务商": [
-    "自定义服务商",
-    "Custom provider"
-  ],
-  "接口协议": [
-    "接口协议",
-    "API protocol"
-  ],
-  "服务区域": [
-    "服务区域",
-    "Service region"
-  ],
-  "自定义地址": [
-    "自定义地址",
-    "Custom endpoint"
-  ],
-  "可选": [
-    "可选",
-    "Optional"
-  ],
-  "测试连接": [
-    "测试连接",
-    "Test connection"
-  ],
-  "正在获取模型…": [
-    "正在获取模型…",
-    "Fetching models…"
-  ],
-  "已获取 {count} 个模型": [
-    "已获取 {count} 个模型",
-    "{count} models fetched"
-  ],
-  "正在验证聊天模型…": [
-    "正在验证聊天模型…",
-    "Verifying chat access…"
-  ],
-  "正在验证…": [
-    "正在验证…",
-    "Verifying…"
-  ],
-  "筛选模型": [
-    "筛选模型",
-    "Filter models"
-  ],
-  "测试连接后选择模型": [
-    "测试连接后选择模型",
-    "Test connection to select a model"
-  ],
+  "默认": ["默认", "Default"],
+  "通义千问": ["通义千问", "Qwen"],
+  "中国内地": ["中国内地", "Mainland China"],
+  "国际": ["国际", "International"],
+  "硅基流动": ["硅基流动", "SiliconFlow"],
+  "本地": ["本地", "Local"],
+  "自定义服务商": ["自定义服务商", "Custom provider"],
+  "接口协议": ["接口协议", "API protocol"],
+  "服务区域": ["服务区域", "Service region"],
+  "自定义地址": ["自定义地址", "Custom endpoint"],
+  "可选": ["可选", "Optional"],
+  "测试连接": ["测试连接", "Test connection"],
+  "正在获取模型…": ["正在获取模型…", "Fetching models…"],
+  "已获取 {count} 个模型": ["已获取 {count} 个模型", "{count} models fetched"],
+  "正在验证聊天模型…": ["正在验证聊天模型…", "Verifying chat access…"],
+  "正在验证…": ["正在验证…", "Verifying…"],
+  "筛选模型": ["筛选模型", "Filter models"],
+  "测试连接后选择模型": ["测试连接后选择模型", "Test connection to select a model"],
   "保存时发送一条简短测试消息，确认模型可用；不发送研究材料。": [
     "保存时发送一条简短测试消息，确认模型可用；不发送研究材料。",
     "Saving verifies chat access with a short test message. Research materials are excluded."
@@ -3581,54 +1895,24 @@
     "模型没有返回有效的聊天响应，请选择其他模型。",
     "The model returned no valid chat response. Select another model."
   ],
-  "模型配置": [
-    "模型配置",
-    "Model configuration"
-  ],
-  "模型设置导航": [
-    "模型设置导航",
-    "Model settings navigation"
-  ],
-  "用户消息": [
-    "用户消息",
-    "Your message"
-  ],
-  "助手消息": [
-    "助手消息",
-    "Assistant message"
-  ],
-  "复制消息": [
-    "复制消息",
-    "Copy message"
-  ],
-  "已复制": [
-    "已复制",
-    "Copied"
-  ],
-  "复制失败，请重试": [
-    "复制失败，请重试",
-    "Copy failed. Try again."
-  ],
+  "模型配置": ["模型配置", "Model configuration"],
+  "模型设置导航": ["模型设置导航", "Model settings navigation"],
+  "用户消息": ["用户消息", "Your message"],
+  "助手消息": ["助手消息", "Assistant message"],
+  "复制消息": ["复制消息", "Copy message"],
+  "已复制": ["已复制", "Copied"],
+  "复制失败，请重试": ["复制失败，请重试", "Copy failed. Try again."],
   "提问，或直接描述要在当前工作区完成的任务": [
     "提问，或直接描述要在当前工作区完成的任务",
     "Ask a question or describe a task for the current workspace"
   ],
-  "正在处理…": [
-    "正在处理…",
-    "Working…"
-  ],
+  "正在处理…": ["正在处理…", "Working…"],
   "当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。": [
     "当前 Windows 沙箱尚未配置，Agent 目前只能读取工作区。需要修改、删除或运行文件时，请先完成配置。",
     "The Windows sandbox is not configured, so the Agent can only read the workspace. Configure it before modifying, deleting, or running files."
   ],
-  "配置 Windows 沙箱": [
-    "配置 Windows 沙箱",
-    "Configure Windows sandbox"
-  ],
-  "正在配置…": [
-    "正在配置…",
-    "Configuring…"
-  ],
+  "配置 Windows 沙箱": ["配置 Windows 沙箱", "Configure Windows sandbox"],
+  "正在配置…": ["正在配置…", "Configuring…"],
   "Windows 沙箱配置已启动，请完成系统提示后再次发送任务。": [
     "Windows 沙箱配置已启动，请完成系统提示后再次发送任务。",
     "Windows sandbox setup has started. Complete the system prompt, then send the task again."
@@ -3637,62 +1921,20 @@
     "Windows 沙箱配置没有启动，请重试或查看系统权限设置。",
     "Windows sandbox setup did not start. Try again or check system permissions."
   ],
-  "执行工作区": [
-    "执行工作区",
-    "Execution workspace"
-  ],
-  "文献目录": [
-    "文献目录",
-    "Literature folder"
-  ],
-  "代码目录": [
-    "代码目录",
-    "Code folder"
-  ],
-  "发送时绑定目录": [
-    "发送时绑定目录",
-    "Folder binds on first send"
-  ],
-  "后台任务": [
-    "后台任务",
-    "Background tasks"
-  ],
-  "等待审批": [
-    "等待审批",
-    "Awaiting approval"
-  ],
-  "运行中": [
-    "运行中",
-    "Running"
-  ],
-  "待保存": [
-    "待保存",
-    "Save required"
-  ],
-  "任务进行中": [
-    "任务进行中",
-    "Task in progress"
-  ],
-  "正在中止…": [
-    "正在中止…",
-    "Stopping…"
-  ],
-  "正在连接 Agent…": [
-    "正在连接 Agent…",
-    "Connecting to Agent…"
-  ],
-  "执行记录": [
-    "执行记录",
-    "Execution log"
-  ],
-  "正在保存结果…": [
-    "正在保存结果…",
-    "Saving results…"
-  ],
-  "恢复连接": [
-    "恢复连接",
-    "Reconnect"
-  ],
+  "执行工作区": ["执行工作区", "Execution workspace"],
+  "文献目录": ["文献目录", "Literature folder"],
+  "代码目录": ["代码目录", "Code folder"],
+  "发送时绑定目录": ["发送时绑定目录", "Folder binds on first send"],
+  "后台任务": ["后台任务", "Background tasks"],
+  "等待审批": ["等待审批", "Awaiting approval"],
+  "运行中": ["运行中", "Running"],
+  "待保存": ["待保存", "Save required"],
+  "任务进行中": ["任务进行中", "Task in progress"],
+  "正在中止…": ["正在中止…", "Stopping…"],
+  "正在连接 Agent…": ["正在连接 Agent…", "Connecting to Agent…"],
+  "执行记录": ["执行记录", "Execution log"],
+  "正在保存结果…": ["正在保存结果…", "Saving results…"],
+  "恢复连接": ["恢复连接", "Reconnect"],
   "上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。": [
     "上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。",
     "Check the previous task by reconnecting. Existing results will be recovered without sending the task again."
@@ -3709,10 +1951,7 @@
     "请先中止并等待此会话任务结束。",
     "Stop this conversation’s task and wait for it to finish first."
   ],
-  "Agent 任务失败。": [
-    "Agent 任务失败。",
-    "Agent task failed."
-  ],
+  "Agent 任务失败。": ["Agent 任务失败。", "Agent task failed."],
   "请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。": [
     "请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。",
     "Finish this project’s Agent tasks and save their results before deleting the project or changing its folder."
@@ -3737,10 +1976,7 @@
     "会话与 Agent 线程不匹配。",
     "The conversation does not match the Agent thread."
   ],
-  "会话工作区不匹配。": [
-    "会话工作区不匹配。",
-    "The conversation workspace does not match."
-  ],
+  "会话工作区不匹配。": ["会话工作区不匹配。", "The conversation workspace does not match."],
   "该会话尚未启动，请重新连接。": [
     "该会话尚未启动，请重新连接。",
     "This conversation has not started. Reconnect to continue."
@@ -3761,98 +1997,32 @@
     "此任务已结束或 turn 标识不匹配。",
     "This task has ended or its turn ID does not match."
   ],
-  "running": [
-    "运行中",
-    "Running"
-  ],
-  "inProgress": [
-    "运行中",
-    "Running"
-  ],
-  "completed": [
-    "已完成",
-    "Completed"
-  ],
-  "failed": [
-    "失败",
-    "Failed"
-  ],
-  "interrupted": [
-    "已中止",
-    "Stopped"
-  ],
-  "declined": [
-    "已拒绝",
-    "Declined"
-  ],
-  "Agent 正在工作…": [
-    "Agent 正在工作…",
-    "Agent is working…"
-  ],
-  "Git 视图": [
-    "Git 视图",
-    "Git views"
-  ],
+  "running": ["运行中", "Running"],
+  "inProgress": ["运行中", "Running"],
+  "completed": ["已完成", "Completed"],
+  "failed": ["失败", "Failed"],
+  "interrupted": ["已中止", "Stopped"],
+  "declined": ["已拒绝", "Declined"],
+  "Agent 正在工作…": ["Agent 正在工作…", "Agent is working…"],
+  "Git 视图": ["Git 视图", "Git views"],
   "Git 管理仅在桌面应用可用": [
     "Git 管理仅在桌面应用可用",
     "Git management is available in the desktop app"
   ],
-  "更改": [
-    "更改",
-    "Changes"
-  ],
-  "已暂存": [
-    "已暂存",
-    "Staged"
-  ],
-  "提交历史": [
-    "提交历史",
-    "History"
-  ],
-  "分支": [
-    "分支",
-    "Branches"
-  ],
-  "提交说明": [
-    "提交说明",
-    "Commit message"
-  ],
-  "查看更改 {path}": [
-    "查看更改 {path}",
-    "View changes for {path}"
-  ],
-  "查看已暂存 {path}": [
-    "查看已暂存 {path}",
-    "View staged changes for {path}"
-  ],
-  "暂存文件": [
-    "暂存文件",
-    "Stage file"
-  ],
-  "暂存 {path}": [
-    "暂存 {path}",
-    "Stage {path}"
-  ],
-  "取消暂存": [
-    "取消暂存",
-    "Unstage file"
-  ],
-  "取消暂存 {path}": [
-    "取消暂存 {path}",
-    "Unstage {path}"
-  ],
-  "暂存区": [
-    "暂存区",
-    "Index"
-  ],
-  "从暂存区恢复文件": [
-    "从暂存区恢复文件",
-    "Restore file from index"
-  ],
-  "恢复 {path}": [
-    "恢复 {path}",
-    "Restore {path}"
-  ],
+  "更改": ["更改", "Changes"],
+  "已暂存": ["已暂存", "Staged"],
+  "提交历史": ["提交历史", "History"],
+  "分支": ["分支", "Branches"],
+  "提交说明": ["提交说明", "Commit message"],
+  "查看更改 {path}": ["查看更改 {path}", "View changes for {path}"],
+  "查看已暂存 {path}": ["查看已暂存 {path}", "View staged changes for {path}"],
+  "暂存文件": ["暂存文件", "Stage file"],
+  "暂存 {path}": ["暂存 {path}", "Stage {path}"],
+  "取消暂存": ["取消暂存", "Unstage file"],
+  "取消暂存 {path}": ["取消暂存 {path}", "Unstage {path}"],
+  "暂存区": ["暂存区", "Index"],
+  "从暂存区恢复文件": ["从暂存区恢复文件", "Restore file from index"],
+  "恢复 {path}": ["恢复 {path}", "Restore {path}"],
   "从暂存区恢复“{path}”？此文件尚未暂存的磁盘修改会被覆盖。": [
     "从暂存区恢复“{path}”？此文件尚未暂存的磁盘修改会被覆盖。",
     "Restore {path} from the index? Its unstaged changes on disk will be overwritten."
@@ -3861,190 +2031,67 @@
     "此目录有未保存或正在读写的文件，请先保存后再执行 Git 操作。",
     "This directory has unsaved files or file operations in progress. Save them before running Git operations."
   ],
-  "操作完成": [
-    "操作完成",
-    "Operation completed"
-  ],
-  "刷新 Git": [
-    "刷新 Git",
-    "Refresh Git"
-  ],
-  "打开项目原目录": [
-    "打开项目原目录",
-    "Open original project directory"
-  ],
+  "操作完成": ["操作完成", "Operation completed"],
+  "刷新 Git": ["刷新 Git", "Refresh Git"],
+  "打开项目原目录": ["打开项目原目录", "Open original project directory"],
   "此代码目录尚未初始化 Git。": [
     "此代码目录尚未初始化 Git。",
     "This code directory has no Git repository."
   ],
-  "初始化 Git 仓库": [
-    "初始化 Git 仓库",
-    "Initialize Git repository"
-  ],
-  "暂无已暂存文件": [
-    "暂无已暂存文件",
-    "No staged files"
-  ],
-  "文件差异": [
-    "文件差异",
-    "File diff"
-  ],
-  "选择文件查看差异": [
-    "选择文件查看差异",
-    "Select a file to view its diff"
-  ],
-  "搜索提交": [
-    "搜索提交",
-    "Search commits"
-  ],
-  "尚无提交": [
-    "尚无提交",
-    "No commits yet"
-  ],
-  "选择提交查看差异": [
-    "选择提交查看差异",
-    "Select a commit to view its diff"
-  ],
-  "创建分支": [
-    "创建分支",
-    "Create branch"
-  ],
-  "当前分支": [
-    "当前分支",
-    "Current branch"
-  ],
-  "切换": [
-    "切换",
-    "Switch"
-  ],
-  "删除分支": [
-    "删除分支",
-    "Delete branch"
-  ],
-  "删除分支 {name}": [
-    "删除分支 {name}",
-    "Delete branch {name}"
-  ],
+  "初始化 Git 仓库": ["初始化 Git 仓库", "Initialize Git repository"],
+  "暂无已暂存文件": ["暂无已暂存文件", "No staged files"],
+  "文件差异": ["文件差异", "File diff"],
+  "选择文件查看差异": ["选择文件查看差异", "Select a file to view its diff"],
+  "搜索提交": ["搜索提交", "Search commits"],
+  "尚无提交": ["尚无提交", "No commits yet"],
+  "选择提交查看差异": ["选择提交查看差异", "Select a commit to view its diff"],
+  "创建分支": ["创建分支", "Create branch"],
+  "当前分支": ["当前分支", "Current branch"],
+  "切换": ["切换", "Switch"],
+  "删除分支": ["删除分支", "Delete branch"],
+  "删除分支 {name}": ["删除分支 {name}", "Delete branch {name}"],
   "删除分支“{name}”？Git 将保护尚未合并的提交。": [
     "删除分支“{name}”？Git 将保护尚未合并的提交。",
     "Delete branch {name}? Git will protect unmerged commits."
   ],
-  "保存到 Stash": [
-    "保存到 Stash",
-    "Save to stash"
-  ],
+  "保存到 Stash": ["保存到 Stash", "Save to stash"],
   "将 {name} 应用到当前 worktree？可能产生需要手动解决的冲突。": [
     "将 {name} 应用到当前 worktree？可能产生需要手动解决的冲突。",
     "Apply {name} to this worktree? Conflicts may require manual resolution."
   ],
-  "暂无 Stash": [
-    "暂无 Stash",
-    "No stashes"
-  ],
-  "创建 Worktree": [
-    "创建 Worktree",
-    "Create worktree"
-  ],
-  "当前 worktree": [
-    "当前 worktree",
-    "Current worktree"
-  ],
-  "{count} 项更改": [
-    "{count} 项更改",
-    "{count} changes"
-  ],
-  "干净": [
-    "干净",
-    "Clean"
-  ],
-  "移除 Worktree": [
-    "移除 Worktree",
-    "Remove worktree"
-  ],
-  "移除 Worktree {name}": [
-    "移除 Worktree {name}",
-    "Remove worktree {name}"
-  ],
+  "暂无 Stash": ["暂无 Stash", "No stashes"],
+  "创建 Worktree": ["创建 Worktree", "Create worktree"],
+  "当前 worktree": ["当前 worktree", "Current worktree"],
+  "{count} 项更改": ["{count} 项更改", "{count} changes"],
+  "干净": ["干净", "Clean"],
+  "移除 Worktree": ["移除 Worktree", "Remove worktree"],
+  "移除 Worktree {name}": ["移除 Worktree {name}", "Remove worktree {name}"],
   "移除 worktree“{path}”？将删除该工作目录，保留分支和提交；未提交更改会阻止移除。": [
     "移除 worktree“{path}”？将删除该工作目录，保留分支和提交；未提交更改会阻止移除。",
     "Remove worktree {path}? Its directory will be deleted, while its branch and commits remain. Uncommitted changes block removal."
   ],
-  "创建新分支": [
-    "创建新分支",
-    "Create a new branch"
-  ],
-  "说明": [
-    "说明",
-    "Message"
-  ],
-  "分支名称": [
-    "分支名称",
-    "Branch name"
-  ],
-  "已有分支": [
-    "已有分支",
-    "Existing branch"
-  ],
-  "起始 Branch / Commit": [
-    "起始 Branch / Commit",
-    "Starting branch / commit"
-  ],
+  "创建新分支": ["创建新分支", "Create a new branch"],
+  "说明": ["说明", "Message"],
+  "分支名称": ["分支名称", "Branch name"],
+  "已有分支": ["已有分支", "Existing branch"],
+  "起始 Branch / Commit": ["起始 Branch / Commit", "Starting branch / commit"],
   "Worktree 目录（新的绝对路径）": [
     "Worktree 目录（新的绝对路径）",
     "Worktree directory (new absolute path)"
   ],
-  "包含未跟踪文件": [
-    "包含未跟踪文件",
-    "Include untracked files"
-  ],
-  "收起运行日志": [
-    "收起运行日志",
-    "Collapse run output"
-  ],
-  "展开运行日志": [
-    "展开运行日志",
-    "Expand run output"
-  ],
-  "请求执行 Git 操作": [
-    "请求执行 Git 操作",
-    "Git operation approval"
-  ],
-  "请求执行命令": [
-    "请求执行命令",
-    "Command approval"
-  ],
-  "请求修改文件": [
-    "请求修改文件",
-    "File change approval"
-  ],
-  "请求提升权限": [
-    "请求提升权限",
-    "Permission approval"
-  ],
-  "目录：{path}": [
-    "目录：{path}",
-    "Directory: {path}"
-  ],
-  "允许本次权限": [
-    "允许本次权限",
-    "Allow these permissions"
-  ],
-  "拒绝权限": [
-    "拒绝权限",
-    "Deny permissions"
-  ],
-  "允许": [
-    "允许",
-    "Allow"
-  ],
-  "本会话允许": [
-    "本会话允许",
-    "Allow for this session"
-  ],
-  "拒绝": [
-    "拒绝",
-    "Deny"
-  ],
+  "包含未跟踪文件": ["包含未跟踪文件", "Include untracked files"],
+  "收起运行日志": ["收起运行日志", "Collapse run output"],
+  "展开运行日志": ["展开运行日志", "Expand run output"],
+  "请求执行 Git 操作": ["请求执行 Git 操作", "Git operation approval"],
+  "请求执行命令": ["请求执行命令", "Command approval"],
+  "请求修改文件": ["请求修改文件", "File change approval"],
+  "请求提升权限": ["请求提升权限", "Permission approval"],
+  "目录：{path}": ["目录：{path}", "Directory: {path}"],
+  "允许本次权限": ["允许本次权限", "Allow these permissions"],
+  "拒绝权限": ["拒绝权限", "Deny permissions"],
+  "允许": ["允许", "Allow"],
+  "本会话允许": ["本会话允许", "Allow for this session"],
+  "拒绝": ["拒绝", "Deny"],
   "此目录有活动任务或 Git 操作，请等待完成后重试。": [
     "此目录有活动任务或 Git 操作，请等待完成后重试。",
     "This directory has active tasks or a Git operation. Wait for them to finish and retry."
@@ -4091,7 +2138,6 @@
   "全部": ["全部", "All"],
   "关闭": ["关闭", "Close"],
   "源代码管理": ["源代码管理", "Source control"],
-  "搜索工作区": ["搜索工作区", "Search workspace"],
   "搜索工作区内容": ["搜索工作区内容", "Search workspace contents"],
   "搜索表达式无效。": ["搜索表达式无效。", "Invalid search expression."],
   "停止搜索": ["停止搜索", "Stop search"],
@@ -4127,7 +2173,10 @@
   "终止终端": ["终止终端", "Terminate terminal"],
   "终端会话": ["终端会话", "Terminal sessions"],
   "终端类型": ["终端类型", "Terminal profile"],
-  "较早的终端输出已截断。": ["较早的终端输出已截断。", "Earlier terminal output has been truncated."],
+  "较早的终端输出已截断。": [
+    "较早的终端输出已截断。",
+    "Earlier terminal output has been truncated."
+  ],
   "Python 环境": ["Python 环境", "Python environments"],
   "Python 工具": ["Python 工具", "Python tools"],
   "选择 Python 解释器": ["选择 Python 解释器", "Select Python interpreter"],
@@ -4139,7 +2188,10 @@
   "环境类型": ["环境类型", "Environment manager"],
   "基础 Python": ["基础 Python", "Base Python"],
   "Python 版本": ["Python 版本", "Python version"],
-  "环境目录（相对实验根）": ["环境目录（相对实验根）", "Environment directory (relative to experiment)"],
+  "环境目录（相对实验根）": [
+    "环境目录（相对实验根）",
+    "Environment directory (relative to experiment)"
+  ],
   "环境": ["环境", "Environment"],
   "依赖": ["依赖", "Packages"],
   "任务": ["任务", "Tasks"],
@@ -4155,14 +2207,633 @@
   "使用此环境": ["使用此环境", "Use this environment"],
   "在终端运行当前 Python 文件": ["在终端运行当前 Python 文件", "Run Python file in terminal"],
   "信任目录并检测 Python": ["信任目录并检测 Python", "Trust directory and detect Python"],
-  "信任此实验目录？终端、Python 和手动运行将使用本机用户权限，可访问本机文件与网络。": ["信任此实验目录？终端、Python 和手动运行将使用本机用户权限，可访问本机文件与网络。", "Trust this experiment directory? Terminals, Python and manual runs will use your local user permissions and can access local files and the network."],
-  "从当前 Python 环境卸载这些包？": ["从当前 Python 环境卸载这些包？", "Uninstall these packages from the current Python environment?"],
-  "当前选择的是系统 Python，安装或删除包将影响其他使用此环境的项目。继续？": ["当前选择的是系统 Python，安装或删除包将影响其他使用此环境的项目。继续？", "The selected system Python is shared. Changing its packages affects other projects. Continue?"],
-  "可信本地执行 · 本机文件与网络": ["可信本地执行 · 本机文件与网络", "Trusted local execution · local files and network"],
+  "信任此实验目录？终端、Python 和手动运行将使用本机用户权限，可访问本机文件与网络。": [
+    "信任此实验目录？终端、Python 和手动运行将使用本机用户权限，可访问本机文件与网络。",
+    "Trust this experiment directory? Terminals, Python and manual runs will use your local user permissions and can access local files and the network."
+  ],
+  "从当前 Python 环境卸载这些包？": [
+    "从当前 Python 环境卸载这些包？",
+    "Uninstall these packages from the current Python environment?"
+  ],
+  "当前选择的是系统 Python，安装或删除包将影响其他使用此环境的项目。继续？": [
+    "当前选择的是系统 Python，安装或删除包将影响其他使用此环境的项目。继续？",
+    "The selected system Python is shared. Changing its packages affects other projects. Continue?"
+  ],
+  "可信本地执行 · 本机文件与网络": [
+    "可信本地执行 · 本机文件与网络",
+    "Trusted local execution · local files and network"
+  ],
   "实验显示方式": ["实验显示方式", "Experiment layout"],
   "卡片视图": ["卡片视图", "Card view"],
   "实验详情": ["实验详情", "Experiment details"],
   "未配置 Python": ["未配置 Python", "Python not configured"],
   "{count} 个活动任务": ["{count} 个活动任务", "{count} active tasks"],
-  "暂无活动任务": ["暂无活动任务", "No active tasks"]
+  "暂无活动任务": ["暂无活动任务", "No active tasks"],
+  "开发中": ["开发中", "In development"],
+  "敬请期待": ["敬请期待", "Coming soon"],
+  "LaTeX 论文撰写": ["LaTeX 论文撰写", "LaTeX writing"],
+  "跳转至文档位置": ["跳转至文档位置", "Go to document location"],
+  "补充指令": ["补充指令", "Send guidance"],
+  "补充指令未发送，请重试。": ["补充指令未发送，请重试。", "Guidance was not sent. Try again."],
+  "Agent 返回的 turn 标识不匹配。": [
+    "Agent 返回的 turn 标识不匹配。",
+    "The Agent returned a mismatched turn ID."
+  ],
+  "不能将文件夹移动到自身或子目录中。": [
+    "不能将文件夹移动到自身或子目录中。",
+    "A folder cannot be moved into itself or a child folder."
+  ],
+  "目标文件已存在：{path}": ["目标文件已存在：{path}", "Destination already exists: {path}"],
+  "已完成 {count} 个文件操作。{error}": [
+    "已完成 {count} 个文件操作。{error}",
+    "Completed {count} file operations. {error}"
+  ],
+  "新连接": ["新连接", "New connection"],
+  "连接名称": ["连接名称", "Connection name"],
+  "删除连接": ["删除连接", "Delete connection"],
+  "删除此连接配置？已有会话保留原配置。": [
+    "删除此连接配置？已有会话保留原配置。",
+    "Delete this connection? Existing chats keep their saved configuration."
+  ],
+  "请填写 API 密钥。": ["请填写 API 密钥。", "Enter an API key."],
+  "模型验证失败。": ["模型验证失败。", "Model verification failed."],
+  "正在验证聊天与 Agent…": ["正在验证聊天与 Agent…", "Verifying chat and Agent…"],
+  "聊天验证通过": ["聊天验证通过", "Chat verified"],
+  "聊天接口不可用": ["聊天接口不可用", "Chat endpoint unavailable"],
+  "Agent 工具验证通过": ["Agent 工具验证通过", "Agent tools verified"],
+  "仅聊天，Agent 未通过验证": ["仅聊天，Agent 未通过验证", "Chat only; Agent verification failed"],
+  "保存时验证聊天及 Agent 工具回传；只发送测试内容。": [
+    "保存时验证聊天及 Agent 工具回传；只发送测试内容。",
+    "Saving verifies chat and Agent tool results using test content only."
+  ],
+  "正在回答…": ["正在回答…", "Responding…"],
+  "此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。": [
+    "此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。",
+    "Chat verification failed. Open a project to use the Agent, or choose another model."
+  ],
+  "手动填写模型 ID": ["手动填写模型 ID", "Enter model ID manually"],
+  "模型 ID": ["模型 ID", "Model ID"],
+  "上次回答连接已断开，可以继续提问。": [
+    "上次回答连接已断开，可以继续提问。",
+    "The previous response disconnected. You can continue asking."
+  ],
+  "当前连接仅支持聊天，无法修改本地文件。": [
+    "当前连接仅支持聊天，无法修改本地文件。",
+    "This connection supports chat only and cannot modify local files."
+  ],
+  "此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。": [
+    "此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。",
+    "This chat does not have paper tools. Start a new chat in the same directory; this history will be kept."
+  ],
+  "Agent 连接验证未通过": ["Agent 连接验证未通过", "Agent connection verification failed"],
+  "Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。": [
+    "Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。",
+    "Agent verification failed. Sending a message will still attempt the Agent, without falling back to chat."
+  ],
+  "重新验证": ["重新验证", "Verify again"],
+  "请输入不含账号密码的 HTTP 或 HTTPS 链接。": [
+    "请输入不含账号密码的 HTTP 或 HTTPS 链接。",
+    "Enter an HTTP or HTTPS URL without embedded credentials."
+  ],
+  "个人信息源数据无效，请检查导入文件。": [
+    "个人信息源数据无效，请检查导入文件。",
+    "Invalid personal sources. Check the imported file."
+  ],
+  "此网址已在个人信息源中。": [
+    "此网址已在个人信息源中。",
+    "This URL is already in your personal sources."
+  ],
+  "分组已被删除，请重新选择。": [
+    "分组已被删除，请重新选择。",
+    "The group was deleted. Choose another group."
+  ],
+  "信息源已被删除，请重新添加。": [
+    "信息源已被删除，请重新添加。",
+    "The source was deleted. Add it again."
+  ],
+  "名称不能超过 200 个字符。": ["名称不能超过 200 个字符。", "Names cannot exceed 200 characters."],
+  "删除此分组？其中的网站会移至未分组。": [
+    "删除此分组？其中的网站会移至未分组。",
+    "Delete this group? Its websites will move to Ungrouped."
+  ],
+  "删除此信息源？不会删除下载的文件或笔记。": [
+    "删除此信息源？不会删除下载的文件或笔记。",
+    "Delete this source? Downloaded files and notes will be kept."
+  ],
+  "添加经常访问的网站，或在浏览器中收藏当前网页。": [
+    "添加经常访问的网站，或在浏览器中收藏当前网页。",
+    "Add websites you visit often, or bookmark the current page in the browser."
+  ],
+  "管理分组 {name}": ["管理分组 {name}", "Manage group {name}"],
+  "管理信息源 {name}": ["管理信息源 {name}", "Manage source {name}"],
+  "信息源操作": ["信息源操作", "Source actions"],
+  "编辑信息源": ["编辑信息源", "Edit source"],
+  "添加信息源": ["添加信息源", "Add source"],
+  "重命名分组": ["重命名分组", "Rename group"],
+  "新建分组": ["新建分组", "New group"],
+  "未分组": ["未分组", "Ungrouped"],
+  "收藏当前网页": ["收藏当前网页", "Bookmark current page"],
+  "编辑网页收藏": ["编辑网页收藏", "Edit bookmark"],
+  "上移": ["上移", "Move up"],
+  "下移": ["下移", "Move down"],
+  "分组": ["分组", "Group"],
+  "网址": ["网址", "URL"],
+  "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。": [
+    "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。",
+    "This protocol is not connected to the built-in Agent. Configure an OpenAI Responses-compatible connection."
+  ],
+  "请输入完整的 HTTP 或 HTTPS 链接。": [
+    "请输入完整的 HTTP 或 HTTPS 链接。",
+    "Enter a complete HTTP or HTTPS URL."
+  ],
+  "删除": ["删除", "Delete"],
+  "笔记格式工具": ["笔记格式工具", "Note formatting tools"],
+  "粗体": ["粗体", "Bold"],
+  "斜体": ["斜体", "Italic"],
+  "插入 Markdown": ["插入 Markdown", "Insert Markdown"],
+  "插入图片": ["插入图片", "Insert image"],
+  "查找与替换": ["查找与替换", "Find and replace"],
+  "Markdown 源码": ["Markdown 源码", "Markdown source"],
+  "笔记标题目录": ["笔记标题目录", "Note outline"],
+  "笔记标题导航": ["笔记标题导航", "Note heading navigation"],
+  "标题目录": ["标题目录", "Heading outline"],
+  "输入 Markdown 标题后将在此显示": [
+    "输入 Markdown 标题后将在此显示",
+    "Markdown headings will appear here"
+  ],
+  "未命名标题": ["未命名标题", "Untitled heading"],
+  "插入": ["插入", "Insert"],
+  "标题": ["标题", "Heading"],
+  "列表": ["列表", "List"],
+  "列表项": ["列表项", "List item"],
+  "任务列表": ["任务列表", "Task list"],
+  "待办事项": ["待办事项", "To-do item"],
+  "引用": ["引用", "Quote"],
+  "链接": ["链接", "Link"],
+  "链接文字": ["链接文字", "Link text"],
+  "代码块": ["代码块", "Code block"],
+  "数学公式": ["数学公式", "Math formula"],
+  "表格": ["表格", "Table"],
+  "内容": ["内容", "Content"],
+  "分割线": ["分割线", "Divider"],
+  "文字": ["文字", "Text"],
+  "正在保存图片…": ["正在保存图片…", "Saving image…"],
+  "请求修改笔记": ["请求修改笔记", "Request note edit"],
+  "在独立浮窗打开": ["在独立浮窗打开", "Open in floating window"],
+  "无法保存翻译设置。": ["无法保存翻译设置。", "Could not save translation settings."],
+  "正在载入翻译配置…": ["正在载入翻译配置…", "Loading translation settings…"],
+  "浮窗内的语言与风格仅用于本次翻译；默认值请在全局翻译设置中修改。": [
+    "浮窗内的语言与风格仅用于本次翻译；默认值请在全局翻译设置中修改。",
+    "Language and style apply to this window. Change defaults in Translation settings."
+  ],
+  "学术": ["学术", "Academic"],
+  "自然": ["自然", "Natural"],
+  "直译": ["直译", "Literal"],
+  "简洁": ["简洁", "Concise"],
+  "系统划词权限": ["系统划词权限", "System selection permissions"],
+  "macOS 辅助功能权限": ["macOS 辅助功能权限", "macOS Accessibility permission"],
+  "读取其他应用的选中文字需要辅助功能权限。请在系统设置中允许 Scientify；仍可直接粘贴翻译。": [
+    "读取其他应用的选中文字需要辅助功能权限。请在系统设置中允许 Scientify；仍可直接粘贴翻译。",
+    "Allow Scientify in system Accessibility settings to read selected text in other apps. You can still paste text manually."
+  ],
+  "授予权限": ["授予权限", "Grant permission"],
+  "打开系统设置": ["打开系统设置", "Open System Settings"],
+  "重新检查": ["重新检查", "Check again"],
+  "已授权": ["已授权", "Granted"],
+  "Windows 和 macOS 支持选中文字后按全局快捷键；Mac 需要辅助功能权限。": [
+    "Windows 和 macOS 支持选中文字后按全局快捷键；Mac 需要辅助功能权限。",
+    "On Windows and macOS, select text and press the global shortcut. macOS requires Accessibility permission."
+  ],
+  "请在翻译设置中授予 Scientify macOS 辅助功能权限，再读取其他应用的选中文字。": [
+    "请在翻译设置中授予 Scientify macOS 辅助功能权限，再读取其他应用的选中文字。",
+    "Grant Scientify macOS Accessibility permission in Translation settings to read selections in other apps."
+  ],
+  "翻译浮窗": ["翻译浮窗", "Translation popup"],
+  "阅读内容": ["阅读内容", "Reading content"],
+  "关闭翻译": ["关闭翻译", "Close translation"],
+  "拖动窗口": ["拖动窗口", "Drag to move"],
+  "拖动调整大小": ["拖动调整大小", "Drag to resize"],
+  "切换语言后重新翻译": ["切换语言后重新翻译", "Retranslate when the target language changes"],
+  "AI 解释": ["AI 解释", "AI explanation"],
+  "返回译文": ["返回译文", "Back to translation"],
+  "修改译文": ["修改译文", "Edit translation"],
+  "仅修改当前译文": ["仅修改当前译文", "This translation only"],
+  "应用修改": ["应用修改", "Apply changes"],
+  "解释选中内容": ["解释选中内容", "Explain selection"],
+  "对此提问…": ["对此提问…", "Ask about this…"],
+  "划词翻译": ["划词翻译", "Selection translation"],
+  "在论文、浏览器或其他应用中选中文字，松开鼠标后自动翻译。固定窗口后，再次划词会打开新的翻译窗口。": [
+    "在论文、浏览器或其他应用中选中文字，松开鼠标后自动翻译。固定窗口后，再次划词会打开新的翻译窗口。",
+    "Select text in a paper, browser, or another app to translate on release. Pin a window to keep it when translating another selection."
+  ],
+  "自动划词已启用": ["自动划词已启用", "Automatic selection is enabled"],
+  "自动划词已暂停": ["自动划词已暂停", "Automatic selection is paused"],
+  "Ctrl + Shift + T 翻译剪贴板中的文字。": [
+    "Ctrl + Shift + T 翻译剪贴板中的文字。",
+    "Ctrl + Shift + T translates the text already on your clipboard."
+  ],
+  "暂停划词": ["暂停划词", "Pause selection"],
+  "启用划词": ["启用划词", "Enable selection"],
+  "系统取词尚未就绪，请在翻译设置中检查权限或修复输入捕获。": [
+    "系统取词尚未就绪，请在翻译设置中检查权限或修复输入捕获。",
+    "Selection capture is not ready. Check permissions or repair input capture in translation settings."
+  ],
+  "剪贴板快捷键尚未就绪，仍可使用下方按钮。": [
+    "剪贴板快捷键尚未就绪，仍可使用下方按钮。",
+    "The clipboard shortcut is unavailable. You can still use the button below."
+  ],
+  "翻译设置无法读取，请在翻译设置中检查原文件。": [
+    "翻译设置无法读取，请在翻译设置中检查原文件。",
+    "Translation settings could not be read. Open translation settings to check the original file."
+  ],
+  "打开完整翻译设置": ["打开完整翻译设置", "Open translation settings"],
+  "翻译剪贴板": ["翻译剪贴板", "Translate clipboard"],
+  "语言、术语表、字体、浮窗外观、纠错记忆和问答记录在翻译设置中管理。模型与密钥沿用 AI 助手的配置。": [
+    "语言、术语表、字体、浮窗外观、纠错记忆和问答记录在翻译设置中管理。模型与密钥沿用 AI 助手的配置。",
+    "Manage languages, glossary, fonts, appearance, saved corrections and AI records in translation settings. Models and credentials are shared with the AI assistant."
+  ],
+  "待翻译文本": ["待翻译文本", "Text to translate"],
+  "也可以粘贴文字，在浮窗中翻译…": [
+    "也可以粘贴文字，在浮窗中翻译…",
+    "Paste text to translate in a floating window…"
+  ],
+  "使用当前选区": ["使用当前选区", "Use current selection"],
+  "划词翻译请在 Scientify 桌面应用中使用。": [
+    "划词翻译请在 Scientify 桌面应用中使用。",
+    "Selection translation is available in the Scientify desktop app."
+  ],
+  "协作": ["协作", "Collaboration"],
+  "协作服务器用于同步项目成员、文献元数据、PDF、笔记和代码仓库。AI、Python 环境与实验运行仍保留在本机。": [
+    "协作服务器用于同步项目成员、文献元数据、PDF、笔记和代码仓库。AI、Python 环境与实验运行仍保留在本机。",
+    "The collaboration server syncs project members, literature metadata, PDFs, notes and code repositories. AI, Python environments and experiment runs stay local."
+  ],
+  "服务器地址": ["服务器地址", "Server address"],
+  "启用项目协作": ["启用项目协作", "Enable project collaboration"],
+  "当前阶段先保存服务器配置；远程登录和同步服务将在服务器接口接入后启用。": [
+    "当前阶段先保存服务器配置；远程登录和同步服务将在服务器接口接入后启用。",
+    "This stage saves the server configuration. Sign-in and remote sync will activate when the server API is connected."
+  ],
+  "连接状态": ["连接状态", "Connection status"],
+  "已启用，等待服务器连接": ["已启用，等待服务器连接", "Enabled, waiting for server connection"],
+  "未启用": ["未启用", "Disabled"],
+  "待同步变更：{count}": ["待同步变更：{count}", "Pending changes: {count}"],
+  "冲突：{count}": ["冲突：{count}", "Conflicts: {count}"],
+  "服务器地址会保存在本地，不会上传 API Key。": [
+    "服务器地址会保存在本地，不会上传 API Key。",
+    "The server address is stored locally. API keys are not uploaded."
+  ],
+  "保存协作设置": ["保存协作设置", "Save collaboration settings"],
+  "协作设置只能在 Scientify 桌面应用中使用。": [
+    "协作设置只能在 Scientify 桌面应用中使用。",
+    "Collaboration settings are available in the Scientify desktop app."
+  ],
+  "协作服务器地址过长。": ["协作服务器地址过长。", "The collaboration server address is too long."],
+  "协作服务器地址格式无效。": [
+    "协作服务器地址格式无效。",
+    "The collaboration server address is invalid."
+  ],
+  "协作服务器地址必须使用 http 或 https。": [
+    "协作服务器地址必须使用 http 或 https。",
+    "The collaboration server address must use http or https."
+  ],
+  "协作服务器地址不能包含账号或密码。": [
+    "协作服务器地址不能包含账号或密码。",
+    "The collaboration server address cannot contain a username or password."
+  ],
+  "协作配置文件格式无效。": [
+    "协作配置文件格式无效。",
+    "The collaboration configuration file is invalid."
+  ],
+  "登录后可以加入协作项目；本地变更会先进入离线队列，再由服务器同步。": [
+    "登录后可以加入协作项目；本地变更会先进入离线队列，再由服务器同步。",
+    "After signing in, you can join collaboration projects. Local changes enter the offline queue before syncing."
+  ],
+  "文献库已完成首次同步": [
+    "文献库已完成首次同步",
+    "The literature library has completed its initial sync."
+  ],
+  "打开文献页后将初始化本地文献库": [
+    "打开文献页后将初始化本地文献库",
+    "The local literature library will be initialized when you open the literature page."
+  ],
+  "待处理的同步变更": ["待处理的同步变更", "Sync changes that need attention"],
+  "本地变更冲突": ["本地变更冲突", "Local change conflict"],
+  "保留本地": ["保留本地", "Keep local"],
+  "重试本地变更": ["重试本地变更", "Retry local change"],
+  "以本地版本覆盖远端变更并重试？": [
+    "以本地版本覆盖远端变更并重试？",
+    "Overwrite the remote change with the local version and retry?"
+  ],
+  "忽略远端变更并保留本地？": [
+    "忽略远端变更并保留本地？",
+    "Ignore the remote change and keep the local version?"
+  ],
+  "远端变更待处理": ["远端变更待处理", "Remote change needs attention"],
+  "文献变更": ["文献变更", "Literature change"],
+  "打开文献页后重试": ["打开文献页后重试", "Retry by opening the literature page"],
+  "协作登录": ["协作登录", "Collaboration sign-in"],
+  "手机号": ["手机号", "Mobile number"],
+  "验证码": ["验证码", "Verification code"],
+  "获取验证码": ["获取验证码", "Get code"],
+  "登录协作服务器": ["登录协作服务器", "Sign in to collaboration"],
+  "退出登录": ["退出登录", "Sign out"],
+  "已登录：{phone}": ["已登录：{phone}", "Signed in: {phone}"],
+  "已登录": ["已登录", "Signed in"],
+  "已启用，尚未登录": ["已启用，尚未登录", "Enabled, not signed in"],
+  "协作项目": ["协作项目", "Collaboration projects"],
+  "立即同步": ["立即同步", "Sync now"],
+  "登录后还没有可加入的协作项目。": [
+    "登录后还没有可加入的协作项目。",
+    "No collaboration projects are available yet."
+  ],
+  "Scientify 官方模型": ["Scientify 官方模型", "Scientify hosted models"],
+  "协作服务器": ["协作服务器", "Collaboration server"],
+  "文件已导入本地，但协作上传失败：{error}": [
+    "文件已导入本地，但协作上传失败：{error}",
+    "The file was imported locally, but collaboration upload failed: {error}"
+  ],
+  "正在初始化协作文献库…": [
+    "正在初始化协作文献库…",
+    "Initializing the collaborative literature library…"
+  ],
+  "协作变更暂未排队：{error}": [
+    "协作变更暂未排队：{error}",
+    "The collaboration change was not queued: {error}"
+  ],
+  "有 {count} 项远端文献变更等待处理。": [
+    "有 {count} 项远端文献变更等待处理。",
+    "{count} remote literature changes are waiting to be handled."
+  ],
+  "确认": ["确认", "Confirm"],
+  "打开标题目录": ["打开标题目录", "Open table of contents"],
+  "PDF 标题目录": ["PDF 标题目录", "PDF table of contents"],
+  "此 PDF 没有可用的标题目录": [
+    "此 PDF 没有可用的标题目录",
+    "This PDF has no available table of contents"
+  ],
+  "工作区尚未载入。": ["工作区尚未载入。", "The workspace has not loaded yet."],
+  "待发送附件": ["待发送附件", "Pending attachment"],
+  "Permission": ["Permission", "Permission"],
+  "已截短": ["已截短", "Truncated"],
+  "本轮材料来源": ["本轮材料来源", "Sources for this turn"],
+  "工作区上下文": ["工作区上下文", "Workspace context"],
+  "附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭“附带材料”后不自动附带。": [
+    "附带当前材料时，自动读取本会话目录的有限摘要和关联文件。关闭“附带材料”后不自动附带。",
+    "When current materials are attached, Scientify reads a limited summary and related files from this chat workspace. Turn off Attach materials to disable this."
+  ],
+  "上次发送的材料": ["上次发送的材料", "Materials sent last time"],
+  "发送后可在这里检查实际附带的来源。": [
+    "发送后可在这里检查实际附带的来源。",
+    "Review the actual attached sources here after sending."
+  ],
+  "Agent 返回了空线程标识。": [
+    "Agent 返回了空线程标识。",
+    "The Agent returned an empty thread ID."
+  ],
+  "Agent 返回了空 turn 标识。": [
+    "Agent 返回了空 turn 标识。",
+    "The Agent returned an empty turn ID."
+  ],
+  "每条消息最多附带 4 个文件。": [
+    "每条消息最多附带 4 个文件。",
+    "Each message can include up to 4 files."
+  ],
+  "个人收集箱没有可操作的目录，请先进入一个项目。": [
+    "个人收集箱没有可操作的目录，请先进入一个项目。",
+    "The personal collection has no actionable directory. Open a project first."
+  ],
+  "当前页面没有可操作的目录，请进入文献库或项目文件后再让 Agent 执行。": [
+    "当前页面没有可操作的目录，请进入文献库或项目文件后再让 Agent 执行。",
+    "The current page has no actionable directory. Open the literature library or project files before asking the Agent to act."
+  ],
+  "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。": [
+    "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。",
+    "The built-in Agent uses the OpenAI Responses protocol and does not support this provider’s native protocol yet."
+  ],
+  "当前会话工作区": ["当前会话工作区", "Current chat workspace"],
+  "Windows 沙箱配置已完成，请再次发送任务。": [
+    "Windows 沙箱配置已完成，请再次发送任务。",
+    "The Windows sandbox is configured. Send the task again."
+  ],
+  "Windows 沙箱配置未完成，请检查系统权限后重试。": [
+    "Windows 沙箱配置未完成，请检查系统权限后重试。",
+    "The Windows sandbox is not configured. Check system permissions and try again."
+  ],
+  "中止任务失败，请重试。": ["中止任务失败，请重试。", "Failed to stop the task. Try again."],
+  "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。": [
+    "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。",
+    "This historical chat keeps its original tools. Start a new chat to use browser search and page reading; the original chat remains available."
+  ],
+  "新建会话": ["新建会话", "New chat"],
+  "正在准备材料…": ["正在准备材料…", "Preparing materials…"],
+  "对话不存在。": ["对话不存在。", "Chat not found."],
+  "保存在本机数据目录，下次自动填入": [
+    "保存在本机数据目录，下次自动填入",
+    "Saved in the local data directory and filled in next time"
+  ],
+  "已读取本机保存的密钥。": ["已读取本机保存的密钥。", "Loaded the key saved on this device."],
+  "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。": [
+    "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。",
+    "The endpoint and model name are saved in workspace settings; the key stays in the local data directory and is not synced with the project."
+  ],
+  "快捷键": ["快捷键", "Shortcuts"],
+  "存在快捷键冲突，请先修改重复按键。": [
+    "存在快捷键冲突，请先修改重复按键。",
+    "Shortcut conflict detected. Change the duplicate key first."
+  ],
+  "像 VS Code、Typora 一样，在这里查看和编辑 Scientify 的快捷操作。输入框、代码编辑器和中文输入法会优先使用自己的快捷键。": [
+    "像 VS Code、Typora 一样，在这里查看和编辑 Scientify 的快捷操作。输入框、代码编辑器和中文输入法会优先使用自己的快捷键。",
+    "View and edit Scientify shortcuts here, like in VS Code or Typora. Inputs, code editors and Chinese IMEs take precedence over global shortcuts."
+  ],
+  "恢复默认": ["恢复默认", "Restore defaults"],
+  "全局": ["全局", "Global"],
+  "编辑器": ["编辑器", "Editor"],
+  "冲突": ["冲突", "Conflict"],
+  "启用 {name}": ["启用 {name}", "Enable {name}"],
+  "启用": ["启用", "Enable"],
+  "正在录入快捷键": ["正在录入快捷键", "Recording shortcut"],
+  "编辑 {name}": ["编辑 {name}", "Edit {name}"],
+  "请按组合键…": ["请按组合键…", "Press a key combination…"],
+  "清除 {name}": ["清除 {name}", "Clear {name}"],
+  "恢复 {name}": ["恢复 {name}", "Restore {name}"],
+  "保存快捷键": ["保存快捷键", "Save shortcuts"],
+  "默认实验": ["默认实验", "Default experiment"],
+  "导入指标将替换此记录的已有指标，继续？": [
+    "导入指标将替换此记录的已有指标，继续？",
+    "Imported metrics will replace the existing metrics for this record. Continue?"
+  ],
+  "Commit": ["Commit", "Commit"],
+  "当前版本不支持在文献区读取此文件。": [
+    "当前版本不支持在文献区读取此文件。",
+    "This file type cannot be read in the literature area yet."
+  ],
+  "在外部程序打开": ["在外部程序打开", "Open in an external application"],
+  "没有可显示的内容。": ["没有可显示的内容。", "There is no content to display."],
+  "纯文本": ["纯文本", "Plain text"],
+  "只读预览": ["只读预览", "Read-only preview"],
+  "打开 AI 助手": ["打开 AI 助手", "Open AI assistant"],
+  "显示或聚焦侧边栏 AI 助手。": [
+    "显示或聚焦侧边栏 AI 助手。",
+    "Show or focus the AI assistant sidebar."
+  ],
+  "打开笔记": ["打开笔记", "Open notes"],
+  "切换到当前项目的笔记工作区。": [
+    "切换到当前项目的笔记工作区。",
+    "Switch to the current project notes workspace."
+  ],
+  "打开文献库": ["打开文献库", "Open literature library"],
+  "切换到当前项目的文献工作区。": [
+    "切换到当前项目的文献工作区。",
+    "Switch to the current project literature workspace."
+  ],
+  "切换到当前项目的实验工作区。": [
+    "切换到当前项目的实验工作区。",
+    "Switch to the current project experiment workspace."
+  ],
+  "打开代码": ["打开代码", "Open code"],
+  "打开当前实验的代码文件。": [
+    "打开当前实验的代码文件。",
+    "Open the current experiment code file."
+  ],
+  "打开项目、文献和笔记搜索。": [
+    "打开项目、文献和笔记搜索。",
+    "Search projects, literature and notes."
+  ],
+  "新建 AI 会话": ["新建 AI 会话", "New AI chat"],
+  "在 AI 助手中创建独立会话。": [
+    "在 AI 助手中创建独立会话。",
+    "Create a separate chat in the AI assistant."
+  ],
+  "加粗": ["加粗", "Bold text"],
+  "在 Markdown 编辑器中加粗选中文本。": [
+    "在 Markdown 编辑器中加粗选中文本。",
+    "Bold the selected text in the Markdown editor."
+  ],
+  "在 Markdown 编辑器中设置斜体。": [
+    "在 Markdown 编辑器中设置斜体。",
+    "Italicize the selected text in the Markdown editor."
+  ],
+  "保存文件": ["保存文件", "Save file"],
+  "保存当前笔记或代码文件。": ["保存当前笔记或代码文件。", "Save the current note or code file."],
+  "在当前编辑器中查找文本。": ["在当前编辑器中查找文本。", "Find text in the current editor."],
+  "发送消息": ["发送消息", "Send message"],
+  "发送当前 AI 输入。": ["发送当前 AI 输入。", "Send the current AI input."],
+  "中止当前 AI 任务。": ["中止当前 AI 任务。", "Stop the current AI task."],
+  "协作项目无法载入，请重试。": [
+    "协作项目无法载入，请重试。",
+    "The collaboration project could not be loaded. Try again."
+  ],
+  "协作服务器设置已保存。": ["协作服务器设置已保存。", "Collaboration server settings saved."],
+  "验证码已发送，请查收短信。": [
+    "验证码已发送，请查收短信。",
+    "The verification code was sent by SMS."
+  ],
+  "已登录协作服务器。": ["已登录协作服务器。", "Signed in to the collaboration server."],
+  "协作项目已创建。": ["协作项目已创建。", "Collaboration project created."],
+  "成员邀请已发送。": ["成员邀请已发送。", "The member invitation was sent."],
+  "登录和协作同步需要在 Scientify 桌面应用中使用。": [
+    "登录和协作同步需要在 Scientify 桌面应用中使用。",
+    "Sign-in and collaboration sync require the Scientify desktop app."
+  ],
+  "登录后管理共享文献与项目成员": [
+    "登录后管理共享文献与项目成员",
+    "Manage shared literature and project members after signing in"
+  ],
+  "本地优先协作": ["本地优先协作", "Local-first collaboration"],
+  "你的协作项目": ["你的协作项目", "Your collaboration projects"],
+  "登录 Scientify 协作": ["登录 Scientify 协作", "Sign in to Scientify collaboration"],
+  "选择一个远程项目，绑定到本机工作区后继续阅读、编辑和运行。": [
+    "选择一个远程项目，绑定到本机工作区后继续阅读、编辑和运行。",
+    "Choose a remote project, bind it to this workspace, and continue reading, editing and running."
+  ],
+  "服务器只负责身份、成员和同步索引；论文文件与实验代码仍由你控制。": [
+    "服务器只负责身份、成员和同步索引；论文文件与实验代码仍由你控制。",
+    "The server handles identity, membership and sync indexes; you keep control of papers and experiment code."
+  ],
+  "已连接": ["已连接", "Connected"],
+  "未登录": ["未登录", "Signed out"],
+  "连接协作服务器": ["连接协作服务器", "Connect to collaboration server"],
+  "服务器地址和登录状态只保存在本机。": [
+    "服务器地址和登录状态只保存在本机。",
+    "The server address and sign-in state stay on this device."
+  ],
+  "保存连接": ["保存连接", "Save connection"],
+  "JWT 会在本机安全存储并自动刷新": [
+    "JWT 会在本机安全存储并自动刷新",
+    "JWT tokens are stored locally and refreshed automatically"
+  ],
+  "输入手机号": ["输入手机号", "Enter phone number"],
+  "短信验证码": ["短信验证码", "SMS verification code"],
+  "登录并继续": ["登录并继续", "Sign in and continue"],
+  "新建协作项目名称": ["新建协作项目名称", "New collaboration project name"],
+  "成员": ["成员", "Members"],
+  "正在打开…": ["正在打开…", "Opening…"],
+  "进入项目": ["进入项目", "Open project"],
+  "还没有协作项目，先创建一个项目。": [
+    "还没有协作项目，先创建一个项目。",
+    "No collaboration projects yet. Create one to get started."
+  ],
+  "项目成员": ["项目成员", "Project members"],
+  "选择项目查看成员": ["选择项目查看成员", "Select a project to view members"],
+  "暂无成员信息": ["暂无成员信息", "No member information"],
+  "邀请成员": ["邀请成员", "Invite members"],
+  "成员手机号": ["成员手机号", "Member phone number"],
+  "编辑者": ["编辑者", "Editor"],
+  "审阅者": ["审阅者", "Reviewer"],
+  "查看者": ["查看者", "Viewer"],
+  "邀请": ["邀请", "Invite"],
+  "成员列表会显示在这里。": ["成员列表会显示在这里。", "The member list will appear here."],
+  "登录协作": ["登录协作", "Sign in to collaboration"],
+  "协作服务连接正常。": ["协作服务连接正常。", "Collaboration service is healthy."],
+  "检查连接": ["检查连接", "Check connection"],
+  "应用远端变更": ["应用远端变更", "Apply remote changes"],
+  "远端变更存在冲突": ["远端变更存在冲突", "Remote change has a conflict"],
+  "远端代码变更": ["远端代码变更", "Remote code change"],
+  "应用远端变更前会检查本地文件版本": [
+    "应用远端变更前会检查本地文件版本",
+    "Local file versions are checked before applying remote changes"
+  ],
+  "账号已连接 · 自动保存与同步已开启": [
+    "账号已连接 · 自动保存与同步已开启",
+    "Account connected · autosave and sync are on"
+  ],
+  "最近已同步": ["最近已同步", "Recently synced"],
+  "等待首次同步": ["等待首次同步", "Waiting for first sync"],
+  "手机号登录": ["手机号登录", "Sign in with phone"],
+  "未注册的手机号将自动创建 Scientify 账号。": [
+    "未注册的手机号将自动创建 Scientify 账号。",
+    "A new Scientify account will be created for an unregistered phone number."
+  ],
+  "请输入手机号": ["请输入手机号", "Enter your phone number"],
+  "6 位短信验证码": ["6 位短信验证码", "6-digit SMS code"],
+  "正在登录…": ["正在登录…", "Signing in…"],
+  "账号与协作数据在本机和服务端加密传输。": [
+    "账号与协作数据在本机和服务端加密传输。",
+    "Account and collaboration data are encrypted in transit."
+  ],
+  "同一账号，多端继续": ["同一账号，多端继续", "One account, continue anywhere"],
+  "让研究资料和团队进度自然流转": [
+    "让研究资料和团队进度自然流转",
+    "Keep research materials and team progress in sync"
+  ],
+  "多设备同步": ["多设备同步", "Multi-device sync"],
+  "在另一台电脑登录后取回协作项目与进度。": [
+    "在另一台电脑登录后取回协作项目与进度。",
+    "Sign in on another computer to restore collaboration projects and progress."
+  ],
+  "多人协同": ["多人协同", "Team collaboration"],
+  "按所有者、编辑者、审阅者和查看者分配权限。": [
+    "按所有者、编辑者、审阅者和查看者分配权限。",
+    "Assign owner, editor, reviewer and viewer permissions."
+  ],
+  "本地优先": ["本地优先", "Local-first"],
+  "断网时继续工作，恢复连接后自动合并变更。": [
+    "断网时继续工作，恢复连接后自动合并变更。",
+    "Keep working offline and merge changes when the connection returns."
+  ],
+  "高级：使用自托管协作服务": [
+    "高级：使用自托管协作服务",
+    "Advanced: use a self-hosted collaboration service"
+  ],
+  "待注册 · {role}": ["待注册 · {role}", "Pending sign-up · {role}"]
 }

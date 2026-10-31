@@ -5,11 +5,14 @@ import {
   type AgentConnection,
   type AgentDomain,
   type AgentEvent,
+  type AgentSkillRef,
+  type PermissionMode,
   type ApprovalDecision,
   type ApprovalRequest,
   type ThreadHandle,
 } from '../../platform/agent';
 import { t } from '../../i18n';
+import { errorMessage } from '../../domain/errors';
 
 export type AgentPhase = 'idle' | 'opening' | 'running' | 'waiting' | 'stopping';
 export type AgentOperation = { id: string; label: string; status: string; output: string };
@@ -78,6 +81,7 @@ export class AgentSession {
       domain: AgentDomain;
       conversationId: string;
       workspaceRoot?: string;
+      permission?: PermissionMode;
     },
     private readonly connection: AgentConnection,
     private readonly onUpdate: (snapshot: AgentSessionSnapshot) => void = () => {},
@@ -90,7 +94,7 @@ export class AgentSession {
     this.onUpdate(this.snapshot);
   }
   private failure(reason: unknown) {
-    const value = reason instanceof Error ? reason.message : String(reason);
+    const value = errorMessage(reason);
     return this.connection.apiKey
       ? value.split(this.connection.apiKey).join(t('[已隐藏密钥]'))
       : value;
@@ -104,6 +108,7 @@ export class AgentSession {
         this.connection,
         {
           conversationId: this.binding.conversationId,
+          permission: this.binding.permission ?? 'ask',
           ...(this.binding.workspaceRoot ? { workspaceRoot: this.binding.workspaceRoot } : {}),
         },
       );
@@ -209,7 +214,11 @@ export class AgentSession {
     }
     this.set(state);
   }
-  async send(text: string): Promise<boolean> {
+  async send(
+    text: string,
+    images?: { mimeType: string; data: string }[],
+    skills?: AgentSkillRef[],
+  ): Promise<boolean> {
     if (!this.snapshot.threadId || hasPendingWork(this.snapshot)) return false;
     this.starting = true;
     this.textItems.clear();
@@ -229,6 +238,8 @@ export class AgentSession {
         ...this.binding,
         threadId: this.snapshot.threadId!,
         text,
+        ...(images?.length ? { images } : {}),
+        ...(skills?.length ? { skills } : {}),
       });
       if (!turn.turnId) throw new Error(t('Agent 返回了空 turn 标识。'));
       this.set({ turnId: turn.turnId });
@@ -298,6 +309,24 @@ export class AgentSession {
     } catch (reason) {
       if (hasPendingWork(this.snapshot))
         this.set({ phase: 'running', error: this.failure(reason) });
+      return false;
+    }
+  }
+  async steer(text: string): Promise<boolean> {
+    const { threadId, turnId, phase } = this.snapshot;
+    if (!threadId || !turnId || !this.agent.steer || !['running', 'waiting'].includes(phase))
+      return false;
+    try {
+      const accepted = await this.agent.steer({
+        ...this.binding,
+        threadId,
+        expectedTurnId: turnId,
+        text,
+      });
+      if (accepted.turnId !== turnId) throw new Error(t('Agent 返回的 turn 标识不匹配。'));
+      return true;
+    } catch (reason) {
+      this.set({ error: this.failure(reason) });
       return false;
     }
   }

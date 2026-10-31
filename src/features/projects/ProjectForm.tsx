@@ -3,7 +3,7 @@ import { Button, Input, Textarea, Dropdown } from '../../components/primitives';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useStore } from 'zustand';
 import { Modal } from '../../components/Modal';
-import type { Project, Team } from '../../domain/workspace';
+import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { projectCoverColors } from './model';
 
@@ -175,91 +175,6 @@ export function ProjectForm({
           <span className="muted">{t('保存在本机工作区')}</span>
           <Button variant="primary" disabled={busy || !draft.name.trim()} type="submit">
             {busy ? t('正在保存…') : t('保存项目')}
-          </Button>
-        </footer>
-      </form>
-    </Modal>
-  );
-}
-
-export function TeamForm({
-  team,
-  store,
-  onClose,
-}: {
-  team?: Team;
-  store: WorkspaceStore;
-  onClose(): void;
-}) {
-  const [name, setName] = useState(team?.name ?? '');
-  const [description, setDescription] = useState(team?.description ?? '');
-  const dirty = name !== (team?.name ?? '') || description !== (team?.description ?? '');
-  const busy = useStore(store, (s) => s.busy);
-  const error = useStore(store, (s) => s.error);
-  useEffect(() => {
-    store.getState().setDirty(dirty);
-    return () => store.getState().setDirty(false);
-  }, [dirty, store]);
-  return (
-    <Modal
-      title={team ? t('团队信息') : t('创建团队空间')}
-      busy={busy}
-      dirty={dirty}
-      onClose={onClose}
-    >
-      <form
-        className="form-grid"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!name.trim()) return;
-          if (
-            await store.getState().update((d) => {
-              if (team) {
-                const target = d.teams.find((t) => t.id === team.id);
-                if (!target) throw new Error(t('团队不存在，请重新载入。'));
-                Object.assign(target, { name: name.trim(), description });
-              } else
-                d.teams.push({
-                  id: crypto.randomUUID(),
-                  name: name.trim(),
-                  description,
-                  color: '#657b71',
-                });
-            })
-          )
-            onClose();
-        }}
-      >
-        <label>
-          {t('团队名称')}
-          <Input
-            disabled={busy}
-            autoFocus
-            required
-            maxLength={100}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <label>
-          {t('团队介绍')}
-          <Textarea
-            disabled={busy}
-            rows={4}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
-        <p className="muted">{t('团队空间用于本机项目分类，成员邀请与在线协作尚未开放。')}</p>
-        {error ? (
-          <p role="alert" className="error-text">
-            {translateError(error)}
-          </p>
-        ) : null}
-        <footer className="dialog-footer">
-          <span />
-          <Button type="submit" variant="primary" disabled={busy || !name.trim()}>
-            {busy ? t('正在保存…') : t('保存团队')}
           </Button>
         </footer>
       </form>

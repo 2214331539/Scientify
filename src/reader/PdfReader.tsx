@@ -1,6 +1,6 @@
 import { t, translateError } from '../i18n';
 import { Button, Input } from '../components/primitives';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,20 +11,24 @@ import {
   ZoomOut,
   Rows3,
   PanelTop,
+  ListTree,
 } from 'lucide-react';
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'pdfjs-dist/web/pdf_viewer.css';
-import type { ResearchBackend } from '../platform/research';
+import type { PdfBackend } from '../platform/research';
 import type { WorkContext } from '../domain/context';
 import { PdfPageSurface } from './PdfPageSurface';
+import { destinationOffset, ReaderLinkService, type PdfLinkTarget } from './pdf-links';
+import { errorMessage } from '../domain/errors';
 import './reader.css';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 type ReadingMode = 'paged' | 'continuous';
 // top is the offset inside the current page, not the whole continuous document.
 type ReadingPosition = { page: number; zoom: number; top: number; left: number; mode: ReadingMode };
-const readingPositions = new WeakMap<ResearchBackend, Map<string, ReadingPosition>>();
+type PdfOutlineItem = { title: string; dest?: unknown; items?: PdfOutlineItem[] };
+const readingPositions = new WeakMap<PdfBackend, Map<string, ReadingPosition>>();
 export default function PdfReader({
   assetId,
   title,
@@ -39,7 +43,7 @@ export default function PdfReader({
   title: string;
   projectId: string;
   paperId: string;
-  backend: ResearchBackend;
+  backend: PdfBackend;
   onContext: (context: WorkContext) => void;
   onTool: (tool: 'assistant' | 'notes') => void;
   compact?: boolean;
@@ -71,6 +75,8 @@ export default function PdfReader({
     };
   });
   const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
+  const [outline, setOutline] = useState<PdfOutlineItem[]>([]);
+  const [outlineOpen, setOutlineOpen] = useState(false);
   const [page, setPage] = useState(initial.page),
     [mode, setMode] = useState(initial.mode);
   const [width, setWidth] = useState(600),
@@ -83,6 +89,7 @@ export default function PdfReader({
   const texts = useRef(new Map<number, string>());
   const position = useRef(initial),
     pendingScroll = useRef<ReadingPosition | null>(initial);
+  const navigationTicket = useRef(0);
   const current = useRef({ page, mode });
   current.current = { page, mode };
   position.current = { ...position.current, page, zoom, mode };
@@ -103,14 +110,77 @@ export default function PdfReader({
     },
     [pageOffset],
   );
+  useLayoutEffect(() => {
+    // Apply the zoom anchor with the preview geometry, without waiting for
+    // PDF.js to finish rasterizing the new resolution.
+    restore(texts.current.has(current.current.page));
+  }, [zoom, width, restore]);
   function navigate(number: number) {
+    ++navigationTicket.current;
     if (!document || number < 1 || number > document.numPages || !Number.isInteger(number)) return;
     pendingScroll.current = { ...position.current, page: number, top: 0, left: 0 };
     position.current = { ...pendingScroll.current };
     setPage(number);
     requestAnimationFrame(() => restore(true));
   }
+  async function followLink({ pageNumber, destArray }: PdfLinkTarget) {
+    const ticket = ++navigationTicket.current;
+    if (
+      !document ||
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > document.numPages
+    )
+      return;
+    try {
+      const pdfPage = await document.getPage(pageNumber);
+      if (ticket !== navigationTicket.current) return;
+      const original = pdfPage.getViewport({ scale: 1 });
+      const scale = Math.max(0.25, Math.min(3, width / original.width)) * zoom;
+      const offset = destinationOffset(pdfPage.getViewport({ scale }), destArray);
+      pendingScroll.current = { ...position.current, page: pageNumber, ...offset };
+      position.current = { ...pendingScroll.current };
+      setPage(pageNumber);
+      requestAnimationFrame(() => restore(texts.current.has(pageNumber)));
+    } catch (reason) {
+      if (ticket === navigationTicket.current) setError(errorMessage(reason));
+    }
+  }
+  async function followOutline(item: PdfOutlineItem) {
+    if (!document || item.dest == null) return;
+    try {
+      const destination =
+        typeof item.dest === 'string' ? await document.getDestination(item.dest) : item.dest;
+      if (!Array.isArray(destination) || destination.length === 0) return;
+      const pageIndex =
+        typeof destination[0] === 'number'
+          ? destination[0]
+          : await document.getPageIndex(destination[0] as never);
+      await followLink({
+        pageNumber: pageIndex + 1,
+        destArray: destination as never,
+      });
+      setOutlineOpen(false);
+    } catch (reason) {
+      setError(errorMessage(reason));
+    }
+  }
+  const linkCallbacks = useRef({ followLink });
+  linkCallbacks.current = { followLink };
+  const linkService = useMemo(
+    () =>
+      document
+        ? new ReaderLinkService(document, {
+            page: () => current.current.page,
+            navigate: (target) => void linkCallbacks.current.followLink(target),
+            error: setError,
+          })
+        : null,
+    [document],
+  );
+  useEffect(() => () => linkService?.setDocument(null), [linkService]);
   function toggleMode() {
+    ++navigationTicket.current;
     const next: ReadingMode = mode === 'paged' ? 'continuous' : 'paged';
     pendingScroll.current = { ...position.current, mode: next };
     setMode(next);
@@ -120,11 +190,39 @@ export default function PdfReader({
       /* Optional preference. */
     }
   }
-  function changeZoom(next: number) {
-    if (next === zoom) return;
-    pendingScroll.current = { ...position.current };
+  const changeZoom = useCallback((value: number, anchor = { x: 0, y: 0 }) => {
+    const source = pendingScroll.current ?? position.current;
+    const next = Math.round(Math.max(0.5, Math.min(2, value)) * 1000) / 1000;
+    if (next === source.zoom) return;
+    ++navigationTicket.current;
+    const ratio = next / source.zoom;
+    pendingScroll.current = {
+      ...source,
+      zoom: next,
+      top: Math.max(0, (source.top + anchor.y) * ratio - anchor.y),
+      left: Math.max(0, (source.left + anchor.x) * ratio - anchor.x),
+    };
+    position.current = { ...pendingScroll.current };
     setZoom(next);
-  }
+  }, []);
+  useEffect(() => {
+    const host = scroll.current;
+    if (!host) return;
+    const wheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      if (!document || !event.deltaY) return;
+      const rect = host.getBoundingClientRect();
+      const delta =
+        event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientHeight : 1);
+      changeZoom(position.current.zoom * Math.exp(-Math.max(-100, Math.min(100, delta)) * 0.002), {
+        x: Math.max(0, event.clientX - rect.left),
+        y: Math.max(0, event.clientY - rect.top),
+      });
+    };
+    host.addEventListener('wheel', wheel, { passive: false });
+    return () => host.removeEventListener('wheel', wheel);
+  }, [changeZoom, document]);
   useEffect(
     () => () => {
       let cache = readingPositions.get(backend);
@@ -147,15 +245,24 @@ export default function PdfReader({
   useEffect(() => {
     const host = scroll.current;
     if (!host) return;
+    let resizeTimer: ReturnType<typeof setTimeout>;
     const observer = new ResizeObserver((entries) => {
-      const next = Math.max(240, entries[0].contentRect.width - 48);
-      setWidth((previous) => {
-        if (previous !== next) pendingScroll.current ??= { ...position.current };
-        return next;
-      });
+      // ResizeObserver reports the content box, already excluding padding
+      // and the scrollbar gutter. Subtracting them again shrinks the page.
+      const next = Math.max(1, Math.floor(entries[0].contentRect.width));
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setWidth((previous) => {
+          if (previous !== next) pendingScroll.current ??= { ...position.current };
+          return next;
+        });
+      }, 80);
     });
     observer.observe(host);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      clearTimeout(resizeTimer);
+    };
   }, []);
   useEffect(() => {
     let stale = false;
@@ -185,18 +292,28 @@ export default function PdfReader({
         const firstPage = Math.min(position.current.page, pdf.numPages);
         if (pendingScroll.current) pendingScroll.current.page = firstPage;
         setDocument(pdf);
+        void pdf
+          .getOutline()
+          .then((items) => {
+            if (!stale) setOutline((items ?? []) as PdfOutlineItem[]);
+          })
+          .catch(() => {
+            if (!stale) setOutline([]);
+          });
         setPage(firstPage);
         setLoading(false);
       })
       .catch((error) => {
         if (!stale) {
-          setError(error instanceof Error ? error.message : String(error));
+          setError(errorMessage(error));
           setLoading(false);
         }
       });
     return () => {
       stale = true;
+      ++navigationTicket.current;
       void task?.destroy();
+      setOutline([]);
     };
   }, [assetId, backend]);
   useEffect(() => {
@@ -293,7 +410,9 @@ export default function PdfReader({
         onClick={toggleMode}
       >
         {mode === 'continuous' ? <Rows3 /> : <PanelTop />}
-        {mode === 'continuous' ? t('连续滚动') : t('分页阅览')}
+        <span className="pdf-mode-label">
+          {mode === 'continuous' ? t('连续滚动') : t('分页阅览')}
+        </span>
       </Button>
       <span className="toolbar-separator" />
       <Button
@@ -373,6 +492,44 @@ export default function PdfReader({
           };
         }}
       >
+        {document ? (
+          <div
+            className={`pdf-outline${outlineOpen ? ' is-open' : ''}`}
+            onMouseEnter={() => setOutlineOpen(true)}
+            onMouseLeave={() => setOutlineOpen(false)}
+          >
+            <Button
+              variant="ghost"
+              iconOnly
+              className="pdf-outline-trigger"
+              aria-label={t('打开标题目录')}
+              aria-expanded={outlineOpen}
+              onFocus={() => setOutlineOpen(true)}
+              onClick={() => setOutlineOpen((open) => !open)}
+            >
+              <ListTree size={16} />
+            </Button>
+            {outlineOpen ? (
+              <nav className="pdf-outline-panel" aria-label={t('PDF 标题目录')}>
+                <div className="pdf-outline-heading">{t('标题目录')}</div>
+                {outline.length ? (
+                  <div className="pdf-outline-items">
+                    {outline.map((item, index) => (
+                      <OutlineItem
+                        key={`${item.title}-${index}`}
+                        item={item}
+                        level={0}
+                        onNavigate={(entry) => void followOutline(entry)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="pdf-outline-empty">{t('此 PDF 没有可用的标题目录')}</div>
+                )}
+              </nav>
+            ) : null}
+          </div>
+        ) : null}
         {loading && (
           <div className="pdf-loading" role="status">
             {t('正在读取 PDF…')}
@@ -390,6 +547,7 @@ export default function PdfReader({
               width={width}
               zoom={zoom}
               title={title}
+              linkService={linkService!}
               visible={mode === 'paged' || visible.has(number) || number === page}
               onReady={ready}
               onError={setError}
@@ -418,6 +576,38 @@ export default function PdfReader({
               ? t('选择原文可提问或记笔记')
               : t('本页没有可提取文本，可能为扫描页。')}
       </div>
+    </div>
+  );
+}
+
+function OutlineItem({
+  item,
+  level,
+  onNavigate,
+}: {
+  item: PdfOutlineItem;
+  level: number;
+  onNavigate: (item: PdfOutlineItem) => void;
+}) {
+  return (
+    <div className="pdf-outline-entry">
+      <button
+        type="button"
+        className="pdf-outline-link"
+        style={{ paddingInlineStart: `${10 + level * 14}px` }}
+        onClick={() => onNavigate(item)}
+        title={item.title}
+      >
+        {item.title}
+      </button>
+      {item.items?.map((child, index) => (
+        <OutlineItem
+          key={`${child.title}-${index}`}
+          item={child}
+          level={level + 1}
+          onNavigate={onNavigate}
+        />
+      ))}
     </div>
   );
 }

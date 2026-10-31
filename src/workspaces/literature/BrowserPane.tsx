@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, ExternalLink, RotateCw, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ExternalLink, RotateCw, X, Star } from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
 import {
   browserCommand,
@@ -9,16 +9,22 @@ import {
   type BrowserTab,
 } from '../../platform/browser-pane';
 import { t, translateError } from '../../i18n';
+import { useActiveView } from '../../components/workspace/ViewTransition';
 
 export function BrowserPane({
   id,
   initialUrl,
   onChanged,
+  onBookmark,
+  isBookmarked,
 }: {
   id: string;
   initialUrl?: string;
   onChanged: (tab: BrowserTab) => void;
+  onBookmark?: (tab: BrowserTab) => void;
+  isBookmarked?: (url: string) => boolean;
 }) {
+  const viewActive = useActiveView();
   const [tab, setTab] = useState<BrowserTab | null>(null),
     [address, setAddress] = useState(DEFAULT_BROWSER_URL),
     [error, setError] = useState('');
@@ -61,6 +67,10 @@ export function BrowserPane({
   useEffect(() => {
     const host = canvas.current;
     if (!host) return;
+    if (!viewActive) {
+      void browserLayout({ op: 'hideAll' }).catch(() => {});
+      return;
+    }
     let disposed = false,
       frame = 0;
     const sync = () => {
@@ -80,7 +90,7 @@ export function BrowserPane({
           // Keep the native page visible when navigation reports an error. WebView2
           // can still have a useful provider error/CAPTCHA page (for example
           // Google's `sorry` page) that the user needs to inspect or retry.
-          visible: !overlay && !document.hidden && !!currentTab.current?.url,
+          visible: viewActive && !overlay && !document.hidden && !!currentTab.current?.url,
         },
       }).catch((e) => {
         if (!disposed) setError(String(e));
@@ -113,7 +123,7 @@ export function BrowserPane({
       document.removeEventListener('visibilitychange', schedule);
       void browserLayout({ op: 'hideAll' }).catch(() => {});
     };
-  }, [id]);
+  }, [id, viewActive]);
   useEffect(() => {
     syncLayout.current?.();
   }, [tab?.url, tab?.error, error]);
@@ -184,6 +194,21 @@ export function BrowserPane({
           }}
           onChange={(e) => setAddress(e.target.value)}
         />
+        {onBookmark && (
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            aria-label={isBookmarked?.(tab?.url ?? '') ? t('编辑网页收藏') : t('收藏当前网页')}
+            aria-pressed={isBookmarked?.(tab?.url ?? '') ?? false}
+            disabled={!tab?.url || !/^https?:\/\//i.test(tab.url)}
+            onClick={() => {
+              if (tab) onBookmark(tab);
+            }}
+          >
+            <Star />
+          </Button>
+        )}
         <Button type="submit">{t('打开')}</Button>
         <Button
           type="button"

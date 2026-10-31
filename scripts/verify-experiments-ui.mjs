@@ -1,12 +1,7 @@
-import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
-const require = createRequire(resolve('.test-tools/package.json'));
-const { chromium } = require('playwright');
-const browser = await chromium.launch({
-  executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  headless: true,
-});
+import { launchUiBrowser } from './ui-test-browser.mjs';
+const browser = await launchUiBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 940 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
@@ -164,10 +159,14 @@ try {
   );
   await page.getByRole('button', { name: '环境与依赖' }).click();
   check(
-    (await page.getByRole('dialog').innerText()).includes('不表示环境检测已通过'),
-    'Environment distinguishes configuration from discovery',
+    (await page.locator('.sf-python-sidebar').count()) === 1,
+    'Python environment sidebar opens from the activity bar',
   );
-  await page.getByRole('button', { name: '关闭弹窗' }).click();
+  check(
+    (await page.locator('.sf-python-sidebar').innerText()).includes('Python'),
+    'Python environment controls are visible',
+  );
+  await page.getByRole('button', { name: '收起资源' }).click();
   await page.getByRole('button', { name: 'Git', exact: true }).click();
   await page.getByText('Git 管理仅在桌面应用可用').waitFor();
   check(true, 'Browser Git unavailable state is explicit');
@@ -322,7 +321,7 @@ try {
   check(errors.length === 0, 'No browser runtime errors: ' + errors.join('; '));
   await writeFile(
     join(directory, 'report.json'),
-    JSON.stringify({ date: '2026-10-02', fixtureOnly: true, checks, errors }, null, 2),
+    JSON.stringify({ date: new Date().toISOString(), fixtureOnly: true, checks, errors }, null, 2),
   );
   console.log(JSON.stringify({ passed: checks.length, errors, screenshots: directory }, null, 2));
 } finally {

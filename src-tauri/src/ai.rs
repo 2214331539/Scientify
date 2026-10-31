@@ -1,4 +1,6 @@
 //! Model discovery, connection verification and chat share the same protocol adapter.
+pub mod stream;
+pub mod verification;
 use reqwest::{Client, RequestBuilder, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -16,7 +18,7 @@ pub enum Provider {
     Gemini,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Connection {
     endpoint: String,
@@ -24,24 +26,26 @@ pub struct Connection {
     provider: Provider,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     System,
     User,
     Assistant,
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Message {
     role: Role,
-    content: String,
+    content: Value,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct AIRequest {
     #[serde(flatten)]
     connection: Connection,
     model: String,
     messages: Vec<Message>,
+    max_tokens: Option<u32>,
+    temperature: Option<f64>,
 }
 #[derive(Deserialize)]
 pub struct ModelTest {
@@ -94,6 +98,7 @@ fn base(connection: &Connection) -> Result<Url, String> {
                 .strip_suffix("/chat")
                 .or_else(|| path.strip_suffix("/tags"))
                 .unwrap_or(path);
+            let path = path.strip_suffix("/v1").unwrap_or(path);
             if path.ends_with("/api") {
                 path.into()
             } else {
@@ -103,6 +108,7 @@ fn base(connection: &Connection) -> Result<Url, String> {
         Provider::Openai => {
             let path = path
                 .strip_suffix("/chat/completions")
+                .or_else(|| path.strip_suffix("/responses"))
                 .or_else(|| path.strip_suffix("/models"))
                 .unwrap_or(path);
             if path.is_empty() {
@@ -133,6 +139,35 @@ fn base(connection: &Connection) -> Result<Url, String> {
     };
     url.set_path(&path);
     Ok(url)
+}
+pub(crate) fn responses_base(
+    endpoint: &str,
+    provider: &str,
+    api_key: Option<&str>,
+) -> Result<Url, String> {
+    if !matches!(provider, "openai" | "ollama") {
+        return Err("该协议尚未接入 Agent。".into());
+    }
+    let mut root = base(&Connection {
+        endpoint: endpoint.into(),
+        api_key: api_key.map(str::to_string),
+        provider: Provider::Openai,
+    })?;
+    if provider == "ollama" {
+        let path = root.path().trim_end_matches('/');
+        let path = path
+            .strip_suffix("/chat")
+            .or_else(|| path.strip_suffix("/tags"))
+            .unwrap_or(path);
+        let path = path.strip_suffix("/api").unwrap_or(path);
+        let path = if path.ends_with("/v1") {
+            path.to_string()
+        } else {
+            format!("{path}/v1")
+        };
+        root.set_path(&path);
+    }
+    Ok(root)
 }
 fn child(base: &Url, path: &str) -> Url {
     let mut url = base.clone();
@@ -210,7 +245,8 @@ async fn response(call: RequestBuilder, limit: usize) -> Result<Value, String> {
     serde_json::from_slice(&bytes).map_err(|_| "模型服务返回了无法解析的 JSON。".into())
 }
 
-fn valid_model(model: &str) -> bool {
+/// Model ids are sent in requests and process arguments; keep them short and printable.
+pub(crate) fn valid_model(model: &str) -> bool {
     !model.trim().is_empty() && model.len() <= 256 && !model.chars().any(char::is_control)
 }
 fn text_model(value: &Value, provider: Provider) -> bool {
@@ -365,39 +401,184 @@ pub async fn research_list_models(request: Connection) -> Result<Vec<Model>, Str
     Err("模型列表分页过多，请使用范围更小的服务接口。".into())
 }
 
-async fn completion(request: &AIRequest, probe: bool) -> Result<Value, String> {
+fn content_text(content: &Value) -> Option<&str> {
+    content.as_str().or_else(|| {
+        content.as_array()?.iter().find_map(|part| {
+            (part["type"] == "text")
+                .then(|| part["text"].as_str())
+                .flatten()
+        })
+    })
+}
+
+fn content_has_image(content: &Value) -> bool {
+    content
+        .as_array()
+        .is_some_and(|parts| parts.iter().any(|part| part["type"] == "image"))
+}
+
+fn data_url(part: &Value) -> Option<String> {
+    let mime = part["mimeType"]
+        .as_str()
+        .filter(|value| !value.is_empty())?;
+    let data = part["data"].as_str().filter(|value| !value.is_empty())?;
+    Some(format!("data:{mime};base64,{data}"))
+}
+
+fn openai_content(content: &Value) -> Value {
+    let Some(parts) = content.as_array() else {
+        return content.clone();
+    };
+    Value::Array(
+        parts
+            .iter()
+            .filter_map(|part| match part["type"].as_str() {
+                Some("text") => Some(json!({"type":"text","text":part["text"]})),
+                Some("image") => data_url(part).map(|url| {
+                    json!({
+                        "type":"image_url",
+                        "image_url":{"url":url}
+                    })
+                }),
+                _ => None,
+            })
+            .collect(),
+    )
+}
+
+fn openai_messages(messages: &[Message]) -> Vec<Value> {
+    messages
+        .iter()
+        .map(|message| json!({"role":message.role,"content":openai_content(&message.content)}))
+        .collect()
+}
+
+fn anthropic_content(content: &Value) -> Value {
+    let Some(parts) = content.as_array() else {
+        return content.clone();
+    };
+    Value::Array(
+        parts
+            .iter()
+            .filter_map(|part| match part["type"].as_str() {
+                Some("text") => Some(json!({"type":"text","text":part["text"]})),
+                Some("image") => {
+                    let mime = part["mimeType"].as_str()?;
+                    let data = part["data"].as_str()?;
+                    Some(json!({"type":"image","source":{"type":"base64","media_type":mime,"data":data}}))
+                }
+                _ => None,
+            })
+            .collect(),
+    )
+}
+
+fn anthropic_message(message: &Message) -> Value {
+    json!({"role":message.role,"content":anthropic_content(&message.content)})
+}
+
+fn gemini_parts(content: &Value) -> Vec<Value> {
+    let Some(parts) = content.as_array() else {
+        return vec![json!({"text":content.as_str().unwrap_or_default()})];
+    };
+    parts
+        .iter()
+        .filter_map(|part| match part["type"].as_str() {
+            Some("text") => Some(json!({"text":part["text"]})),
+            Some("image") => {
+                Some(json!({"inlineData":{"mimeType":part["mimeType"],"data":part["data"]}}))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn ollama_messages(messages: &[Message]) -> Vec<Value> {
+    messages
+        .iter()
+        .map(|message| {
+            if let Some(parts) = message.content.as_array() {
+                let text = parts
+                    .iter()
+                    .filter_map(|part| {
+                        (part["type"] == "text")
+                            .then(|| part["text"].as_str())
+                            .flatten()
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let images = parts
+                    .iter()
+                    .filter_map(|part| {
+                        (part["type"] == "image")
+                            .then(|| part["data"].as_str())
+                            .flatten()
+                    })
+                    .collect::<Vec<_>>();
+                json!({"role":message.role,"content":text,"images":images})
+            } else {
+                json!({"role":message.role,"content":message.content.as_str().unwrap_or_default()})
+            }
+        })
+        .collect()
+}
+
+fn completion_call(
+    request: &AIRequest,
+    probe: bool,
+    streaming: bool,
+) -> Result<RequestBuilder, String> {
     if !valid_model(&request.model) {
         return Err("请配置有效的模型名称。".into());
     }
+    let request_size = request
+        .messages
+        .iter()
+        .map(|m| m.content.to_string().len())
+        .sum::<usize>();
+    let has_image = request
+        .messages
+        .iter()
+        .any(|message| content_has_image(&message.content));
     if request.messages.is_empty()
         || request.messages.len() > 50
-        || request
-            .messages
-            .iter()
-            .map(|m| m.content.len())
-            .sum::<usize>()
-            > 256 * 1024
+        || request_size
+            > if has_image {
+                12 * 1024 * 1024
+            } else {
+                256 * 1024
+            }
     {
         return Err("对话超过 50 条或 256 KiB 上下文限制，请新建对话或减少上下文。".into());
     }
     let connection = &request.connection;
     let root = base(connection)?;
-    let tokens = if probe { 32 } else { 4096 };
+    let tokens = if probe {
+        32
+    } else {
+        request.max_tokens.unwrap_or(4096)
+    };
+    if !(1..=32768).contains(&tokens)
+        || request
+            .temperature
+            .is_some_and(|v| !v.is_finite() || !(0.0..=2.0).contains(&v))
+    {
+        return Err("模型生成参数无效。".into());
+    }
     let system = request
         .messages
         .iter()
         .filter(|m| matches!(m.role, Role::System))
-        .map(|m| m.content.as_str())
+        .filter_map(|m| content_text(&m.content))
         .collect::<Vec<_>>()
         .join("\n\n");
     let (url, body) = match connection.provider {
         Provider::Ollama => (
             child(&root, "chat"),
-            json!({"model":request.model,"messages":request.messages,"stream":false,"options":{"num_predict":tokens}}),
+            json!({"model":request.model,"messages":ollama_messages(&request.messages),"stream":false,"options":{"num_predict":tokens}}),
         ),
         Provider::Openai => {
-            let mut body =
-                json!({"model":request.model,"messages":request.messages,"stream":false});
+            let mut body = json!({"model":request.model,"messages":openai_messages(&request.messages),"stream":false});
             let token_key = if root.host_str() == Some("api.openai.com") {
                 "max_completion_tokens"
             } else {
@@ -411,6 +592,7 @@ async fn completion(request: &AIRequest, probe: bool) -> Result<Value, String> {
                 .messages
                 .iter()
                 .filter(|m| !matches!(m.role, Role::System))
+                .map(anthropic_message)
                 .collect::<Vec<_>>();
             let mut body = json!({"model":request.model,"messages":messages,"max_tokens":tokens,"stream":false});
             if !system.is_empty() {
@@ -425,7 +607,7 @@ async fn completion(request: &AIRequest, probe: bool) -> Result<Value, String> {
                 .map_err(|_| "模型服务地址格式无效。")?
                 .push(&format!("{}:generateContent", request.model));
             let contents = request.messages.iter().filter(|m| !matches!(m.role, Role::System)).map(|m| json!({
-                "role":if matches!(m.role, Role::Assistant) {"model"} else {"user"}, "parts":[{"text":m.content}]
+                "role":if matches!(m.role, Role::Assistant) {"model"} else {"user"}, "parts":gemini_parts(&m.content)
             })).collect::<Vec<_>>();
             let mut body =
                 json!({"contents":contents,"generationConfig":{"maxOutputTokens":tokens}});
@@ -435,11 +617,37 @@ async fn completion(request: &AIRequest, probe: bool) -> Result<Value, String> {
             (url, body)
         }
     };
-    response(
-        authorize(client(&root)?.post(url).json(&body), connection),
-        1024 * 1024,
-    )
-    .await
+    let mut body = body;
+    if !probe {
+        if let Some(temperature) = request.temperature {
+            match connection.provider {
+                Provider::Ollama => body["options"]["temperature"] = json!(temperature),
+                Provider::Gemini => body["generationConfig"]["temperature"] = json!(temperature),
+                _ => body["temperature"] = json!(temperature),
+            }
+        }
+    }
+    let mut url = url;
+    if streaming {
+        if matches!(connection.provider, Provider::Gemini) {
+            url.set_path(
+                &url.path()
+                    .replace(":generateContent", ":streamGenerateContent"),
+            );
+            url.query_pairs_mut().append_pair("alt", "sse");
+        } else {
+            body["stream"] = json!(true);
+        }
+    }
+    let call = authorize(client(&root)?.post(url).json(&body), connection);
+    Ok(if streaming {
+        call.timeout(Duration::from_secs(600))
+    } else {
+        call
+    })
+}
+async fn completion(request: &AIRequest, probe: bool) -> Result<Value, String> {
+    response(completion_call(request, probe, false)?, 1024 * 1024).await
 }
 fn output(value: &Value, provider: Provider) -> String {
     match provider {
@@ -475,6 +683,8 @@ fn output(value: &Value, provider: Provider) -> String {
 #[tauri::command]
 pub async fn research_test_model(request: ModelTest) -> Result<(), String> {
     let request = AIRequest {
+        max_tokens: None,
+        temperature: None,
         connection: request.connection,
         model: request.model,
         messages: vec![Message {
@@ -506,17 +716,6 @@ pub async fn research_test_model(request: ModelTest) -> Result<(), String> {
 }
 #[tauri::command]
 pub async fn research_ask_ai(request: AIRequest) -> Result<String, String> {
-    static BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    if BUSY.swap(true, std::sync::atomic::Ordering::SeqCst) {
-        return Err("已有模型请求正在执行，请等待当前回答完成。".into());
-    }
-    struct Release;
-    impl Drop for Release {
-        fn drop(&mut self) {
-            BUSY.store(false, std::sync::atomic::Ordering::SeqCst);
-        }
-    }
-    let _release = Release;
     let value = completion(&request, false).await?;
     let text = output(&value, request.connection.provider);
     if text.trim().is_empty() {
@@ -545,13 +744,29 @@ pub(crate) mod tests {
     pub(crate) fn server(
         responses: Vec<(&str, &str)>,
     ) -> (String, thread::JoinHandle<Vec<String>>) {
+        server_mime(
+            responses
+                .into_iter()
+                .map(|(status, body)| (status, "application/json", body))
+                .collect(),
+        )
+    }
+    pub(crate) fn server_mime(
+        responses: Vec<(&str, &str, &str)>,
+    ) -> (String, thread::JoinHandle<Vec<String>>) {
+        let replies = responses.into_iter().map(|(status, mime, body)| format!("HTTP/1.1 {status}\r\nContent-Type: {mime}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len())).collect::<Vec<_>>();
+        server_factory(replies.len(), move |index, _| replies[index].clone())
+    }
+    pub(crate) fn server_factory(
+        count: usize,
+        reply: impl Fn(usize, &str) -> String + Send + 'static,
+    ) -> (String, thread::JoinHandle<Vec<String>>) {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         listener.set_nonblocking(true).unwrap();
         let address = format!("http://{}", listener.local_addr().unwrap());
-        let replies = responses.into_iter().map(|(status, body)| format!("HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len())).collect::<Vec<_>>();
         let handle = thread::spawn(move || {
             let mut requests = vec![];
-            for reply in replies {
+            for index in 0..count {
                 let deadline = Instant::now() + Duration::from_secs(10);
                 let mut stream = loop {
                     match listener.accept() {
@@ -591,7 +806,9 @@ pub(crate) mod tests {
                         }
                     }
                 }
-                requests.push(String::from_utf8(bytes).unwrap());
+                let request = String::from_utf8(bytes).unwrap();
+                let reply = reply(index, &request);
+                requests.push(request);
                 stream.write_all(reply.as_bytes()).unwrap();
             }
             requests
@@ -753,6 +970,8 @@ pub(crate) mod tests {
             }))
             .unwrap();
             let request = AIRequest {
+                max_tokens: None,
+                temperature: None,
                 connection: connection(&url, provider),
                 model: "chat-a".into(),
                 messages: vec![

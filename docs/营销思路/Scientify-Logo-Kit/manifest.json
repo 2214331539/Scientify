@@ -1,10 +1,10 @@
 {
   "brand": "Scientify",
-  "source": "source/original-logo.png",
-  "master": "source/master-transparent.png",
+  "source": "source/build.mjs",
+  "master": "svg/scientify-mark-light.svg",
   "themeMeaning": {
-    "light": "Dark mark for light surfaces",
-    "dark": "White mark for dark surfaces"
+    "light": "Ink mark for light surfaces",
+    "dark": "White mark with lime dot for dark surfaces"
   },
   "assets": [
     {
@@ -486,21 +486,21 @@
     {
       "file": "web/icon-180.png",
       "kind": "web",
-      "theme": "light",
+      "theme": "dark",
       "width": 180,
       "height": 180
     },
     {
       "file": "web/icon-192.png",
       "kind": "web",
-      "theme": "light",
+      "theme": "dark",
       "width": 192,
       "height": 192
     },
     {
       "file": "web/icon-512.png",
       "kind": "web",
-      "theme": "light",
+      "theme": "dark",
       "width": 512,
       "height": 512
     }

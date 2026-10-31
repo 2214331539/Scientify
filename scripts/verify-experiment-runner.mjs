@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +12,9 @@ const executable = resolve(repository, process.argv[2] ?? 'target/release/scient
 const engine = join(repository, 'src-tauri/binaries/codex-x86_64-pc-windows-msvc.exe');
 assert.ok(existsSync(executable), 'Build the release application first.');
 assert.ok(existsSync(engine), 'Prepare the bundled Codex engine first.');
-const directory = await mkdtemp(join(tmpdir(), 'scientify-release-runner-'));
+const fixtures = join(repository, '.test-artifacts');
+await mkdir(fixtures, { recursive: true });
+const directory = await mkdtemp(join(fixtures, 'release-runner-'));
 const externalDirectory = await mkdtemp(join(repository, '.scientify-runner-boundary-'));
 const root = join(directory, 'code');
 const artifacts = join(directory, 'artifacts');
@@ -57,6 +58,10 @@ const child = spawn(
     'windows.sandbox="unelevated"',
     '-c',
     'features.memories=false',
+    '-c',
+    'features.plugins=false',
+    '-c',
+    'features.remote_plugin=false',
   ],
   { cwd: root, env: { ...process.env, CODEX_HOME: home }, windowsHide: true },
 );

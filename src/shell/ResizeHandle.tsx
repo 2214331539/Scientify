@@ -1,4 +1,4 @@
-import type { KeyboardEvent, PointerEvent } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react';
 
 export function ResizeHandle({
   value,
@@ -16,22 +16,36 @@ export function ResizeHandle({
   label: string;
 }) {
   const upper = Math.max(min, max);
+  const cleanup = useRef<(() => void) | null>(null);
+  useEffect(() => () => cleanup.current?.(), []);
   const clamp = (next: number) => Math.round(Math.min(upper, Math.max(min, next)));
   function start(event: PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    cleanup.current?.();
     const startX = event.clientX;
     const startValue = value;
     const target = event.currentTarget;
     target.setPointerCapture(event.pointerId);
+    target.dataset.resizing = 'true';
+    target.dataset.nativeOverlay = 'true';
     const move = (e: globalThis.PointerEvent) =>
       onChange(clamp(startValue + (e.clientX - startX) * (side === 'left' ? 1 : -1)));
     const stop = () => {
       target.removeEventListener('pointermove', move);
       target.removeEventListener('pointerup', stop);
       target.removeEventListener('lostpointercapture', stop);
+      target.removeEventListener('pointercancel', stop);
+      if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
+      delete target.dataset.resizing;
+      delete target.dataset.nativeOverlay;
+      cleanup.current = null;
     };
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerup', stop);
     target.addEventListener('lostpointercapture', stop);
+    target.addEventListener('pointercancel', stop);
+    cleanup.current = stop;
   }
   function key(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {

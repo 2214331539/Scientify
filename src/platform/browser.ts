@@ -199,7 +199,4 @@ export const browserResearch: ResearchBackend = {
   testModel: async () => {
     throw new Error(t('AI 请求通过桌面后端发送。请启动桌面应用并配置模型。'));
   },
-  fetchArxiv: async () => {
-    throw new Error(t('订阅更新通过桌面后端获取，请在桌面应用中更新。'));
-  },
 };

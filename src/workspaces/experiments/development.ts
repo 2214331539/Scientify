@@ -6,7 +6,7 @@ import { useStore } from 'zustand';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { confirmAction } from '../../components/prompts';
 import { t } from '../../i18n';
-import { describeError } from './runtime';
+import { errorMessage } from '../../domain/errors';
 
 export type Interpreter = { executable: string; version: string; prefix: string; manager: string };
 export type TerminalInfo = {
@@ -121,7 +121,7 @@ export function useDevelopmentRuntime(store: WorkspaceStore, enabled: boolean) {
             .getState()
             .setAgentTask(`python:${item.id}`, active.get(`python:${item.id}`) ?? null);
       } catch (reason) {
-        if (alive) developmentStore.setState({ error: describeError(reason) });
+        if (alive) developmentStore.setState({ error: errorMessage(reason) });
       } finally {
         polling = false;
         if (alive) timer = setTimeout(() => void poll(), pending ? 80 : 1000);

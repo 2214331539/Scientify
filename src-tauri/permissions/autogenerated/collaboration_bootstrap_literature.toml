@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-bootstrap-literature"
+description = "Enables the collaboration_bootstrap_literature command without any pre-configured scope."
+commands.allow = ["collaboration_bootstrap_literature"]
+
+[[permission]]
+identifier = "deny-collaboration-bootstrap-literature"
+description = "Denies the collaboration_bootstrap_literature command without any pre-configured scope."
+commands.deny = ["collaboration_bootstrap_literature"]

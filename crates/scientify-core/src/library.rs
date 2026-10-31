@@ -1,5 +1,6 @@
 //! Authorized local literature roots. All mutations share one queue and fail closed.
 use crate::research::{reject_links, FileContent};
+use crate::workspace::valid_id;
 use atomicwrites::{AllowOverwrite, AtomicFile, DisallowOverwrite};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -13,6 +14,15 @@ use std::{
 use uuid::Uuid;
 
 pub const PDF_LIMIT: u64 = 150 * 1024 * 1024;
+pub const AGENT_PDF_LIMIT: u64 = 50 * 1024 * 1024;
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaperSource {
+    pub path: String,
+    pub version: String,
+    pub size: u64,
+}
 const NOTE_LIMIT: u64 = 2 * 1024 * 1024;
 /// Text previews in the literature browser use the same conservative bound as
 /// project files. Binary files remain available through the external opener.
@@ -26,13 +36,6 @@ fn digest(bytes: &[u8]) -> String {
 }
 fn portable(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
-}
-fn id_valid(id: &str) -> bool {
-    !id.is_empty()
-        && id.len() <= 80
-        && id
-            .bytes()
-            .all(|v| v.is_ascii_alphanumeric() || v == b'-' || v == b'_')
 }
 fn relative(path: &str, root: bool) -> Result<PathBuf> {
     if root && path.is_empty() {
@@ -251,14 +254,14 @@ impl LocalLibrary {
             .map_err(|_| "文献根目录映射损坏，已停止修改。")?;
         if roots
             .iter()
-            .any(|(id, root)| !id_valid(id) || !Path::new(root).is_absolute())
+            .any(|(id, root)| !valid_id(id) || !Path::new(root).is_absolute())
         {
             return Err("文献根目录映射无效。".into());
         }
         Ok(roots)
     }
     pub fn root(&self, project: &str) -> Result<Option<PathBuf>> {
-        if !id_valid(project) {
+        if !valid_id(project) {
             return Err("项目标识无效。".into());
         }
         self.roots()?
@@ -318,7 +321,7 @@ impl LocalLibrary {
         for p in &index.papers {
             self.resolve(root, &p.path, false)?;
             self.resolve(root, &p.note_path, false)?;
-            if !id_valid(&p.id)
+            if !valid_id(&p.id)
                 || !p.path.to_lowercase().ends_with(".pdf")
                 || !p.note_path.to_lowercase().ends_with(".md")
                 || !ids.insert(&p.id)
@@ -342,7 +345,7 @@ impl LocalLibrary {
     }
     pub fn mount(&self, project: &str, root: &Path) -> Result<Scan> {
         let _guard = self.gate.lock().map_err(err)?;
-        if !id_valid(project) {
+        if !valid_id(project) {
             return Err("项目标识无效。".into());
         }
         let root = self.check_root(root)?;
@@ -546,6 +549,12 @@ impl LocalLibrary {
         self.write_index(&root, &index)?;
         Ok(result)
     }
+    /// Read one registered paper without scanning the library or creating a binding.
+    pub fn binding(&self, project: &str, id: &str) -> Result<Option<Binding>> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        Ok(self.index(&root)?.papers.into_iter().find(|p| p.id == id))
+    }
     pub fn scan(&self, project: &str) -> Result<Scan> {
         let _g = self.gate.lock().map_err(err)?;
         match self.root(project)? {
@@ -573,6 +582,60 @@ impl LocalLibrary {
             .any(|v| v == b"%PDF-")
         {
             return Err("不是有效的 PDF 文件。".into());
+        }
+        Ok(bytes)
+    }
+
+    fn paper_root(&self, project: &str, expected: &Path) -> Result<PathBuf> {
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        if root != expected {
+            return Err("文献目录已变化，请在新目录创建会话。".into());
+        }
+        Ok(root)
+    }
+
+    /// Discover on disk without binding papers, creating notes, or writing an index.
+    pub fn papers(&self, project: &str, expected: &Path, directory: &str) -> Result<Vec<Entry>> {
+        let _guard = self.gate.lock().map_err(err)?;
+        let root = self.paper_root(project, expected)?;
+        let directory = if directory == "." { "" } else { directory };
+        relative(directory, true)?;
+        let mut entries = self.walk(&root)?;
+        entries
+            .retain(|entry| entry.pdf && (directory.is_empty() || below(&entry.path, directory)));
+        Ok(entries)
+    }
+
+    pub fn paper_source(&self, project: &str, expected: &Path, path: &str) -> Result<PaperSource> {
+        let _guard = self.gate.lock().map_err(err)?;
+        let root = self.paper_root(project, expected)?;
+        if !path.to_ascii_lowercase().ends_with(".pdf") {
+            return Err("请选择 PDF 文件。".into());
+        }
+        let full = self.resolve(&root, path, false)?;
+        let metadata = fs::metadata(&full).map_err(err)?;
+        if !metadata.is_file() || metadata.len() > AGENT_PDF_LIMIT {
+            return Err("AI 论文读取支持不超过 50 MiB 的 PDF。".into());
+        }
+        Ok(PaperSource {
+            path: path.into(),
+            version: self.fingerprint(&full)?,
+            size: metadata.len(),
+        })
+    }
+
+    pub fn paper_bytes(
+        &self,
+        project: &str,
+        expected: &Path,
+        path: &str,
+        version: &str,
+    ) -> Result<Vec<u8>> {
+        let _guard = self.gate.lock().map_err(err)?;
+        let root = self.paper_root(project, expected)?;
+        let bytes = bounded(&self.resolve(&root, path, false)?, AGENT_PDF_LIMIT)?;
+        if digest(&bytes) != version {
+            return Err("document_changed：PDF 已变化，请重新读取。".into());
         }
         Ok(bytes)
     }

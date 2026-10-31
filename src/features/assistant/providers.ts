@@ -1,4 +1,4 @@
-import type { AIProtocol } from '../../platform/research';
+import type { AIProtocol } from '../../domain/workspace';
 import type { AISettings } from './model';
 
 /** Service branding is separate from the wire protocol. Models always come from the service. */
@@ -8,6 +8,12 @@ export const modelServices: {
   provider: AIProtocol;
   endpoints: { name: string; url: string }[];
 }[] = [
+  {
+    id: 'scientify',
+    name: 'Scientify 官方模型',
+    provider: 'openai',
+    endpoints: [{ name: '协作服务器', url: 'http://127.0.0.1:8081' }],
+  },
   {
     id: 'openai',
     name: 'OpenAI',

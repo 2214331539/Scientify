@@ -338,6 +338,29 @@ impl ExperimentState {
             return Err("工作目录不存在。".into());
         }
         let executable = resolve_program(&root, &config.executable)?;
+        // Snapshot Git state before taking the run table lock: these are several git
+        // subprocesses, and the list, log and stop commands wait on the same lock.
+        let repository = crate::git::repository_root(&root)
+            .ok()
+            .filter(|repo| {
+                !self
+                    .directory
+                    .parent()
+                    .is_some_and(|data| root.starts_with(data))
+                    || *repo == root
+            })
+            .unwrap_or_else(|| root.clone());
+        let git_changes: Vec<String> = research::git_status(&repository)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|c| format!("{} {}", c.status, c.path))
+            .collect();
+        let git_commit = research::git_head(&repository).ok();
+        let branch = if repository.join(".git").exists() {
+            crate::git::inspect(&repository).ok().and_then(|s| s.branch)
+        } else {
+            None
+        };
         let mut entries = self.entries.lock().map_err(|e| e.to_string())?;
         if let Some(source) = &source {
             for entry in entries.values() {
@@ -362,22 +385,6 @@ impl ExperimentState {
         let lease = crate::code::Lease::run(&root)?;
         let directory = self.directory.join(&id);
         scientify_core::research::reject_links(&directory)?;
-        let repository = crate::git::repository_root(&root)
-            .ok()
-            .filter(|repo| {
-                !self
-                    .directory
-                    .parent()
-                    .is_some_and(|data| root.starts_with(data))
-                    || *repo == root
-            })
-            .unwrap_or_else(|| root.clone());
-        let git_changes = research::git_status(&repository)
-            .unwrap_or_default()
-            .into_iter()
-            .map(|c| format!("{} {}", c.status, c.path))
-            .collect();
-        let git_commit = research::git_head(&repository).ok();
         let run = Run {
             id: id.clone(),
             project,
@@ -405,11 +412,7 @@ impl ExperimentState {
             }
             .into(),
             workspace_root: root.display().to_string(),
-            branch: if repository.join(".git").exists() {
-                crate::git::inspect(&repository).ok().and_then(|s| s.branch)
-            } else {
-                None
-            },
+            branch,
         };
         fs::create_dir_all(directory.join("artifacts")).map_err(|e| e.to_string())?;
         let private = directory.join("artifacts/.scientify");
@@ -465,9 +468,17 @@ impl ExperimentState {
                 "--nocapture".into(),
             ];
             fs::write(private.join("heartbeat"), "alive").map_err(|e| e.to_string())?;
-            serde_json::json!({"command":argv,"processId":id,"cwd":process_path(&cwd),"disableTimeout":true,
-                "env":{"PYTHONUNBUFFERED":"1","SCIENTIFY_RUN_DIR":artifacts,"SCIENTIFY_FIXTURE_RUNNER":request},
-                "sandboxPolicy":execution::policy(&process_path(&root),Some(&artifacts))})
+            #[cfg_attr(not(test), allow(unused_mut))]
+            let mut params = serde_json::json!({"command":argv,"processId":id,"cwd":process_path(&cwd),"disableTimeout":true,
+                "env":{"PYTHONUNBUFFERED":"1","SCIENTIFY_RUN_DIR":artifacts},
+                "sandboxPolicy":execution::policy(&process_path(&root),Some(&artifacts))});
+            // Release builds pass the request path as an argument; the test binary's runner
+            // fixture reads it from the environment instead.
+            #[cfg(test)]
+            {
+                params["env"]["SCIENTIFY_FIXTURE_RUNNER"] = serde_json::json!(request);
+            }
+            params
         };
         if let Some(environment) = &environment {
             for (key, value) in &environment.variables {

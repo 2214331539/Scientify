@@ -5,6 +5,43 @@ dialog.settings-dialog.sf-model-settings-dialog {
 .sf-model-settings-dialog .settings-navigation .sf-button {
   flex-shrink: 0;
 }
+.sf-model-profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.sf-model-profile-list .sf-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-model-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--sf-text-secondary);
+}
+.sf-model-capabilities p {
+  width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.sf-ai-model-verification {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--sf-text-secondary);
+}
+.sf-model-manual {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
 .sf-model-discovery-actions {
   display: flex;
   gap: 12px;

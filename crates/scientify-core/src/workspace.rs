@@ -17,7 +17,7 @@ pub fn empty() -> Value {
         "navigation":{"tabs":["home"],"active":"home","expanded":[],"panel":null}})
 }
 
-fn id_valid(id: &str) -> bool {
+pub fn valid_id(id: &str) -> bool {
     !id.is_empty()
         && id.len() <= 80
         && id
@@ -49,6 +49,100 @@ fn strings(items: &[Value], fields: &[&str]) -> Result<(), String> {
     Ok(())
 }
 
+fn model_connection(value: &Value) -> Result<(), String> {
+    if !value.is_object()
+        || !value["endpoint"].as_str().is_some_and(|s| s.len() <= 4096)
+        || !value["model"].as_str().is_some_and(|s| s.len() <= 256)
+        || !matches!(
+            value["provider"].as_str(),
+            Some("ollama" | "openai" | "anthropic" | "gemini")
+        )
+        || value.get("apiKey").is_some()
+        || value.get("api_key").is_some()
+    {
+        return Err("模型连接配置无效，密钥只能保存在本机凭据文件。".into());
+    }
+    if let Some(catalog) = value.get("modelCatalog") {
+        if !catalog.as_array().is_some_and(|a| {
+            a.len() <= 5000 && a.iter().all(|m| m.as_str().is_some_and(|s| s.len() <= 256))
+        }) {
+            return Err("模型列表格式无效。".into());
+        }
+    }
+    if let Some(check) = value.get("verification") {
+        if !check.is_object()
+            || !check["model"].is_string()
+            || !check["checkedAt"].is_string()
+            || !check["chat"].is_boolean()
+            || !check["agent"].is_boolean()
+        {
+            return Err("模型验证记录格式无效。".into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_web_sources(data: &Value) -> Result<(), String> {
+    let Some(sources) = data.get("webSources") else {
+        return Ok(());
+    };
+    let fail = || "个人信息源数据无效，请检查导入文件。".to_string();
+    let groups = sources["groups"]
+        .as_array()
+        .filter(|a| a.len() <= 100)
+        .ok_or_else(fail)?;
+    let items = sources["items"]
+        .as_array()
+        .filter(|a| a.len() <= 2000)
+        .ok_or_else(fail)?;
+    let text = |v: &Value, max: usize| {
+        v.as_str()
+            .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= max)
+    };
+    let order = |v: &Value| v.as_u64().is_some_and(|n| n <= MAX_REVISION);
+    let mut ids = HashSet::new();
+    for group in groups {
+        let id = group["id"]
+            .as_str()
+            .filter(|s| valid_id(s))
+            .ok_or_else(fail)?;
+        if !ids.insert(id) || !text(&group["name"], 200) || !order(&group["order"]) {
+            return Err(fail());
+        }
+    }
+    let mut item_ids = HashSet::new();
+    let mut urls = HashSet::new();
+    for item in items {
+        let id = item["id"]
+            .as_str()
+            .filter(|s| valid_id(s))
+            .ok_or_else(fail)?;
+        let url = item["url"].as_str().ok_or_else(fail)?;
+        let address = url
+            .strip_prefix("https://")
+            .or_else(|| url.strip_prefix("http://"))
+            .ok_or_else(fail)?;
+        let authority = address.split(['/', '?', '#']).next().unwrap_or("");
+        if !item_ids.insert(id)
+            || !urls.insert(url)
+            || !text(&item["title"], 200)
+            || url.len() > 8192
+            || authority.is_empty()
+            || authority.contains('@')
+            || url.chars().any(|c| c.is_control() || c.is_whitespace())
+            || !order(&item["order"])
+            || !text(&item["createdAt"], 100)
+            || !text(&item["updatedAt"], 100)
+            || item
+                .get("groupId")
+                .is_some_and(|g| !g.as_str().is_some_and(|g| ids.contains(g)))
+        {
+            return Err(fail());
+        }
+    }
+    Ok(())
+}
+
 /// Normalize schema 3 without discarding fields from features not migrated yet.
 pub fn validate(mut data: Value) -> Result<Value, String> {
     if data["schema"] != 3 {
@@ -58,6 +152,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         return Err("工作区格式无效。".into());
     }
     normalize_experiments(&mut data)?;
+    validate_web_sources(&data)?;
     for key in [
         "projects",
         "experiments",
@@ -72,7 +167,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         for item in array(&data, key)? {
             let id = item["id"]
                 .as_str()
-                .filter(|s| id_valid(s))
+                .filter(|s| valid_id(s))
                 .ok_or("记录标识无效。")?;
             if !ids.insert(id) {
                 return Err("工作区包含重复的记录标识。".into());
@@ -189,7 +284,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
     for team in array(&data, "teams")? {
         let id = team["id"]
             .as_str()
-            .filter(|s| id_valid(s) && *s != "personal")
+            .filter(|s| valid_id(s) && *s != "personal")
             .ok_or("团队标识无效。")?;
         if !team_ids.insert(id) || !team["name"].as_str().is_some_and(|s| !s.trim().is_empty()) {
             return Err("团队信息无效。".into());
@@ -243,6 +338,42 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
     {
         return Err("工作区设置格式无效。".into());
     }
+    if let Some(profiles) = data["settings"].get("modelProfiles") {
+        let profiles = profiles
+            .as_array()
+            .filter(|a| a.len() <= 100)
+            .ok_or("模型连接列表无效或过多。")?;
+        let mut ids = HashSet::new();
+        for profile in profiles {
+            let id = profile["id"]
+                .as_str()
+                .filter(|s| valid_id(s))
+                .ok_or("模型连接标识无效。")?;
+            if !ids.insert(id)
+                || !profile["name"]
+                    .as_str()
+                    .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= 80)
+            {
+                return Err("模型连接名称无效或标识重复。".into());
+            }
+            model_connection(profile)?;
+        }
+    }
+    if data["settings"]
+        .get("defaultModelProfileId")
+        .is_some_and(|v| !v.as_str().is_some_and(valid_id))
+    {
+        return Err("默认模型连接标识无效。".into());
+    }
+    for chat in array(&data, "sessions")? {
+        if let Some(selection) = chat.get("modelSelection") {
+            if !selection["profileId"].as_str().is_some_and(valid_id) {
+                return Err("会话模型选择无效。".into());
+            }
+            // A saved snapshot remains valid even after a profile is removed.
+            model_connection(&selection["settings"])?;
+        }
+    }
     if !data["navigation"]["tabs"]
         .as_array()
         .is_some_and(|a| a.iter().all(Value::is_string))
@@ -259,7 +390,7 @@ pub fn validate(mut data: Value) -> Result<Value, String> {
         if !matches!(
             entry["collection"].as_str(),
             Some("records" | "papers" | "runs" | "sessions")
-        ) || !entry["value"]["id"].as_str().is_some_and(id_valid)
+        ) || !entry["value"]["id"].as_str().is_some_and(valid_id)
         {
             return Err("回收站数据无效。".into());
         }

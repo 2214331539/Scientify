@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/2214331539/Yita",
+  "revision": "487a6ead65703ab47abb850eb9f21583b4598344",
+  "sourceDirectories": [
+    "src",
+    "tests"
+  ],
+  "integration": "Scientify embedded mode; local changes documented in README.scientify.md"
+}

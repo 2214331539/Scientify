@@ -1,4 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
+import type { AIProtocol } from '../domain/workspace';
 
 export interface ResearchFile {
   path: string;
@@ -21,19 +22,35 @@ export interface GitChange {
   status: string;
   oldPath?: string;
 }
-export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini';
 export interface AIConnection {
   endpoint: string;
   apiKey?: string;
   provider: AIProtocol;
 }
+export type AIContentPart =
+  { type: 'text'; text: string } | { type: 'image'; mimeType: string; data: string };
+export type AIContent = string | AIContentPart[];
 export interface AIModel {
   id: string;
   name: string;
 }
 export interface AIRequest extends AIConnection {
   model: string;
-  messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
+  messages: { role: 'system' | 'user' | 'assistant'; content: AIContent }[];
+}
+export interface ModelVerification {
+  chat: boolean;
+  agent: boolean;
+  chatError?: string | null;
+  agentError?: string | null;
+}
+export interface ChatResult {
+  text: string;
+  interrupted: boolean;
+}
+export interface ChatStream {
+  result: Promise<ChatResult>;
+  cancel(): Promise<void>;
 }
 export interface ResearchBackend {
   listFiles(projectId: string, workspaceRoot?: string): Promise<ResearchFile[]>;
@@ -51,8 +68,12 @@ export interface ResearchBackend {
   askAI(request: AIRequest): Promise<string>;
   listModels(request: AIConnection): Promise<AIModel[]>;
   testModel(request: AIConnection & { model: string }): Promise<void>;
-  fetchArxiv(query: string): Promise<string>;
+  verifyModel?(request: AIConnection & { model: string }): Promise<ModelVerification>;
+  streamAI?(request: AIRequest, onDelta: (text: string) => void): ChatStream;
 }
+
+export type FileBackend = Pick<ResearchBackend, 'readFile' | 'writeFile'>;
+export type PdfBackend = Pick<ResearchBackend, 'readPdf'>;
 
 export const nativeResearch: ResearchBackend = {
   listFiles: (projectId, workspaceRoot) =>
@@ -68,5 +89,27 @@ export const nativeResearch: ResearchBackend = {
   askAI: (request) => invoke('research_ask_ai', { request }),
   listModels: (request) => invoke('research_list_models', { request }),
   testModel: (request) => invoke('research_test_model', { request }),
-  fetchArxiv: (query) => invoke('research_fetch_arxiv', { query }),
+  verifyModel: (request) => invoke('research_verify_model', { request }),
+  streamAI: (request, onDelta) => {
+    const requestId = crypto.randomUUID();
+    let registered!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      registered = resolve;
+    });
+    const channel = new Channel<{ type: 'ready' } | { type: 'delta'; text: string }>();
+    channel.onmessage = (event) => {
+      if (event.type === 'delta') onDelta(event.text);
+      else registered();
+    };
+    const result = invoke<ChatResult>('research_chat_stream', { requestId, request, channel });
+    return {
+      result,
+      cancel: async () => {
+        // Cancellation must reach a registered request. A startup failure also
+        // settles this wait and propagates instead of leaving Stop stuck.
+        await Promise.race([ready, result]);
+        await invoke<void>('research_chat_cancel', { requestId });
+      },
+    };
+  },
 };

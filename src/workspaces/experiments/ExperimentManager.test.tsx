@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { emptyWorkspace, normalizeExperiments } from '../../domain/workspace';
 import { createWorkspaceStore } from '../../stores/workspace';
 import { ExperimentManager } from './ExperimentManager';
@@ -12,14 +12,6 @@ vi.mock('../../components/prompts', () => ({
   confirmAction: vi.fn(async () => true),
   requestText: vi.fn(async () => 'Renamed'),
 }));
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
-});
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();

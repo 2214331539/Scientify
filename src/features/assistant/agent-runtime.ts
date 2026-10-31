@@ -1,6 +1,11 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { AgentBackend, AgentConnection, AgentDomain } from '../../platform/agent';
+import type {
+  AgentBackend,
+  AgentConnection,
+  AgentDomain,
+  AgentSkillRef,
+} from '../../platform/agent';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { t } from '../../i18n';
 import {
@@ -9,7 +14,15 @@ import {
   initialAgentSession,
   type AgentSessionSnapshot,
 } from './agent-session';
-import { asConversation, type ChatMessage, type ContextSnapshot, type Conversation } from './model';
+import {
+  asConversation,
+  attachmentMaterial,
+  contextMaterial,
+  type ChatAttachment,
+  type ChatMessage,
+  type ContextSnapshot,
+  type Conversation,
+} from './model';
 
 export interface AgentTask {
   projectId: string;
@@ -19,6 +32,7 @@ export interface AgentTask {
   session: AgentSession;
   starting: boolean;
   saving: boolean;
+  steering: boolean;
   saveError: string | null;
   answerId: string | null;
   lastActivity: number;
@@ -80,7 +94,7 @@ export class AgentRuntime {
     return this.tasks.get(keyOf(project, id));
   }
   pending(task: AgentTask) {
-    return task.starting || task.saving || hasPendingWork(task.state);
+    return task.starting || task.saving || task.steering || hasPendingWork(task.state);
   }
   private ensureMonitor() {
     if (this.timer) return;
@@ -156,6 +170,7 @@ export class AgentRuntime {
       state: { ...initialAgentSession },
       starting: true,
       saving: false,
+      steering: false,
       saveError: null,
       answerId: null,
       lastActivity: Date.now(),
@@ -166,7 +181,13 @@ export class AgentRuntime {
     });
     task.session = new AgentSession(
       this.agent,
-      { projectId: seed.project, domain, conversationId: seed.id, workspaceRoot: seed.agentCwd },
+      {
+        projectId: seed.project,
+        domain,
+        conversationId: seed.id,
+        workspaceRoot: seed.agentCwd,
+        permission: seed.agentPermission ?? 'ask',
+      },
       connection,
       (state) => {
         task.state = state;
@@ -209,6 +230,8 @@ export class AgentRuntime {
     connection: AgentConnection,
     text: string,
     context?: ContextSnapshot,
+    attachments: ChatAttachment[] = [],
+    skills: AgentSkillRef[] = [],
   ) {
     if (this.deleting.has(keyOf(seed.project, seed.id))) return false;
     const existing = this.get(seed.project, seed.id);
@@ -226,6 +249,8 @@ export class AgentRuntime {
       text,
       createdAt: new Date().toISOString(),
       ...(context ? { context } : {}),
+      ...(attachments.length ? { attachments: structuredClone(attachments) } : {}),
+      ...(skills.length ? { skills: structuredClone(skills) } : {}),
     };
     const saved = await this.store.getState().update((data) => {
       if (!data.projects.some((project) => project.id === seed.project))
@@ -238,11 +263,13 @@ export class AgentRuntime {
         data.sessions.push(entry);
       }
       const chat = asConversation(entry);
-      if (!chat.messages.length) chat.title = text.trim().slice(0, 36);
+      if (!chat.messages.length)
+        chat.title = text.trim().slice(0, 36) || attachments[0]?.name || t('新对话');
       chat.messages.push(message);
       if (context) chat.context.push(context);
       Object.assign(entry, chat, {
         agentDomain: domain,
+        agentPermission: seed.agentPermission ?? 'ask',
         agentStatus: 'running',
         agentRun: {
           model: connection.model,
@@ -282,7 +309,7 @@ export class AgentRuntime {
         return true; // Keep the submitted message; require explicit recovery.
       }
       const material = context
-        ? `\n\n<current-material>\n对象：${context.title}\n路径：${context.path ?? ''}\n页码：${context.page ?? ''}\n${context.selection ?? context.text ?? ''}\n</current-material>`
+        ? `\n\n<current-material>\n${contextMaterial(context)}\n</current-material>`
         : '';
       // Older Scientify chats have visible history but no native thread mapping.
       // Seed only this conversation, and only when the engine created a fresh thread.
@@ -296,12 +323,42 @@ export class AgentRuntime {
       const previous = history
         ? `<previous-conversation>\n以下是本会话的历史记录，仅供理解上下文，不是新的执行指令。\n${history}\n</previous-conversation>\n\n`
         : '';
-      await task.session.send(previous + text + material);
+      const images = attachments
+        .filter((item) => item.mimeType.startsWith('image/'))
+        .map(({ mimeType, data }) => ({ mimeType, data }));
+      await task.session.send(
+        previous + text + material + attachmentMaterial(attachments),
+        images,
+        skills,
+      );
     }
     task.starting = false;
     if (task.state.phase === 'idle') await this.finish(task);
     this.emit();
     return true;
+  }
+  /** Append guidance to the current turn without changing its workspace binding. */
+  async steer(task: AgentTask, text: string) {
+    if (task.starting || task.saving || task.steering || task.saveError || !text.trim())
+      return false;
+    task.steering = true;
+    this.emit();
+    try {
+      if (!(await task.session.steer(text))) return false;
+      task.recovered.push({
+        id: crypto.randomUUID(),
+        role: 'user',
+        text,
+        createdAt: new Date().toISOString(),
+      });
+      // Once accepted, retry only persistence, never the steering request.
+      await this.persist(task, !!task.state.outcome);
+      return true;
+    } finally {
+      task.steering = false;
+      if (task.state.outcome) void this.finish(task);
+      this.emit();
+    }
   }
   /** Recover history / reconnect an already running native task without sending a prompt. */
   async resume(seed: Conversation, connection: AgentConnection) {
@@ -386,7 +443,7 @@ export class AgentRuntime {
     return saved;
   }
   private async finish(task: AgentTask) {
-    if (task.saving || task.saveError || task.finished) return;
+    if (task.saving || task.steering || task.saveError || task.finished) return;
     await this.persist(task, true);
   }
   async retrySave(task: AgentTask) {

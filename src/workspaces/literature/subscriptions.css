@@ -1,0 +1,86 @@
+.subscription-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 1;
+  padding: 12px 8px;
+}
+.source-heading,
+.source-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+}
+.source-heading h3 {
+  flex: 1;
+  margin: 0 4px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.source-list {
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+.source-empty {
+  margin: 8px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.source-group ul {
+  list-style: none;
+  padding: 0 0 4px 10px;
+  margin: 0;
+}
+.source-row > .sf-button:first-child {
+  flex: 1;
+  justify-content: flex-start;
+  min-width: 0;
+  font-size: 12px;
+}
+.source-row > .sf-button:first-child span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-row svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+.source-group-heading svg {
+  transition: transform var(--sf-motion-content) var(--sf-ease-standard);
+}
+.source-group-heading svg.collapsed {
+  transform: rotate(-90deg);
+}
+.source-recommendations {
+  border-top: 1px solid var(--sf-border-subtle);
+  justify-content: flex-start;
+}
+.source-recommendations small {
+  margin-left: auto;
+  color: var(--sf-text-muted);
+}
+dialog.source-dialog {
+  width: min(440px, calc(100vw - 40px));
+}
+.source-form :is(label, input, select) {
+  min-width: 0;
+}
+.source-form :is(input, select) {
+  width: 100%;
+}
+.source-form > button {
+  align-self: flex-end;
+}
+.browser-address .sf-button[aria-pressed='true'] {
+  color: var(--sf-text-primary);
+}
+.browser-address .sf-button[aria-pressed='true'] svg {
+  fill: currentColor;
+}

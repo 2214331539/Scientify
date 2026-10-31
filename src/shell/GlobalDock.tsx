@@ -1,5 +1,12 @@
 import { t } from '../i18n';
-import { useCallback, useRef, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { Bot, NotebookPen, X } from 'lucide-react';
 import { Button } from '../components/primitives';
 import type { WorkContext } from '../domain/context';
@@ -8,7 +15,12 @@ import type { WorkspaceStore } from '../stores/workspace';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
 import { NotesPanel } from '../features/notes/NotesPanel';
 import { scopeFor } from '../features/notes/model';
+import {
+  translationConversation,
+  type TranslationConversationRequest,
+} from '../features/translation/conversations';
 import './auxiliary.css';
+import { translationWindow, watchTranslationWindow } from '../features/translation/window';
 
 export interface GlobalDockProps {
   store: WorkspaceStore;
@@ -22,6 +34,9 @@ export interface GlobalDockProps {
   onToolChange: (tool: 'assistant' | 'notes') => void;
   onClose: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+  workspaceContent?: ReactNode;
+  notesLayerRef?: RefObject<HTMLElement | null>;
+  notesWorkspaceActive?: boolean;
 }
 
 function AuxiliarySession({
@@ -83,8 +98,58 @@ export function GlobalDock({
   onToolChange,
   onClose,
   onDirtyChange,
+  workspaceContent,
+  notesLayerRef,
+  notesWorkspaceActive = notesWorkspace,
 }: GlobalDockProps) {
   const scope = scopeFor(context);
+  const handoffTarget = useRef({ scope, onToolChange });
+  handoffTarget.current = { scope, onToolChange };
+  useEffect(
+    () =>
+      watchTranslationWindow(
+        'translation-conversation-request',
+        async () => {
+          const requests = await translationWindow<TranslationConversationRequest[] | null>({
+            type: 'takeConversations',
+          });
+          for (const request of requests ?? []) {
+            let result: unknown;
+            try {
+              const target = handoffTarget.current;
+              result = await translationConversation(
+                store,
+                backend,
+                target.scope,
+                request,
+                (id, draft) => {
+                  target.onToolChange('assistant');
+                  let accepted = false;
+                  window.dispatchEvent(
+                    new CustomEvent('scientify-assistant-open-session', {
+                      detail: {
+                        scope: target.scope,
+                        id,
+                        draft,
+                        accept: () => {
+                          accepted = true;
+                        },
+                      },
+                    }),
+                  );
+                  if (!accepted) throw new Error('请先保存当前草稿或处理附件，再跳转到此会话。');
+                },
+              );
+            } catch (error) {
+              result = { error: String(error) };
+            }
+            await translationWindow({ type: 'conversationReply', id: request.id, result });
+          }
+        },
+        (error) => store.setState({ error: String(error) }),
+      ),
+    [store, backend],
+  );
   const scopes = useRef(new Map<string, WorkContext>());
   const dirtySources = useRef(new Set<string>());
   const dirtyCallback = useRef(onDirtyChange);
@@ -97,9 +162,17 @@ export function GlobalDock({
     if (before !== dirtySources.current.size > 0)
       dirtyCallback.current?.(dirtySources.current.size > 0);
   }, []);
-  const sideVisible = open && (!notesWorkspace || tool === 'assistant');
-  const notesVisible = notesWorkspace || (open && tool === 'notes');
+  const integrated = workspaceContent !== undefined;
+  const sideVisible = open && (!notesWorkspaceActive || tool !== 'notes');
+  const notesVisible = notesWorkspaceActive || (open && tool === 'notes' && !notesWorkspace);
   const assistantVisible = open && tool === 'assistant';
+  useLayoutEffect(() => {
+    if (!notesWorkspace && notesLayerRef?.current) {
+      notesLayerRef.current.hidden = !notesVisible;
+      notesLayerRef.current.inert = !notesVisible;
+      notesLayerRef.current.setAttribute('aria-hidden', String(!notesVisible));
+    }
+  }, [notesWorkspace, notesVisible, notesLayerRef]);
   const sessions = (current: 'assistant' | 'notes') =>
     [...scopes.current.entries()].map(([sessionScope, scopedContext]) => (
       <AuxiliarySession
@@ -111,23 +184,21 @@ export function GlobalDock({
         store={store}
         backend={backend}
         markDirty={markDirty}
-        onNoteContext={notesWorkspace ? onNoteContext : undefined}
+        onNoteContext={notesWorkspaceActive ? onNoteContext : undefined}
       />
     ));
   return (
     <div
-      className={`sf-dock-layout${notesWorkspace ? ' has-notes-workspace' : ' auxiliary-surface'}`}
+      className={`sf-dock-layout${notesWorkspace ? ' has-notes-workspace' : ' auxiliary-surface'}${integrated ? ' sf-workspace-layout' : ''}`}
       data-side-open={sideVisible}
       data-tool={tool}
-      hidden={!notesWorkspace && !open}
-      role={notesWorkspace ? undefined : 'complementary'}
-      aria-label={notesWorkspace ? undefined : t('全局辅助工具')}
+      hidden={!integrated && !notesWorkspace && !open}
+      role={integrated || notesWorkspace ? undefined : 'complementary'}
+      aria-label={integrated || notesWorkspace ? undefined : t('全局辅助工具')}
     >
+      {integrated && <div className="sf-dock-main">{workspaceContent}</div>}
       <div className="sf-dock-resize" hidden={!sideVisible}>
         {resizeHandle}
-      </div>
-      <div className="sf-dock-header sf-notes-workspace-header" hidden={!notesWorkspace}>
-        <span className="workspace-name">{t('Notes')}</span>
       </div>
       <div className="sf-dock-header sf-dock-shared-header" hidden={!sideVisible}>
         <div className="sf-dock-tabs" role="group" aria-label={t('辅助工具切换')}>
@@ -156,13 +227,19 @@ export function GlobalDock({
         </Button>
       </div>
       <div
+        ref={notesLayerRef as RefObject<HTMLDivElement | null> | undefined}
         className={`sf-dock-layer sf-dock-notes sf-global-dock${notesWorkspace ? ' notes-workspace-surface' : ''}`}
         data-active={notesVisible}
         aria-hidden={!notesVisible}
         inert={!notesVisible}
-        role={notesWorkspace ? 'main' : undefined}
-        aria-label={notesWorkspace ? t('Notes workspace') : t('Notes')}
+        role={notesWorkspaceActive ? 'main' : integrated ? 'complementary' : undefined}
+        aria-label={
+          notesWorkspaceActive ? t('Notes workspace') : integrated ? t('全局辅助工具') : t('Notes')
+        }
       >
+        <div className="sf-dock-header sf-notes-workspace-header" hidden={!notesWorkspace}>
+          <span className="workspace-name">{t('Notes')}</span>
+        </div>
         {sessions('notes')}
       </div>
       <aside

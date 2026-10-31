@@ -168,6 +168,125 @@ dialog.settings-dialog[open] {
   font-size: 18px;
   font-weight: 600;
 }
+.settings-collaboration-status {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  padding: 14px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.settings-collaboration-status strong {
+  color: var(--sf-text-primary);
+}
+.settings-collaboration-login,
+.settings-collaboration-projects {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+}
+.settings-collaboration-login h3,
+.settings-collaboration-projects h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-collaboration-login-fields,
+.settings-collaboration-code {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.settings-collaboration-login-fields {
+  flex-direction: column;
+}
+.settings-collaboration-code input {
+  min-width: 0;
+  flex: 1;
+}
+.settings-collaboration-account,
+.settings-collaboration-projects-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-collaboration-account p {
+  margin: 0;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.settings-collaboration-project-list {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.settings-collaboration-project-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sf-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.settings-collaboration-project-list button:hover,
+.settings-collaboration-project-list button.active {
+  border-color: var(--sf-border-subtle);
+  background: var(--sf-surface-chrome);
+}
+.settings-collaboration-project-list small {
+  color: var(--sf-text-muted);
+}
+.settings-collaboration-issues {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+}
+.settings-collaboration-issues h3 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-collaboration-issue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.settings-collaboration-issue > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.settings-collaboration-issue-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+.settings-collaboration-issue strong {
+  font-size: 12px;
+}
+.settings-collaboration-issue span,
+.settings-collaboration-issue small {
+  overflow-wrap: anywhere;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
 @media (max-width: 640px) {
   dialog.settings-dialog {
     width: calc(100vw - 24px);
@@ -187,4 +306,19 @@ dialog.settings-dialog[open] {
   .settings-data .setting-row {
     flex-direction: column;
   }
+}
+.settings-translation .setting-row select,
+.settings-translation .setting-row input[type='text'],
+.settings-shortcut-input {
+  min-width: 120px;
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+  background: var(--sf-surface-canvas);
+}
+.settings-translation .setting-row input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--sf-accent);
 }

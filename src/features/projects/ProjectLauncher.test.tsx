@@ -13,12 +13,6 @@ beforeAll(() => {
   window.matchMedia = vi
     .fn()
     .mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() });
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
 });
 afterEach(() => {
   cleanup();
@@ -54,7 +48,7 @@ it('switches project views, filters records and provides a static profile with o
   data.projects.push(project('Alpha'), project('Beta'));
   const { user } = fixture(data);
   await screen.findByRole('button', { name: 'Alpha' });
-  expect(screen.getByLabelText('登录入口占位').tagName).toBe('DIV');
+  expect(screen.getByRole('button', { name: '登录协作' })).toBeTruthy();
   for (const name of ['全部项目', '已收藏', '已归档', '数据与备份', '关于 MVP'])
     expect(screen.queryByRole('button', { name })).toBeNull();
   expect(screen.queryByRole('combobox', { name: '项目排序' })).toBeNull();
@@ -72,41 +66,22 @@ it('switches project views, filters records and provides a static profile with o
   expect(localStorage.getItem('scientify.projects.view')).toBe('list');
 });
 
-it('creates and edits a team, assigns projects and moves them safely when deleting the team', async () => {
-  const { user, store } = fixture();
-  await screen.findByText('暂无项目');
+it('shows the collaboration sign-in surface and preserves existing teams and projects without writes', async () => {
+  const data = emptyWorkspace();
+  data.teams.push({ id: 'team', name: 'Vision lab', color: '#657b71' });
+  data.projects.push(project('Personal research'), project('Team research', 'team'));
+  const { user, store, save } = fixture(data);
+  await screen.findByRole('button', { name: 'Personal research' });
   await user.click(screen.getByRole('button', { name: '团队协作空间' }));
-  await user.click(screen.getAllByRole('button', { name: '创建团队空间' })[0]);
-  await user.type(screen.getByLabelText('团队名称'), 'Vision lab');
-  await user.click(screen.getByRole('button', { name: '保存团队' }));
-  await waitFor(() => expect(store.getState().data?.teams).toHaveLength(1));
-  expect(screen.queryByRole('searchbox', { name: '搜索团队' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: /Vision lab.*0 个项目/ }));
-  await user.click(screen.getByRole('button', { name: '新建项目' }));
-  expect((screen.getByLabelText('所属空间') as HTMLSelectElement).value).toBe(
-    store.getState().data?.teams[0].id,
-  );
-  await user.type(screen.getByLabelText('项目名称'), 'Team research');
-  await user.click(screen.getByRole('button', { name: '保存项目' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  fireEvent.contextMenu(screen.getByRole('button', { name: /Vision lab.*1 个项目/ }));
-  await user.click(await screen.findByRole('menuitem', { name: '重命名 / 编辑' }));
-  await user.clear(screen.getByLabelText('团队名称'));
-  await user.type(screen.getByLabelText('团队名称'), 'Research lab');
-  await user.click(screen.getByRole('button', { name: '保存团队' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  await user.click(
-    within(screen.getByRole('navigation', { name: '空间导航' })).getByRole('button', {
-      name: '团队协作空间',
-    }),
-  );
-  fireEvent.contextMenu(screen.getByRole('button', { name: /Research lab.*1 个项目/ }));
-  await user.click(await screen.findByRole('menuitem', { name: '删除团队空间' }));
-  await user.click(screen.getByRole('button', { name: '确认删除' }));
-  await waitFor(() => expect(store.getState().data?.teams).toHaveLength(0));
-  expect(store.getState().data?.projects[0].space).toBe('personal');
+  const collaboration = within(screen.getByRole('region', { name: '团队协作空间' }));
+  expect(collaboration.getByText('登录和协作同步需要在 Scientify 桌面应用中使用。')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: '新建项目' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Vision lab/ })).toBeNull();
+  expect(store.getState().data?.teams).toEqual(data.teams);
+  expect(store.getState().data?.projects).toEqual(data.projects);
+  expect(save).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: '个人空间' }));
-  expect(await screen.findByRole('button', { name: 'Team research' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Personal research' })).toBeTruthy();
 });
 
 it('keeps the project when deletion fails and only removes records after a successful retry', async () => {

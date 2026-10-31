@@ -69,7 +69,9 @@ pnpm start
 
 ```powershell
 pnpm check
+pnpm format:check
 pnpm test --maxWorkers=2
+pnpm test:ui
 cargo fmt --all --check
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -77,6 +79,10 @@ git diff --check
 ```
 
 前端格式遵循 Prettier；可以对修改的文件运行 `pnpm exec prettier --write <files>`。不要为小修复重排无关文件。
+
+`pnpm test:ui` 会启动一个临时 Vite 服务，依次检查实验、Git、PDF 和图片输入夹具，完成或失败后关闭它自己创建的服务。可用 `pnpm test:ui reader`、`pnpm test:ui experiments` 或 `pnpm test:ui git` 单独运行。已有预览服务可通过 `SCIENTIFY_UI_URL` 复用，脚本不会关闭该服务。报告和截图写入已忽略的 `.test-artifacts/`。
+
+浏览器验证使用受 pnpm lockfile 管理的 Playwright（Apache-2.0，仅开发依赖，不打包进应用）。Windows 默认使用已安装的 Edge；其他平台先执行 `pnpm exec playwright install chromium`。`SCIENTIFY_BROWSER_CHANNEL=chromium` 选择 Playwright 浏览器，`SCIENTIFY_BROWSER_PATH` 可以指定本机浏览器路径。CI 使用 Chromium，不依赖开发者私有的 `.test-tools/` 目录或固定 C 盘路径。上述测试不会请求真实模型服务。
 
 根据改动选择验证：文档只检查事实和链接；行为变更补能发现回归的测试；原生文件、进程、浏览器及窗口行为还需桌面验证。测试记录说明真实调用和夹具的区别。没有验证的平台或场景应在 PR 中明确标注。
 

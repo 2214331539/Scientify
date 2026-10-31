@@ -21,6 +21,7 @@ import {
 import { Button, Dropdown, Input, Textarea } from '../../components/primitives';
 import { Modal } from '../../components/Modal';
 import { WorkspaceFrame } from '../../components/workspace/WorkspaceFrame';
+import { useActiveView, ViewTransition } from '../../components/workspace/ViewTransition';
 import { confirmAction } from '../../components/prompts';
 import type { Project, Experiment } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
@@ -40,7 +41,6 @@ import { PythonSidebar } from './PythonSidebar';
 import { developmentApi, ensureExecutionTrust, openTerminal, useDevelopment } from './development';
 import {
   configurationsOf,
-  describeError,
   experimentApi,
   parseArguments,
   startExecution,
@@ -48,6 +48,7 @@ import {
   type Execution,
   type RunConfiguration,
 } from './runtime';
+import { errorMessage } from '../../domain/errors';
 import './experiments.css';
 import './development.css';
 const TerminalPanel = lazy(() =>
@@ -91,6 +92,7 @@ export function ExperimentWorkspace({
   resize: ReactNode;
   onProjectRun?: (projectId: string, runId: string) => void;
 }) {
+  const viewActive = useActiveView();
   const data = useStore(store, (state) => state.data);
   const experimentId = useStore(codeContext, (state) => state.experiments[project.id]);
   const catalog = experimentsFor(data, project.id).filter((item) => !item.archived);
@@ -129,7 +131,7 @@ export function ExperimentWorkspace({
       );
       openExperiment(next);
     } catch (reason) {
-      setError(describeError(reason));
+      setError(errorMessage(reason));
     }
   }
   const root = code.root;
@@ -201,6 +203,7 @@ export function ExperimentWorkspace({
     };
   }, []);
   useEffect(() => {
+    if (!viewActive) return;
     if (view === 'manage') {
       onContext({
         projectId: project.id,
@@ -235,6 +238,7 @@ export function ExperimentWorkspace({
     project.question,
     backend,
     onContext,
+    viewActive,
     root,
     code.ready,
     experiment?.id,
@@ -291,7 +295,7 @@ export function ExperimentWorkspace({
         if (result.error) setError(result.error);
       }
     } catch (e) {
-      if (alive.current) setError(describeError(e));
+      if (alive.current) setError(errorMessage(e));
     } finally {
       if (alive.current) setStarting(false);
     }
@@ -340,7 +344,7 @@ export function ExperimentWorkspace({
       }
       if (info) store.getState().setAgentTask(`terminal:${info.id}`, project.id);
     } catch (e) {
-      if (alive.current) setError(describeError(e));
+      if (alive.current) setError(errorMessage(e));
     } finally {
       if (alive.current) setStarting(false);
     }
@@ -369,7 +373,7 @@ export function ExperimentWorkspace({
       }
       code.refresh();
     } catch (e) {
-      if (alive.current && currentRoot.current === root) setError(describeError(e));
+      if (alive.current && currentRoot.current === root) setError(errorMessage(e));
     } finally {
       if (alive.current) setSavingAll(false);
     }
@@ -377,6 +381,7 @@ export function ExperimentWorkspace({
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
       if (
+        !viewActive ||
         event.defaultPrevented ||
         event.isComposing ||
         (!event.ctrlKey && !event.metaKey) ||
@@ -454,7 +459,7 @@ export function ExperimentWorkspace({
                 projectId={project.id}
                 root={root}
                 backend={backend}
-                active={view === 'files' && sidebarOpen && resourceView === 'search'}
+                active={viewActive && view === 'files' && sidebarOpen && resourceView === 'search'}
                 onOpen={(hit) => void openMatch(hit)}
               />
             </div>
@@ -464,7 +469,7 @@ export function ExperimentWorkspace({
                 projectId={project.id}
                 experiment={experiment}
                 store={store}
-                active={view === 'files' && sidebarOpen && resourceView === 'python'}
+                active={viewActive && view === 'files' && sidebarOpen && resourceView === 'python'}
                 tasks={development.tasks}
                 onTerminal={() => void startTerminal()}
               />
@@ -726,7 +731,7 @@ export function ExperimentWorkspace({
                   aria-label={t('停止当前运行')}
                   onClick={() => {
                     void experimentApi.stop(activeRun.id).catch((e) => {
-                      if (alive.current) setError(describeError(e));
+                      if (alive.current) setError(errorMessage(e));
                     });
                   }}
                 >
@@ -737,14 +742,6 @@ export function ExperimentWorkspace({
         ) : undefined
       }
     >
-      {(view === 'manage' || !experiment) && (
-        <ExperimentManager
-          project={project}
-          store={store}
-          executions={executions}
-          onOpen={openExperiment}
-        />
-      )}
       {(error || runtimeError || development.error) && (
         <div role="alert" className="sf-experiment-error">
           {translateError(error || runtimeError || development.error)}
@@ -761,141 +758,157 @@ export function ExperimentWorkspace({
           </Button>
         </div>
       )}
-      <div className="sf-experiment-code" hidden={view !== 'files' || !experiment}>
-        <div className="sf-experiment-editor" hidden={panelOpen && panelMaximized}>
-          {code.ready && experiment ? (
-            <FileWorkspace
-              project={project}
-              store={store}
-              backend={backend}
-              mode="experiments"
-              view="files"
-              activePath={currentPath}
-              onActivePathChange={openPath}
-              workspaceRoot={root}
-              createRequest={createRequest}
-              onCreateHandled={() => setCreateRequest(0)}
-              onContext={
-                view === 'files'
-                  ? (context) => onContext({ ...context, experimentId: experiment?.id })
-                  : noContext
-              }
-            />
-          ) : (
-            <div className="sf-git-empty" role={code.error ? 'alert' : 'status'}>
-              {code.error ? (
-                <>
-                  <span>{translateError(code.error)}</span>
-                  <Button onClick={() => clearCodeRoot(project.id)}>{t('打开项目原目录')}</Button>
-                </>
+      <ViewTransition viewKey={!experiment ? 'manage' : view}>
+        {(view === 'manage' || !experiment) && (
+          <ExperimentManager
+            project={project}
+            store={store}
+            executions={executions}
+            onOpen={openExperiment}
+          />
+        )}
+        {view === 'files' && experiment && (
+          <div className="sf-experiment-code">
+            <div className="sf-experiment-editor" hidden={panelOpen && panelMaximized}>
+              {code.ready && experiment ? (
+                <FileWorkspace
+                  project={project}
+                  store={store}
+                  backend={backend}
+                  mode="experiments"
+                  view="files"
+                  activePath={currentPath}
+                  onActivePathChange={openPath}
+                  workspaceRoot={root}
+                  createRequest={createRequest}
+                  onCreateHandled={() => setCreateRequest(0)}
+                  onContext={
+                    view === 'files'
+                      ? (context) => onContext({ ...context, experimentId: experiment?.id })
+                      : noContext
+                  }
+                />
               ) : (
-                t('正在读取…')
+                <div className="sf-git-empty" role={code.error ? 'alert' : 'status'}>
+                  {code.error ? (
+                    <>
+                      <span>{translateError(code.error)}</span>
+                      <Button onClick={() => clearCodeRoot(project.id)}>
+                        {t('打开项目原目录')}
+                      </Button>
+                    </>
+                  ) : (
+                    t('正在读取…')
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-        <div
-          className={
-            'sf-experiment-bottom ' +
-            (!panelOpen ? 'is-collapsed' : '') +
-            (panelOpen && panelMaximized ? ' is-maximized' : '')
-          }
-        >
-          <header>
-            {['terminal', 'logs', 'artifacts'].map((value) => (
-              <Button
-                key={value}
-                variant="ghost"
-                aria-current={panelTab === value ? 'page' : undefined}
-                onClick={() => {
-                  setPanelTab(value);
-                  setPanelOpen(true);
-                }}
-              >
-                {t(value === 'terminal' ? '终端' : value === 'logs' ? '日志' : '产物')}
-              </Button>
-            ))}
-            <span className="spacer" />
-            {panelTab !== 'terminal' && (
-              <Dropdown
-                aria-label={t('查看运行输出')}
-                value={activeRun?.id || ''}
-                onChange={(e) => setLogRun(e.target.value)}
-              >
-                {!ownRuns.length && <option value="">{t('尚无本地运行')}</option>}
-                {ownRuns.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} · {r.id.slice(0, 8)}
-                  </option>
+            <div
+              className={
+                'sf-experiment-bottom ' +
+                (!panelOpen ? 'is-collapsed' : '') +
+                (panelOpen && panelMaximized ? ' is-maximized' : '')
+              }
+            >
+              <header>
+                {['terminal', 'logs', 'artifacts'].map((value) => (
+                  <Button
+                    key={value}
+                    variant="ghost"
+                    aria-current={panelTab === value ? 'page' : undefined}
+                    onClick={() => {
+                      setPanelTab(value);
+                      setPanelOpen(true);
+                    }}
+                  >
+                    {t(value === 'terminal' ? '终端' : value === 'logs' ? '日志' : '产物')}
+                  </Button>
                 ))}
-              </Dropdown>
-            )}
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t(panelMaximized ? '还原输出面板' : '最大化输出面板')}
-              onClick={() => {
-                setPanelMaximized((value) => !value);
-                setPanelOpen(true);
-              }}
-            >
-              <PanelBottom size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t('关闭输出面板')}
-              onClick={() => setPanelOpen(false)}
-            >
-              <X size={14} />
-            </Button>
-          </header>
-          <div className="sf-terminal-container" hidden={!panelOpen || panelTab !== 'terminal'}>
-            {panelTab === 'terminal' && experiment && (
-              <Suspense fallback={<p>{t('正在读取…')}</p>}>
-                <TerminalPanel
-                  projectId={project.id}
-                  experimentId={experiment.id}
-                  terminals={ownTerminals}
-                  activeId={terminalId}
-                  onActive={setTerminalId}
-                  onError={setError}
-                />
-              </Suspense>
-            )}
+                <span className="spacer" />
+                {panelTab !== 'terminal' && (
+                  <Dropdown
+                    aria-label={t('查看运行输出')}
+                    value={activeRun?.id || ''}
+                    onChange={(e) => setLogRun(e.target.value)}
+                  >
+                    {!ownRuns.length && <option value="">{t('尚无本地运行')}</option>}
+                    {ownRuns.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} · {r.id.slice(0, 8)}
+                      </option>
+                    ))}
+                  </Dropdown>
+                )}
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  aria-label={t(panelMaximized ? '还原输出面板' : '最大化输出面板')}
+                  onClick={() => {
+                    setPanelMaximized((value) => !value);
+                    setPanelOpen(true);
+                  }}
+                >
+                  <PanelBottom size={14} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  aria-label={t('关闭输出面板')}
+                  onClick={() => setPanelOpen(false)}
+                >
+                  <X size={14} />
+                </Button>
+              </header>
+              <div className="sf-terminal-container" hidden={!panelOpen || panelTab !== 'terminal'}>
+                {panelTab === 'terminal' && experiment && (
+                  <Suspense fallback={<p>{t('正在读取…')}</p>}>
+                    <TerminalPanel
+                      projectId={project.id}
+                      experimentId={experiment.id}
+                      terminals={ownTerminals}
+                      activeId={terminalId}
+                      onActive={setTerminalId}
+                      onError={setError}
+                    />
+                  </Suspense>
+                )}
+              </div>
+              {panelOpen && panelTab !== 'terminal' && (
+                <ExecutionPanel run={activeRun} tab={panelTab} />
+              )}
+            </div>
           </div>
-          {panelOpen && panelTab !== 'terminal' && (
-            <ExecutionPanel run={activeRun} tab={panelTab} />
-          )}
-        </div>
-      </div>
-      {view === 'runs' && experiment && (
-        <ExperimentRuns
-          project={project}
-          experimentId={experiment.id}
-          store={store}
-          executions={ownRuns}
-          selectedId={selectedRunId}
-          onSelect={onSelect}
-          onContext={onContext}
-          onRerun={(r) => void run(r.configuration)}
-        />
-      )}
-      <div className="sf-experiment-git" hidden={view !== 'versions' || !experiment}>
-        <GitWorkspace
-          projectId={project.id}
-          backend={backend}
-          store={store}
-          code={code}
-          view={gitView}
-          onView={setGitView}
-          onSelectRoot={(root) => void openWorktree(root)}
-          onOpen={(p) => {
-            openPath(p);
-            onView('files');
-          }}
-        />
-      </div>
+        )}
+        {view === 'runs' && experiment && (
+          <ExperimentRuns
+            project={project}
+            experimentId={experiment.id}
+            store={store}
+            executions={ownRuns}
+            selectedId={selectedRunId}
+            onSelect={onSelect}
+            onContext={onContext}
+            onRerun={(r) => void run(r.configuration)}
+          />
+        )}
+        {view === 'versions' && experiment && (
+          <div className="sf-experiment-git">
+            <GitWorkspace
+              projectId={project.id}
+              backend={backend}
+              store={store}
+              code={code}
+              view={gitView}
+              onView={setGitView}
+              onSelectRoot={(root) => void openWorktree(root)}
+              onOpen={(p) => {
+                openPath(p);
+                onView('files');
+              }}
+            />
+          </div>
+        )}
+      </ViewTransition>
       {dialog === 'config' && (
         <ConfigurationForm
           key={editConfig?.id || 'new'}
@@ -944,7 +957,7 @@ export function ExperimentWorkspace({
                       try {
                         await experimentApi.stop(r.id);
                       } catch (e) {
-                        setError(describeError(e));
+                        setError(errorMessage(e));
                       }
                     }}
                   >
@@ -1014,7 +1027,7 @@ export function ConfigurationForm({
       if (result) onSaved(id);
       else setError(store.getState().error || t('保存失败'));
     } catch (e) {
-      setError(describeError(e));
+      setError(errorMessage(e));
     } finally {
       setSaving(false);
     }

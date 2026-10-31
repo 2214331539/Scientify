@@ -1,0 +1,40 @@
+.sf-view-stack {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.sf-view-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--sf-surface-canvas);
+}
+.sf-view-layer[hidden] {
+  display: none !important;
+}
+.sf-view-layer[inert] {
+  pointer-events: none;
+}
+.sf-view-layer > * {
+  flex: 1;
+  min-height: 0;
+}
+.sf-view-stack--flow {
+  display: grid;
+  flex: none;
+  height: auto;
+  overflow: visible;
+}
+.sf-view-stack--flow > .sf-view-layer {
+  position: relative;
+  inset: auto;
+  grid-area: 1 / 1;
+  overflow: visible;
+}

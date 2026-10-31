@@ -5,6 +5,7 @@ import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { FileContent, ResearchFile } from '../../platform/research';
+import { errorMessage } from '../../domain/errors';
 
 export type RunConfiguration = {
   id: string;
@@ -66,7 +67,6 @@ export const experimentOutput = createStore<{ revisions: Record<string, number> 
 export function openExecution(projectId: string, runId: string) {
   window.dispatchEvent(new CustomEvent('scientify-open-run', { detail: { projectId, runId } }));
 }
-export const describeError = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export function useExecutions(store: WorkspaceStore, enabled = true) {
   const snapshot = useStore(executionStore);
   useEffect(() => {
@@ -118,7 +118,7 @@ export function useExecutions(store: WorkspaceStore, enabled = true) {
           if (store.getState().agentTasks[key] !== project)
             store.getState().setAgentTask(key, project);
       } catch (e) {
-        if (alive) executionStore.setState({ error: describeError(e) });
+        if (alive) executionStore.setState({ error: errorMessage(e) });
       } finally {
         polling = false;
         if (alive) timer = setTimeout(() => void poll(), pending ? 80 : 1200);

@@ -68,6 +68,15 @@
   gap: 14px;
   font-size: 14px;
   color: var(--sf-text-secondary);
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.launcher-profile:hover:not(:disabled) {
+  background: transparent;
 }
 .launcher-avatar {
   width: 42px;

@@ -14,7 +14,7 @@ import { Button, Input } from '../../components/primitives';
 import { getFileRuntime } from '../../editor/sessions';
 import type { ResearchBackend } from '../../platform/research';
 import { t, translateError } from '../../i18n';
-import { describeError } from './runtime';
+import { errorMessage } from '../../domain/errors';
 
 export type SearchHit = { path: string; from: number; to: number; line: number; preview: string };
 export function fileMatches(
@@ -152,7 +152,7 @@ export function CodeSearch({
       setSkipped(unread);
       setLimited(results.length >= 200 || files.length > selected.length);
     } catch (e) {
-      if (ticket === generation.current) setError(describeError(e));
+      if (ticket === generation.current) setError(errorMessage(e));
     } finally {
       if (ticket === generation.current) setBusy(false);
     }

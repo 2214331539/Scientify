@@ -201,6 +201,19 @@ try {
     a.events.some((event) => event.method === 'turn/completed'),
     false,
   );
+  await assert.rejects(
+    a.rpc('turn/steer', {
+      threadId: ta.thread.id,
+      expectedTurnId: 'wrong-turn',
+      input: [{ type: 'text', text: 'must not reach the other turn', text_elements: [] }],
+    }),
+  );
+  const guided = await a.rpc('turn/steer', {
+    threadId: ta.thread.id,
+    expectedTurnId: ra.turn.id,
+    input: [{ type: 'text', text: 'keep this task in its own workspace', text_elements: [] }],
+  });
+  assert.equal(guided.turnId, ra.turn.id);
   await a.rpc('turn/interrupt', { threadId: ta.thread.id, turnId: ra.turn.id });
   const stopped = await a.wait((event) => event.method === 'turn/completed');
   assert.equal(stopped.params.turn.status, 'interrupted');
@@ -222,7 +235,7 @@ try {
     ),
   );
   console.log(
-    'PASS: two real sidecars share a home, stream independently, keep model overrides, interrupt only one turn, and resume native history after process restart.',
+    'PASS: two real sidecars share a home, stream independently, keep model overrides, validate and accept steering, interrupt only one turn, and resume native history after process restart.',
   );
 } finally {
   for (const engine of engines) if (engine.child.exitCode === null) engine.child.kill();

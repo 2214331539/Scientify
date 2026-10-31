@@ -45,23 +45,7 @@ console.log(
   `Windows icon ready: ${ordered.map(([size]) => size).join(', ')}px; original PNG frames preserved.`,
 );
 
-// ICNS accepts the same lossless PNG payloads; no image conversion is needed.
-const chunks = [
-  [128, 'ic07'],
-  [256, 'ic08'],
-].map(([size, type]) => {
-  const png = frames.get(size);
-  if (!png) throw new Error(`Missing ${size}px macOS icon frame`);
-  const chunk = Buffer.alloc(8);
-  chunk.write(type, 0, 'ascii');
-  chunk.writeUInt32BE(8 + png.length, 4);
-  return Buffer.concat([chunk, png]);
-});
-const icns = Buffer.alloc(8);
-icns.write('icns', 0, 'ascii');
-icns.writeUInt32BE(8 + chunks.reduce((n, chunk) => n + chunk.length, 0), 4);
-writeFileSync(
-  new URL('../src-tauri/icons/icon.icns', import.meta.url),
-  Buffer.concat([icns, ...chunks]),
-);
-writeFileSync(new URL('../src-tauri/icons/icon.png', import.meta.url), frames.get(256));
+// icon.icns and icon.png come from `pnpm tauri icon` run on
+// docs/营销思路/Scientify-Logo-Kit/desktop/dark/scientify-1024.png (see
+// docs/开发记录/Logo更换-2026-10-17.md). They carry frames up to 1024 px, so they
+// must not be rebuilt from the 256 px frames above.

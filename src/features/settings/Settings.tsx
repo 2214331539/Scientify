@@ -1,3 +1,5 @@
+import { isTauri } from '@tauri-apps/api/core';
+import { NativeTranslationPanel } from '../translation/NativeTranslationPanel';
 import { t, translateError } from '../../i18n';
 import { Button, Input } from '../../components/primitives';
 import { PreferenceFields } from './Appearance';
@@ -7,8 +9,18 @@ import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { StorageLocation } from '../../platform/desktop';
-import { CircleHelp, Database, Palette, Settings } from 'lucide-react';
+import { CircleHelp, Cloud, Database, Keyboard, Languages, Palette, Settings } from 'lucide-react';
+import { ShortcutsSettings } from './ShortcutsSettings';
+import { CollaborationPreferences } from './CollaborationPreferences';
 import './settings.css';
+
+function TranslationPreferences() {
+  return isTauri() ? (
+    <NativeTranslationPanel />
+  ) : (
+    <p>{t('划词翻译请在 Scientify 桌面应用中使用。')}</p>
+  );
+}
 
 function DataPreferences({ store }: { store: WorkspaceStore }) {
   const state = useStore(store);
@@ -162,7 +174,8 @@ export function SettingsDialog({
 }: {
   store: WorkspaceStore;
   onClose(): void;
-  initialSection?: 'general' | 'appearance' | 'data' | 'about';
+  initialSection?:
+    'general' | 'appearance' | 'shortcuts' | 'translation' | 'collaboration' | 'data' | 'about';
 }) {
   const data = useStore(store, (s) => s.data);
   const [section, setSection] = useState(initialSection);
@@ -178,6 +191,11 @@ export function SettingsDialog({
     store.getState().setDirtySource('settings-profile', dirty);
     return () => store.getState().setDirtySource('settings-profile', false);
   }, [dirty, store]);
+  const [shortcutsDirty, setShortcutsDirty] = useState(false);
+  useEffect(() => {
+    store.getState().setDirtySource('settings-shortcuts', shortcutsDirty);
+    return () => store.getState().setDirtySource('settings-shortcuts', false);
+  }, [shortcutsDirty, store]);
   useEffect(() => {
     const next = data?.settings.name ?? '';
     setProfile((current) =>
@@ -187,6 +205,9 @@ export function SettingsDialog({
   const sections = [
     { id: 'general', label: t('通用'), icon: Settings },
     { id: 'appearance', label: t('外观'), icon: Palette },
+    { id: 'shortcuts', label: t('快捷键'), icon: Keyboard },
+    { id: 'translation', label: t('翻译'), icon: Languages },
+    { id: 'collaboration', label: t('协作'), icon: Cloud },
     { id: 'data', label: t('数据与备份'), icon: Database },
     { id: 'about', label: t('关于 Scientify'), icon: CircleHelp },
   ] as const;
@@ -274,6 +295,15 @@ export function SettingsDialog({
           </div>
           <p className="settings-note">{t('顶栏按钮可直接切换亮暗。')}</p>
         </section>
+        <section hidden={section !== 'shortcuts'} aria-label={t('快捷键')}>
+          <ShortcutsSettings store={store} onDirtyChange={setShortcutsDirty} />
+        </section>
+        <section hidden={section !== 'translation'} aria-label={t('翻译')}>
+          <TranslationPreferences />
+        </section>
+        <section hidden={section !== 'collaboration'} aria-label={t('协作')}>
+          <CollaborationPreferences />
+        </section>
         <section hidden={section !== 'data'} aria-label={t('数据与备份')}>
           <DataPreferences store={store} />
         </section>
@@ -286,11 +316,7 @@ export function SettingsDialog({
                 '已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。',
               )}
             </p>
-            <p>
-              {t(
-                '后续接入：代码版本管理、LaTeX 编译、自动订阅更新与 PDF 批注。模型服务在 AI 助手中配置。',
-              )}
-            </p>
+            <p>{t('后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。')}</p>
             <p>
               {t(
                 'JSON 导出包含元数据，不包含 PDF 和源码；备份请保留完整数据目录及关联项目文件夹。',

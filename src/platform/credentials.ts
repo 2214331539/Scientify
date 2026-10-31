@@ -1,5 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import type { AIProtocol } from './research';
+import type { AIProtocol } from '../domain/workspace';
 
 /**
  * Where one key is filed. A slot is the provider plus its endpoint, because two
