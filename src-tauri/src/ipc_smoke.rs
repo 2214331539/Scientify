@@ -19,7 +19,7 @@ use tauri::{
 fn translation_service_passes_generated_acl_only_for_local_app_views() {
     let app = mock_builder()
         .invoke_handler(tauri::generate_handler![yita::translation_service])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
         "http://tauri.localhost"
@@ -85,7 +85,7 @@ fn assistant_context_obeys_generated_acl_and_reads_only_the_bound_library_and_no
         })
         .manage(library)
         .invoke_handler(tauri::generate_handler![agent::materials::agent_context])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
         "http://tauri.localhost"
@@ -137,7 +137,7 @@ fn chat_stream_commands_are_registered_and_remote_pages_cannot_call_them() {
             ai::stream::research_chat_cancel,
             ai::verification::research_verify_model
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
@@ -204,7 +204,7 @@ fn literature_mutations_share_directory_leases_with_agent_tasks() {
             library::library_command,
             library::library_note
         ])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
@@ -899,7 +899,7 @@ fn agent_steer_uses_generated_acl_and_parses_the_expected_turn_id() {
     let app = mock_builder()
         .manage(agent::AgentState::default())
         .invoke_handler(tauri::generate_handler![agent::agent_steer])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
         "http://tauri.localhost"
@@ -931,7 +931,7 @@ fn agent_steer_uses_generated_acl_and_parses_the_expected_turn_id() {
 fn agent_skills_uses_generated_acl_and_rejects_untrusted_webviews() {
     let app = mock_builder()
         .invoke_handler(tauri::generate_handler![agent::skills::agent_skills])
-        .build(tauri::generate_context!())
+        .build(crate::app_context())
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
         "http://tauri.localhost"

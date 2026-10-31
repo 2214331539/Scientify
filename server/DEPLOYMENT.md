@@ -26,11 +26,23 @@ optional SMS/model gateway values. The provided Alibaba SMS names are accepted
 through `ALIBABA_CLOUD_SMS_SIGN_NAME` and `ALIBABA_CLOUD_SMS_TEMPLATE_CODE`;
 the access key aliases are also accepted. Keep this file outside Git.
 
+These values belong only on the collaboration server. Desktop release and
+local Mac/Windows build machines must not receive database, JWT, OSS or SMS
+secrets. The desktop uses the managed service URL for normal builds and exposes
+an advanced self-hosted URL override for development.
+
 Use `HOST=127.0.0.1` when Nginx is the public TLS endpoint. A reverse proxy
 should forward `/v1/` to `http://127.0.0.1:8081/v1/` and preserve the
 `Authorization` and `Content-Type` headers. The OSS signed URLs are returned
 to the desktop and upload bytes directly to OSS, so Nginx never handles large
 PDF bodies.
+
+The repository includes `deploy/scientify-collab.service` and
+`deploy/nginx-scientify.conf` as the smallest production layout. Install the
+application under `/opt/scientify-collab`, keep secrets in
+`/etc/scientify-collab.env`, and include the Nginx location inside the existing
+TLS server block for the public collaboration host. The service account needs
+no shell, sudo or access to the Learn2ai data directory.
 
 ## First smoke check
 

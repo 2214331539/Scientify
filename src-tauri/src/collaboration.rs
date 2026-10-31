@@ -21,8 +21,13 @@ const INBOX_FILE_NAME: &str = "collaboration-inbox.json";
 const MAX_OUTBOX_ITEMS: usize = 10_000;
 const MAX_OPERATION_BYTES: usize = 4 * 1024 * 1024;
 const MAX_BLOB_BYTES: u64 = 200 * 1024 * 1024;
+pub(crate) const DEFAULT_ENDPOINT: &str = match option_env!("SCIENTIFY_COLLAB_ENDPOINT") {
+    Some(endpoint) => endpoint,
+    None => "https://47.79.122.59",
+};
+const LEGACY_ENDPOINT: &str = "https://collab.example.com";
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CollaborationState {
     pub client_id: String,
@@ -39,6 +44,26 @@ pub struct CollaborationState {
     pub literature_bootstrapped: bool,
     /// Last accepted server revision for each `domain:entityId` pair.
     pub entity_revisions: HashMap<String, u64>,
+}
+
+impl Default for CollaborationState {
+    fn default() -> Self {
+        Self {
+            client_id: String::new(),
+            enabled: true,
+            endpoint: DEFAULT_ENDPOINT.into(),
+            workspace_id: None,
+            last_sync_at: None,
+            pending_changes: 0,
+            conflicts: 0,
+            sync_cursor: 0,
+            authenticated: false,
+            user_id: None,
+            phone: None,
+            literature_bootstrapped: false,
+            entity_revisions: HashMap::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -106,7 +131,13 @@ fn read(state: &AppState) -> Result<CollaborationState, String> {
         return Ok(CollaborationState::default());
     }
     let bytes = fs::read(file).map_err(|error| error.to_string())?;
-    serde_json::from_slice(&bytes).map_err(|_| "协作配置文件格式无效。".into())
+    let mut current: CollaborationState =
+        serde_json::from_slice(&bytes).map_err(|_| "协作配置文件格式无效。".to_string())?;
+    if current.endpoint.is_empty() || current.endpoint == LEGACY_ENDPOINT {
+        current.endpoint = DEFAULT_ENDPOINT.into();
+        current.enabled = true;
+    }
+    Ok(current)
 }
 
 fn read_outbox(state: &AppState) -> Result<Outbox, String> {
@@ -663,6 +694,7 @@ pub async fn collaboration_login<R: tauri::Runtime>(
 ) -> Result<CollaborationState, String> {
     trusted(&view)?;
     let endpoint = normalize_endpoint(&endpoint)?;
+    let previous_phone = read_auth(&state)?.map(|auth| auth.phone);
     let result = request_json(
         &endpoint,
         "/auth/login",
@@ -692,6 +724,13 @@ pub async fn collaboration_login<R: tauri::Runtime>(
     };
     write_auth(&state, &auth)?;
     let mut current = read(&state)?;
+    if previous_phone.as_deref() != Some(auth.phone.as_str()) {
+        current.workspace_id = None;
+        current.last_sync_at = None;
+        current.sync_cursor = 0;
+        current.literature_bootstrapped = false;
+        current.entity_revisions.clear();
+    }
     current.endpoint = endpoint;
     current.enabled = true;
     write(&state, &current)?;
@@ -699,12 +738,30 @@ pub async fn collaboration_login<R: tauri::Runtime>(
 }
 
 #[tauri::command]
-pub fn collaboration_logout<R: tauri::Runtime>(
+pub async fn collaboration_logout<R: tauri::Runtime>(
     view: Webview<R>,
     state: State<'_, AppState>,
 ) -> Result<CollaborationState, String> {
     trusted(&view)?;
+    if let Some(auth) = read_auth(&state)? {
+        let current = read(&state)?;
+        let _ = request_json(
+            &current.endpoint,
+            "/auth/logout",
+            reqwest::Method::POST,
+            Some(&auth.access_token),
+            Some(json!({"refreshToken": auth.refresh_token})),
+        )
+        .await;
+    }
     clear_auth(&state)?;
+    let mut current = read(&state)?;
+    current.workspace_id = None;
+    current.last_sync_at = None;
+    current.sync_cursor = 0;
+    current.literature_bootstrapped = false;
+    current.entity_revisions.clear();
+    write(&state, &current)?;
     snapshot(&state)
 }
 
@@ -1338,7 +1395,8 @@ pub fn collaboration_mark_conflict<R: tauri::Runtime>(
 mod tests {
     use super::{
         content_type_for_path, counts, has_queued_operation, normalize_endpoint, retry_operation,
-        validate_operation, CollaborationOperation, OperationStatus, Outbox,
+        validate_operation, CollaborationOperation, CollaborationState, OperationStatus, Outbox,
+        DEFAULT_ENDPOINT,
     };
     use serde_json::json;
 
@@ -1355,6 +1413,14 @@ mod tests {
         assert!(normalize_endpoint("ftp://collab.example").is_err());
         assert!(normalize_endpoint("https://user:pass@collab.example").is_err());
         assert!(normalize_endpoint("not a url").is_err());
+    }
+
+    #[test]
+    fn new_installs_use_the_managed_endpoint() {
+        let current = CollaborationState::default();
+        assert!(current.enabled);
+        assert_eq!(current.endpoint, DEFAULT_ENDPOINT);
+        assert!(!current.authenticated);
     }
 
     fn operation() -> CollaborationOperation {

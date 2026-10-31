@@ -1,0 +1,22 @@
+[Unit]
+Description=Scientify collaboration API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=scientify
+Group=scientify
+WorkingDirectory=/opt/scientify-collab/server
+EnvironmentFile=/etc/scientify-collab.env
+ExecStart=/opt/learn2ai-node/bin/node src/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/scientify-collab
+
+[Install]
+WantedBy=multi-user.target

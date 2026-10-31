@@ -231,7 +231,7 @@ mod tests {
         for agent_available in [true, false] {
             let (endpoint, server) = fixture(agent_available);
             let app = tauri::test::mock_builder()
-                .build(tauri::generate_context!())
+                .build(crate::app_context())
                 .unwrap();
             let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
                 .build()

@@ -57,6 +57,7 @@ export type CollaborationMember = {
   phone: string;
   role: 'owner' | 'editor' | 'reviewer' | 'viewer' | string;
   createdAt?: string;
+  pending?: boolean;
 };
 
 export const collaborationStateEvent = 'scientify-collaboration-state-changed';

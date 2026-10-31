@@ -13,7 +13,8 @@ const uuid = () => crypto.randomUUID();
 function send(response, status, value, headers = {}) {
   const body = Buffer.from(typeof value === 'string' ? value : json(value));
   response.writeHead(status, {
-    'content-type': typeof value === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8',
+    'content-type':
+      typeof value === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8',
     'content-length': body.length,
     'cache-control': 'no-store',
     ...headers,
@@ -119,13 +120,30 @@ async function authenticateCode(db, config, phone, code) {
 async function login(db, config, phone, code) {
   await authenticateCode(db, config, phone, code);
   const existing = await db.query('SELECT id, phone FROM users WHERE phone = $1', [phone]);
-  const user = existing.rows[0] ?? { id: uuid(), phone };
-  if (!existing.rows[0]) {
-    await db.query('INSERT INTO users(id, phone) VALUES ($1, $2)', [user.id, user.phone]);
+  let user = existing.rows[0];
+  if (!user) {
+    const inserted = await db.query(
+      `INSERT INTO users(id, phone) VALUES ($1, $2)
+       ON CONFLICT (phone) DO NOTHING RETURNING id, phone`,
+      [uuid(), phone],
+    );
+    user =
+      inserted.rows[0] ??
+      (await db.query('SELECT id, phone FROM users WHERE phone = $1', [phone])).rows[0];
+    if (!user) throw Object.assign(new Error('账号创建失败，请重试。'), { status: 500 });
   }
+  await withTransaction(db, async (client) => {
+    await client.query(
+      `INSERT INTO project_members(project_id, user_id, role)
+       SELECT project_id, $1, role FROM project_invitations WHERE phone = $2
+       ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+      [user.id, phone],
+    );
+    await client.query('DELETE FROM project_invitations WHERE phone = $1', [phone]);
+  });
   const tokens = issueTokens(config, user);
   await db.query(
-    'INSERT INTO refresh_tokens(id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL \'1 second\'))',
+    "INSERT INTO refresh_tokens(id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL '1 second'))",
     [uuid(), user.id, hashSecret(tokens.refreshToken), config.refreshTokenTtl],
   );
   return { user, ...tokens };
@@ -145,17 +163,27 @@ function modelEndpoint(endpoint, suffix) {
 }
 
 async function proxyOfficialModel(response, config, input, path) {
-  const endpoint = path === '/v1/chat/completions'
-    ? (config.officialModel.chatEndpoint || config.officialModel.endpoint)
-    : config.officialModel.endpoint;
+  const endpoint =
+    path === '/v1/chat/completions'
+      ? config.officialModel.chatEndpoint || config.officialModel.endpoint
+      : config.officialModel.endpoint;
   if (!endpoint || !config.officialModel.apiKey) {
     throw Object.assign(new Error('官方模型服务尚未配置。'), { status: 503 });
   }
-  const upstream = await fetch(modelEndpoint(endpoint, path.endsWith('responses') ? 'responses' : 'chat/completions'), {
-    method: 'POST',
-    headers: { authorization: `Bearer ${config.officialModel.apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ ...input, model: String(input.model || config.officialModel.defaultModel || '').trim() }),
-  });
+  const upstream = await fetch(
+    modelEndpoint(endpoint, path.endsWith('responses') ? 'responses' : 'chat/completions'),
+    {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${config.officialModel.apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...input,
+        model: String(input.model || config.officialModel.defaultModel || '').trim(),
+      }),
+    },
+  );
   response.writeHead(upstream.status, {
     'content-type': upstream.headers.get('content-type') ?? 'application/json',
     'cache-control': 'no-cache',
@@ -182,7 +210,16 @@ async function syncProject(db, projectId, userId, input) {
         );
         continue;
       }
-      const required = ['operationId', 'clientId', 'domain', 'entityId', 'baseRevision', 'kind', 'payload', 'createdAt'];
+      const required = [
+        'operationId',
+        'clientId',
+        'domain',
+        'entityId',
+        'baseRevision',
+        'kind',
+        'payload',
+        'createdAt',
+      ];
       if (required.some((key) => operation[key] === undefined)) {
         conflicts.push(operationError(operation.operationId ?? '', '协作变更格式无效。'));
         continue;
@@ -192,7 +229,10 @@ async function syncProject(db, projectId, userId, input) {
         [operation.operationId],
       );
       if (duplicate.rows[0]) {
-        accepted.push({ operationId: operation.operationId, serverRevision: duplicate.rows[0].server_revision });
+        accepted.push({
+          operationId: operation.operationId,
+          serverRevision: duplicate.rows[0].server_revision,
+        });
         continue;
       }
       const head = await client.query(
@@ -202,7 +242,9 @@ async function syncProject(db, projectId, userId, input) {
       const current = Number(head.rows[0]?.revision ?? 0);
       const base = Number(operation.baseRevision);
       if (!Number.isSafeInteger(base) || (base !== current && operation.kind !== 'create')) {
-        conflicts.push(operationError(operation.operationId, '远程资源已发生变化，需要处理冲突。', current));
+        conflicts.push(
+          operationError(operation.operationId, '远程资源已发生变化，需要处理冲突。', current),
+        );
         continue;
       }
       const next = current + 1;
@@ -248,7 +290,8 @@ async function syncProject(db, projectId, userId, input) {
       sequence: Number(change.sequence),
       serverRevision: Number(change.serverRevision),
     }));
-    if (accepted.length) await client.query('UPDATE projects SET updated_at = NOW() WHERE id = $1', [projectId]);
+    if (accepted.length)
+      await client.query('UPDATE projects SET updated_at = NOW() WHERE id = $1', [projectId]);
     const nextCursor = changes.at(-1)?.sequence ?? (Number(input.cursor ?? 0) || 0);
     return { accepted, conflicts, changes, nextCursor };
   });
@@ -293,8 +336,13 @@ async function handle(request, response, { config, db }) {
     if (request.method === 'POST' && path === '/v1/auth/send-code') {
       const input = await body(request, 16_384);
       const phone = normalizePhone(input.phone);
-      const existing = await db.query('SELECT last_sent_at FROM auth_codes WHERE phone = $1', [phone]);
-      if (existing.rows[0] && Date.now() - new Date(existing.rows[0].last_sent_at).getTime() < 60_000) {
+      const existing = await db.query('SELECT last_sent_at FROM auth_codes WHERE phone = $1', [
+        phone,
+      ]);
+      if (
+        existing.rows[0] &&
+        Date.now() - new Date(existing.rows[0].last_sent_at).getTime() < 60_000
+      ) {
         throw Object.assign(new Error('验证码发送过于频繁，请稍后再试。'), { status: 429 });
       }
       const code = phoneCode(config);
@@ -311,13 +359,19 @@ async function handle(request, response, { config, db }) {
     }
     if (request.method === 'POST' && path === '/v1/auth/login') {
       const input = await body(request, 16_384);
-      const result = await login(db, config, normalizePhone(input.phone), String(input.code ?? '').trim());
+      const result = await login(
+        db,
+        config,
+        normalizePhone(input.phone),
+        String(input.code ?? '').trim(),
+      );
       return send(response, 200, result);
     }
     if (request.method === 'POST' && path === '/v1/auth/refresh') {
       const input = await body(request, 16_384);
       const payload = verifyToken(input.refreshToken, config.jwtSecret, config.jwtIssuer);
-      if (payload.tokenType !== 'refresh') throw Object.assign(new Error('刷新令牌无效。'), { status: 401 });
+      if (payload.tokenType !== 'refresh')
+        throw Object.assign(new Error('刷新令牌无效。'), { status: 401 });
       const result = await db.query(
         'SELECT u.id, u.phone FROM refresh_tokens r JOIN users u ON u.id = r.user_id WHERE r.token_hash = $1 AND r.expires_at > NOW()',
         [hashSecret(input.refreshToken)],
@@ -326,9 +380,11 @@ async function handle(request, response, { config, db }) {
       const tokens = issueTokens(config, result.rows[0]);
       await withTransaction(db, async (client) => {
         // Rotate refresh tokens. A replayed token is rejected after its first use.
-        await client.query('DELETE FROM refresh_tokens WHERE token_hash = $1', [hashSecret(input.refreshToken)]);
+        await client.query('DELETE FROM refresh_tokens WHERE token_hash = $1', [
+          hashSecret(input.refreshToken),
+        ]);
         await client.query(
-          'INSERT INTO refresh_tokens(id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL \'1 second\'))',
+          "INSERT INTO refresh_tokens(id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL '1 second'))",
           [uuid(), result.rows[0].id, hashSecret(tokens.refreshToken), config.refreshTokenTtl],
         );
       });
@@ -342,17 +398,24 @@ async function handle(request, response, { config, db }) {
     if (request.method === 'POST' && path === '/v1/auth/logout') {
       const input = await body(request, 16_384);
       if (input.refreshToken) {
-        await db.query('DELETE FROM refresh_tokens WHERE token_hash = $1 AND user_id = $2', [hashSecret(input.refreshToken), user.sub]);
+        await db.query('DELETE FROM refresh_tokens WHERE token_hash = $1 AND user_id = $2', [
+          hashSecret(input.refreshToken),
+          user.sub,
+        ]);
       }
       return send(response, 200, { ok: true });
     }
     if (request.method === 'GET' && path === '/v1/models') {
-      return send(response, 200, { models: config.officialModel.models, defaultModel: config.officialModel.defaultModel });
+      return send(response, 200, {
+        models: config.officialModel.models,
+        defaultModel: config.officialModel.defaultModel,
+      });
     }
     if (request.method === 'POST' && path === '/v1/projects') {
       const input = await body(request, 16_384);
       const name = String(input.name ?? '').trim();
-      if (!name || name.length > 160) throw Object.assign(new Error('项目名称无效。'), { status: 400 });
+      if (!name || name.length > 160)
+        throw Object.assign(new Error('项目名称无效。'), { status: 400 });
       const timestamp = now().toISOString();
       const project = {
         id: uuid(),
@@ -363,9 +426,13 @@ async function handle(request, response, { config, db }) {
         updatedAt: timestamp,
       };
       await withTransaction(db, async (client) => {
-        await client.query('INSERT INTO projects(id, name, owner_id) VALUES ($1, $2, $3)', [project.id, name, user.sub]);
+        await client.query('INSERT INTO projects(id, name, owner_id) VALUES ($1, $2, $3)', [
+          project.id,
+          name,
+          user.sub,
+        ]);
         await client.query(
-          'INSERT INTO project_members(project_id, user_id, role) VALUES ($1, $2, \'owner\')',
+          "INSERT INTO project_members(project_id, user_id, role) VALUES ($1, $2, 'owner')",
           [project.id, user.sub],
         );
       });
@@ -387,9 +454,14 @@ async function handle(request, response, { config, db }) {
       if (request.method === 'GET' && suffix === 'members') {
         await requireMember(db, projectId, user.sub);
         const result = await db.query(
-          `SELECT u.id, u.phone, m.role, m.created_at AS "createdAt"
+          `SELECT u.id, u.phone, m.role, m.created_at AS "createdAt", FALSE AS pending
              FROM project_members m JOIN users u ON u.id = m.user_id
-            WHERE m.project_id = $1 ORDER BY m.created_at`,
+            WHERE m.project_id = $1
+            UNION ALL
+           SELECT 'invite:' || i.phone, i.phone, i.role, i.created_at AS "createdAt", TRUE AS pending
+             FROM project_invitations i
+            WHERE i.project_id = $1
+            ORDER BY "createdAt"`,
           [projectId],
         );
         return send(response, 200, { members: result.rows });
@@ -397,21 +469,42 @@ async function handle(request, response, { config, db }) {
       if (request.method === 'POST' && suffix === 'members') {
         await requireMember(db, projectId, user.sub, true);
         const currentRole = await member(db, projectId, user.sub);
-        if (currentRole !== 'owner') throw Object.assign(new Error('只有项目所有者可以管理成员。'), { status: 403 });
+        if (currentRole !== 'owner')
+          throw Object.assign(new Error('只有项目所有者可以管理成员。'), { status: 403 });
         const input = await body(request, 16_384);
         const phone = normalizePhone(input.phone);
         const role = ['editor', 'reviewer', 'viewer'].includes(input.role) ? input.role : 'viewer';
         const target = await db.query('SELECT id FROM users WHERE phone = $1', [phone]);
-        if (!target.rows[0]) throw Object.assign(new Error('该手机号尚未注册 Scientify。'), { status: 404 });
+        if (target.rows[0]?.id === user.sub) {
+          throw Object.assign(new Error('你已经是该项目成员。'), { status: 409 });
+        }
+        if (target.rows[0]) {
+          await db.query(
+            `INSERT INTO project_members(project_id, user_id, role) VALUES ($1, $2, $3)
+             ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
+            [projectId, target.rows[0].id, role],
+          );
+          await db.query('DELETE FROM project_invitations WHERE project_id = $1 AND phone = $2', [
+            projectId,
+            phone,
+          ]);
+          return send(response, 200, { ok: true, pending: false });
+        }
         await db.query(
-          `INSERT INTO project_members(project_id, user_id, role) VALUES ($1, $2, $3)
-           ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role`,
-          [projectId, target.rows[0].id, role],
+          `INSERT INTO project_invitations(project_id, phone, role, invited_by)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (project_id, phone) DO UPDATE SET role = EXCLUDED.role,
+             invited_by = EXCLUDED.invited_by, created_at = NOW()`,
+          [projectId, phone, role, user.sub],
         );
-        return send(response, 200, { ok: true });
+        return send(response, 200, { ok: true, pending: true });
       }
       if (request.method === 'GET' && suffix === 'sync') {
-        return send(response, 200, await listChanges(db, projectId, user.sub, url.searchParams.get('cursor')));
+        return send(
+          response,
+          200,
+          await listChanges(db, projectId, user.sub, url.searchParams.get('cursor')),
+        );
       }
       if (request.method === 'POST' && suffix === 'sync') {
         return send(response, 200, await syncProject(db, projectId, user.sub, await body(request)));
@@ -422,7 +515,12 @@ async function handle(request, response, { config, db }) {
         const sha256 = String(input.sha256 ?? '').toLowerCase();
         const size = Number(input.size);
         const contentType = String(input.contentType ?? 'application/octet-stream').slice(0, 160);
-        if (!/^[a-f0-9]{64}$/.test(sha256) || !Number.isSafeInteger(size) || size < 0 || size > 200 * 1024 * 1024) {
+        if (
+          !/^[a-f0-9]{64}$/.test(sha256) ||
+          !Number.isSafeInteger(size) ||
+          size < 0 ||
+          size > 200 * 1024 * 1024
+        ) {
           throw Object.assign(new Error('文件摘要或大小无效。'), { status: 400 });
         }
         const existing = await db.query(
@@ -431,7 +529,11 @@ async function handle(request, response, { config, db }) {
           [projectId, sha256],
         );
         if (existing.rows[0]) {
-          return send(response, 200, { existing: true, blob: existing.rows[0], downloadUrl: signedDownloadUrl(config, existing.rows[0].objectKey) });
+          return send(response, 200, {
+            existing: true,
+            blob: existing.rows[0],
+            downloadUrl: signedDownloadUrl(config, existing.rows[0].objectKey),
+          });
         }
         const id = uuid();
         const key = objectKey(projectId, sha256);
@@ -441,7 +543,11 @@ async function handle(request, response, { config, db }) {
            ON CONFLICT (object_key) DO UPDATE SET size_bytes = EXCLUDED.size_bytes, content_type = EXCLUDED.content_type`,
           [id, projectId, key, sha256, size, contentType, user.sub],
         );
-        return send(response, 200, { existing: false, blob: { id, objectKey: key }, uploadUrl: signedUploadUrl(config, key, contentType) });
+        return send(response, 200, {
+          existing: false,
+          blob: { id, objectKey: key },
+          uploadUrl: signedUploadUrl(config, key, contentType),
+        });
       }
     }
     const blobMatch = path.match(/^\/v1\/blobs\/([^/]+)(?:\/(.*))?$/);
@@ -457,20 +563,31 @@ async function handle(request, response, { config, db }) {
         return send(response, 200, { ok: true, blob: { id: blob.id, objectKey: blob.object_key } });
       }
       if (request.method === 'GET' && !suffix) {
-        if (blob.status !== 'complete') throw Object.assign(new Error('文件尚未上传完成。'), { status: 409 });
+        if (blob.status !== 'complete')
+          throw Object.assign(new Error('文件尚未上传完成。'), { status: 409 });
         return send(response, 200, { downloadUrl: signedDownloadUrl(config, blob.object_key) });
       }
       if (request.method === 'DELETE' && !suffix) {
         await deleteObject(config, blob.object_key);
-        await db.query("UPDATE blobs SET status = 'deleted', deleted_at = NOW() WHERE id = $1", [blobId]);
+        await db.query("UPDATE blobs SET status = 'deleted', deleted_at = NOW() WHERE id = $1", [
+          blobId,
+        ]);
         return send(response, 200, { ok: true });
       }
     }
-    if (request.method === 'POST' && ['/v1/models/responses', '/v1/responses', '/v1/chat/completions'].includes(path)) {
+    if (
+      request.method === 'POST' &&
+      ['/v1/models/responses', '/v1/responses', '/v1/chat/completions'].includes(path)
+    ) {
       const input = await body(request, config.officialModel.maxBodyBytes);
       const model = String(input.model || config.officialModel.defaultModel || '').trim();
       if (!model) throw Object.assign(new Error('未选择官方模型。'), { status: 400 });
-      return proxyOfficialModel(response, config, { ...input, model }, path === '/v1/models/responses' ? '/v1/responses' : path);
+      return proxyOfficialModel(
+        response,
+        config,
+        { ...input, model },
+        path === '/v1/models/responses' ? '/v1/responses' : path,
+      );
     }
     return send(response, 404, { error: 'not_found' });
   } catch (error) {
