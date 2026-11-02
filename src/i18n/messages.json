@@ -1702,6 +1702,10 @@
   "连续滚动": ["连续滚动", "Continuous"],
   "分页阅览": ["分页阅览", "Paged"],
   "PDF 阅读区域": ["PDF 阅读区域", "PDF reading area"],
+  "PDF 页面渲染失败，请尝试重新打开该文献。": [
+    "PDF 页面渲染失败，请尝试重新打开该文献。",
+    "The PDF page could not be rendered. Try reopening the paper."
+  ],
   "团队协作空间": ["团队协作空间", "Team spaces"],
   "登录入口占位": ["登录入口占位", "Account placeholder"],
   "登录": ["登录", "Sign in"],

@@ -9,6 +9,7 @@ const links = vi.hoisted(() => ({
   getDestination: vi.fn(async () => [{ num: 3, gen: 0 }, { name: 'XYZ' }, 120, 300, null]),
   getPageIndex: vi.fn(async () => 1),
   render: vi.fn(() => ({ promise: Promise.resolve(), cancel: vi.fn() })),
+  textLayerError: null as Error | null,
 }));
 
 vi.mock('pdfjs-dist', async (importOriginal) => {
@@ -47,13 +48,16 @@ vi.mock('pdfjs-dist', async (importOriginal) => {
       destroy: async () => {},
     }),
     TextLayer: class {
-      render = async () => {};
+      render = async () => {
+        if (links.textLayerError) throw links.textLayerError;
+      };
       cancel = () => {};
     },
   };
 });
 beforeEach(() => {
   links.annotations.clear();
+  links.textLayerError = null;
   links.getDestination.mockClear();
   links.getPageIndex.mockClear();
   links.render
@@ -152,6 +156,17 @@ it('keeps the painted page during slow zooms and ignores a superseded render', a
   expect(latest?.style.width).toBe('780px');
   await act(async () => finishOld());
   expect(host.container.querySelector('canvas')).toBe(latest);
+});
+
+it('keeps the PDF page visible when the supplemental text layer fails', async () => {
+  links.textLayerError = new Error('text layer unavailable');
+  const { reader, context } = setup();
+  const host = render(reader);
+
+  await waitFor(() => expect(host.container.querySelector('.pdf-page-frame')).not.toBeNull());
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(host.container.querySelector('.pdf-page-frame canvas')).not.toBeNull();
+  await waitFor(() => expect(context.mock.lastCall?.[0].text).toBe('Research text'));
 });
 
 it('restores page, zoom and scroll when a document tab is remounted', async () => {

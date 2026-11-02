@@ -65,11 +65,19 @@ export function PdfPageSurface({
     annotationNode.className = 'annotationLayer';
     frame.append(node, textNode, annotationNode);
     let stale = false;
-    let published = false;
     let renderTask:
       ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']> | undefined;
     let layer: TextLayer | undefined;
     let links: AnnotationLayer | undefined;
+    const disposeLinks = () => {
+      const current = links;
+      links = undefined;
+      try {
+        current?.destroy();
+      } catch (error) {
+        console.warn('PDF annotation layer cleanup failed:', error);
+      }
+    };
     setLoading(!painted.current);
     // Coalesce wheel/resize bursts without ever removing the visible frame.
     let rendering: Promise<void> | undefined;
@@ -97,65 +105,87 @@ export function PdfPageSurface({
               viewport,
               transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
             });
-            // Observe cancellation immediately, including while text is loading.
-            const [content, annotations] = await Promise.all([
-              pdfPage.getTextContent(),
-              pdfPage.getAnnotations({ intent: 'display' }),
-              renderTask.promise,
-            ]);
+            // Text and annotations improve the page but must not prevent its
+            // canvas from appearing if one of those PDF.js layers fails.
+            const textTask = pdfPage.getTextContent().then(
+              (value) => ({ value, error: null }),
+              (error: unknown) => ({ value: null, error }),
+            );
+            const annotationTask = pdfPage.getAnnotations({ intent: 'display' }).then(
+              (value) => ({ value, error: null }),
+              (error: unknown) => ({ value: null, error }),
+            );
+            await renderTask.promise;
             if (stale) return;
-            const pageText = content.items
+            painted.current?.dispose();
+            host.replaceChildren(frame);
+            painted.current = { node: frame, scale, dispose: disposeLinks };
+            setLoading(false);
+
+            const [textResult, annotationResult] = await Promise.all([textTask, annotationTask]);
+            if (stale) return;
+            if (textResult.error) console.warn('PDF text content failed:', textResult.error);
+            if (annotationResult.error)
+              console.warn('PDF annotations failed:', annotationResult.error);
+            const content = textResult.value;
+            const annotations = annotationResult.value ?? [];
+            const pageText = (content?.items ?? [])
               .map((item) => ('str' in item ? item.str : ''))
               .join(' ')
               .slice(0, 24000);
-            layer = new TextLayer({
-              textContentSource: content,
-              container: textNode,
-              viewport,
-            });
-            const linkViewport = viewport.clone({ dontFlip: true });
-            links = new AnnotationLayer({
-              div: annotationNode,
-              page: pdfPage,
-              viewport: linkViewport,
-              linkService,
-              accessibilityManager: null,
-              annotationCanvasMap: null,
-              annotationEditorUIManager: null,
-              structTreeLayer: null,
-              commentManager: null,
-              annotationStorage: null,
-            });
-            await Promise.all([
-              renderTask.promise,
-              layer.render(),
-              links.render({
-                viewport: linkViewport,
+            if (content) {
+              layer = new TextLayer({
+                textContentSource: content,
+                container: textNode,
+                viewport,
+              });
+              try {
+                await layer.render();
+              } catch (error) {
+                console.warn('PDF text layer failed:', error);
+              }
+            }
+            if (annotations.length) {
+              const linkViewport = viewport.clone({ dontFlip: true });
+              links = new AnnotationLayer({
                 div: annotationNode,
                 page: pdfPage,
+                viewport: linkViewport,
                 linkService,
-                annotations: annotations.filter(
-                  (annotation) =>
-                    annotation.annotationType === AnnotationType.LINK &&
-                    (annotation.url ||
-                      annotation.dest ||
-                      ['NextPage', 'PrevPage', 'FirstPage', 'LastPage'].includes(
-                        annotation.action,
-                      )),
-                ),
-                renderForms: false,
-                enableScripting: false,
-              }),
-            ]);
+                accessibilityManager: null,
+                annotationCanvasMap: null,
+                annotationEditorUIManager: null,
+                structTreeLayer: null,
+                commentManager: null,
+                annotationStorage: null,
+              });
+              try {
+                await links.render({
+                  viewport: linkViewport,
+                  div: annotationNode,
+                  page: pdfPage,
+                  linkService,
+                  annotations: annotations.filter(
+                    (annotation) =>
+                      annotation.annotationType === AnnotationType.LINK &&
+                      (annotation.url ||
+                        annotation.dest ||
+                        ['NextPage', 'PrevPage', 'FirstPage', 'LastPage'].includes(
+                          annotation.action,
+                        )),
+                  ),
+                  renderForms: false,
+                  enableScripting: false,
+                });
+              } catch (error) {
+                console.warn('PDF annotation layer failed:', error);
+                disposeLinks();
+              }
+            }
             if (!stale) {
               for (const link of annotationNode.querySelectorAll('a'))
                 link.setAttribute('aria-label', pdfLinkLabel(link));
-              painted.current?.dispose();
-              host.replaceChildren(frame);
-              painted.current = { node: frame, scale, dispose: () => links?.destroy() };
-              published = true;
               text.current = pageText;
-              setLoading(false);
               callbacks.current.onReady(page, text.current);
               linkService.eventBus.dispatch('textlayerrendered', {
                 pageNumber: page,
@@ -169,8 +199,9 @@ export function PdfPageSurface({
           })
           .catch((error) => {
             if (!stale && error?.name !== 'RenderingCancelledException') {
+              console.error('PDF page render failed:', error);
               setLoading(false);
-              callbacks.current.onError(error instanceof Error ? error.message : String(error));
+              callbacks.current.onError(t('PDF 页面渲染失败，请尝试重新打开该文献。'));
             }
           });
       },
@@ -181,10 +212,11 @@ export function PdfPageSurface({
       clearTimeout(timer);
       renderTask?.cancel();
       layer?.cancel();
-      // AnnotationLayer has no cancel API. Destroy it after its async render
-      // settles; its detached nodes belong only to this effect.
-      void rendering?.then(() => {
-        if (!published) links?.destroy();
+      // AnnotationLayer has no cancel API. Destroy it after its async work
+      // settles. This also releases layers created after the canvas was shown.
+      void rendering?.finally(() => {
+        layer?.cancel();
+        disposeLinks();
       });
     };
   }, [document, page, width, zoom, visible, linkService]);
