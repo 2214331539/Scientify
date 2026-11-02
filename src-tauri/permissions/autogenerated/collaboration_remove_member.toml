@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-remove-member"
+description = "Enables the collaboration_remove_member command without any pre-configured scope."
+commands.allow = ["collaboration_remove_member"]
+
+[[permission]]
+identifier = "deny-collaboration-remove-member"
+description = "Denies the collaboration_remove_member command without any pre-configured scope."
+commands.deny = ["collaboration_remove_member"]

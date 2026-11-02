@@ -302,7 +302,7 @@ export function SettingsDialog({
           <TranslationPreferences />
         </section>
         <section hidden={section !== 'collaboration'} aria-label={t('协作')}>
-          <CollaborationPreferences />
+          <CollaborationPreferences store={store} />
         </section>
         <section hidden={section !== 'data'} aria-label={t('数据与备份')}>
           <DataPreferences store={store} />

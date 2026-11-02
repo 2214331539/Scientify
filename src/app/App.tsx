@@ -51,6 +51,8 @@ import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/short
 import {
   collaboration,
   collaborationStateEvent,
+  isSyncedProject,
+  projectSyncRequestEvent,
   type CollaborationProject,
 } from '../platform/collaboration';
 
@@ -281,27 +283,52 @@ export function App({
   const notesLayerRef = useRef<HTMLElement>(null);
   const [notesPlacement, setNotesPlacement] = useState(false);
   useCloseProtection(store, backend, windowMode === 'workspace');
+  // Keep the open cloud project in sync: when it opens, every 30 s, and a few
+  // seconds after local saves. Records that arrive load without touching drafts.
+  const syncedProjectId =
+    windowMode === 'workspace' &&
+    isSyncedProject(data?.projects.find((item) => item.id === ui.projectId))
+      ? ui.projectId
+      : null;
   useEffect(() => {
-    if (windowMode !== 'workspace') return;
+    if (!syncedProjectId) return;
     let disposed = false;
-    const syncCollaboration = async () => {
+    let soon: number | undefined;
+    let reloadPending = false;
+    const run = async () => {
       try {
         const state = await collaboration.status();
-        if (!state.enabled || !state.authenticated || !state.workspaceId || disposed) return;
-        await collaboration.sync();
-        if (!disposed) window.dispatchEvent(new Event(collaborationStateEvent));
+        if (!state.enabled || !state.authenticated || disposed) return;
+        const outcome = await collaboration.syncProject(syncedProjectId);
+        if (disposed) return;
+        if (
+          outcome.changed.some((kind) => ['project', 'record', 'experiment', 'run'].includes(kind))
+        )
+          reloadPending = true;
       } catch {
-        // Background sync must not interrupt editing. The pending outbox and
-        // the next explicit sync action remain available to the user.
+        // Retried on the next tick; the settings page shows the last error.
       }
+      if (disposed) return;
+      // A busy store skips the reload; try again until it lands.
+      if (reloadPending) reloadPending = !(await store.getState().refreshSaved());
+      window.dispatchEvent(new Event(collaborationStateEvent));
     };
-    void syncCollaboration();
-    const timer = window.setInterval(() => void syncCollaboration(), 30_000);
+    const request = (event: Event) => {
+      if ((event as CustomEvent<{ projectId?: string }>).detail?.projectId !== syncedProjectId)
+        return;
+      window.clearTimeout(soon);
+      soon = window.setTimeout(() => void run(), 3_000);
+    };
+    void run();
+    const timer = window.setInterval(() => void run(), 30_000);
+    window.addEventListener(projectSyncRequestEvent, request);
     return () => {
       disposed = true;
       window.clearInterval(timer);
+      window.clearTimeout(soon);
+      window.removeEventListener(projectSyncRequestEvent, request);
     };
-  }, [windowMode]);
+  }, [syncedProjectId, store]);
   useEffect(() => {
     if (!epoch || store.getState().dirty) return;
     const runtime = getFileRuntime(backend);

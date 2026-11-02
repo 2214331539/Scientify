@@ -12,6 +12,7 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import { coverColor, coverInk, deleteProject } from './model';
 import { ProjectActions } from './ProjectActions';
 import { CollaborationWorkspace } from './CollaborationWorkspace';
+import { isSyncedProject } from '../../platform/collaboration';
 import type { CollaborationProject } from '../../platform/collaboration';
 import './project-library.css';
 
@@ -133,7 +134,15 @@ export function ProjectLibrary({
       }
     },
   });
-  if (space !== 'personal') return <CollaborationWorkspace onOpenProject={onOpenRemote} />;
+  if (space !== 'personal')
+    return (
+      <CollaborationWorkspace
+        onOpenProject={onOpenRemote}
+        localProjects={data.projects
+          .filter((item) => !item.archived && !isSyncedProject(item))
+          .map((item) => ({ id: item.id, name: item.name }))}
+      />
+    );
   return (
     <section className="launcher-library" aria-label={t('项目管理')}>
       <header className="launcher-topbar" data-tauri-drag-region>

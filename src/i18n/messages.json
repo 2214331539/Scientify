@@ -2835,5 +2835,55 @@
     "高级：使用自托管协作服务",
     "Advanced: use a self-hosted collaboration service"
   ],
-  "待注册 · {role}": ["待注册 · {role}", "Pending sign-up · {role}"]
+  "待注册 · {role}": ["待注册 · {role}", "Pending sign-up · {role}"],
+  "云端项目自动同步": ["云端项目自动同步", "Cloud projects sync automatically"],
+  "选择要同步的本机项目": ["选择要同步的本机项目", "Choose a local project to sync"],
+  "选择本机项目，在多台设备间同步": [
+    "选择本机项目，在多台设备间同步",
+    "Choose a local project to sync across devices"
+  ],
+  "开启多设备同步": ["开启多设备同步", "Sync across devices"],
+  "协作服务器在你的多台设备和项目成员之间同步云端项目：文献与笔记、代码文件、项目笔记、实验与运行记录。AI 对话、Python 环境与实验运行仍保留在本机。": [
+    "协作服务器在你的多台设备和项目成员之间同步云端项目：文献与笔记、代码文件、项目笔记、实验与运行记录。AI 对话、Python 环境与实验运行仍保留在本机。",
+    "The collaboration server keeps cloud projects the same on your devices and for project members: literature and notes, code files, project notes, experiments and run records. AI conversations, Python environments and experiment runs stay on this device."
+  ],
+  "登录后，云端项目会在打开时和每 30 秒自动同步，本机保存后也会尽快同步。": [
+    "登录后，云端项目会在打开时和每 30 秒自动同步，本机保存后也会尽快同步。",
+    "Once signed in, cloud projects sync when opened, every 30 seconds, and shortly after you save."
+  ],
+  "云端项目同步": ["云端项目同步", "Cloud project sync"],
+  "上次同步：{time}": ["上次同步：{time}", "Last synced: {time}"],
+  "尚未同步": ["尚未同步", "Not synced yet"],
+  "文献文件夹：{path}": ["文献文件夹：{path}", "Literature folder: {path}"],
+  "正在同步…": ["正在同步…", "Syncing…"],
+  "还没有云端项目。在“团队协作空间”中新建项目，或为本机项目开启多设备同步。": [
+    "还没有云端项目。在“团队协作空间”中新建项目，或为本机项目开启多设备同步。",
+    "No cloud projects yet. Create one in Team spaces, or turn on device sync for a local project."
+  ],
+  "最近的同步冲突": ["最近的同步冲突", "Recent sync conflicts"],
+  "两台设备改了同一内容时两份都会保留：远端版本沿用原名，本机版本另存为冲突副本。": [
+    "两台设备改了同一内容时两份都会保留：远端版本沿用原名，本机版本另存为冲突副本。",
+    "When two devices change the same item, both versions are kept: the remote one keeps the name and this device’s version is saved as a conflict copy."
+  ],
+  "本机版本另存为：{copy}": ["本机版本另存为：{copy}", "This device’s version saved as: {copy}"],
+  "已采用远端版本": ["已采用远端版本", "Kept the remote version"],
+  "笔记图片": ["笔记图片", "Note images"],
+  "运行记录": ["运行记录", "Run records"],
+  "项目信息": ["项目信息", "Project details"],
+  "正在同步，请稍候。": ["正在同步，请稍候。", "Already syncing. Please wait."],
+  "该项目没有开启云同步。": ["该项目没有开启云同步。", "This project does not sync to the cloud."],
+  "协作同步已关闭。": ["协作同步已关闭。", "Collaboration sync is turned off."],
+  "请先登录协作账号。": ["请先登录协作账号。", "Sign in to your collaboration account first."],
+  "同步目录中的文件超过 20000 个，请整理后再同步。": [
+    "同步目录中的文件超过 20000 个，请整理后再同步。",
+    "The synced folder has more than 20,000 files. Tidy it up, then sync again."
+  ],
+  "工作区正被频繁修改，稍后再同步。": [
+    "工作区正被频繁修改，稍后再同步。",
+    "The workspace is changing too often. Sync again shortly."
+  ],
+  "下载的文件内容校验失败。": [
+    "下载的文件内容校验失败。",
+    "A downloaded file failed its integrity check."
+  ]
 }

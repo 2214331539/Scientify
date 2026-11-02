@@ -472,7 +472,7 @@ it('seeds a legacy conversation only into its own newly created native thread', 
   expect(vi.mocked(agent.startTurn).mock.calls[0][0].text).not.toContain('另一会话的私有内容');
 });
 
-it('rebases a failed result save on the current disk revision without losing another window’s edit', async () => {
+it('saves a result on the current disk revision without losing another window’s edit', async () => {
   const { store, runtime, complete, externalEdit } = await harness();
   const chat = newConversation('p1');
   await runtime.send(chat, 'code', connection, '任务');
@@ -480,11 +480,12 @@ it('rebases a failed result save on the current disk revision without losing ano
   complete(chat.id, '应保留的结果');
   await runtime.poll();
   const task = runtime.get('p1', chat.id)!;
-  await vi.waitFor(() => expect(task.saveError).toContain('工作区已发生变化'));
-  await runtime.retrySave(task);
+  // The store re-applies the save on the newer workspace instead of failing it.
+  await vi.waitFor(() =>
+    expect(asConversation(store.getState().data!.sessions[0]).messages.at(-1)?.text).toBe(
+      '应保留的结果',
+    ),
+  );
   expect(task.saveError).toBeNull();
   expect(store.getState().data!.projects[1].name).toBe('其他窗口的修改');
-  expect(asConversation(store.getState().data!.sessions[0]).messages.at(-1)?.text).toBe(
-    '应保留的结果',
-  );
 });

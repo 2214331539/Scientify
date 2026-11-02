@@ -90,35 +90,48 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
       if (!get().data || exclusive || get().phase !== 'ready') return false;
       pending += 1;
       set({ busy: true });
+      const attempt = async () => {
+        // Read the authoritative snapshot when this operation reaches the queue.
+        const data = get().data!;
+        const draft = structuredClone(data);
+        edit(draft);
+        normalizeExperiments(draft);
+        for (const projectId of Object.values(get().agentTasks)) {
+          const before = data.projects.find((project) => project.id === projectId);
+          const after = draft.projects.find((project) => project.id === projectId);
+          if (
+            before &&
+            (!after || (before.path || before.repo || '') !== (after.path || after.repo || ''))
+          )
+            throw new Error(t('请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。'));
+        }
+        for (const taskKey of Object.keys(get().agentTasks)) {
+          const [project, id] = taskKey.split(':');
+          if (
+            data.sessions.some((chat) => chat.project === project && chat.id === id) &&
+            !draft.sessions.some((chat) => chat.project === project && chat.id === id)
+          )
+            throw new Error(t('请先中止并等待此会话任务结束。'));
+        }
+        draft.revision = data.revision + 1;
+        draft.updatedAt = new Date().toISOString();
+        const saved = await backend.save(draft, data.revision);
+        set({ data: normalizeExperiments(saved), notice: t('已保存到本机') });
+      };
       const run = async () => {
         set({ error: null, notice: null });
         try {
-          // Read the authoritative snapshot when this operation reaches the queue.
-          const data = get().data!;
-          const draft = structuredClone(data);
-          edit(draft);
-          normalizeExperiments(draft);
-          for (const projectId of Object.values(get().agentTasks)) {
-            const before = data.projects.find((project) => project.id === projectId);
-            const after = draft.projects.find((project) => project.id === projectId);
-            if (
-              before &&
-              (!after || (before.path || before.repo || '') !== (after.path || after.repo || ''))
-            )
-              throw new Error(t('请先结束此项目的 Agent 任务并保存结果，再删除项目或更换目录。'));
+          try {
+            await attempt();
+          } catch (error) {
+            // Project sync may save between this edit's read and write; re-apply
+            // the edit once on top of the newer workspace instead of failing it.
+            if (!errorMessage(error).includes('工作区已发生变化')) throw error;
+            const latest = await backend.load();
+            if (!latest.workspace) throw error;
+            set({ data: normalizeExperiments(latest.workspace) });
+            await attempt();
           }
-          for (const taskKey of Object.keys(get().agentTasks)) {
-            const [project, id] = taskKey.split(':');
-            if (
-              data.sessions.some((chat) => chat.project === project && chat.id === id) &&
-              !draft.sessions.some((chat) => chat.project === project && chat.id === id)
-            )
-              throw new Error(t('请先中止并等待此会话任务结束。'));
-          }
-          draft.revision = data.revision + 1;
-          draft.updatedAt = new Date().toISOString();
-          const saved = await backend.save(draft, data.revision);
-          set({ data: normalizeExperiments(saved), notice: t('已保存到本机') });
           return true;
         } catch (error) {
           set({ error: errorMessage(error) });

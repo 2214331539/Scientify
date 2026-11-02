@@ -104,6 +104,34 @@ describe('workspace transaction boundary', () => {
     expect(store.getState().data?.settings.theme).toBe('dark');
     expect(store.getState().data?.revision).toBe(2);
   });
+  it('re-applies an edit on top of a save made elsewhere', async () => {
+    let disk = emptyWorkspace();
+    const adapter: WorkspaceBackend = {
+      ...backend(),
+      load: async () => ({
+        workspace: structuredClone(disk),
+        directory: 'test/workspace',
+        legacyAvailable: false,
+      }),
+      save: vi.fn(async (next, expected) => {
+        if (disk.revision !== expected) throw new Error('工作区已发生变化，请重新载入后再保存。');
+        disk = structuredClone(next);
+        return structuredClone(disk);
+      }),
+    };
+    const store = createWorkspaceStore(adapter);
+    await store.getState().load();
+    // Project sync writes the workspace after the store last read it.
+    disk = { ...structuredClone(disk), revision: 1, settings: { ...disk.settings, theme: 'dark' } };
+    expect(
+      await store.getState().update((d) => {
+        d.settings.name = 'Ada';
+      }),
+    ).toBe(true);
+    expect(store.getState().data?.settings).toMatchObject({ name: 'Ada', theme: 'dark' });
+    expect(store.getState().data?.revision).toBe(2);
+    expect(adapter.save).toHaveBeenCalledTimes(2);
+  });
   it('tracks independent unsaved editors without clearing another source', () => {
     const store = createWorkspaceStore(backend());
     store.getState().setDirtySource('note', true);

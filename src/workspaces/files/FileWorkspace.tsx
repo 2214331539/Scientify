@@ -33,7 +33,7 @@ import { undoDepth, redoDepth } from '@codemirror/commands';
 import type { Project } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
 import type { FileContent, ResearchBackend, ResearchFile } from '../../platform/research';
-import { collaboration, collaborationEntityId } from '../../platform/collaboration';
+import { requestProjectSync } from '../../platform/collaboration';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
   beginFileOperation,
@@ -116,24 +116,10 @@ export function FileWorkspace(props: FileWorkspaceProps) {
   onDirtyChangeRef.current = onDirtyChange;
   const dirty = hasUnsavedFileChanges(backend);
   const onCodeSaved = useCallback(
-    async (file: FileContent, previousVersion: string | null) => {
-      if (mode !== 'experiments') return;
-      await collaboration.enqueueIfEnabled({
-        operationId: crypto.randomUUID(),
-        domain: 'code',
-        entityId: collaborationEntityId(`${workspaceRoot ?? 'base'}:${file.path}`),
-        baseRevision: 0,
-        kind: 'code-upsert',
-        payload: {
-          path: file.path,
-          workspaceRoot: workspaceRoot ?? null,
-          content: file.content,
-          baseVersion: previousVersion,
-        },
-        createdAt: new Date().toISOString(),
-      });
+    async (_file: FileContent, _previousVersion: string | null) => {
+      if (mode === 'experiments') requestProjectSync(project.id);
     },
-    [mode, workspaceRoot],
+    [mode, project.id],
   );
   const getSession = useCallback(
     (path: string) =>
@@ -235,10 +221,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
         null,
         ...(workspaceRoot ? [workspaceRoot] : []),
       );
-      if (mode === 'experiments')
-        void onCodeSaved(created, null).catch((error) =>
-          console.warn('Scientify collaboration outbox unavailable:', error),
-        );
+      if (mode === 'experiments') void onCodeSaved(created, null);
       if (mounted.current && activeScope.current === scope) {
         open(path);
         setShowCreate(false);

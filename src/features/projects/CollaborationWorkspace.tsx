@@ -44,8 +44,11 @@ function roleName(role?: string) {
 
 export function CollaborationWorkspace({
   onOpenProject,
+  localProjects = [],
 }: {
   onOpenProject(project: CollaborationProject): Promise<void>;
+  /** Personal projects on this device that do not sync yet. */
+  localProjects?: { id: string; name: string }[];
 }) {
   const [state, setState] = useState<CollaborationState | null>(null);
   const [endpoint, setEndpoint] = useState('');
@@ -55,6 +58,7 @@ export function CollaborationWorkspace({
   const [selected, setSelected] = useState<CollaborationProject | null>(null);
   const [members, setMembers] = useState<CollaborationMember[]>([]);
   const [projectName, setProjectName] = useState('');
+  const [publishId, setPublishId] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteRole, setInviteRole] = useState<'editor' | 'reviewer' | 'viewer'>('editor');
   const [busy, setBusy] = useState(false);
@@ -198,6 +202,23 @@ export function CollaborationWorkspace({
     }
   }
 
+  /** Publish a personal project under its own id; the first sync uploads it. */
+  async function publish() {
+    const local = localProjects.find((item) => item.id === publishId);
+    if (!local) return;
+    setBusy(true);
+    setError('');
+    try {
+      const project = await collaboration.createProject(local.name, local.id);
+      setPublishId('');
+      await onOpenProject(project);
+    } catch (reason) {
+      setError(translateError(String(reason)));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function showMembers(project: CollaborationProject) {
     setSelected(project);
     setBusyProject(project.id);
@@ -232,7 +253,6 @@ export function CollaborationWorkspace({
     setBusyProject(project.id);
     setError('');
     try {
-      await collaboration.bindProject(project.id);
       await onOpenProject(project);
     } catch (reason) {
       setError(translateError(String(reason)));
@@ -310,7 +330,7 @@ export function CollaborationWorkspace({
               </div>
               <span className="collaboration-sync-state">
                 <Cloud />
-                {state.lastSyncAt ? t('最近已同步') : t('等待首次同步')}
+                {t('云端项目自动同步')}
               </span>
             </div>
           </section>
@@ -477,6 +497,26 @@ export function CollaborationWorkspace({
                   {t('新建')}
                 </Button>
               </div>
+              {localProjects.length ? (
+                <div className="collaboration-create-project">
+                  <Dropdown
+                    aria-label={t('选择要同步的本机项目')}
+                    value={publishId}
+                    disabled={busy}
+                    onChange={(event) => setPublishId(event.target.value)}
+                  >
+                    <option value="">{t('选择本机项目，在多台设备间同步')}</option>
+                    {localProjects.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </Dropdown>
+                  <Button disabled={busy || !publishId} onClick={() => void publish()}>
+                    {t('开启多设备同步')}
+                  </Button>
+                </div>
+              ) : null}
               <div className="collaboration-project-list">
                 {projects.length ? (
                   projects.map((project) => (
