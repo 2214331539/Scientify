@@ -63,6 +63,13 @@ export type ProjectSyncState = {
 
 export const collaborationStateEvent = 'scientify-collaboration-state-changed';
 export const projectSyncRequestEvent = 'scientify-project-sync-request';
+export const signInRequestEvent = 'scientify-sign-in-request';
+
+/** Ask the window to show the sign-in page, from wherever sign-in is offered. */
+export function requestSignIn(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(signInRequestEvent));
+}
 
 /**
  * Ask the open window to sync a project soon. Sync finds changes by scanning

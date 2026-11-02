@@ -7,9 +7,11 @@ import {
   collaboration,
   collaborationStateEvent,
   isSyncedProject,
+  requestSignIn,
   type CollaborationState,
   type ProjectSyncState,
 } from '../../platform/collaboration';
+import { maskPhone } from '../account/account';
 
 function notifyCollaborationStateChanged() {
   window.dispatchEvent(new Event(collaborationStateEvent));
@@ -34,8 +36,6 @@ export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
   const [state, setState] = useState<CollaborationState | null>(null);
   const [endpoint, setEndpoint] = useState('');
   const [enabled, setEnabled] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
   const [syncStates, setSyncStates] = useState<Record<string, ProjectSyncState>>({});
   const [busy, setBusy] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
@@ -80,13 +80,6 @@ export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
   const save = () =>
     run(async () => {
       setState(await collaboration.configure(endpoint, enabled));
-      notifyCollaborationStateChanged();
-    });
-  const sendCode = () => run(async () => void (await collaboration.sendCode(endpoint, phone)));
-  const login = () =>
-    run(async () => {
-      setState(await collaboration.login(endpoint, phone, code));
-      setEnabled(true);
       notifyCollaborationStateChanged();
     });
   const logout = () =>
@@ -151,40 +144,16 @@ export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
         <h3>{t('协作登录')}</h3>
         {state?.authenticated ? (
           <div className="settings-collaboration-account">
-            <p>{t('已登录：{phone}', { phone: state.phone ?? '' })}</p>
+            <p>{t('已登录：{phone}', { phone: maskPhone(state.phone ?? '') })}</p>
             <Button variant="ghost" disabled={busy} onClick={() => void logout()}>
               {t('退出登录')}
             </Button>
           </div>
         ) : (
-          <div className="settings-collaboration-login-fields">
-            <Input
-              value={phone}
-              placeholder={t('手机号')}
-              disabled={busy}
-              onChange={(event) => setPhone(event.target.value)}
-            />
-            <div className="settings-collaboration-code">
-              <Input
-                value={code}
-                placeholder={t('验证码')}
-                disabled={busy}
-                onChange={(event) => setCode(event.target.value)}
-              />
-              <Button
-                variant="ghost"
-                disabled={busy || !phone.trim()}
-                onClick={() => void sendCode()}
-              >
-                {t('获取验证码')}
-              </Button>
-            </div>
-            <Button
-              variant="primary"
-              disabled={busy || !phone.trim() || !code.trim()}
-              onClick={() => void login()}
-            >
-              {t('登录协作服务器')}
+          <div className="settings-collaboration-account">
+            <p>{t('尚未登录。登录后，云端项目会在你的设备之间同步。')}</p>
+            <Button variant="primary" disabled={busy} onClick={requestSignIn}>
+              {t('登录')}
             </Button>
           </div>
         )}

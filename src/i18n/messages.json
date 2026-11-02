@@ -2535,7 +2535,6 @@
   "手机号": ["手机号", "Mobile number"],
   "验证码": ["验证码", "Verification code"],
   "获取验证码": ["获取验证码", "Get code"],
-  "登录协作服务器": ["登录协作服务器", "Sign in to collaboration"],
   "退出登录": ["退出登录", "Sign out"],
   "已登录：{phone}": ["已登录：{phone}", "Signed in: {phone}"],
   "已登录": ["已登录", "Signed in"],
@@ -2723,12 +2722,6 @@
     "协作项目无法载入，请重试。",
     "The collaboration project could not be loaded. Try again."
   ],
-  "协作服务器设置已保存。": ["协作服务器设置已保存。", "Collaboration server settings saved."],
-  "验证码已发送，请查收短信。": [
-    "验证码已发送，请查收短信。",
-    "The verification code was sent by SMS."
-  ],
-  "已登录协作服务器。": ["已登录协作服务器。", "Signed in to the collaboration server."],
   "协作项目已创建。": ["协作项目已创建。", "Collaboration project created."],
   "成员邀请已发送。": ["成员邀请已发送。", "The member invitation was sent."],
   "登录和协作同步需要在 Scientify 桌面应用中使用。": [
@@ -2757,14 +2750,12 @@
     "服务器地址和登录状态只保存在本机。",
     "The server address and sign-in state stay on this device."
   ],
-  "保存连接": ["保存连接", "Save connection"],
   "JWT 会在本机安全存储并自动刷新": [
     "JWT 会在本机安全存储并自动刷新",
     "JWT tokens are stored locally and refreshed automatically"
   ],
   "输入手机号": ["输入手机号", "Enter phone number"],
   "短信验证码": ["短信验证码", "SMS verification code"],
-  "登录并继续": ["登录并继续", "Sign in and continue"],
   "新建协作项目名称": ["新建协作项目名称", "New collaboration project name"],
   "成员": ["成员", "Members"],
   "正在打开…": ["正在打开…", "Opening…"],
@@ -2799,11 +2790,6 @@
   ],
   "最近已同步": ["最近已同步", "Recently synced"],
   "等待首次同步": ["等待首次同步", "Waiting for first sync"],
-  "手机号登录": ["手机号登录", "Sign in with phone"],
-  "未注册的手机号将自动创建 Scientify 账号。": [
-    "未注册的手机号将自动创建 Scientify 账号。",
-    "A new Scientify account will be created for an unregistered phone number."
-  ],
   "请输入手机号": ["请输入手机号", "Enter your phone number"],
   "6 位短信验证码": ["6 位短信验证码", "6-digit SMS code"],
   "正在登录…": ["正在登录…", "Signing in…"],
@@ -2830,10 +2816,6 @@
   "断网时继续工作，恢复连接后自动合并变更。": [
     "断网时继续工作，恢复连接后自动合并变更。",
     "Keep working offline and merge changes when the connection returns."
-  ],
-  "高级：使用自托管协作服务": [
-    "高级：使用自托管协作服务",
-    "Advanced: use a self-hosted collaboration service"
   ],
   "待注册 · {role}": ["待注册 · {role}", "Pending sign-up · {role}"],
   "云端项目自动同步": ["云端项目自动同步", "Cloud projects sync automatically"],
@@ -2885,5 +2867,77 @@
   "下载的文件内容校验失败。": [
     "下载的文件内容校验失败。",
     "A downloaded file failed its integrity check."
-  ]
+  ],
+  "返回": ["返回", "Back"],
+  "登录 Scientify": ["登录 Scientify", "Sign in to Scientify"],
+  "使用手机号登录。未注册的手机号验证后会自动创建账号。": [
+    "使用手机号登录。未注册的手机号验证后会自动创建账号。",
+    "Sign in with your phone number. A new number gets an account once it is verified."
+  ],
+  "请输入正确的 11 位手机号。": [
+    "请输入正确的 11 位手机号。",
+    "Enter a valid 11-digit phone number."
+  ],
+  "{seconds} 秒后重发": ["{seconds} 秒后重发", "Resend in {seconds}s"],
+  "重新获取": ["重新获取", "Resend code"],
+  "验证码已发送至 {phone}": ["验证码已发送至 {phone}", "Code sent to {phone}"],
+  "使用自托管协作服务": ["使用自托管协作服务", "Use a self-hosted collaboration service"],
+  "登录成功后，这台设备会使用该地址。": [
+    "登录成功后，这台设备会使用该地址。",
+    "This device uses the address once you sign in."
+  ],
+  "无法连接协作服务，请检查网络后重试。": [
+    "无法连接协作服务，请检查网络后重试。",
+    "Cannot reach the collaboration service. Check your network and try again."
+  ],
+  "请求过于频繁，请稍后再试。": [
+    "请求过于频繁，请稍后再试。",
+    "Too many requests. Try again later."
+  ],
+  "协作服务暂时不可用，请稍后再试。": [
+    "协作服务暂时不可用，请稍后再试。",
+    "The collaboration service is unavailable right now. Try again later."
+  ],
+  "账号": ["账号", "Account"],
+  "已登录 Scientify 协作": ["已登录 Scientify 协作", "Signed in to Scientify collaboration"],
+  "同步与协作设置": ["同步与协作设置", "Sync and collaboration settings"],
+  "退出登录后，云端项目会停止同步，本机的项目和文件会保留。": [
+    "退出登录后，云端项目会停止同步，本机的项目和文件会保留。",
+    "After you sign out, cloud projects stop syncing. Projects and files on this device stay."
+  ],
+  "登录后使用团队协作": ["登录后使用团队协作", "Sign in to collaborate"],
+  "创建协作项目、邀请成员，并在你的多台设备间同步项目。": [
+    "创建协作项目、邀请成员，并在你的多台设备间同步项目。",
+    "Create shared projects, invite members and sync projects across your devices."
+  ],
+  "登录或注册": ["登录或注册", "Sign in or sign up"],
+  "未注册的手机号验证后会自动创建账号。": [
+    "未注册的手机号验证后会自动创建账号。",
+    "A new number gets an account once it is verified."
+  ],
+  "尚未登录。登录后，云端项目会在你的设备之间同步。": [
+    "尚未登录。登录后，云端项目会在你的设备之间同步。",
+    "Not signed in. Once you sign in, cloud projects sync across your devices."
+  ],
+  "手机号格式无效。": ["手机号格式无效。", "Invalid phone number."],
+  "验证码不正确。": ["验证码不正确。", "The verification code is incorrect."],
+  "验证码已过期，请重新获取。": [
+    "验证码已过期，请重新获取。",
+    "The verification code has expired. Request a new one."
+  ],
+  "验证码尝试次数过多，请重新获取。": [
+    "验证码尝试次数过多，请重新获取。",
+    "Too many attempts. Request a new code."
+  ],
+  "验证码发送过于频繁，请稍后再试。": [
+    "验证码发送过于频繁，请稍后再试。",
+    "A code was sent a moment ago. Try again in a minute."
+  ],
+  "验证码请求过多，请稍后再试。": [
+    "验证码请求过多，请稍后再试。",
+    "Too many code requests. Try again later."
+  ],
+  "账号创建失败，请重试。": ["账号创建失败，请重试。", "Could not create the account. Try again."],
+  "短信服务尚未配置。": ["短信服务尚未配置。", "SMS sign-in is not set up on this server."],
+  "短信发送失败：{message}": ["短信发送失败：{message}", "Could not send the SMS: {message}"]
 }

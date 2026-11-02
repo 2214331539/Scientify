@@ -1,16 +1,13 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ChevronDown,
   Cloud,
   History,
-  LoaderCircle,
   LogIn,
   LogOut,
   RefreshCw,
   Shield,
   ShieldCheck,
-  Smartphone,
   UserPlus,
   UsersRound,
 } from 'lucide-react';
@@ -21,10 +18,12 @@ import { t, translateError } from '../../i18n';
 import {
   collaboration,
   collaborationStateEvent,
+  requestSignIn,
   type CollaborationMember,
   type CollaborationProject,
   type CollaborationState,
 } from '../../platform/collaboration';
+import { maskPhone } from '../account/account';
 import './collaboration-workspace.css';
 
 const roleLabel: Record<string, string> = {
@@ -51,9 +50,6 @@ export function CollaborationWorkspace({
   localProjects?: { id: string; name: string }[];
 }) {
   const [state, setState] = useState<CollaborationState | null>(null);
-  const [endpoint, setEndpoint] = useState('');
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
   const [projects, setProjects] = useState<CollaborationProject[]>([]);
   const [selected, setSelected] = useState<CollaborationProject | null>(null);
   const [members, setMembers] = useState<CollaborationMember[]>([]);
@@ -65,16 +61,6 @@ export function CollaborationWorkspace({
   const [busyProject, setBusyProject] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [showServerSettings, setShowServerSettings] = useState(false);
-  const [codeCountdown, setCodeCountdown] = useState(0);
-
-  useEffect(() => {
-    if (!codeCountdown) return;
-    const timer = window.setInterval(() => {
-      setCodeCountdown((current) => Math.max(0, current - 1));
-    }, 1_000);
-    return () => window.clearInterval(timer);
-  }, [codeCountdown]);
 
   const loadProjects = useCallback(async () => {
     const result = await collaboration.projects();
@@ -89,7 +75,6 @@ export function CollaborationWorkspace({
     try {
       const next = await collaboration.status();
       setState(next);
-      setEndpoint(next.endpoint);
       setError('');
       if (next.authenticated) await loadProjects();
       else {
@@ -102,71 +87,13 @@ export function CollaborationWorkspace({
     }
   }, [loadProjects]);
 
+  // Signing in or out elsewhere (the sign-in page, the account menu) shows up here.
   useEffect(() => {
     void refresh();
+    const update = () => void refresh();
+    window.addEventListener(collaborationStateEvent, update);
+    return () => window.removeEventListener(collaborationStateEvent, update);
   }, [refresh]);
-
-  async function saveEndpoint() {
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      const next = await collaboration.configure(endpoint, true);
-      setState(next);
-      notifyCollaborationStateChanged();
-      setNotice(t('协作服务器设置已保存。'));
-    } catch (reason) {
-      setError(translateError(String(reason)));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function checkHealth() {
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      await collaboration.health(endpoint);
-      setNotice(t('协作服务连接正常。'));
-    } catch (reason) {
-      setError(translateError(String(reason)));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function sendCode() {
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      await collaboration.sendCode(endpoint, phone);
-      setNotice(t('验证码已发送，请查收短信。'));
-      setCodeCountdown(60);
-    } catch (reason) {
-      setError(translateError(String(reason)));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function login() {
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      const next = await collaboration.login(endpoint, phone, code);
-      setState(next);
-      notifyCollaborationStateChanged();
-      await loadProjects();
-      setNotice(t('已登录协作服务器。'));
-    } catch (reason) {
-      setError(translateError(String(reason)));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function logout() {
     setBusy(true);
@@ -325,7 +252,7 @@ export function CollaborationWorkspace({
                 {state.phone?.slice(-2) ?? <Shield />}
               </span>
               <div>
-                <strong>{state.phone}</strong>
+                <strong>{state.phone ? maskPhone(state.phone) : t('已登录')}</strong>
                 <small>{t('账号已连接 · 自动保存与同步已开启')}</small>
               </div>
               <span className="collaboration-sync-state">
@@ -339,61 +266,24 @@ export function CollaborationWorkspace({
             <section className="collaboration-card collaboration-auth-card">
               <div className="collaboration-auth-heading">
                 <span className="collaboration-auth-icon">
-                  <Smartphone />
+                  <LogIn />
                 </span>
                 <div>
-                  <h2>{t('手机号登录')}</h2>
-                  <p>{t('未注册的手机号将自动创建 Scientify 账号。')}</p>
+                  <h2>{t('登录后使用团队协作')}</h2>
+                  <p>{t('创建协作项目、邀请成员，并在你的多台设备间同步项目。')}</p>
                 </div>
               </div>
-              <label>
-                {t('手机号')}
-                <Input
-                  value={phone}
-                  disabled={busy}
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder={t('请输入手机号')}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
-              </label>
-              <label>
-                {t('验证码')}
-                <div className="collaboration-code-input">
-                  <Input
-                    value={code}
-                    disabled={busy}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder={t('6 位短信验证码')}
-                    onChange={(event) => setCode(event.target.value.trim())}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' && phone.trim() && code.trim()) {
-                        void login();
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="ghost"
-                    disabled={busy || !phone.trim() || !endpoint.trim() || codeCountdown > 0}
-                    onClick={() => void sendCode()}
-                  >
-                    {codeCountdown > 0 ? `${codeCountdown}s` : t('获取验证码')}
-                  </Button>
-                </div>
-              </label>
               <Button
                 className="collaboration-login-submit"
                 variant="primary"
-                disabled={busy || !phone.trim() || !code.trim() || !endpoint.trim()}
-                onClick={() => void login()}
+                onClick={requestSignIn}
               >
-                {busy ? <LoaderCircle className="is-spinning" /> : <LogIn />}
-                {busy ? t('正在登录…') : t('登录并继续')}
+                <LogIn />
+                {t('登录或注册')}
               </Button>
               <p className="collaboration-auth-footnote">
                 <ShieldCheck />
-                {t('账号与协作数据在本机和服务端加密传输。')}
+                {t('未注册的手机号验证后会自动创建账号。')}
               </p>
             </section>
             <aside className="collaboration-auth-benefits">
@@ -423,48 +313,6 @@ export function CollaborationWorkspace({
             </aside>
           </div>
         )}
-
-        {!state?.authenticated ? (
-          <details
-            className="collaboration-server-settings"
-            open={showServerSettings}
-            onToggle={(event) => setShowServerSettings(event.currentTarget.open)}
-          >
-            <summary>
-              <ChevronDown />
-              {t('高级：使用自托管协作服务')}
-            </summary>
-            <div className="collaboration-server-settings-body">
-              <label>
-                {t('服务器地址')}
-                <Input
-                  value={endpoint}
-                  disabled={busy}
-                  placeholder="https://collab.example.com"
-                  onChange={(event) => setEndpoint(event.target.value)}
-                />
-              </label>
-              <div className="collaboration-card-actions">
-                <Button
-                  variant="ghost"
-                  disabled={busy || !endpoint.trim()}
-                  onClick={() => void checkHealth()}
-                >
-                  <Shield />
-                  {t('检查连接')}
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={busy || !endpoint.trim()}
-                  onClick={() => void saveEndpoint()}
-                >
-                  <RefreshCw />
-                  {t('保存连接')}
-                </Button>
-              </div>
-            </div>
-          </details>
-        ) : null}
 
         {state?.authenticated ? (
           <div className="collaboration-main-grid">

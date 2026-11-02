@@ -77,6 +77,33 @@
 }
 .launcher-profile:hover:not(:disabled) {
   background: transparent;
+  color: var(--sf-text-primary);
+}
+.launcher-profile-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.launcher-profile-text strong {
+  color: var(--sf-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.launcher-profile-text small {
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.launcher-account-heading {
+  display: grid;
+  gap: 2px;
+  padding: 6px 9px 4px;
+}
+.launcher-account-heading strong {
+  font-size: 12px;
+}
+.launcher-account-heading small {
+  color: var(--sf-text-muted);
+  font-size: 11px;
 }
 .launcher-avatar {
   width: 42px;

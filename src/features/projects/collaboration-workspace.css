@@ -18,7 +18,6 @@
 
 .collaboration-heading,
 .collaboration-toolbar,
-.collaboration-card-actions,
 .collaboration-card-heading,
 .collaboration-account,
 .collaboration-project-actions,
@@ -50,9 +49,6 @@
 }
 .collaboration-toolbar {
   gap: 8px;
-}
-.collaboration-card-actions {
-  gap: 6px;
 }
 .collaboration-toolbar .sf-button {
   min-height: 34px;
@@ -182,13 +178,6 @@
 .collaboration-auth-icon svg {
   width: 20px;
 }
-.collaboration-auth-card > label,
-.collaboration-server-settings-body label {
-  display: grid;
-  gap: 7px;
-  color: var(--sf-text-secondary);
-  font-size: 12px;
-}
 .collaboration-login-submit {
   width: 100%;
   min-height: 42px;
@@ -253,73 +242,6 @@
   color: var(--sf-text-muted);
   font-size: 11px;
   line-height: 1.55;
-}
-.collaboration-server-settings {
-  max-width: 900px;
-  margin: 0 auto 18px;
-  border: 1px solid var(--sf-border-subtle);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--sf-surface-raised) 88%, transparent);
-}
-.collaboration-server-settings summary {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 11px 14px;
-  color: var(--sf-text-muted);
-  font-size: 11px;
-  cursor: pointer;
-  list-style: none;
-}
-.collaboration-server-settings summary::-webkit-details-marker {
-  display: none;
-}
-.collaboration-server-settings summary svg {
-  width: 14px;
-  transition: transform var(--sf-motion-feedback) var(--sf-ease-standard);
-}
-.collaboration-server-settings[open] summary svg {
-  transform: rotate(180deg);
-}
-.collaboration-server-settings-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 12px;
-  padding: 0 14px 14px;
-}
-.collaboration-connection label,
-.collaboration-login-fields label {
-  display: grid;
-  gap: 6px;
-  color: var(--sf-text-secondary);
-  font-size: 12px;
-}
-.collaboration-connection > label {
-  max-width: 560px;
-}
-.collaboration-login-fields {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.collaboration-login-fields label {
-  flex: 1 1 180px;
-}
-.collaboration-login-fields > .sf-button {
-  min-height: 38px;
-}
-.collaboration-code-input {
-  display: flex;
-  gap: 7px;
-}
-.collaboration-code-input .sf-input {
-  min-width: 0;
-  flex: 1;
-}
-.collaboration-code-input .sf-button {
-  flex: 0 0 auto;
 }
 .collaboration-account {
   gap: 9px;
@@ -555,13 +477,6 @@
   }
   .collaboration-hero {
     flex-direction: column;
-  }
-  .collaboration-login-fields {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .collaboration-server-settings-body {
-    grid-template-columns: 1fr;
   }
   .collaboration-project-list article {
     grid-template-columns: 32px minmax(0, 1fr);

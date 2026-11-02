@@ -53,13 +53,23 @@ import {
   collaborationStateEvent,
   isSyncedProject,
   projectSyncRequestEvent,
+  signInRequestEvent,
   type CollaborationProject,
 } from '../platform/collaboration';
+import { SignInPage } from '../features/account/SignInPage';
 
 const COLLABORATION_TEAM_ID = 'scientify-collaboration';
 
 type Dialog =
-  { kind: 'project'; project?: Project } | { kind: 'data' | 'profile' | 'search' | 'about' } | null;
+  | { kind: 'project'; project?: Project }
+  | { kind: 'data' | 'profile' | 'search' | 'about' | 'collaboration' }
+  | null;
+const settingsSection = {
+  profile: 'general',
+  data: 'data',
+  about: 'about',
+  collaboration: 'collaboration',
+} as const;
 type Location = {
   workspace: WorkspaceId;
   view: string;
@@ -280,9 +290,16 @@ export function App({
   });
   const [pendingNote, setPendingNote] = useState<{ scope: string; id: string } | null>(null);
   const [launching, setLaunching] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const notesLayerRef = useRef<HTMLElement>(null);
   const [notesPlacement, setNotesPlacement] = useState(false);
   useCloseProtection(store, backend, windowMode === 'workspace');
+  // Every sign-in entry asks for the same page; it opens over any dialog.
+  useEffect(() => {
+    const open = () => setSigningIn(true);
+    window.addEventListener(signInRequestEvent, open);
+    return () => window.removeEventListener(signInRequestEvent, open);
+  }, []);
   // Keep the open cloud project in sync: when it opens, every 30 s, and a few
   // seconds after local saves. Records that arrive load without touching drafts.
   const syncedProjectId =
@@ -1045,18 +1062,17 @@ export function App({
               onClose={() => setDialog(null)}
             />
           ) : null}
-          {dialog && ['profile', 'data', 'about'].includes(dialog.kind) ? (
+          {dialog && dialog.kind in settingsSection ? (
             <SettingsDialog
               store={store}
-              initialSection={
-                dialog.kind === 'profile' ? 'general' : dialog.kind === 'about' ? 'about' : 'data'
-              }
+              initialSection={settingsSection[dialog.kind as keyof typeof settingsSection]}
               onClose={() => setDialog(null)}
             />
           ) : null}
           {dialog?.kind === 'search' && data ? (
             <SearchDialog store={store} onClose={() => setDialog(null)} onNavigate={goToTarget} />
           ) : null}
+          {signingIn ? <SignInPage onClose={() => setSigningIn(false)} /> : null}
         </>
       }
     >
@@ -1066,6 +1082,7 @@ export function App({
           ready={!!ready}
           onSpace={(space) => setUI((s) => ({ ...s, space }))}
           onSettings={() => openDialog({ kind: 'profile' })}
+          onCollaborationSettings={() => openDialog({ kind: 'collaboration' })}
         />
       )}
       {(!ready || !project) && central}

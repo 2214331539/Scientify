@@ -195,19 +195,6 @@ dialog.settings-dialog[open] {
   font-size: 13px;
   font-weight: 600;
 }
-.settings-collaboration-login-fields,
-.settings-collaboration-code {
-  display: flex;
-  gap: 8px;
-  min-width: 0;
-}
-.settings-collaboration-login-fields {
-  flex-direction: column;
-}
-.settings-collaboration-code input {
-  min-width: 0;
-  flex: 1;
-}
 .settings-collaboration-account,
 .settings-collaboration-projects-heading {
   display: flex;
