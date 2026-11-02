@@ -31,7 +31,7 @@ pnpm start
 
 ## 分支与合并
 
-采用 GitHub Flow：`main` 保持可构建、可发布；每个任务独立分支，通过 PR 合入，不设置长期 `develop`。
+`main` 是唯一长期分支，保持可构建、可发布，不设置 `develop`。维护者和自动化助手直接在 `main` 上提交，流程见[开发与验收流程](docs/开发流程/开发与验收流程.md)。外部贡献者从 `main` 创建任务分支，通过 PR 合入：
 
 | 分支 | 用途 | 示例 |
 | --- | --- | --- |
@@ -41,17 +41,17 @@ pnpm start
 | `docs/<topic>` | 文档 | `docs/getting-started` |
 | `chore/<topic>` | 构建、依赖与维护 | `chore/release-0.3.0` |
 | `refactor/<topic>`、`test/<topic>` | 重构与验证 | `test/workspace-save` |
-| `codex/<topic>` | 自动化助手创建的任务分支 | `codex/windows-alpha-release` |
+| `codex/<topic>` | 自动化助手需要并行时的临时分支，当天合回 `main` | `codex/windows-alpha-release` |
 
 分支名使用小写英文和连字符，可加入 Issue 编号。提交与 PR 标题使用 `feat:`、`fix:`、`docs:`、`chore:`、`refactor:` 或 `test:` 前缀。破坏兼容性的改动需显式说明。
 
-合并前必须通过 `Windows checks / windows` 和 `macOS checks / Apple Silicon build and native verification` 并解决讨论。维护者使用 squash merge，合并后删除任务分支；不直接在 `main` 开发，不强推或删除 `main`。当前单维护者阶段不要求另一位维护者审批，以免阻塞自身 PR；外部贡献仍由维护者审阅。GitHub 服务端保护是否可强制执行取决于仓库可见性和套餐，不能用书面约定代替实际保护。
+外部 PR 合并前必须通过 `Windows checks / windows` 和 `macOS checks / Apple Silicon build and native verification` 并解决讨论，由维护者审阅后 squash merge，合并后删除任务分支。任何人都不强推或删除 `main`。GitHub 服务端保护是否可强制执行取决于仓库可见性和套餐，不能用书面约定代替实际保护。
 
 发布流程与故障处理见[版本发布说明](docs/技术方案/版本发布与分支管理.md)。
 
 首次启动或构建会下载固定版本的 Agent 引擎并生成协议类型。请使用 `pnpm run build` 准备资源后再运行检查；仅执行 `pnpm install` 不会生成这些文件。`pnpm dev` 是隔离的前端预览，仍会执行资源准备脚本，不能验证原生能力。
 
-开发构建使用 `.tauri-data/`。测试必须使用临时目录或夹具，不能拿真实研究项目、模型密钥或浏览器资料作测试数据。
+开发构建使用源码目录旁边的 `ScientifyDevData/`，所有工作树共用；`pnpm dev:data` 查看它和正式数据的位置。自动测试必须使用临时目录或夹具，不能拿真实研究项目、模型密钥或浏览器资料作测试数据。
 
 ## 代码边界
 

@@ -1,6 +1,8 @@
 # Scientify 开发入口
 
 - 源码和文档根目录均为本仓库。先查 [项目说明](README.md) 与 [文档索引](docs/README.md)。
+- 开发、验收和推送按 [开发与验收流程](docs/开发流程/开发与验收流程.md)：只用 `main`，推到 Tsingyu-x-THU/Scientify-Desktop；开工前先 `git pull`；每次更新在 [更新记录](docs/更新记录/README.md) 写范围、验收清单和自动检查结果。
+- 开发版的数据在源码目录旁边的 `ScientifyDevData`，正式版的数据由 `scientify-storage.json` 指定。不要为了运行程序新建工作树，不要在源码目录运行 `git clean -x`，不拿正式数据做测试。
 - UI/UX 工作先读 [标准入口](docs/UI-UX/README.md)，按任务阅读视觉、组件、动效、验收规范。现有组件说明在 [src/components/README.md](src/components/README.md)。
 - 技术架构以 [技术方案第 0 节](docs/架构设计/技术方案.md#0-当前基线与-uiux-固定准则) 区分当前实现与后续目标。旧四入口、单窗口、Electron 方案和开发记录不作为回退当前产品的依据。
 - 复用现有 primitives、workspace 组件和语义变量。视觉变化不重置编辑会话、草稿、选区或保存保护；用户数据不作为演示夹具。
