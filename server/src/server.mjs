@@ -5,6 +5,7 @@ import { createDb, initDb, withTransaction } from './db.mjs';
 import { hashSecret, signToken, verifyToken } from './jwt.mjs';
 import { normalizePhone, sendVerificationCode } from './sms.mjs';
 import { deleteObject, objectKey, signedDownloadUrl, signedUploadUrl } from './oss.mjs';
+import { pullEntities, pushEntities } from './sync.mjs';
 
 const json = (value) => JSON.stringify(value);
 const now = () => new Date();
@@ -79,6 +80,31 @@ async function requireMember(db, projectId, userId, write = false) {
   return role;
 }
 
+const codeRequests = new Map();
+const CODE_WINDOW_MS = 10 * 60_000;
+const CODE_REQUESTS_PER_WINDOW = 10;
+
+/** Behind Nginx the client address arrives in X-Real-IP; otherwise use the socket. */
+function clientAddress(request, config) {
+  const forwarded = config.trustProxy ? String(request.headers['x-real-ip'] ?? '') : '';
+  return forwarded || request.socket.remoteAddress || 'unknown';
+}
+
+function limitCodeRequests(address) {
+  const nowMs = Date.now();
+  const recent = (codeRequests.get(address) ?? []).filter((at) => nowMs - at < CODE_WINDOW_MS);
+  if (recent.length >= CODE_REQUESTS_PER_WINDOW) {
+    throw Object.assign(new Error('验证码请求过多，请稍后再试。'), { status: 429 });
+  }
+  recent.push(nowMs);
+  codeRequests.set(address, recent);
+  if (codeRequests.size > 10_000) {
+    for (const [key, times] of codeRequests) {
+      if (times.every((at) => nowMs - at >= CODE_WINDOW_MS)) codeRequests.delete(key);
+    }
+  }
+}
+
 function phoneCode(config) {
   if (config.sms.developmentCode) return config.sms.developmentCode;
   return String(crypto.randomInt(100000, 1_000_000));
@@ -149,10 +175,6 @@ async function login(db, config, phone, code) {
   return { user, ...tokens };
 }
 
-function operationError(operationId, message, serverRevision = null) {
-  return { operationId, message, serverRevision };
-}
-
 function modelEndpoint(endpoint, suffix) {
   const url = new URL(endpoint);
   const base = url.pathname
@@ -195,124 +217,6 @@ async function proxyOfficialModel(response, config, input, path) {
   response.end();
 }
 
-async function syncProject(db, projectId, userId, input) {
-  const role = await requireMember(db, projectId, userId, false);
-  const writable = canWrite(role);
-  const operations = Array.isArray(input.operations) ? input.operations.slice(0, 500) : [];
-  return withTransaction(db, async (client) => {
-    const accepted = [];
-    const conflicts = [];
-    for (const operation of operations) {
-      if (!operation || typeof operation !== 'object') continue;
-      if (!writable) {
-        conflicts.push(
-          operationError(operation.operationId ?? '', '当前成员权限只能读取，不能提交协作变更。'),
-        );
-        continue;
-      }
-      const required = [
-        'operationId',
-        'clientId',
-        'domain',
-        'entityId',
-        'baseRevision',
-        'kind',
-        'payload',
-        'createdAt',
-      ];
-      if (required.some((key) => operation[key] === undefined)) {
-        conflicts.push(operationError(operation.operationId ?? '', '协作变更格式无效。'));
-        continue;
-      }
-      const duplicate = await client.query(
-        'SELECT operation_id, server_revision FROM sync_operations WHERE operation_id = $1',
-        [operation.operationId],
-      );
-      if (duplicate.rows[0]) {
-        accepted.push({
-          operationId: operation.operationId,
-          serverRevision: duplicate.rows[0].server_revision,
-        });
-        continue;
-      }
-      const head = await client.query(
-        'SELECT revision FROM entity_heads WHERE project_id = $1 AND domain = $2 AND entity_id = $3 FOR UPDATE',
-        [projectId, operation.domain, operation.entityId],
-      );
-      const current = Number(head.rows[0]?.revision ?? 0);
-      const base = Number(operation.baseRevision);
-      if (!Number.isSafeInteger(base) || (base !== current && operation.kind !== 'create')) {
-        conflicts.push(
-          operationError(operation.operationId, '远程资源已发生变化，需要处理冲突。', current),
-        );
-        continue;
-      }
-      const next = current + 1;
-      if (head.rows[0]) {
-        await client.query(
-          'UPDATE entity_heads SET revision = $4 WHERE project_id = $1 AND domain = $2 AND entity_id = $3',
-          [projectId, operation.domain, operation.entityId, next],
-        );
-      } else {
-        await client.query(
-          'INSERT INTO entity_heads(project_id, domain, entity_id, revision) VALUES ($1, $2, $3, $4)',
-          [projectId, operation.domain, operation.entityId, next],
-        );
-      }
-      await client.query(
-        `INSERT INTO sync_operations
-          (operation_id, project_id, actor_id, client_id, domain, entity_id, base_revision, server_revision, kind, payload, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [
-          operation.operationId,
-          projectId,
-          userId,
-          operation.clientId,
-          operation.domain,
-          operation.entityId,
-          base,
-          next,
-          operation.kind,
-          operation.payload,
-          operation.createdAt,
-        ],
-      );
-      accepted.push({ operationId: operation.operationId, serverRevision: next });
-    }
-    const changeResult = await client.query(
-      `SELECT operation_id AS "operationId", client_id AS "clientId", domain, entity_id AS "entityId",
-              server_revision AS "serverRevision", kind, payload, created_at AS "createdAt", sequence
-         FROM sync_operations WHERE project_id = $1 AND sequence > $2 ORDER BY sequence LIMIT 500`,
-      [projectId, Number(input.cursor ?? 0) || 0],
-    );
-    const changes = changeResult.rows.map((change) => ({
-      ...change,
-      sequence: Number(change.sequence),
-      serverRevision: Number(change.serverRevision),
-    }));
-    if (accepted.length)
-      await client.query('UPDATE projects SET updated_at = NOW() WHERE id = $1', [projectId]);
-    const nextCursor = changes.at(-1)?.sequence ?? (Number(input.cursor ?? 0) || 0);
-    return { accepted, conflicts, changes, nextCursor };
-  });
-}
-
-async function listChanges(db, projectId, userId, cursor) {
-  await requireMember(db, projectId, userId);
-  const result = await db.query(
-    `SELECT operation_id AS "operationId", client_id AS "clientId", domain, entity_id AS "entityId",
-            server_revision AS "serverRevision", kind, payload, created_at AS "createdAt", sequence
-       FROM sync_operations WHERE project_id = $1 AND sequence > $2 ORDER BY sequence LIMIT 500`,
-    [projectId, Number(cursor) || 0],
-  );
-  const changes = result.rows.map((change) => ({
-    ...change,
-    sequence: Number(change.sequence),
-    serverRevision: Number(change.serverRevision),
-  }));
-  return { changes, nextCursor: changes.at(-1)?.sequence ?? (Number(cursor) || 0) };
-}
-
 async function projectBlob(db, projectId, blobId, userId) {
   const result = await db.query(
     'SELECT * FROM blobs WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL',
@@ -336,6 +240,7 @@ async function handle(request, response, { config, db }) {
     if (request.method === 'POST' && path === '/v1/auth/send-code') {
       const input = await body(request, 16_384);
       const phone = normalizePhone(input.phone);
+      limitCodeRequests(clientAddress(request, config));
       const existing = await db.query('SELECT last_sent_at FROM auth_codes WHERE phone = $1', [
         phone,
       ]);
@@ -416,14 +321,30 @@ async function handle(request, response, { config, db }) {
       const name = String(input.name ?? '').trim();
       if (!name || name.length > 160)
         throw Object.assign(new Error('项目名称无效。'), { status: 400 });
+      // Publishing a local project keeps its id so its files and records stay linked.
+      const id = input.id === undefined ? uuid() : String(input.id);
+      if (!/^[A-Za-z0-9_-]{8,80}$/.test(id))
+        throw Object.assign(new Error('项目标识无效。'), { status: 400 });
+      const taken = await db.query('SELECT owner_id FROM projects WHERE id = $1', [id]);
+      if (taken.rows[0]) {
+        if (taken.rows[0].owner_id !== user.sub)
+          throw Object.assign(new Error('项目标识已被使用。'), { status: 409 });
+        const mine = await db.query(
+          `SELECT id, name, owner_id AS "ownerId", created_at AS "createdAt", updated_at AS "updatedAt",
+                  change_seq AS "changeSeq", 'owner' AS role FROM projects WHERE id = $1`,
+          [id],
+        );
+        return send(response, 200, { ...mine.rows[0], changeSeq: Number(mine.rows[0].changeSeq) });
+      }
       const timestamp = now().toISOString();
       const project = {
-        id: uuid(),
+        id,
         name,
         ownerId: user.sub,
         role: 'owner',
         createdAt: timestamp,
         updatedAt: timestamp,
+        changeSeq: 0,
       };
       await withTransaction(db, async (client) => {
         await client.query('INSERT INTO projects(id, name, owner_id) VALUES ($1, $2, $3)', [
@@ -440,12 +361,15 @@ async function handle(request, response, { config, db }) {
     }
     if (request.method === 'GET' && path === '/v1/projects') {
       const result = await db.query(
-        `SELECT p.id, p.name, p.owner_id AS "ownerId", p.created_at AS "createdAt", p.updated_at AS "updatedAt", m.role
+        `SELECT p.id, p.name, p.owner_id AS "ownerId", p.created_at AS "createdAt", p.updated_at AS "updatedAt",
+                p.change_seq AS "changeSeq", m.role
            FROM projects p JOIN project_members m ON m.project_id = p.id
           WHERE m.user_id = $1 ORDER BY p.updated_at DESC`,
         [user.sub],
       );
-      return send(response, 200, { projects: result.rows });
+      return send(response, 200, {
+        projects: result.rows.map((row) => ({ ...row, changeSeq: Number(row.changeSeq) })),
+      });
     }
     const projectMatch = path.match(/^\/v1\/projects\/([^/]+)(?:\/(.*))?$/);
     if (projectMatch) {
@@ -499,15 +423,51 @@ async function handle(request, response, { config, db }) {
         );
         return send(response, 200, { ok: true, pending: true });
       }
-      if (request.method === 'GET' && suffix === 'sync') {
+      if (request.method === 'DELETE' && suffix.startsWith('members/')) {
+        const role = await requireMember(db, projectId, user.sub);
+        const target = decodeURIComponent(suffix.slice('members/'.length));
+        if (target === user.sub) {
+          if (role === 'owner')
+            throw Object.assign(new Error('项目所有者不能退出项目。'), { status: 409 });
+        } else if (role !== 'owner') {
+          throw Object.assign(new Error('只有项目所有者可以管理成员。'), { status: 403 });
+        }
+        if (target.startsWith('invite:')) {
+          await db.query('DELETE FROM project_invitations WHERE project_id = $1 AND phone = $2', [
+            projectId,
+            target.slice('invite:'.length),
+          ]);
+        } else {
+          await db.query(
+            "DELETE FROM project_members WHERE project_id = $1 AND user_id = $2 AND role <> 'owner'",
+            [projectId, target],
+          );
+        }
+        return send(response, 200, { ok: true });
+      }
+      if (request.method === 'GET' && suffix === 'entities') {
+        await requireMember(db, projectId, user.sub);
         return send(
           response,
           200,
-          await listChanges(db, projectId, user.sub, url.searchParams.get('cursor')),
+          await pullEntities(
+            db,
+            projectId,
+            Number(url.searchParams.get('since') ?? 0),
+            Number(url.searchParams.get('limit') ?? 500),
+          ),
         );
       }
-      if (request.method === 'POST' && suffix === 'sync') {
-        return send(response, 200, await syncProject(db, projectId, user.sub, await body(request)));
+      if (request.method === 'POST' && suffix === 'entities') {
+        const role = await requireMember(db, projectId, user.sub);
+        const input = await body(request, 8 * 1024 * 1024);
+        return send(
+          response,
+          200,
+          await withTransaction(db, (client) =>
+            pushEntities(client, projectId, user.sub, role, input),
+          ),
+        );
       }
       if (request.method === 'POST' && suffix === 'blobs/presign-upload') {
         await requireMember(db, projectId, user.sub, true);
@@ -535,17 +495,19 @@ async function handle(request, response, { config, db }) {
             downloadUrl: signedDownloadUrl(config, existing.rows[0].objectKey),
           });
         }
-        const id = uuid();
         const key = objectKey(projectId, sha256);
-        await db.query(
+        // An interrupted or deleted upload of the same content keeps its row id.
+        const row = await db.query(
           `INSERT INTO blobs(id, project_id, object_key, sha256, size_bytes, content_type, status, created_by)
            VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
-           ON CONFLICT (object_key) DO UPDATE SET size_bytes = EXCLUDED.size_bytes, content_type = EXCLUDED.content_type`,
-          [id, projectId, key, sha256, size, contentType, user.sub],
+           ON CONFLICT (object_key) DO UPDATE SET size_bytes = EXCLUDED.size_bytes,
+             content_type = EXCLUDED.content_type, status = 'pending', deleted_at = NULL
+           RETURNING id`,
+          [uuid(), projectId, key, sha256, size, contentType, user.sub],
         );
         return send(response, 200, {
           existing: false,
-          blob: { id, objectKey: key },
+          blob: { id: row.rows[0].id, objectKey: key },
           uploadUrl: signedUploadUrl(config, key, contentType),
         });
       }
@@ -558,6 +520,7 @@ async function handle(request, response, { config, db }) {
       if (!found.rows[0]) throw Object.assign(new Error('文件不存在。'), { status: 404 });
       const blob = await projectBlob(db, found.rows[0].project_id, blobId, user.sub);
       if (request.method === 'POST' && suffix === 'complete') {
+        await requireMember(db, found.rows[0].project_id, user.sub, true);
         if (blob.status !== 'pending') return send(response, 200, { ok: true });
         await db.query("UPDATE blobs SET status = 'complete' WHERE id = $1", [blobId]);
         return send(response, 200, { ok: true, blob: { id: blob.id, objectKey: blob.object_key } });
@@ -568,6 +531,15 @@ async function handle(request, response, { config, db }) {
         return send(response, 200, { downloadUrl: signedDownloadUrl(config, blob.object_key) });
       }
       if (request.method === 'DELETE' && !suffix) {
+        const role = await member(db, found.rows[0].project_id, user.sub);
+        if (role !== 'owner')
+          throw Object.assign(new Error('只有项目所有者可以删除云端文件。'), { status: 403 });
+        const used = await db.query(
+          'SELECT 1 FROM sync_entities WHERE blob_id = $1 AND NOT deleted LIMIT 1',
+          [blobId],
+        );
+        if (used.rows[0])
+          throw Object.assign(new Error('文件仍在同步中使用，不能删除。'), { status: 409 });
         await deleteObject(config, blob.object_key);
         await db.query("UPDATE blobs SET status = 'deleted', deleted_at = NOW() WHERE id = $1", [
           blobId,

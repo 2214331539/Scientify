@@ -25,9 +25,12 @@ CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   owner_id TEXT NOT NULL REFERENCES users(id),
+  -- Last sync change number; pushes take the row lock, so numbers commit in order.
+  change_seq BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS change_seq BIGINT NOT NULL DEFAULT 0;
 CREATE TABLE IF NOT EXISTS project_members (
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -43,28 +46,39 @@ CREATE TABLE IF NOT EXISTS project_invitations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (project_id, phone)
 );
-CREATE TABLE IF NOT EXISTS sync_operations (
-  operation_id TEXT PRIMARY KEY,
+-- The current state of every synced file and record. A device catches up by
+-- reading rows whose change_seq is above its cursor; history is kept apart.
+CREATE TABLE IF NOT EXISTS sync_entities (
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  actor_id TEXT NOT NULL REFERENCES users(id),
-  client_id TEXT NOT NULL,
   domain TEXT NOT NULL,
-  entity_id TEXT NOT NULL,
-  base_revision BIGINT NOT NULL,
-  server_revision BIGINT NOT NULL,
-  kind TEXT NOT NULL,
-  payload JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  sequence BIGSERIAL UNIQUE
+  path TEXT NOT NULL,
+  revision BIGINT NOT NULL,
+  change_seq BIGINT NOT NULL,
+  deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  hash TEXT,
+  size_bytes BIGINT,
+  blob_id TEXT,
+  content JSONB,
+  updated_by TEXT NOT NULL REFERENCES users(id),
+  device_id TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (project_id, domain, path)
 );
-CREATE INDEX IF NOT EXISTS sync_operations_project_sequence
-  ON sync_operations(project_id, sequence);
-CREATE TABLE IF NOT EXISTS entity_heads (
+CREATE INDEX IF NOT EXISTS sync_entities_project_seq ON sync_entities(project_id, change_seq);
+CREATE TABLE IF NOT EXISTS sync_entity_versions (
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   domain TEXT NOT NULL,
-  entity_id TEXT NOT NULL,
-  revision BIGINT NOT NULL DEFAULT 0,
-  PRIMARY KEY (project_id, domain, entity_id)
+  path TEXT NOT NULL,
+  revision BIGINT NOT NULL,
+  deleted BOOLEAN NOT NULL,
+  hash TEXT,
+  size_bytes BIGINT,
+  blob_id TEXT,
+  content JSONB,
+  updated_by TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (project_id, domain, path, revision)
 );
 CREATE TABLE IF NOT EXISTS blobs (
   id TEXT PRIMARY KEY,

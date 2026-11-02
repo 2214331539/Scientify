@@ -15,7 +15,8 @@ function signature(parameters, secret) {
 
 export function normalizePhone(value) {
   const phone = String(value ?? '').trim().replace(/^\+86/, '');
-  if (!/^1[3-9]\d{9}$/.test(phone)) throw new Error('手机号格式无效。');
+  if (!/^1[3-9]\d{9}$/.test(phone))
+    throw Object.assign(new Error('手机号格式无效。'), { status: 400 });
   return phone;
 }
 

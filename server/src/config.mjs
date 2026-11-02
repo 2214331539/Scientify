@@ -20,6 +20,8 @@ export function readConfig(env = process.env) {
   return {
     host: optional(env, 'HOST') || '127.0.0.1',
     port: integer(env.PORT, 8081, 1, 65535),
+    // True behind Nginx, so per-address limits see the client instead of the proxy.
+    trustProxy: optional(env, 'TRUST_PROXY').toLowerCase() === 'true',
     databaseUrl: optional(env, 'DATABASE_URL'),
     jwtSecret: optional(env, 'JWT_SECRET'),
     jwtIssuer: optional(env, 'JWT_ISSUER') || 'scientify-collaboration',
