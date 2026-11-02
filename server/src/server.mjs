@@ -105,8 +105,18 @@ function limitCodeRequests(address) {
   }
 }
 
-function phoneCode(config) {
-  if (config.sms.developmentCode) return config.sms.developmentCode;
+/**
+ * A fixed code for test accounts, which receive no SMS. In production it only
+ * covers the numbers in DEV_SMS_PHONES; elsewhere it covers every number.
+ */
+function usesDevelopmentCode(config, phone) {
+  const { developmentCode, developmentPhones } = config.sms;
+  if (!developmentCode) return false;
+  return developmentPhones.length ? developmentPhones.includes(phone) : !config.production;
+}
+
+function phoneCode(config, phone) {
+  if (usesDevelopmentCode(config, phone)) return config.sms.developmentCode;
   return String(crypto.randomInt(100000, 1_000_000));
 }
 
@@ -250,7 +260,7 @@ async function handle(request, response, { config, db }) {
       ) {
         throw Object.assign(new Error('验证码发送过于频繁，请稍后再试。'), { status: 429 });
       }
-      const code = phoneCode(config);
+      const code = phoneCode(config, phone);
       const hash = hashSecret(`${config.jwtSecret}:${phone}:${code}`);
       await db.query(
         `INSERT INTO auth_codes(phone, code_hash, expires_at, last_sent_at, attempts)
@@ -259,7 +269,7 @@ async function handle(request, response, { config, db }) {
            expires_at = EXCLUDED.expires_at, last_sent_at = EXCLUDED.last_sent_at, attempts = 0`,
         [phone, hash],
       );
-      await sendVerificationCode(config, phone, code);
+      if (!usesDevelopmentCode(config, phone)) await sendVerificationCode(config, phone, code);
       return send(response, 202, { accepted: true });
     }
     if (request.method === 'POST' && path === '/v1/auth/login') {
@@ -577,7 +587,7 @@ export function createServer(config, db) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const config = readConfig();
-  if (process.env.NODE_ENV === 'production') assertProductionConfig(config);
+  if (config.production) assertProductionConfig(config);
   const db = createDb(config);
   await initDb(db);
   const server = createServer(config, db);

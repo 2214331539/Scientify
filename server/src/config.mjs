@@ -20,6 +20,7 @@ export function readConfig(env = process.env) {
   return {
     host: optional(env, 'HOST') || '127.0.0.1',
     port: integer(env.PORT, 8081, 1, 65535),
+    production: optional(env, 'NODE_ENV') === 'production',
     // True behind Nginx, so per-address limits see the client instead of the proxy.
     trustProxy: optional(env, 'TRUST_PROXY').toLowerCase() === 'true',
     databaseUrl: optional(env, 'DATABASE_URL'),
@@ -43,6 +44,11 @@ export function readConfig(env = process.env) {
       regionId: optional(env, 'SMS_REGION_ID') || 'cn-hangzhou',
       dryRun: String(env.SMS_DRY_RUN ?? '').toLowerCase() === 'true',
       developmentCode: optional(env, 'DEV_SMS_CODE'),
+      // Test accounts that sign in with DEV_SMS_CODE instead of a real SMS.
+      developmentPhones: optional(env, 'DEV_SMS_PHONES')
+        .split(',')
+        .map((phone) => phone.trim())
+        .filter(Boolean),
     },
     officialModel: {
       endpoint: optional(env, 'OFFICIAL_MODEL_ENDPOINT'),
@@ -68,6 +74,10 @@ export function assertProductionConfig(config) {
     regionOf(config.oss);
   } catch {
     missing.push('OSS_REGION');
+  }
+  if (config.sms.developmentCode && !config.sms.developmentPhones.length) {
+    // Without a list the fixed code would sign anyone in as any number.
+    missing.push('DEV_SMS_PHONES (required with DEV_SMS_CODE)');
   }
   if (missing.length) throw new Error(`Missing production configuration: ${missing.join(', ')}`);
 }
