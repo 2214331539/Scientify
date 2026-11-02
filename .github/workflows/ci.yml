@@ -50,8 +50,8 @@ jobs:
         run: pnpm format:check
       - name: Type checking
         run: pnpm check
-      - name: Release platform mapping
-        run: node --test scripts/platform.test.mjs
+      - name: Release platform mapping and development data
+        run: node --test scripts/platform.test.mjs scripts/dev-data.test.mjs
       - name: Frontend tests
         run: pnpm test --maxWorkers=2
       - name: Install UI test browser

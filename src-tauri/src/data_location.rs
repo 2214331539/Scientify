@@ -48,17 +48,27 @@ pub fn production_locator() -> Result<Locator, String> {
     ))
 }
 
+/// Development builds share one `ScientifyDevData` folder next to the
+/// checkout, so every worktree and fresh clone opens the same projects
+/// instead of starting from an empty workspace of its own.
+#[cfg(debug_assertions)]
+fn development_directory() -> PathBuf {
+    let checkout = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("src-tauri sits inside the checkout");
+    checkout
+        .parent()
+        .unwrap_or(checkout)
+        .join("ScientifyDevData")
+        .join("workspace")
+}
+
 pub fn prepare() -> Result<(PathBuf, DataLocation), String> {
     #[cfg(debug_assertions)]
     {
         let directory = std::env::var_os("SCIENTIFY_DATA_DIR")
             .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .parent()
-                    .unwrap()
-                    .join(".tauri-data/workspace")
-            });
+            .unwrap_or_else(development_directory);
         Ok((
             directory.clone(),
             DataLocation {

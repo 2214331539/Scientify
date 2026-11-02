@@ -92,7 +92,7 @@ Mac 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles 
 ## 数据与 AI
 
 - PDF、相邻论文笔记和代码保留在本地目录。应用元数据、项目研究笔记和运行记录由本地数据目录管理。
-- Windows 正式构建默认在可写安装目录附近使用 `ScientifyData/`；Mac 默认使用 `~/Library/Application Support/com.scientify.desktop/ScientifyData/`。设置中可以安排数据迁移。开发构建使用独立的 `.tauri-data/`。
+- Windows 正式构建默认在可写安装目录附近使用 `ScientifyData/`；Mac 默认使用 `~/Library/Application Support/Scientify/ScientifyData/`。设置中可以安排数据迁移。开发构建使用源码目录旁边的 `ScientifyDevData/`，所有工作树共用，见[开发与验收流程](docs/开发流程/开发与验收流程.md)。
 - **JSON 导出不包含 PDF 和源码。** 完整备份需要复制应用数据和外部关联目录；详细步骤见[数据说明](docs/产品功能文档/桌面使用说明.md#数据与文件)。
 - 使用远程模型时，选定材料或 Agent 读取的内容可能发送给所配置的服务商，费用遵循该服务商规则。本地优先不等于所有功能离线运行。
 - 当前模型密钥保存在本机未加密的凭据文件中。不要分享整个数据目录、浏览器资料或带密钥的日志；该限制与报告方式见[安全说明](SECURITY.md)。

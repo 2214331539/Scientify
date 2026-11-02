@@ -175,7 +175,7 @@ type AgentBinding = {
 | 项目与线程的映射索引 | 1 个 | `<data>/agent/threads.json` |
 | 服务商 API 密钥 | 1 个 | `<data>/credentials.json`（明文），见 §4.7 |
 
-`<data>` 指现有数据目录：debug 为仓库 `.tauri-data/workspace/`，release 为应用数据目录下的 `workspace/`。
+`<data>` 指现有数据目录：debug 为源码目录旁边的 `ScientifyDevData/workspace/`，release 为应用数据目录下的 `workspace/`。
 
 每个 `CODEX_HOME` 下各自持有 `config.toml`、`auth.json` 与 `sessions/`。两个 home 即得到硬隔离：线程历史、配置、凭据互不可见。
 

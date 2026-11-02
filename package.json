@@ -24,7 +24,8 @@
     "test:rust": "cargo test --workspace",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" \"scripts/*.mjs\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\" \"scripts/*.mjs\"",
-    "prepare:translation": "node scripts/prepare-translation.mjs"
+    "prepare:translation": "node scripts/prepare-translation.mjs",
+    "dev:data": "node scripts/dev-data.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
