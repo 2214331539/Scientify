@@ -1855,6 +1855,18 @@ mod tests {
             outcome
         }
 
+        fn library_root(&self) -> PathBuf {
+            self.library
+                .root(&self.project)
+                .unwrap()
+                .expect("library folder")
+        }
+
+        fn code_root(&self) -> PathBuf {
+            crate::research::project_root(&self.state.storage, &self.state.files, &self.project)
+                .unwrap()
+        }
+
         fn edit(&self, change: impl FnOnce(&mut Value)) {
             let mut data = self.state.storage.load().unwrap().unwrap();
             let revision = data["revision"].as_u64().unwrap();
@@ -1871,21 +1883,24 @@ mod tests {
         }
     }
 
-    /// Same account on two devices against a running server; records only, so
-    /// no OSS access is needed. Start `server/` in development mode, then run
-    /// `SCIENTIFY_E2E_ENDPOINT=http://127.0.0.1:8090 cargo test -p scientify
-    /// --lib live_server -- --ignored` (DEV_SMS_CODE defaults to 123456).
+    /// Same account on two devices against a running server, with files going
+    /// through OSS. Use a number from the server's DEV_SMS_PHONES: it signs in
+    /// with DEV_SMS_CODE (default 123456) and receives no SMS. Run
+    /// `SCIENTIFY_E2E_ENDPOINT=http://127.0.0.1:8090 SCIENTIFY_E2E_PHONE=<number>
+    /// cargo test -p scientify --lib live_server -- --ignored`.
     #[tokio::test]
     #[ignore]
     async fn live_server_keeps_one_account_in_sync_on_two_devices() {
         let Ok(endpoint) = std::env::var("SCIENTIFY_E2E_ENDPOINT") else {
             return;
         };
+        let phone = std::env::var("SCIENTIFY_E2E_PHONE")
+            .expect("SCIENTIFY_E2E_PHONE: a number listed in the server's DEV_SMS_PHONES");
+        let phone = phone.as_str();
         let code = std::env::var("SCIENTIFY_E2E_CODE").unwrap_or_else(|_| "123456".into());
         let project = format!("live-{}", uuid::Uuid::new_v4());
         let first = Live::new("device-a", &project);
         let second = Live::new("device-b", &project);
-        let phone = "13900000001";
         // Device A signs in by code; device B gets its own tokens for the same account.
         super::super::request_json(
             &endpoint,
@@ -1926,6 +1941,12 @@ mod tests {
         .await
         .unwrap();
 
+        // The first sync gives device A its literature folder.
+        first.sync(&endpoint).await;
+        let library = first.library_root();
+        write(library.join("papers/paper.pdf"), "%PDF-1.7 live");
+        write(library.join("papers/paper.notes.md"), "# Notes");
+        write(first.code_root().join("train.py"), "print('a')");
         first.edit(|data| {
             data["records"] = json!([note("note-1", "Plan", "from a")]);
             data["records"][0]["project"] = json!(project);
@@ -1936,11 +1957,28 @@ mod tests {
         assert_eq!(second.records()[0]["body"], "from a");
         let data = second.state.storage.load().unwrap().unwrap();
         assert_eq!(data["projects"][0]["question"], "Does it travel?");
+        let library = second.library_root();
+        assert_eq!(
+            fs::read_to_string(library.join("papers/paper.pdf")).unwrap(),
+            "%PDF-1.7 live"
+        );
+        assert!(library.join("papers/paper.notes.md").is_file());
+        assert_eq!(
+            fs::read_to_string(second.code_root().join("train.py")).unwrap(),
+            "print('a')"
+        );
 
         second.edit(|data| data["records"][0]["body"] = json!("from b"));
+        write(second.code_root().join("train.py"), "print('b')");
+        fs::remove_file(library.join("papers/paper.pdf")).unwrap();
         second.sync(&endpoint).await;
         first.sync(&endpoint).await;
         assert_eq!(first.records()[0]["body"], "from b");
+        assert_eq!(
+            fs::read_to_string(first.code_root().join("train.py")).unwrap(),
+            "print('b')"
+        );
+        assert!(!first.library_root().join("papers/paper.pdf").exists());
 
         first.edit(|data| data["records"][0]["body"] = json!("a2"));
         second.edit(|data| data["records"][0]["body"] = json!("b2"));
