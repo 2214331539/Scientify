@@ -1785,4 +1785,189 @@ mod tests {
         assert_eq!(experiments[0]["purpose"], "baseline");
         assert_eq!(experiments[0]["root"], "");
     }
+
+    /// One device talking to a real collaboration server over HTTP.
+    struct Live {
+        _temp: tempfile::TempDir,
+        state: crate::AppState,
+        library: LocalLibrary,
+        documents: PathBuf,
+        id: String,
+        project: String,
+    }
+
+    impl Live {
+        fn new(id: &str, project: &str) -> Self {
+            let temp = tempfile::tempdir().unwrap();
+            let storage = Storage::open(temp.path().join("ScientifyData/workspace")).unwrap();
+            let files = ResearchFiles::new(storage.directory().to_path_buf());
+            let library = LocalLibrary::new(storage.directory().to_path_buf());
+            let mut data = workspace::empty();
+            let now = workspace::now();
+            data["projects"] = json!([{
+                "id": project, "name": "Live study", "question": "", "createdAt": now,
+                "updatedAt": now, "collaborationRole": "owner",
+            }]);
+            data["revision"] = json!(1);
+            storage.save(data, 0).unwrap();
+            let documents = temp.path().join("Documents");
+            Self {
+                state: crate::AppState {
+                    storage: std::sync::Arc::new(storage),
+                    files: std::sync::Arc::new(files),
+                    legacy: temp.path().join("legacy"),
+                },
+                _temp: temp,
+                library,
+                documents,
+                id: id.into(),
+                project: project.into(),
+            }
+        }
+
+        fn sign_in(&self, tokens: &Value) {
+            super::super::write_auth(
+                &self.state,
+                &super::super::AuthTokens {
+                    access_token: tokens["accessToken"].as_str().unwrap().into(),
+                    refresh_token: tokens["refreshToken"].as_str().unwrap().into(),
+                    user_id: tokens["user"]["id"].as_str().unwrap().into(),
+                    phone: tokens["user"]["phone"].as_str().unwrap().into(),
+                },
+            )
+            .unwrap();
+        }
+
+        async fn sync(&self, endpoint: &str) -> Outcome {
+            let device = Device {
+                storage: &self.state.storage,
+                files: &self.state.files,
+                library: &self.library,
+                device_id: self.id.clone(),
+                documents: self.documents.clone(),
+            };
+            let remote = Remote::Http {
+                state: &self.state,
+                endpoint: endpoint.into(),
+            };
+            let outcome = sync(&device, &remote, &self.project).await.unwrap();
+            assert!(outcome.errors.is_empty(), "{:?}", outcome.errors);
+            outcome
+        }
+
+        fn edit(&self, change: impl FnOnce(&mut Value)) {
+            let mut data = self.state.storage.load().unwrap().unwrap();
+            let revision = data["revision"].as_u64().unwrap();
+            change(&mut data);
+            data["revision"] = json!(revision + 1);
+            self.state.storage.save(data, revision).unwrap();
+        }
+
+        fn records(&self) -> Vec<Value> {
+            self.state.storage.load().unwrap().unwrap()["records"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+        }
+    }
+
+    /// Same account on two devices against a running server; records only, so
+    /// no OSS access is needed. Start `server/` in development mode, then run
+    /// `SCIENTIFY_E2E_ENDPOINT=http://127.0.0.1:8090 cargo test -p scientify
+    /// --lib live_server -- --ignored` (DEV_SMS_CODE defaults to 123456).
+    #[tokio::test]
+    #[ignore]
+    async fn live_server_keeps_one_account_in_sync_on_two_devices() {
+        let Ok(endpoint) = std::env::var("SCIENTIFY_E2E_ENDPOINT") else {
+            return;
+        };
+        let code = std::env::var("SCIENTIFY_E2E_CODE").unwrap_or_else(|_| "123456".into());
+        let project = format!("live-{}", uuid::Uuid::new_v4());
+        let first = Live::new("device-a", &project);
+        let second = Live::new("device-b", &project);
+        let phone = "13900000001";
+        // Device A signs in by code; device B gets its own tokens for the same account.
+        super::super::request_json(
+            &endpoint,
+            "/auth/send-code",
+            reqwest::Method::POST,
+            None,
+            Some(json!({"phone": phone})),
+        )
+        .await
+        .unwrap();
+        let login = super::super::request_json(
+            &endpoint,
+            "/auth/login",
+            reqwest::Method::POST,
+            None,
+            Some(json!({"phone": phone, "code": code})),
+        )
+        .await
+        .unwrap();
+        first.sign_in(&login);
+        let other = super::super::request_json(
+            &endpoint,
+            "/auth/refresh",
+            reqwest::Method::POST,
+            None,
+            Some(json!({"refreshToken": login["refreshToken"]})),
+        )
+        .await
+        .unwrap();
+        second.sign_in(&other);
+        super::super::auth_request(
+            &first.state,
+            &endpoint,
+            "/projects",
+            reqwest::Method::POST,
+            Some(json!({"name": "Live study", "id": project})),
+        )
+        .await
+        .unwrap();
+
+        first.edit(|data| {
+            data["records"] = json!([note("note-1", "Plan", "from a")]);
+            data["records"][0]["project"] = json!(project);
+            data["projects"][0]["question"] = json!("Does it travel?");
+        });
+        first.sync(&endpoint).await;
+        second.sync(&endpoint).await;
+        assert_eq!(second.records()[0]["body"], "from a");
+        let data = second.state.storage.load().unwrap().unwrap();
+        assert_eq!(data["projects"][0]["question"], "Does it travel?");
+
+        second.edit(|data| data["records"][0]["body"] = json!("from b"));
+        second.sync(&endpoint).await;
+        first.sync(&endpoint).await;
+        assert_eq!(first.records()[0]["body"], "from b");
+
+        first.edit(|data| data["records"][0]["body"] = json!("a2"));
+        second.edit(|data| data["records"][0]["body"] = json!("b2"));
+        first.sync(&endpoint).await;
+        let outcome = second.sync(&endpoint).await;
+        assert_eq!(outcome.conflicts, 1, "{outcome:?}");
+        let records = second.records();
+        assert!(records
+            .iter()
+            .any(|r| r["id"] == "note-1" && r["body"] == "a2"));
+        assert!(records
+            .iter()
+            .any(|r| r["body"] == "b2" && r["id"] != "note-1"));
+        first.sync(&endpoint).await;
+        assert_eq!(first.records().len(), 2);
+
+        first.edit(|data| {
+            data["records"]
+                .as_array_mut()
+                .unwrap()
+                .retain(|r| r["id"] == "note-1")
+        });
+        first.sync(&endpoint).await;
+        second.sync(&endpoint).await;
+        assert_eq!(second.records().len(), 1);
+        // A sync with nothing new changes nothing on either side.
+        let quiet = second.sync(&endpoint).await;
+        assert_eq!((quiet.applied, quiet.pushed), (0, 0));
+    }
 }

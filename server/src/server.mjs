@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
 import { readConfig, assertProductionConfig } from './config.mjs';
 import { createDb, initDb, withTransaction } from './db.mjs';
@@ -585,7 +586,8 @@ export function createServer(config, db) {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run when started directly (node src/server.mjs); tests import createServer instead.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = readConfig();
   if (config.production) assertProductionConfig(config);
   const db = createDb(config);
