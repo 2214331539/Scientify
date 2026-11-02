@@ -1,6 +1,6 @@
 [Unit]
 Description=Scientify collaboration API
-After=network-online.target
+After=network-online.target postgresql.service
 Wants=network-online.target
 
 [Service]
@@ -9,14 +9,16 @@ User=scientify
 Group=scientify
 WorkingDirectory=/opt/scientify-collab/server
 EnvironmentFile=/etc/scientify-collab.env
-ExecStart=/opt/learn2ai-node/bin/node src/server.mjs
+# Node 20 or newer; Ubuntu 26.04 ships it as /usr/bin/node.
+ExecStart=/usr/bin/node src/server.mjs
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/scientify-collab
+# systemd creates /var/lib/scientify-collab owned by the service user.
+StateDirectory=scientify-collab
 
 [Install]
 WantedBy=multi-user.target

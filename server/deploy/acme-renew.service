@@ -1,0 +1,11 @@
+[Unit]
+Description=Renew TLS certificates with acme.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Renews certificates whose renewal date has passed and runs their reload hook
+# (systemctl reload nginx). IP certificates last 160 hours, so they are issued
+# with --days 3 and renewed about twice a week.
+ExecStart=/usr/bin/acme.sh --cron --home /root/.acme.sh
