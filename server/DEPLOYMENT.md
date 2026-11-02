@@ -7,7 +7,9 @@ clients upload and download files straight to OSS through short-lived signed
 URLs, so file bytes never pass through this server.
 
 The steps below were run on Ubuntu 26.04 (Node 22, PostgreSQL 18, Nginx 1.28).
-Everything comes from the distribution archive except the application itself.
+The production host runs Ubuntu 24.04 (Node 18, PostgreSQL 16, Nginx 1.24)
+next to other sites; section 6 covers that case. Everything comes from the
+distribution archive except the application itself.
 
 ## 0. Before you start
 
@@ -17,7 +19,7 @@ Everything comes from the distribution archive except the application itself.
   API) and from the host to `dysmsapi.aliyuncs.com:443`, which SMS sign-in
   needs. Replace the IP if either fails.
 - **Firewall.** The cloud firewall or security group must allow TCP 80 (for
-  certificate validation) and 443.
+  certificate validation) and 443, or 8443 on a shared host (section 6).
 - **OSS bucket and key.** Create a private bucket and a RAM user whose key can
   only use it. The key needs at least this policy:
 
@@ -47,8 +49,10 @@ sudo useradd --system --home-dir /opt/scientify-collab --shell /usr/sbin/nologin
 sudo mkdir -p /opt/scientify-collab/server /var/www/acme
 ```
 
-Node 20 or newer is required. certbot 4.0 cannot issue IP-address
-certificates; acme.sh 3.1 can.
+Node 20 or newer is recommended. Ubuntu 24.04 ships Node 18, which runs the
+service; on a shared host keep the system Node that other services use.
+certbot 4.0 cannot issue IP-address certificates; acme.sh 3.1 can. Ubuntu
+24.04 does not package acme.sh, and a shared host already has a certificate.
 
 ## 2. Database
 
@@ -122,9 +126,15 @@ The site serves `/.well-known/acme-challenge/` from `/var/www/acme` on port
 80 and the API on 443 with a 16 MiB body limit; Nginx's default 1 MiB would
 reject larger sync pushes.
 
-On a host that already serves other sites, do not replace their server
-blocks. Add the two API `location` blocks to the existing TLS server for the
-collaboration host name instead, and keep their certificates as they are.
+On a host where another site already serves port 443 for the address, leave
+its server blocks alone. Install `scientify-8443.conf` as
+`/etc/nginx/conf.d/scientify.conf` instead of the site file, with its
+certificate lines pointing at that site's certificate for the address. The
+API then listens on 8443; the other site's renewals reload Nginx, so this
+server picks up the new certificate as well. The cloud firewall must allow TCP
+8443. Mainland hosts cannot use a domain without an ICP filing, so the bare
+IP on its own port is the simplest address there. Skip the certificate steps
+below.
 
 Issue the certificate while only the port-80 block is active, then enable
 the 443 block:
@@ -150,7 +160,8 @@ sudo systemctl daemon-reload && sudo systemctl enable --now acme-renew.timer
 
 ## 7. Smoke checks
 
-1. `curl https://<host>/v1/health` from outside the host reports `database: ok`.
+1. `curl https://<host>/v1/health` (`https://<host>:8443/v1/health` on a
+   shared host) from outside the host reports `database: ok`.
 2. A test number signs in with `DEV_SMS_CODE`; a real number receives an SMS.
 3. Two desktop clients on the same account open one cloud project; a note,
    a PDF and a code file edited on one device appear on the other.
