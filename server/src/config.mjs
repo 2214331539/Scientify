@@ -1,3 +1,5 @@
+import { regionOf } from './oss.mjs';
+
 const integer = (value, fallback, minimum, maximum) => {
   const parsed = Number(value ?? fallback);
   if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
@@ -25,6 +27,7 @@ export function readConfig(env = process.env) {
     refreshTokenTtl: integer(env.REFRESH_TOKEN_TTL_SECONDS, 2_592_000, 600, 31_536_000),
     oss: {
       endpoint: optional(env, 'OSS_ENDPOINT'),
+      region: optional(env, 'OSS_REGION'),
       bucket: optional(env, 'OSS_BUCKET'),
       accessKeyId: optional(env, 'OSS_ACCESS_KEY_ID'),
       accessKeySecret: optional(env, 'OSS_ACCESS_KEY_SECRET'),
@@ -59,5 +62,10 @@ export function assertProductionConfig(config) {
   if (!config.oss.bucket) missing.push('OSS_BUCKET');
   if (!config.oss.accessKeyId) missing.push('OSS_ACCESS_KEY_ID');
   if (!config.oss.accessKeySecret) missing.push('OSS_ACCESS_KEY_SECRET');
+  try {
+    regionOf(config.oss);
+  } catch {
+    missing.push('OSS_REGION');
+  }
   if (missing.length) throw new Error(`Missing production configuration: ${missing.join(', ')}`);
 }
