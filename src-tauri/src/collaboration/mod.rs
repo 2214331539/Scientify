@@ -17,7 +17,7 @@ const FILE_NAME: &str = "collaboration.json";
 const AUTH_FILE_NAME: &str = "collaboration-auth.json";
 pub(crate) const DEFAULT_ENDPOINT: &str = match option_env!("SCIENTIFY_COLLAB_ENDPOINT") {
     Some(endpoint) => endpoint,
-    None => "https://43.165.185.11",
+    None => "https://124.221.115.83:8443",
 };
 /// Addresses of earlier builds; saved settings that still use one move to the default.
 const LEGACY_ENDPOINTS: &[&str] = &["https://collab.example.com", "https://47.79.122.59"];
