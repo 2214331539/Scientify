@@ -26,6 +26,7 @@ cpSync(
   join(directory, `THIRD_PARTY_LICENSES_${label}.txt`),
 );
 const signed = process.env.MACOS_SIGNING === 'developer-id';
+const ci = process.env.GITHUB_ACTIONS === 'true';
 const notes = mac
   ? `## macOS Apple Silicon 预览版\n\n` +
     `- 下载 **${name}**。仅支持 Apple Silicon（M 系列），最低 macOS 14；不包含 Intel 版本。\n` +
@@ -33,16 +34,21 @@ const notes = mac
     (signed
       ? '- 已使用 Developer ID 签名并完成 Apple 公证。\n'
       : '- 本次为 ad-hoc 签名、未经过 Apple 公证的预发布包。macOS 可能阻止首次打开；确认下载来源后，可在系统设置 → 隐私与安全性中使用系统提供的“仍要打开”。无需关闭 Gatekeeper。\n') +
-    `- 数据默认保存在 ~/Library/Application Support/com.scientify.desktop/ScientifyData；应用内可迁移数据位置。更新前备份此目录和外部关联目录。\n` +
-    `- 已在 GitHub 原生 ARM Mac runner 执行前端/Rust 检查、浏览器历史与 IPC 隔离验证、DMG 挂载、Agent 执行、覆盖安装数据保留及 LaunchServices 启动检查。最低系统版本、真实网站登录/下载及完整科研操作仍需更多真实设备反馈；这不是完整人工验收。\n` +
+    `- 数据默认保存在 ~/Library/Application Support/Scientify/ScientifyData；应用内可迁移数据位置。更新前备份此目录和外部关联目录。\n` +
+    (ci
+      ? '- 已在 GitHub 原生 ARM Mac runner 执行前端/Rust 检查、浏览器历史与 IPC 隔离验证、DMG 挂载、Agent 执行、覆盖安装数据保留及 LaunchServices 启动检查。'
+      : '- 由维护者在 Apple Silicon Mac 上本地构建，检查了 DMG 完整性、app 与 Agent 的 arm64 架构和签名、Agent 能否运行；没有在 GitHub 原生 runner 上做启动和覆盖安装数据保留验证。') +
+    '最低系统版本、真实网站登录/下载及完整科研操作仍需更多真实设备反馈；这不是完整人工验收。\n' +
     `- 工作区中 Cmd+Q 先经过保存保护并返回 Projects，再次退出即可关闭应用。\n` +
     `- Mac 使用 WKWebView；HTTP 状态错误提示与 Windows 尚不完全一致，网站兼容性取决于系统 WebKit。\n`
   : `# Scientify ${version}\n\nWindows x64 与 macOS Apple Silicon 预发布版本：本地 PDF、论文笔记、Python 终端、Git、实验和可配置 AI。\n\n` +
+    `> macOS 安装包在 Mac 上单独构建和检查，完成后补充到本页。\n\n` +
     `## Windows x64\n\n- 下载 **${name}**，运行安装。缺少 WebView2 时安装器需要联网；Python 与 Git 按需自行安装。\n` +
     `- Windows 安装包未签名，可能提示未知发布者。SHA256SUMS.txt 验证下载完整性，不替代发布者签名。\n` +
     `- 更新前备份 ScientifyData 及外部关联目录。Windows CI 检查前端/Rust，并验证隔离安装、重复安装与卸载后数据保留。\n\n` +
     `## 共同说明\n\n- 包含固定版本 Agent 和各平台第三方许可清单。\n` +
-    `- 本版本包含协作客户端：登录、项目绑定、文献初始化同步和离线变更队列；使用前需要配置独立协作服务器。实验代码协作和自动更新尚未开放。\n` +
-    `- 模型密钥保存在本机未加密凭据文件中，请勿分享整个数据目录；手动终端与实验按本机用户权限执行，AI 正式运行沿用引擎沙箱。\n`;
+    `- 协作：用手机号登录后，同一账号的多台设备可以同步云端项目（文献、笔记、代码文件和运行记录），所有者可以邀请成员。默认连接官方协作服务，也可以在登录页填写自托管地址。冲突对比、历史版本和自动更新尚未开放。\n` +
+    `- 模型密钥保存在本机未加密凭据文件中，请勿分享整个数据目录；手动终端与实验按本机用户权限执行，AI 正式运行沿用引擎沙箱。\n` +
+    `- 每个版本的变化和验收结果见仓库的 docs/更新记录。\n`;
 writeFileSync(join(directory, `RELEASE_NOTES_${label}.md`), `${notes}\n`);
 console.log(`Release files staged: ${name}`);
