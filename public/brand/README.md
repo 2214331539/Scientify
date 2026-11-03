@@ -1,6 +1,6 @@
 # Scientify 品牌素材
 
-来源：[docs/营销思路/Scientify-Logo-Kit](../../docs/营销思路/Scientify-Logo-Kit/README.md)，与源码同处本仓库。
+来源：[docs/品牌/Scientify-Logo-Kit](../../docs/品牌/Scientify-Logo-Kit/README.md)，与源码同处本仓库。
 
 - `scientify-light.png`：`app/light/scientify-96.png`，浅色界面使用，墨黑单色。
 - `scientify-dark.png`：`app/dark/scientify-96.png`，深色界面使用，白色箱体配荧光绿圆点。

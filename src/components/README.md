@@ -77,4 +77,4 @@ components/
 
 共享动效使用 `styles/motion.css` 与 token。项目和文献菜单统一用 Menu；业务确认/文本输入调用 `prompts.tsx`，脏表单交由 Modal 确认。新页面不使用 window.confirm / prompt。
 
-2026-10-03：团队协作、项目内概览、LaTeX 论文与订阅入口统一挂载 FeaturePlaceholder，不挂载对应业务页面。2026-10-05：用户已选定 D 柔和，共享 ViewTransition 接入页面和列表模式切换；参数唯一来源为 `platform/motion.ts`，`applyAppearance` 安装为 CSS 变量。新增页面不另写动画时长；窗口/原生网页、草稿与保存保护仍由原有所有者管理。验证与范围见 [动效方案与统一管理](../../docs/UI-UX/05-动效方案与统一管理.md)。
+项目概览、写作（LaTeX 论文）与订阅推荐挂载 FeaturePlaceholder，不挂载对应业务页面。2026-10-05：用户已选定 D 柔和，共享 ViewTransition 接入页面和列表模式切换；参数唯一来源为 `platform/motion.ts`，`applyAppearance` 安装为 CSS 变量。新增页面不另写动画时长；窗口/原生网页、草稿与保存保护仍由原有所有者管理。参数与规则见 [交互与动效](../../docs/UI-UX/03-交互与动效.md)。

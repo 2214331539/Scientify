@@ -1,6 +1,6 @@
 # Scientify 路线图
 
-本路线图描述优先级，不是发布时间承诺。当前为 Windows x64 Alpha 与 macOS Apple Silicon 预览版；已实现能力以 [README](README.md)、[当前入口说明](docs/产品功能文档/产品功能入口说明.md)和代码为准。历史设计与原型不作为功能完成证明。
+本路线图描述优先级，不是发布时间承诺。当前为 Windows x64 Alpha 与 macOS Apple Silicon 预览版；已实现能力以 [README](README.md)、[产品设计](docs/产品设计/README.md)（各页面的“现状”）和代码为准。历史设计与原型不作为功能完成证明。
 
 ## 当前重点
 

@@ -63,7 +63,7 @@ On Mac, use `node node_modules/@tauri-apps/cli/tauri.js build --bundles app,dmg 
 
 PDFs, adjacent paper notes, and code stay in local folders. Windows release builds store application data in `ScientifyData/` near the writable installation. Mac builds use `~/Library/Application Support/Scientify/ScientifyData/`, outside the app bundle. Development builds use a `ScientifyDevData/` folder next to the checkout, shared by every worktree.
 
-**JSON export excludes PDFs and source files.** Back up the application data and every externally linked directory. See the [desktop guide](docs/产品功能文档/桌面使用说明.md) for details.
+**JSON export excludes PDFs and source files.** Back up the application data and every externally linked directory. See the [desktop guide](docs/使用说明/桌面使用说明.md) for details.
 
 Remote model requests may send selected material or Agent-read content to your configured provider, under that provider's billing and data policies. Provider keys currently live in an unencrypted local credential file. Do not share application data, browser profiles, or secrets in reports. See [SECURITY.md](SECURITY.md).
 

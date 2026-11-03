@@ -46,6 +46,6 @@ console.log(
 );
 
 // icon.icns and icon.png come from `pnpm tauri icon` run on
-// docs/营销思路/Scientify-Logo-Kit/desktop/dark/scientify-1024.png (see
-// docs/开发记录/Logo更换-2026-10-17.md). They carry frames up to 1024 px, so they
-// must not be rebuilt from the 256 px frames above.
+// docs/品牌/Scientify-Logo-Kit/desktop/dark/scientify-1024.png. They carry
+// frames up to 1024 px, so they must not be rebuilt from the 256 px frames
+// above.

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/营销思路/Scientify-Logo-Kit/web/icon-192.png" width="88" alt="Scientify logo" />
+  <img src="docs/品牌/Scientify-Logo-Kit/web/icon-192.png" width="88" alt="Scientify logo" />
 </p>
 
 # Scientify
@@ -8,7 +8,7 @@
 
 面向计算型研究者的本地科研工具。在同一个项目里阅读论文、记录思考、编辑和运行 Python 实验，并可配置地在本地使用AI辅助。
 
-[English](README.en.md) · [快速开始](#快速开始) · [使用文档](docs/产品功能文档/桌面使用说明.md) · [参与贡献](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [问题反馈](https://github.com/2214331539/Scientify/issues)
+[English](README.en.md) · [快速开始](#快速开始) · [使用文档](docs/使用说明/桌面使用说明.md) · [参与贡献](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [问题反馈](https://github.com/2214331539/Scientify/issues)
 
 ![Stage: Alpha](https://img.shields.io/badge/stage-alpha-orange)
 ![Desktop: Windows x64 and macOS arm64](https://img.shields.io/badge/desktop-Windows_x64_%7C_macOS_arm64-blue)
@@ -93,7 +93,7 @@ Mac 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles 
 
 - PDF、相邻论文笔记和代码保留在本地目录。应用元数据、项目研究笔记和运行记录由本地数据目录管理。
 - Windows 正式构建默认在可写安装目录附近使用 `ScientifyData/`；Mac 默认使用 `~/Library/Application Support/Scientify/ScientifyData/`。设置中可以安排数据迁移。开发构建使用源码目录旁边的 `ScientifyDevData/`，所有工作树共用，见[开发与验收流程](docs/开发流程/开发与验收流程.md)。
-- **JSON 导出不包含 PDF 和源码。** 完整备份需要复制应用数据和外部关联目录；详细步骤见[数据说明](docs/产品功能文档/桌面使用说明.md#数据与文件)。
+- **JSON 导出不包含 PDF 和源码。** 完整备份需要复制应用数据和外部关联目录；详细步骤见[数据说明](docs/使用说明/桌面使用说明.md#数据与文件)。
 - 使用远程模型时，选定材料或 Agent 读取的内容可能发送给所配置的服务商，费用遵循该服务商规则。本地优先不等于所有功能离线运行。
 - 当前模型密钥保存在本机未加密的凭据文件中。不要分享整个数据目录、浏览器资料或带密钥的日志；该限制与报告方式见[安全说明](SECURITY.md)。
 - 手动终端和手动实验使用用户授予信任后的本机权限；AI 正式运行使用工作区沙箱。两者的权限范围不同。
@@ -101,7 +101,7 @@ Mac 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles 
 ## 当前边界
 
 - 项目概览、LaTeX 论文页和部分文献订阅能力仍显示「开发中 / 敬请期待」。协作登录默认使用托管协作服务，自托管地址位于登录页高级设置。
-- 订阅推荐和个人信息源尚未启用；没有 PDF OCR、批注系统或全文语料库。
+- 订阅推荐和新论文收件箱尚未启用；没有 PDF OCR、批注系统或全文语料库。
 - 暂无 Notebook 单元执行、断点调试、远程 GPU 调度，以及完整 Git 远程与冲突解决界面。
 - 独立 LaTeX 编辑与编译尚未开放。记录运行条件不等于完整冻结所有依赖或保证可复现。
 - 文件草稿不保证崩溃恢复；终端进程不会在应用重启后恢复。
@@ -111,14 +111,14 @@ Mac 打包命令为 `node node_modules/@tauri-apps/cli/tauri.js build --bundles 
 
 欢迎代码、文档、翻译、复现报告和科研示例。请先阅读[贡献指南](CONTRIBUTING.md)与[社区行为规范](CODE_OF_CONDUCT.md)。小修复可以直接提交 PR；新功能、依赖、数据结构或权限改动先通过 Issue 讨论范围。
 
-技术栈为 **Tauri 2 + Rust、React 19 + TypeScript、Vite、Zustand、CodeMirror 和 PDF.js**。界面、原生能力及存储边界见[架构入口](docs/架构设计/技术方案.md#0-当前基线与-uiux-固定准则)。
+技术栈为 **Tauri 2 + Rust、React 19 + TypeScript、Vite、Zustand、CodeMirror 和 PDF.js**。界面、原生能力及存储边界见[架构入口](docs/技术方案/总体架构.md#0-当前基线与-uiux-固定准则)。
 
 ```text
 src/                     React 工作区、编辑器、PDF 阅读器与类型化 IPC
 src-tauri/               桌面窗口、文件、进程、浏览器与 Agent 集成
 crates/scientify-core/   本地存储、校验与文件事务
 scripts/                 资源准备和验收工具
-docs/                    产品、架构、UI/UX 与开发记录
+docs/                    产品设计、UI/UX、技术方案与开发流程
 ```
 
 运行检查前先执行 `pnpm run build`，准备被 Git 忽略的资源和协议绑定。
@@ -135,8 +135,9 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 
 ## 文档与许可
 
-- [桌面使用说明](docs/产品功能文档/桌面使用说明.md)：文件、模型、存储、备份与操作细节。
-- [文档索引](docs/README.md)：产品规格、架构、UI/UX 与开发记录；设计目标不等于已交付功能。
+- [桌面使用说明](docs/使用说明/桌面使用说明.md)：文件、模型、存储、备份与操作细节。
+- [产品设计](docs/产品设计/README.md)：功能模块、页面结构和每页内容；设计目标不等于已交付功能，以各页的“现状”为准。
+- [文档索引](docs/README.md)：产品设计、UI/UX、技术方案、开发流程与更新记录。
 - [路线图](ROADMAP.md)：当前重点和接受贡献的方向。
 - [安全说明](SECURITY.md)：已知边界及私密报告方式。
 
