@@ -1,0 +1,1242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scientify 产品功能结构图</title>
+<!--
+  Scientify 产品功能结构图。用浏览器直接打开，离线可用。
+  功能内容在下方 id="source" 的文本里，每缩进两个空格是一层：
+    名称 [已有|部分|待做] [P0|P1|P2] {相关文档路径} | 一句话说明
+  状态只写在最末一层；上层的状态和统计自动汇总。
+-->
+<style>
+:root{--ink:#1f2328;--ink2:#57606a;--muted:#6e7781;--line:#e5e7eb;--soft:#f6f8fa;--have:#1a7f37;--part:#bf8700;--todo:#8c959f;--font:"PingFang SC","Microsoft YaHei UI","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:13px/1.5 var(--font);color:var(--ink);background:#fff;display:grid;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0;white-space:nowrap}
+header .sub{color:var(--muted);font-size:12px;white-space:nowrap}
+.search{flex:0 1 360px;display:flex;align-items:center;gap:6px;border:1px solid #d0d7de;border-radius:8px;padding:0 6px 0 10px;height:32px;margin-left:auto;background:#fff}
+.search:focus-within{border-color:#0969da;box-shadow:0 0 0 3px rgba(9,105,218,.12)}
+.search input{border:0;outline:0;font:inherit;flex:1;min-width:0;background:transparent}
+.search .cnt{color:var(--muted);font-size:12px;white-space:nowrap}
+.search button{border:0;background:transparent;color:var(--ink2);width:24px;height:24px;border-radius:5px}
+.search button:hover{background:var(--soft)}
+button{font:inherit;cursor:pointer}
+.btn{height:30px;border:1px solid #d0d7de;background:#fff;border-radius:7px;padding:0 10px;color:var(--ink);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--soft)}
+.btn.on{background:#eef1f4;border-color:#b6bec7;font-weight:600}
+.btn.icon{width:30px;padding:0;justify-content:center;font-size:16px;line-height:1}
+.zoom{display:flex;align-items:center;gap:4px}
+.zoom .pct{min-width:46px;text-align:center;color:var(--ink2);font-variant-numeric:tabular-nums}
+.bar{display:flex;align-items:center;gap:14px;padding:7px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:#fcfcfd}
+.group{display:flex;align-items:center;gap:5px}
+.group .lbl{color:var(--muted);font-size:12px;margin-right:2px}
+.seg{display:inline-flex;border:1px solid #d0d7de;border-radius:7px;overflow:hidden}
+.seg button{border:0;border-left:1px solid #d0d7de;background:#fff;height:28px;padding:0 10px;color:var(--ink2)}
+.seg button:first-child{border-left:0}
+.seg button.on{background:#eef1f4;color:var(--ink);font-weight:600}
+.chip{height:26px;border:1px solid #d0d7de;background:#fff;border-radius:13px;padding:0 10px;display:inline-flex;align-items:center;gap:5px;color:var(--ink2);white-space:nowrap}
+.chip.on{border-color:#6e7781;color:var(--ink);font-weight:600;background:#f6f8fa}
+.chip.off{opacity:.45}
+.crumbs{display:flex;align-items:center;gap:2px;font-size:12.5px;color:var(--ink2);flex-wrap:wrap}
+.crumbs a{color:var(--ink2);cursor:pointer;padding:2px 6px;border-radius:5px}
+.crumbs a:hover{background:var(--soft);color:var(--ink)}
+.crumbs a.cur{color:var(--ink);font-weight:600;cursor:default;background:transparent}
+.crumbs .sep{color:#afb8c1}
+.totals{margin-left:auto;color:var(--ink2);font-size:12px;white-space:nowrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;vertical-align:-1px}
+.dot.have{background:var(--have)}
+.dot.part{border:1.5px solid var(--part);background:linear-gradient(90deg,var(--part) 50%,#fff 50%)}
+.dot.todo{border:1.5px solid var(--todo);background:#fff}
+main{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:0}
+#stage{position:relative;overflow:hidden;cursor:grab;background:#fff;outline:none}
+#stage.dragging{cursor:grabbing}
+#stage svg{width:100%;height:100%;display:block;user-select:none}
+.node{cursor:pointer}
+.node.dim{opacity:.16}
+.link{fill:none}
+.link.dim{opacity:.1}
+.node.enter{animation:enter .3s ease-out}
+@keyframes enter{from{opacity:0}}
+.tog{cursor:pointer}
+.tog:hover circle{fill:#f6f8fa}
+aside{width:340px;border-left:1px solid var(--line);overflow:auto;background:#fff}
+aside.hidden{display:none}
+.panel{padding:16px 18px 24px}
+.panel .path{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px;align-items:center}
+.panel .path a{cursor:pointer;color:var(--ink2);padding:1px 4px;border-radius:4px}
+.panel .path a:hover{background:var(--soft)}
+.panel h2{font-size:18px;margin:6px 0 8px;line-height:1.35;display:flex;align-items:center;gap:8px}
+.panel h2 i{width:10px;height:10px;border-radius:3px;flex:none}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.pill{font-size:11.5px;border-radius:10px;padding:1px 8px;border:1px solid;white-space:nowrap}
+.pill.have{color:var(--have);border-color:#a6dcb5;background:#f0faf3}
+.pill.part{color:#9a6700;border-color:#eed48c;background:#fff8e5}
+.pill.todo{color:#57606a;border-color:#d0d7de;background:#f6f8fa}
+.pill.P0{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.pill.P1{color:#c2410c;border-color:#fed7aa;background:#fff7ed}
+.pill.P2{color:#475569;border-color:#cbd5e1;background:#f8fafc}
+.panel p.desc{margin:0 0 12px;font-size:13.5px;line-height:1.75}
+.sbar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#eef1f4;margin:6px 0 4px}
+.sbar i{display:block;height:100%}
+.slegend{display:flex;gap:12px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
+.slegend span{display:inline-flex;align-items:center;gap:5px}
+.panel h3{font-size:12.5px;color:var(--muted);margin:16px 0 6px;font-weight:600}
+.kids{list-style:none;margin:0;padding:0}
+.kids li{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer}
+.kids li:hover{background:var(--soft)}
+.kids li .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kids li .n{margin-left:auto;color:var(--muted);font-size:11.5px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.kids li .mini{width:46px;height:5px;border-radius:3px;overflow:hidden;display:flex;background:#eef1f4}
+.kids li .mini i{display:block;height:100%}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 4px}
+.doc{font-size:12.5px;margin-top:14px;color:var(--ink2)}
+.doc a{color:#0969da;text-decoration:none}
+.doc a:hover{text-decoration:underline}
+.tips{font-size:12px;color:var(--ink2);line-height:1.8;margin:6px 0 0;padding-left:16px}
+.tips b{color:var(--ink)}
+#mini{position:absolute;left:12px;bottom:12px;width:220px;height:140px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:crosshair}
+.hint{position:absolute;right:12px;bottom:12px;color:var(--muted);font-size:11.5px;background:rgba(255,255,255,.92);padding:4px 8px;border-radius:6px;border:1px solid var(--line);pointer-events:none}
+.focusbadge{position:absolute;left:12px;top:12px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--ink2);box-shadow:0 2px 8px rgba(0,0,0,.05);display:none;align-items:center;gap:8px}
+.focusbadge.show{display:flex}
+.focusbadge b{color:var(--ink)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Scientify 产品功能结构图</h1>
+  <span class="sub">产品 → 大模块 → 子模块 → 具体功能 · 2026-11-04</span>
+  <label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="搜索功能，回车跳到下一个" autocomplete="off"><span class="cnt" id="qcount"></span><button type="button" id="qprev" title="上一个（Shift+回车）">↑</button><button type="button" id="qnext" title="下一个（回车）">↓</button></label>
+  <div class="zoom"><button type="button" class="btn icon" id="zout" title="缩小（-）">−</button><span class="pct" id="pct">100%</span><button type="button" class="btn icon" id="zin" title="放大（+）">+</button><button type="button" class="btn" id="fit" title="适应窗口（0）">适应窗口</button><button type="button" class="btn" id="panelbtn" title="显示或隐藏右侧面板">面板</button></div>
+</header>
+<div class="bar">
+  <div class="group"><span class="lbl">展开到</span><div class="seg" id="levels"><button type="button" data-level="1" class="on">大模块</button><button type="button" data-level="2">子模块</button><button type="button" data-level="3">功能</button><button type="button" data-level="99">全部</button></div></div>
+  <div class="group" id="statusChips"><span class="lbl">现状</span><button type="button" class="chip on" data-status="have"><span class="dot have"></span>已有</button><button type="button" class="chip on" data-status="part"><span class="dot part"></span>部分</button><button type="button" class="chip on" data-status="todo"><span class="dot todo"></span>待做</button></div>
+  <div class="group" id="priChips"><span class="lbl">优先级</span><button type="button" class="chip" data-pri="P0">P0</button><button type="button" class="chip" data-pri="P1">P1</button><button type="button" class="chip" data-pri="P2">P2</button></div>
+  <div class="group"><button type="button" class="chip on" id="descToggle" title="在末级功能下显示一句话说明">显示说明</button><button type="button" class="chip on" id="spotToggle" title="选中节点时淡化其他分支">聚光</button></div>
+  <div class="crumbs" id="crumbs"></div>
+  <span class="totals" id="totals"></span>
+</div>
+<main>
+  <div id="stage" tabindex="0">
+    <svg id="map" aria-label="功能结构图"><g id="viewport"><g id="links"></g><g id="nodes"></g></g></svg>
+    <div class="focusbadge" id="focusbadge">正在聚焦 <b id="focusname"></b><button type="button" class="btn" id="focusup">返回上一层</button><button type="button" class="btn" id="focusall">回到全图</button></div>
+    <canvas id="mini" title="小地图：点击或拖动移动视野"></canvas>
+    <div class="hint">滚轮缩放 · 拖动平移 · 双击聚焦 · Esc 返回</div>
+  </div>
+  <aside id="aside"><div class="panel" id="panel"></div></aside>
+</main>
+
+<script type="text/plain" id="source">
+Scientify | 本地优先、以项目为中心的科研工作台：把读过的文献、自己的判断、实验结果和论文正文连在一起，研究的依据和过程随时可追溯。
+  项目中心 {页面/01-项目中心.md} | 启动后的第一个窗口：决定今天做哪项研究，管理项目、团队、收集箱和账号。
+    首页 [P1] | 打开应用的第一页，只显示真实内容，没有欢迎横幅和统计卡片。
+      继续工作 [待做] | 跨项目列出最近打开的论文（含读到的页码）、笔记、运行、稿件和 AI 对话，点击直接回到这个对象。
+      待处理 [待做] | 项目邀请、等待审批的 AI 操作、失败的运行、同步冲突；处理后自动消失，和通知中心是同一份数据。
+      快速开始 [待做] | 新建项目、打开文件夹作为项目、导入论文、打开示例项目；没有项目时是首页的主要内容。
+    我的项目 | 本机的全部项目，用书本封面展示。
+      项目书架 [已有] | 封面网格和列表两种视图，封面颜色来自项目设置，云朵图标表示在多台设备上同步。
+      搜索项目 [已有] | 按项目名和研究问题搜索。
+      筛选 [待做] [P1] | 全部、收藏、已归档。
+      排序 [待做] [P1] | 最近打开、名称、创建时间；现在只能按更新时间排列。
+      项目菜单 | 右键或更多按钮打开。
+        打开、编辑、收藏、归档 [已有] | 打开后回到这个项目上次停留的位置。
+        删除 [已有] | 删除前说明哪些记录会删、哪些磁盘文件会保留。
+        共享给团队 [部分] | 现在只能在团队页“共享本机项目”里操作。
+        在多台设备上同步 [部分] | 同上，菜单里还没有入口。
+        在资源管理器或 Finder 中显示 [待做] | 打开项目关联的文件夹。
+      新建项目 [部分] | 名称、研究问题、关联文件夹、封面颜色；现在是单页表单，目标是两步向导。
+      打开文件夹作为项目 [待做] | 把已有的研究目录直接变成一个项目。
+    团队 [P0] | 和团队共享的项目和成员；去掉宣传卡片和标语，改成项目表格加右侧成员详情。
+      团队项目表格 [部分] | 项目名、我的角色、成员、本机状态（已同步、同步中、未下载、有冲突）、最近更新和更新人。
+      新建团队项目 [已有] | 在服务器上创建一个云端项目。
+      共享本机项目 [已有] | 把个人项目共享给团队，项目 ID 不变，原文件夹继续使用。
+      下载并打开 [已有] | 另一台设备第一次进入时取回整个项目。
+      成员详情 [部分] | 选中项目时显示成员和角色，“管理成员”打开成员与共享。
+      团队切换 [待做] [P2] | 一个账号加入多个团队，在这里切换。
+      未登录状态 [部分] | 只保留一句话说明和“登录”按钮，不放宣传文案。
+    收集箱 [P0] | 还没归到任何项目的随手笔记和 AI 快速问答。
+      随手笔记 [已有] | 在项目中心打开速记时记到这里。
+      快速问答对话 [已有] | 不绑定项目，只能对话，不能读写文件；划词翻译转来的对话不在项目里时也放这里。
+      侧栏入口 [待做] [P0] | 项目中心侧栏里的“收集箱”；现在只能用快捷键或搜索进入。
+      移到项目 [待做] | 把笔记或对话移进某个项目；对话移入后改用 Agent，可以读这个项目的论文。
+    账号入口 | 项目中心左下角。
+      登录按钮 [已有] | 未登录时显示“登录”，打开登录窗口。
+      账号菜单 [已有] | 登录后显示部分隐藏的手机号，菜单里是团队、同步与协作设置、退出登录。
+      账号资料与设备 [待做] | 昵称、头像、已登录的设备列表。
+  项目窗口框架 {02-信息架构与页面结构.md} | 所有模块共用的外壳：顶栏、模块栏、侧栏、主区、右侧栏、状态栏。
+    顶栏 | 现在只有品牌、项目切换和亮暗切换。
+      返回项目中心 [已有] | 有未保存的内容或后台任务时先提示。
+      项目切换器 [已有] | 原地切换项目，不新开窗口；团队项目带“团队”标记。
+      搜索框 [待做] [P0] | 点击打开搜索与命令，显示快捷键。
+      同步状态 [待做] [P0] | 已同步、同步中、离线、有冲突、同步失败；点开看同步面板。
+      共享按钮 [待做] | 打开当前项目的成员与共享。
+      通知按钮 [待做] [P1] | 显示未读数，点开通知中心。
+      AI 助手开关 [已有] | 现在在状态栏右下角，计划移到顶栏。
+    模块栏 [已有] | 概览、文献、笔记、实验、写作五个一级入口，不再为终端、AI、知识图谱单独开入口。
+    侧栏 [已有] | 当前模块的范围：分组、文件夹、标签、实验列表；可以调宽和收起。
+    主区与标签页 [已有] | 打开的论文、笔记、运行、稿件各占一个标签页，切换模块时保留。
+    右侧栏 | 跨模块的工具，窗口窄于 900 时浮在主区上方。
+      AI 助手面板 [已有] | 见“AI 助手”模块。
+      速记面板 [已有] | 见“笔记 → 速记”。
+      详情面板 [待做] [P1] | 显示当前选中的论文、笔记、运行的属性和关联，代替各页自己塞的信息区。
+    状态栏 [部分] | 保存状态、同步状态、Git 分支、Python 解释器、后台任务数、通知数。
+    保留现场 [已有] | 切换页面、项目、主题、语言时保留草稿、选区、撤销历史、滚动和阅读位置。
+  概览 {页面/02-概览.md} | 项目主页：研究问题、做到哪了、下一步、最近发生了什么；现在是占位页。
+    研究问题 [待做] [P1] | 项目要回答的问题，直接在这里编辑。
+    进展与里程碑 [待做] [P1] | 手动添加阶段，标记完成，当前阶段高亮。
+    下一步 [待做] [P1] | 项目待办，可以从笔记和 AI 回答添加。
+    最近活动 [待做] [P1] | 运行、笔记、摘录、成员修改的时间线，只记真实发生的事。
+    核心文献 [待做] | 几篇关键论文，点击进入论文阅读。
+    实验动态 [待做] | 运行中、刚完成、失败的运行，点击进入运行记录。
+    最近笔记 [待做] | 最近编辑的笔记，点击进入笔记。
+    AI 项目摘要 [待做] [P2] | 按需生成项目现状摘要，列出依据。
+    项目设置 | 现在只有“编辑项目”表单。
+      基本信息 [已有] | 名称、研究问题、研究方向、封面颜色。
+      关联文件夹 [部分] | 文献文件夹现在在文献页单独关联，目标是在这里统一管理。
+      成员与共享入口 [待做] | 打开成员与共享。
+      归档与删除 [已有] | 删除前说明后果。
+  文献 {页面/03-文献.md} | 管理和阅读项目的论文；PDF 和论文笔记留在用户自己的文件夹，Scientify 只记录位置和阅读信息。
+    文献库 | 侧栏选范围，主区是列表，右侧是详情。
+      智能分组 [待做] [P1] | 全部、未读、在读、已读、收藏、最近添加、有笔记、缺少元数据，按状态自动归组。
+      文件夹树 [已有] | 关联磁盘目录，展开、拖动整理，文件变化自动更新。
+      标签 [待做] [P1] | 给论文打标签，侧栏按标签筛选。
+      文献表格 [待做] [P1] | 标题、作者、年份、来源、阅读状态、标签、添加时间，任意列排序；现在只有目录树。
+      批量操作 [待做] | 多选后移动、加标签、标记已读、导出引用。
+      文件操作 [已有] | 复制、剪切、粘贴、重命名、移动、移入回收站（PDF 和笔记一起），在文件管理器中显示。
+      多选与拖拽 [已有] | Ctrl 或 Shift 多选，批量拖动；按住 Ctrl 拖动是复制，重名时报错不覆盖。
+      失联记录 [已有] | 文件被移走或删除时列出，可以重新关联或移除。
+      文件夹状态 [已有] | 没关联文件夹、扫描或导入中、无法访问时分别说明并给出下一步。
+    导入 | 把论文放进文献库。
+      拖入文件 [已有] | 拖到文件夹或根目录，单个文件最大 150 MB，同名自动编号，显示导入进度。
+      拖入整个文件夹 [待做] | 现在只能拖入文件。
+      DOI、arXiv、网页链接 [待做] [P1] | 输入编号或链接，自动下载 PDF 并补全元数据。
+      BibTeX、RIS、Zotero [待做] [P1] | 批量导入条目，有 PDF 的一起导入。
+      浏览器下载 [已有] | 内置浏览器下载的 PDF 默认存进当前文献文件夹。
+    论文阅读 | 一篇论文一个标签页，右侧是论文笔记。
+      PDF 阅读 [已有] | 分页或连续滚动、目录、页码跳转、缩放；PDF 内部链接跳转，外部链接用系统浏览器打开。
+      阅读位置记忆 [已有] | 重新打开时回到上次的页码。
+      多论文标签页 [已有] | 同时打开多篇，切换模块后保留。
+      目录侧栏 [部分] | 阅读时侧栏换成论文目录或缩略图，顶部可以返回文献库。
+      选中文字工具条 [待做] [P1] | 提问、摘录到笔记、高亮、翻译、复制；现在窄窗口下“提问”“记笔记”会被隐藏。
+      高亮与批注 [待做] [P1] | 标注保存在论文笔记旁边，可以按颜色筛选。
+      论文笔记 [已有] | 和 PDF 同名的 .notes.md，摘录带页码链接，自动保存，外部修改时保留草稿。
+      问 AI [已有] | 右侧栏自动带上当前论文；Agent 可以按页读完整篇论文。
+      扫描版识别 [待做] [P2] | 对没有文字层的扫描版做 OCR；现在会提示无法提取文字。
+    论文详情 [P1] | 一篇论文的档案，从阅读页“详情”或表格打开。
+      元数据 [待做] | 标题、作者、年份、期刊或会议、DOI、arXiv 编号。
+      自动补全元数据 [待做] | 从 DOI 或 arXiv 获取；现在论文只有文件名。
+      阅读状态、标签、评分 [待做] | 自己的标记。
+      被引用 [待做] | 哪些稿件和笔记引用了这篇论文。
+      复制引用 [待做] | BibTeX、GB/T 7714、APA 格式。
+      AI 摘要 [待做] | 按需生成，标明依据的页码。
+      相关论文 [待做] [P2] | 同一作者的论文、引用关系。
+    订阅 | 跟踪新论文和常看的网站。
+      个人信息源 [已有] | 常用网站的收藏，一级分组，增删改、排序，所有项目共用；删除分组时网站移到“未分组”。
+      内置浏览器 [已有] | 地址栏、前进后退、刷新、收藏为信息源、在系统浏览器打开，最多 16 个网页标签。
+      新论文订阅 [待做] [P2] | 按 arXiv 分类、关键词、RSS 或 Atom 订阅，打开应用时增量获取。
+      新论文收件箱 [待做] [P2] | 未读标记，加入文献库、稍后读、忽略、交给 AI 分析；新论文不打断当前阅读。
+      推荐 [待做] [P2] | 根据项目里的论文推荐新论文并说明理由；现在是占位标签。
+    文本预览 [已有] | 文献文件夹里的 md、txt、csv、json、tex、bib、py 只读预览，Markdown 渲染显示。
+    全文检索 [待做] [P2] | 在所有 PDF 正文里搜索，结果定位到页。
+    多论文比较 [待做] [P2] | 把几篇论文的方法、数据、结果放在一起对照。
+  笔记 {页面/04-笔记.md} | 项目里的研究笔记：阅读心得、假设、实验记录、组会纪要，可以挂上论文页码、运行、文件等来源。
+    笔记库 | 侧栏选分组，中间是笔记列表。
+      列表与搜索 [已有] | 显示标题、摘要和更新时间，搜索标题和正文。
+      分组 [待做] [P1] | 研究笔记、阅读小结、组会纪要、实验分析，可以自建分组。
+      标签 [待做] [P1] | 给笔记打标签，按标签筛选。
+      排序 [待做] | 更新时间、创建时间、标题。
+      收藏 [待做] | 常用笔记置顶。
+      论文笔记汇总 [待做] | 汇总文献里每篇论文旁的笔记；现在只能在阅读页里看。
+    编辑 | 主区的笔记编辑器。
+      Markdown 实时预览 [已有] | 数学公式、图片、表格、任务列表、代码块。
+      编辑工具栏 [已有] | 粗体、斜体、标题、列表、任务、引用、链接、代码、公式、表格、分割线，撤销重做、查找替换。
+      插入图片 [已有] | 粘贴或拖入，图片保存在本机。
+      自动保存 [已有] | 停止输入约 0.9 秒后保存；失败时保留草稿并可重试。
+      来源 [已有] | 论文页码、文件、运行，点击跳回原处。
+      标题目录 [已有] | 按标题生成的大纲。
+      笔记类型 [待做] [P1] | 假设、阅读小结、实验分析、决策、组会、自由。
+      判断状态 [待做] [P1] | 待验证、支持、不支持、证据不足。
+      双向链接 [待做] [P1] | 输入 [[ 链接其他笔记，显示反向链接（哪些笔记和稿件引用了它）。
+      模板 [待做] [P1] | 空白、阅读笔记、实验记录、会议纪要。
+      AI 改写与总结 [待做] | 结果先预览，确认后才写入。
+    整理 | 管理已有的笔记。
+      删除与回收站 [待做] [P0] | 删除进回收站，30 天内可以恢复；现在笔记不能删除。
+      移到其他项目或收集箱 [待做] | 跨项目整理。
+      导出 Markdown [待做] | 导出单篇或多篇。
+      批量操作 [待做] | 多选后删除、移动、加标签。
+    速记 [已有] | 在任何页面的右侧栏随手记一笔，和笔记库是同一批、同一个编辑实例；在笔记页里不重复显示。
+  实验 {页面/05-实验.md} | 每个实验一个目的、一个代码目录、一个 Python 环境；每次运行都留下可复现、可比较的记录。
+    实验列表 | 实验模块的入口，侧栏一直显示实验列表。
+      卡片与表格视图 [已有] | 显示目的、代码目录、Python 环境、运行中的任务数，记住选择的视图。
+      新建实验 [已有] | 名称、目的和代码来源：新建空文件夹、使用已有文件夹、从分支新建 Worktree。
+      默认实验 [已有] | 每个项目自动有一个默认实验。
+      重命名、归档、移除 [已有] | 有任务在运行时不能归档或移除；移除只删登记，不删磁盘文件、Git、对话和运行记录。
+      防止重复登记 [已有] | 同一个或重叠的文件夹不能登记两次。
+    实验详情 [P1] | 一个实验的总览页；现在只有实验卡片上的简要信息。
+      目的与假设 [待做] | 实验要验证什么，可以关联一条假设笔记。
+      代码与环境摘要 [待做] | 代码目录、Git 分支、未提交的改动、Python 解释器和包数量。
+      运行配置列表 [待做] | 所有运行配置，选一个直接运行。
+      结果汇总 [待做] | 各次运行的关键指标；有足够可比的运行时才画趋势图，只用真实数据。
+      相关材料 [待做] | 相关论文、笔记、发起过运行的 AI 对话。
+    代码编辑 {专题/实验代码工作台.md} | 在实验目录里写代码，目标向 VS Code 看齐。
+      文件树 [已有] | 新建、刷新、筛选、全部折叠，右键重命名和删除。
+      文本搜索 [已有] | 区分大小写、全词、正则；一次最多 500 个文件、200 条结果。
+      编辑器 [已有] | 标签页、保存、查找替换、自动换行、Markdown 预览；外部修改时可查看磁盘内容或另存。
+      运行当前文件 [已有] | 编辑器里的运行按钮保存并在终端运行当前 Python 文件。
+      快速打开 [待做] [P2] | Ctrl 或 ⌘ + P 按文件名打开。
+      语言服务 [待做] [P2] | 代码补全、跳转定义、诊断（Pyright）。
+      格式化与检查 [待做] [P2] | Ruff 格式化和 lint。
+      断点调试 [待做] [P2] | debugpy。
+      测试 [待做] [P2] | 发现并运行 pytest、unittest。
+      Notebook [待做] [P2] | 运行 .ipynb 的单元格。
+    终端 | 底部面板里的真实终端。
+      多会话与分屏 [已有] | 最多 32 个会话，可以分屏；隐藏面板不会停止进程。
+      多种 shell [已有] | PowerShell、cmd、bash、zsh、Python 交互环境。
+      中断与结束 [已有] | Ctrl+C 中断（11-04 修复了 Windows 上继承“忽略 Ctrl+C”导致中断无效的问题），结束整个进程树。
+      终端内搜索 [待做] | 在终端输出里查找。
+    运行 | 按配置运行实验代码，不需要配置模型。
+      运行配置 [已有] | 名称、可执行程序、参数（JSON 数组）、工作目录，可以删除。
+      环境变量与运行前任务 [待做] | env、envFile 和运行前先执行的任务。
+      首次运行确认 [已有] | 依次确认信任这个目录、保存未保存的文件、选择 Python 解释器。
+      并行与后台 [已有] | 同时最多 8 个运行；切换页面、项目、对话都不影响；后台任务列表可单独停止。
+      停止 [已有] | 先发中断，长时间停不下来时提供强制结束。
+      实时日志 [已有] | 停在底部时跟随新输出；显示最后 256 KB，单次超过 64 MB 时停止运行并说明。
+      产物 [已有] | 收集脚本写进 SCIENTIFY_RUN_DIR 的文件，预览图片、表格和文本，不执行任何代码。
+      意外退出处理 [已有] | 应用意外退出后，结果无法确认的运行标为“中断”，不会自动重跑。
+      GPU 队列与批量参数 [待做] [P2] | GPU 槽位、排队、参数组合和随机种子。
+      远程计算 [待做] [P2] | 把实验交给云端算力，结果回到运行记录。
+    运行记录 | 每次运行的完整记录，用来复现和比较。
+      运行表格 [已有] | 状态、来源（本地、AI 对话、手动）、关键指标、时间；搜索和按状态、来源筛选。
+      运行详情 [已有] | 结果、日志、产物、环境与版本（命令、目录、分支、提交、解释器），以及发起它的 AI 对话。
+      手动记录 [已有] | 新建和编辑，单独标为“手动”。
+      再次运行 [已有] | 按原配置生成一条新记录，原记录保留。
+      比较 [已有] | 勾选 2–4 条并排比较，缺失的值留空，不显示 0。
+      导入指标 [已有] | 从产物里的 JSON 导入指标。
+      删除记录 [待做] [P1] | 默认只删记录，可以另外勾选清理日志和产物，先列出路径和大小。
+      指标图表与导出 [待做] [P1] | 多次运行的指标曲线对比，导出为表格。
+      源码快照与原代码重跑 [待做] [P2] | 每次运行保存实际代码，可以用当时的代码再跑一次。
+    Python 环境 | 为实验准备和管理 Python 环境。
+      解释器检测与选择 [已有] | 信任目录后检测，或手动填写解释器路径。
+      新建虚拟环境 [已有] | 新建 venv 或 Conda 环境。
+      依赖管理 [已有] | 安装、升级、卸载，按 requirements 安装，可编辑安装，按 environment.yml 更新。
+      环境任务 [已有] | 环境相关的后台任务，可以查看日志和取消。
+      uv、Poetry、Pipenv [待做] [P2] | 支持更多环境管理工具。
+    版本（Git） | 在实验目录里用 Git，不用离开应用。
+      更改与差异 [已有] | 已暂存和未暂存的文件，暂存、取消暂存、受保护的还原，并排显示差异。
+      提交与历史 [已有] | 填写说明后提交；最近 100 条历史，可以搜索。
+      分支 [已有] | 新建、切换、删除（需确认）。
+      Stash [已有] | 保存（可包含未跟踪的文件）、应用、弹出。
+      Worktree [已有] | 新建（新分支或已有分支）、打开为实验、移除。
+      初始化仓库 [已有] | 目录还没有 Git 时提供。
+      远程操作 [待做] [P2] | 克隆、获取、拉取、推送。
+      合并与变基 [待做] [P2] | merge、rebase、cherry-pick、revert。
+      冲突解决 [待做] [P2] | 三方合并编辑器。
+  写作 {页面/06-写作.md} | 把文献、笔记和实验结果写成论文；现在是“LaTeX 论文撰写”的占位页。
+    稿件管理 [P1] | 项目里的全部稿件：论文、报告、投稿版本。
+      稿件列表 [待做] | 名称、类型（LaTeX 或 Markdown）、模板、页数或字数、最近一次编译结果。
+      新建稿件 [待做] | 空白 LaTeX、常见会议和期刊模板、Markdown 报告。
+      关联已有 LaTeX 目录 [待做] | 直接编辑已有的论文目录。
+      复制为新版本、归档 [待做] | 投稿版本单独保存。
+    编辑与编译 [P1] | 左边源码，右边 PDF 预览，底部编译日志。
+      源码编辑 [待做] | LaTeX 语法高亮、章节大纲、文件树（tex、bib、图片）。
+      引用补全 [待做] | 输入引用命令（cite、ref）时从文献库和标签补全。
+      编译 [待做] | 使用本机 TeX 或内置编译器；没有 TeX 时引导安装。
+      PDF 预览 [待做] | 编译后显示，源码和 PDF 可以互相定位。
+      编译日志 [待做] | 错误和警告，点击跳到出错的行。
+    参考文献 | 参考文献直接来自文献库，不用手工维护 bib 文件。
+      插入引用 [待做] | 搜索文献库，选中后自动写入参考文献文件。
+      缺失与重复检查 [待做] | 标出缺失或重复的条目，缺失的一键从文献库加入。
+      导出 BibTeX [待做] | 导出稿件用到的条目。
+    图表 | 把实验结果变成稿件里的图和表。
+      插入运行产物 [待做] | 从运行产物里选图片或表格，记住来自哪次运行和配置。
+      过期提醒与替换 [待做] | 运行更新后提示稿件里的图已过期，可以一键替换。
+    AI 协助 [待做] | 润色段落、检查引用是否都在文献库、根据文献库起草相关工作；改动先显示差异，确认后写入。
+    版本与导出 [待做] | 提交、对比两个版本，导出 PDF 和源码压缩包。
+  AI 助手 {页面/07-AI助手.md} | 在每个页面旁边的研究助手；在项目里以 Agent 方式读论文、改笔记、跑实验，每一步可见、可停。
+    对话 | 右侧栏里的对话管理。
+      对话历史 [已有] | 最新的在前，可以重命名、删除；新建对话 Ctrl 或 ⌘ + Shift + N。
+      后台任务条 [已有] | 显示其他对话的运行中、等待审批、待保存状态，点击切过去；切换不会中断任务。
+      补充指令 [已有] | 回答过程中继续追加要求。
+      草稿保留 [已有] | 每个对话的未发送草稿分别保留。
+      关联的运行 [已有] | AI 启动的运行显示在对话里，可以打开详情、看日志、停止。
+    工作模式 [P0] | 决定 AI 能看到什么、能做什么。
+      Agent 模式 [已有] | 在项目的文献页或代码页、模型连接兼容（OpenAI 协议、Ollama）时使用，能读写项目里的文件。
+      快速问答模式 [已有] | 项目外、划词浮窗或连接不兼容时使用，只看得到当前页、选中的文字和附件。
+      模式始终可见 [待做] [P0] | 对话顶部显示当前模式和原因；现在看不出来，导致误以为 AI 读不到全文。
+      划词对话改用 Agent [待做] [P0] | 从翻译浮窗转来的对话在项目的文献页或代码页里改用 Agent。
+      用 Agent 读全文 [待做] [P0] | 快速问答遇到整篇论文的问题时给出入口。
+    材料与附件 | 每条消息附带什么内容。
+      当前材料 [已有] | 自动附带当前项目和页面、打开的论文和页码、网址、选中的文字；每条消息可以关闭。
+      本轮材料来源 [已有] | 每条消息下列出实际发送的内容，可以逐条核查。
+      附件 [已有] | 拖入或粘贴图片（8 MB）、PDF（20 MB，前 20 页）、文本和代码（2 MB），每条最多 4 个。
+      PDF 附件改引用文献库 [待做] [P0] | 文献库里的 PDF 改由 Agent 按页读全文；不在文献库的说明“只含前几页”。
+    Agent 工具 | Agent 模式下能调用的能力。
+      文献工具 [已有] | 列出项目论文、按页读取（每次 8 页，可接着读）、在论文里搜索。
+      笔记工具 [已有] | 列出、读取、修改已有笔记，修改前审批。
+      实验工具 [已有] | 在受管理的环境里启动、查看、停止运行，读取结果。
+      Git 工具 [已有] | 查看状态和历史，提交等操作前审批。
+      浏览器工具 [已有] | 列出、打开、读取网页，Google 搜索；后台浏览不抢走当前页面。
+      命令与文件 [已有] | 在工作区执行命令、修改文件。
+    权限与审批 | 每个对话单独设置。
+      询问模式 [已有] | 在沙箱里运行，只能改当前工作区；越权、Git 操作、修改笔记前先审批。
+      完全允许 [已有] | 不使用沙箱，可以联网、访问工作区外的文件，不再逐项审批。
+      审批卡 [已有] | 允许、本对话允许、拒绝、中止任务；Git 和笔记修改没有“本对话允许”。
+      Windows 沙箱配置 [已有] | 首次使用时自动准备，失败时说明并提供重试。
+    技能与命令 | 扩展和快捷操作。
+      技能 [已有] | 输入 /skills 选择，最多 4 个；项目技能放在 .agents/skills，也可用内置技能。
+      快捷命令 [已有] | /permission、/skills、/model、/new、/context、/stop。
+    模型与连接 | 用哪个模型、怎样连接。
+      服务商 [已有] | OpenAI、Anthropic、Gemini、DeepSeek、通义千问、Moonshot、硅基流动、OpenRouter、Ollama、自定义。
+      测试与验证 [已有] | 测试连接并获取模型列表，分别验证聊天能力和 Agent 能力。
+      官方模型 [已有] | 登录后可以使用 Scientify 官方模型，不需要自己的密钥。
+      设置中的 AI 模型分区 [待做] [P0] | 现在模型只能在 AI 助手的模型菜单里配置。
+      用量与费用 [待做] [P2] | 按连接统计请求次数和花费。
+    结果沉淀 | 让 AI 的产出变成研究资产。
+      保存到笔记 [待做] [P1] | 把回答或其中一段存为笔记，保留来源。
+      修改先看差异 [待做] [P1] | AI 修改文件前显示差异，确认后写入。
+      任务时间线 [待做] | 完整显示读了什么、执行了什么。
+      长期记忆与跨项目检索 [待做] [P2] | 记住偏好和项目背景，可跨项目查找。
+  划词翻译 {页面/10-全局功能.md} | 由内置的 Yita 提供，在任何软件里选中文字就能翻译，追问可以转到 AI 助手。
+    翻译浮窗 [已有] | 语言切换、原文和译文、解释、纠错、只看原文、固定、移动和缩放，译文逐字显示。
+    触发方式 [已有] | 在任意软件里选中文字；或按 Ctrl+Shift+T 翻译剪贴板。
+    问答浮窗 [已有] | 在浮窗里追问；箭头把同一个对话转到 Scientify 的 AI 助手，不重复发送，也不覆盖草稿。
+    常驻菜单 [已有] | 托盘（Windows）或菜单栏（macOS）图标：打开 Scientify、翻译剪贴板、暂停划词、翻译设置、修复取词。
+    外观跟随主题 [已有] | 浮窗使用 Scientify 的明暗主题和标志。
+    macOS 授权引导 [待做] [P0] | 检查“辅助功能”权限，没有时引导打开系统设置；设置里显示授权状态。
+    关闭窗口后继续可用 [待做] [P0] | Windows 留在托盘、macOS 留在菜单栏，没有打开窗口时也能划词。
+    排除指定软件 [待做] | 在这些软件里不触发划词。
+  协作与同步 {页面/08-协作与同步.md} | 多台设备、多个人共享项目；阅读、AI、运行都在本机，服务器只管账号、成员和同步。
+    账号 | 登录只为协作和同步，本机使用不需要。
+      手机号登录 [已有] | 短信验证码，60 秒内只能获取一次，未注册的号码验证后自动创建账号。
+      自托管服务 [已有] | 在登录页或设置里填写团队自己的服务地址。
+      退出登录 [已有] | 云端项目停止同步，本机的项目和文件保留。
+      账号资料与设备管理 [待做] | 昵称、头像、已登录的设备，可以远程退出。
+    云端项目 | 服务器上有一份的项目。
+      新建团队项目 [已有] | 在团队页创建。
+      个人项目上云 [已有] | 项目 ID 不变，原文件夹继续使用。
+      多设备取回 [已有] | 另一台设备登录同一账号后进入项目，文献放到“文档/Scientify/项目名”。
+      删除云端项目 [待做] | 只有所有者可以删除；服务端也还没有。
+      转让所有权 [待做] | 把项目交给另一位成员。
+    成员与角色 [P0] | 一个项目的成员和权限。
+      邀请成员 [已有] | 手机号加角色；号码还没注册时保留邀请，对方首次登录后自动加入。
+      四种角色 [已有] | 所有者、编辑者可以改全部；审阅者只能改笔记；查看者只读。
+      成员管理界面 [待做] [P0] | 修改角色、移除成员、撤销邀请、退出项目；接口已有，界面还没有。
+      按角色限制编辑 [待做] [P0] | 本机界面隐藏或禁用无权的操作并说明原因；现在只在服务器检查，查看者的修改会被拒绝。
+    同步 | 自动把项目内容保持一致。
+      同步范围 [已有] | 文献 PDF、论文笔记、笔记图片、代码文件（跳过 .git、虚拟环境等）、项目笔记、运行记录；AI 对话、密钥、终端、Python 环境不同步。
+      同步时机 [已有] | 打开项目时、每 30 秒、本机保存后约 3 秒；也可以手动立即同步。
+      离线可用 [已有] | 断网时照常阅读和编辑，联网后自动补上。
+      同步状态与同步面板 [待做] [P0] | 在项目顶栏和项目库里看到每个项目的同步状态；现在只能在设置里看。
+      大文件分片上传 [待做] [P2] | 现在单个文件上限 200 MB。
+      外部实验目录跨设备 [待做] [P2] | 非默认实验的目录对应，运行日志和产物的选择性同步。
+    冲突与历史 | 两边同时修改时怎么办。
+      冲突副本 [已有] | 两边都改了时两份都保留，本机那份另存为冲突副本；一边删一边改时保留修改。
+      冲突对比与处理 [待做] [P0] | 列出冲突，逐条对比，选择保留本机、远端或两份。
+      历史版本 [待做] [P2] | 服务器为每个文件保留最近 20 个版本，可以预览、对比、恢复。
+    Git 远程协作 [待做] [P2] | 团队代码用 Git 推送、拉取和分支协作。
+  搜索、导航与通知 {页面/10-全局功能.md} | 在哪儿都能用的能力：找东西、去地方、知道发生了什么。
+    全局搜索 | Ctrl 或 ⌘ + K 打开的搜索浮层。
+      搜索浮层 [已有] | 项目中心和项目窗口都能用，方向键选择、回车打开、Esc 关闭。
+      项目、笔记、旧版文献记录 [已有] | 搜标题和正文，最多显示 30 条，标明所属项目。
+      文献文件夹里的论文 [待做] [P0] | 现在搜不到新文献库里的论文。
+      实验、运行、稿件、AI 对话 [待做] [P1] | 扩大搜索范围。
+      范围切换 [待做] | 当前项目或全部项目，在项目里默认搜当前项目。
+      最近打开 [待做] | 没输入时显示最近打开的对象和用过的命令。
+      顶栏入口 [待做] [P0] | 项目窗口顶栏的搜索框；现在只能用快捷键打开。
+    命令面板 [待做] [P1] | 输入 > 执行命令：打开模块、新建笔记或实验、运行当前配置、切换项目、打开设置、切换主题，每条显示快捷键。
+    导航 | 在模块和对象之间移动。
+      模块快捷键 [部分] | 现有打开文献、实验、代码、笔记、AI 的快捷键；计划加 Ctrl 或 ⌘ + 1 到 5 切换五个模块。
+      项目切换 [已有] | 顶栏原地切换项目。
+      深链接 [部分] | 搜索结果、通知、继续工作直接定位到对象。
+      位置记忆 [已有] | 每个模块记住上次的视图和打开的对象。
+      菜单 [待做] | macOS 原生菜单栏，Windows 标题栏应用菜单，所有功能都能从菜单找到。
+    通知中心 [P1] | 集中显示需要处理的事和动态，不弹窗打断。
+      需要处理 [待做] | AI 等待审批、运行失败、同步冲突、登录过期、数据迁移失败；处理完自动消失。
+      动态 [待做] | 运行结束、后台 AI 任务完成、成员加入、订阅有新论文、有新版本。
+      系统通知 [待做] | 应用在后台时，运行结束和等待审批另发系统通知，可以关闭。
+    首次使用引导 [P0] | 第一次打开时几分钟走通一遍。
+      引导步骤 [待做] | 语言与外观、数据位置、连接模型（可跳过）、macOS 的划词授权、开始。
+      示例项目 [待做] [P0] | 不配置模型也能体验阅读、笔记和运行的内置项目。
+    帮助 [待做] [P1] | 使用说明、快捷键速查、重新查看引导、反馈问题（附版本和系统信息）、版本与更新。
+  设置 {页面/09-设置与数据.md} | 应用级的偏好，改动立即生效；Windows 是弹窗，macOS 是独立的设置窗口。
+    通用 | 界面语言和个人资料。
+      界面语言 [已有] | 简体中文、English，只切换界面，不改研究内容。
+      显示名称 [已有] | 本机资料，不需要登录。
+      启动时打开 [待做] | 项目中心或上次的项目。
+    外观 | 明暗主题和字号。
+      主题 [已有] | 浅色、深色、跟随系统；顶栏按钮也能直接切换。
+      界面字号 [待做] | 调整整体字号。
+    快捷键 [已有] | 全局、编辑器、AI 助手三组；录入新组合键、启用或停用、冲突标出、单项或全部恢复默认。
+    AI 模型 [待做] [P0] | 连接列表、默认连接、新增和编辑、测试与验证、隐私说明。
+    划词翻译 [已有] | 启用或暂停、翻译剪贴板快捷键、目标语言、打开完整翻译设置。
+    账号 [部分] | 现在和同步合在“协作”分区，计划单独成一个分区。
+    同步与协作 [已有] | 服务器地址、启用协作、每个云端项目的上次同步时间和立即同步、最近的冲突。
+    数据与备份 [已有] | 数据位置、导入导出、恢复，见“数据与安全”。
+    关于 | 版本和许可。
+      版本与简介 [已有] | 当前版本号和功能简介。
+      检查更新 [待做] | 有新版本时提示。
+      开源许可与反馈 [待做] | 第三方许可清单、问题反馈入口。
+    立即生效 [部分] | 部分分区还要点“保存偏好”，计划统一为改了就生效。
+  数据与安全 {页面/09-设置与数据.md} | 数据放在哪、怎样备份、怎样不丢、怎样不泄露。
+    数据位置 | 应用数据和研究文件分开存放。
+      应用数据目录 [已有] | Windows 在安装目录旁的 ScientifyData，macOS 在 Application Support/Scientify。
+      文件留在原处 [已有] | 文献 PDF、论文笔记和关联的代码文件夹不搬走。
+      更改位置 [已有] | 选择空文件夹，下次启动迁移，逐个文件校验后切换，迁移前可以取消。
+      开发版独立数据 [已有] | 开发版使用 ScientifyDevData，不会碰正式数据。
+    备份与恢复 | 防止数据丢失。
+      JSON 导出与导入 [已有] | 只含记录和附件索引，不含 PDF 和代码；导入前自动备份。
+      恢复最近备份 [已有] | 回到上一次保存的内容，当前主文件另存保留。
+      迁移旧版数据 [已有] | 从 Electron 旧版复制整个工作区，旧目录不动。
+      完整备份与恢复 [待做] [P1] | 打包应用数据和所有关联目录，先列出内容和大小；从备份包恢复到空目录。
+      空间占用与清理 [待做] | 按项目、AI 历史、缓存、运行产物统计占用，可以清理缓存。
+      打开数据目录 [待做] | 在文件管理器里打开。
+    防丢失 | 编辑和保存的保护。
+      关闭前保存保护 [已有] | 有未保存的内容时先保存或确认放弃。
+      保存失败保留草稿 [已有] | 保留内容并提供重试或另存一份。
+      外部修改检测 [已有] | 文件被别的程序改过时提示查看磁盘内容、另存或重试。
+      覆盖前保留旧版本 [部分] | 保存在 recovery/files，还没有找回的界面。
+      意外退出后恢复草稿 [待做] [P1] | 下次启动时恢复未保存的草稿。
+      文件操作中断恢复 [待做] | 移动、迁移中断后，下次启动提示继续或回滚。
+    安全与隐私 | 密钥和数据外发。
+      密钥加密保存 [待做] [P0] | 改存系统钥匙串；现在模型密钥明文保存在数据目录。
+      网页隔离 [已有] | 内置浏览器里的网页不能调用应用接口。
+      AI 运行沙箱 [已有] | 询问模式下 AI 只能在工作区沙箱里执行。
+      首次外发提示 [待做] | 第一次把材料发给模型服务时说明会发送什么。
+  平台与分发 {../技术方案/跨平台适配路线.md} | 窗口外壳、平台约定、安装包和更新。
+    Windows | Windows x64。
+      自绘标题栏 [已有] | 右上角最小化、最大化、关闭，支持贴靠布局。
+      应用菜单 [待做] | 标题栏左侧，按 Alt 打开，结构和 macOS 菜单栏一致。
+      托盘图标 [已有] | 划词翻译和打开主窗口。
+      关闭后留在托盘 [待做] | 在设置里选择，划词翻译继续可用。
+      安装包 [已有] | NSIS 安装包，由 GitHub Actions 构建并做隔离安装验证。
+      代码签名 [待做] [P0] | 避免系统提示“未知发布者”。
+    macOS [P0] | Apple Silicon；现在的窗口外壳和 Windows 一样，需要改成原生结构。
+      红绿灯与统一工具栏 [待做] [P0] | 保留系统窗口按钮，工具栏和标题栏合一，不再画右上角的三个按钮。
+      原生菜单栏 [待做] [P0] | Scientify、文件、编辑、显示、前往、窗口、帮助，每项显示快捷键。
+      独立设置窗口 [待做] [P0] | ⌘, 打开，顶部分区图标，改动立即生效。
+      sheet 式对话框 [待做] | 确认和表单从工具栏下方滑出。
+      关闭窗口后留在菜单栏 [待做] [P0] | 关闭最后一个窗口不退出，⌘Q 才退出。
+      安装包 [已有] | DMG，由维护者在 Mac 上构建、检查后上传到 Release。
+      签名与公证 [待做] [P0] | Developer ID 签名和 Apple 公证；未签名时更新后可能要重新授权辅助功能。
+    通用 | 两个平台共有。
+      双窗口结构 [已有] | 项目中心和项目窗口两个窗口，同一时间打开一个项目。
+      单实例 [已有] | 再次启动时唤起已经打开的窗口。
+      中英双语界面 [已有] | 研究内容不翻译。
+      浅色与深色 [已有] | 跟随系统或固定。
+      自动更新 [待做] [P2] | 现在需要手动下载新版本。
+      发布流程 [已有] | Release 只在公开仓库发布：Windows 由 CI 构建，Mac 本机构建后上传。
+</script>
+
+<script>
+(() => {
+  const FONT = '"PingFang SC","Microsoft YaHei UI","Segoe UI",system-ui,sans-serif';
+  const PALETTE = ['#2563eb', '#64748b', '#0891b2', '#7c3aed', '#db2777', '#ea580c', '#b45309', '#4f46e5', '#0d9488', '#16a34a', '#0284c7', '#78716c', '#dc2626', '#c026d3'];
+  const STATUS_NAME = { have: '已有', part: '部分', todo: '待做' };
+  const STATUS_COLOR = { have: '#1a7f37', part: '#bf8700', todo: '#8c959f' };
+  const PRI_STYLE = { P0: ['#fef2f2', '#b91c1c'], P1: ['#fff7ed', '#c2410c'], P2: ['#f1f5f9', '#475569'] };
+  const STY = [
+    { size: 19, weight: 700, padX: 18, padY: 11, r: 12 },
+    { size: 15, weight: 700, padX: 14, padY: 9, r: 10 },
+    { size: 13.5, weight: 600, padX: 11, padY: 7, r: 8 },
+    { size: 13, weight: 400, padX: 9, padY: 6, r: 7 },
+  ];
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  /* ---------- parse ---------- */
+  const all = [];
+  function parse(text) {
+    const top = { children: [], depth: -1 };
+    const stack = [top];
+    for (const raw of text.split('\n')) {
+      if (!raw.trim()) continue;
+      const depth = Math.floor(raw.match(/^ */)[0].length / 2);
+      const bar = raw.indexOf('|');
+      let head = (bar >= 0 ? raw.slice(0, bar) : raw).trim();
+      const node = { id: all.length, depth, children: [], desc: bar >= 0 ? raw.slice(bar + 1).trim() : '' };
+      head = head.replace(/\[(已有|部分|待做)\]/, (m, s) => { node.own = { 已有: 'have', 部分: 'part', 待做: 'todo' }[s]; return ''; });
+      head = head.replace(/\[(P[0-2])\]/, (m, p) => { node.pri = p; return ''; });
+      head = head.replace(/\{([^}]+)\}/, (m, d) => { node.doc = d; return ''; });
+      node.label = head.trim();
+      while (stack.length > depth + 1) stack.pop();
+      const parent = stack[stack.length - 1];
+      node.parent = parent === top ? null : parent;
+      parent.children.push(node);
+      stack.push(node);
+      all.push(node);
+    }
+    return top.children[0];
+  }
+  const ROOT = parse($('source').textContent);
+  function tally(n) {
+    if (!n.children.length) {
+      n.status = n.own || 'part';
+      n.count = { have: 0, part: 0, todo: 0, total: 1 };
+      n.count[n.status] = 1;
+      return n.count;
+    }
+    const c = { have: 0, part: 0, todo: 0, total: 0 };
+    for (const k of n.children) {
+      const s = tally(k);
+      c.have += s.have; c.part += s.part; c.todo += s.todo; c.total += s.total;
+    }
+    n.count = c;
+    n.status = n.own || (c.have === c.total ? 'have' : c.todo === c.total ? 'todo' : 'part');
+    return c;
+  }
+  tally(ROOT);
+  ROOT.children.forEach((m, i) => {
+    const paint = (n) => { n.color = PALETTE[i % PALETTE.length]; n.children.forEach(paint); };
+    paint(m);
+  });
+  ROOT.color = '#1f2328';
+  for (const n of all) {
+    const names = [];
+    for (let p = n; p && p !== ROOT; p = p.parent) names.unshift(p.label);
+    n.path = names.join(' / ');
+  }
+  let acc = 0;
+  ROOT.children.forEach((m) => { m.side0 = acc < ROOT.count.total / 2 ? 1 : -1; acc += m.count.total; });
+  const docOf = (n) => { for (let p = n; p; p = p.parent) if (p.doc) return p; return null; };
+
+  /* ---------- state ---------- */
+  const state = {
+    focus: ROOT, selected: null, showDesc: true, spotlight: true,
+    status: { have: true, part: true, todo: true }, pri: new Set(),
+    query: '', matches: [], matchIndex: -1,
+  };
+  const expanded = new Set();
+  const isOpen = (n) => n === state.focus || expanded.has(n.id);
+  const kids = (n) => (n.children.length && isOpen(n) ? n.children : []);
+  function expandTo(level) {
+    const base = state.focus.depth;
+    const visit = (n) => {
+      if (n.children.length) {
+        if (n.depth < base + level) expanded.add(n.id); else expanded.delete(n.id);
+      }
+      n.children.forEach(visit);
+    };
+    visit(state.focus);
+    document.querySelectorAll('#levels button').forEach((b) => b.classList.toggle('on', Number(b.dataset.level) === level));
+  }
+  const ancestors = (n) => { const out = []; for (let p = n.parent; p; p = p.parent) out.push(p); return out; };
+  const openPath = (n) => ancestors(n).forEach((p) => expanded.add(p.id));
+  const inside = (n, root) => { for (let p = n; p; p = p.parent) if (p === root) return true; return false; };
+
+  /* ---------- measure ---------- */
+  const mctx = document.createElement('canvas').getContext('2d');
+  function tw(text, size, weight) { mctx.font = weight + ' ' + size + 'px ' + FONT; return mctx.measureText(text).width; }
+  function wrap(text, size, maxW, maxLines) {
+    mctx.font = '400 ' + size + 'px ' + FONT;
+    const lines = [];
+    let line = '';
+    let overflow = false;
+    for (const ch of text) {
+      if (line && mctx.measureText(line + ch).width > maxW) {
+        lines.push(line);
+        line = ch;
+        if (lines.length === maxLines) { overflow = true; break; }
+      } else line += ch;
+    }
+    if (!overflow && line) lines.push(line);
+    if (overflow) {
+      let last = lines[maxLines - 1];
+      while (last && mctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+      lines[maxLines - 1] = last + '…';
+    }
+    return lines;
+  }
+  function metric(n) {
+    const s = STY[Math.min(n.depth, 3)];
+    const lineH = Math.round(s.size * 1.4);
+    const labelW = tw(n.label, s.size, s.weight);
+    const icon = n.depth === 0 ? 0 : 16;
+    const priW = n.pri ? Math.ceil(tw(n.pri, 10, 700)) + 12 : 0;
+    let inner = icon + labelW + (priW ? priW + 6 : 0);
+    let h = lineH;
+    let desc = [];
+    if (state.showDesc && n.desc && n.depth >= 2 && !n.children.length) {
+      desc = wrap(n.desc, 11.5, 300, 2);
+      inner = Math.max(inner, icon + Math.max(...desc.map((l) => tw(l, 11.5, 400))));
+      h += desc.length * 16 + 3;
+    }
+    const bar = n.depth === 1 ? 10 : 0;
+    if (n.depth === 1) inner = Math.max(inner, 132);
+    return { s, lineH, labelW, icon, priW, desc, bar, w: Math.ceil(inner + s.padX * 2), h: Math.ceil(h + s.padY * 2 + bar) };
+  }
+
+  /* ---------- layout ---------- */
+  const gapX = (d) => [78, 60, 48, 42][Math.min(d, 3)];
+  const gapY = (d) => [0, 26, 10, 6, 5][Math.min(d, 4)];
+  let visible = [];
+  function layout() {
+    const list = [];
+    const walk = (n) => { n.m = metric(n); list.push(n); kids(n).forEach(walk); };
+    walk(state.focus);
+    const height = (n) => {
+      const ks = kids(n);
+      if (!ks.length) return (n.sh = n.m.h);
+      const g = gapY(n.depth + 1);
+      const sum = ks.reduce((a, c) => a + height(c), 0) + g * (ks.length - 1);
+      return (n.sh = Math.max(n.m.h, sum));
+    };
+    const place = (n, x, top, dir) => {
+      n.side = dir;
+      n.tx = dir > 0 ? x : x - n.m.w;
+      n.ty = top + n.sh / 2 - n.m.h / 2;
+      const ks = kids(n);
+      if (!ks.length) return;
+      const g = gapY(n.depth + 1);
+      const sum = ks.reduce((a, c) => a + c.sh, 0) + g * (ks.length - 1);
+      let y = top + (n.sh - sum) / 2;
+      const offset = n.children.length && n !== state.focus ? 20 : 0;
+      const cx = dir > 0 ? n.tx + n.m.w + offset + gapX(n.depth) : n.tx - offset - gapX(n.depth);
+      for (const c of ks) { place(c, cx, y, dir); y += c.sh + g; }
+    };
+    const f = state.focus;
+    if (f === ROOT) {
+      f.tx = -f.m.w / 2; f.ty = -f.m.h / 2; f.side = 1; f.sh = f.m.h;
+      const g = gapY(1);
+      for (const dir of [1, -1]) {
+        const group = kids(f).filter((c) => c.side0 === dir);
+        group.forEach(height);
+        const sum = group.reduce((a, c) => a + c.sh, 0) + g * Math.max(0, group.length - 1);
+        let y = -sum / 2;
+        const x = dir > 0 ? f.tx + f.m.w + gapX(0) : f.tx - gapX(0);
+        for (const c of group) { place(c, x, y, dir); y += c.sh + g; }
+      }
+    } else {
+      height(f);
+      place(f, 0, -f.sh / 2, 1);
+    }
+    return list;
+  }
+
+  /* ---------- render ---------- */
+  const svg = $('map');
+  const viewport = $('viewport');
+  const linkLayer = $('links');
+  const nodeLayer = $('nodes');
+  const nodeEls = new Map();
+  const linkEls = new Map();
+  function mix(hex, t) {
+    const v = parseInt(hex.slice(1), 16);
+    const f = (c) => Math.round(255 - (255 - c) * t).toString(16).padStart(2, '0');
+    return '#' + f(v >> 16) + f((v >> 8) & 255) + f(v & 255);
+  }
+  function statusGlyph(n, x, y) {
+    const c = STATUS_COLOR[n.status];
+    if (n.status === 'have') return '<circle cx="' + x + '" cy="' + y + '" r="5" fill="' + c + '"/>';
+    if (n.status === 'todo') return '<circle cx="' + x + '" cy="' + y + '" r="4.4" fill="#fff" stroke="' + c + '" stroke-width="1.6"/>';
+    return '<circle cx="' + x + '" cy="' + y + '" r="4.4" fill="#fff" stroke="' + c + '" stroke-width="1.6"/><path d="M' + x + ',' + (y - 4.4) + ' A4.4,4.4 0 0 0 ' + x + ',' + (y + 4.4) + ' Z" fill="' + c + '"/>';
+  }
+  function nodeMarkup(n) {
+    const m = n.m;
+    const s = m.s;
+    const color = n.color;
+    const selected = state.selected === n;
+    const match = state.query && state.matchSet && state.matchSet.has(n.id);
+    const current = state.matches[state.matchIndex] === n;
+    let fill = '#fff';
+    let stroke = '#d8dee4';
+    let width = 1;
+    let text = '#1f2328';
+    if (n.depth === 0) { fill = '#1f2328'; stroke = '#1f2328'; text = '#fff'; }
+    else if (n.depth === 1) { fill = mix(color, 0.1); stroke = color; width = 1.6; }
+    else if (n.depth === 2) { stroke = mix(color, 0.55); }
+    if (match) fill = '#fff8c5';
+    if (current) { stroke = '#d4a72c'; width = 2.6; }
+    if (selected) { stroke = n.depth === 0 ? '#57606a' : color; width = 2.6; }
+    let out = '<title>' + esc(n.label + (n.desc ? ' — ' + n.desc : '')) + '</title>';
+    if (selected) out += '<rect x="-4" y="-4" width="' + (m.w + 8) + '" height="' + (m.h + 8) + '" rx="' + (s.r + 4) + '" fill="' + mix(color, 0.12) + '"/>';
+    out += '<rect class="box" width="' + m.w + '" height="' + m.h + '" rx="' + s.r + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + width + '"/>';
+    const cy = s.padY + m.lineH / 2;
+    let x = s.padX;
+    if (m.icon) { out += statusGlyph(n, x + 5, cy); x += m.icon; }
+    out += '<text x="' + x + '" y="' + cy + '" dominant-baseline="central" font-size="' + s.size + '" font-weight="' + s.weight + '" fill="' + text + '">' + esc(n.label) + '</text>';
+    if (n.pri) {
+      const [bg, fg] = PRI_STYLE[n.pri];
+      const px = x + m.labelW + 6;
+      out += '<rect x="' + px + '" y="' + (cy - 8) + '" width="' + m.priW + '" height="16" rx="8" fill="' + bg + '"/><text x="' + (px + m.priW / 2) + '" y="' + cy + '" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="700" fill="' + fg + '">' + n.pri + '</text>';
+    }
+    m.desc.forEach((line, i) => {
+      out += '<text x="' + x + '" y="' + (s.padY + m.lineH + 3 + i * 16 + 8) + '" dominant-baseline="central" font-size="11.5" fill="#57606a">' + esc(line) + '</text>';
+    });
+    if (m.bar) {
+      const bw = m.w - s.padX * 2;
+      const by = m.h - s.padY - 4;
+      let bx = s.padX;
+      out += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="4" rx="2" fill="#eef1f4"/>';
+      for (const k of ['have', 'part', 'todo']) {
+        const w = (bw * n.count[k]) / n.count.total;
+        if (w > 0) out += '<rect x="' + bx + '" y="' + by + '" width="' + w + '" height="4" fill="' + STATUS_COLOR[k] + '"/>';
+        bx += w;
+      }
+    }
+    if (n.children.length && n !== state.focus) {
+      const tx = n.side > 0 ? m.w + 11 : -11;
+      const open = isOpen(n);
+      out += '<g class="tog" data-act="toggle"><circle cx="' + tx + '" cy="' + m.h / 2 + '" r="9" fill="#fff" stroke="' + (n.depth === 0 ? '#57606a' : color) + '" stroke-width="1.4"/><text x="' + tx + '" y="' + m.h / 2 + '" dominant-baseline="central" text-anchor="middle" font-size="' + (open ? 13 : 10) + '" font-weight="700" fill="' + (n.depth === 0 ? '#57606a' : color) + '">' + (open ? '−' : n.children.length) + '</text></g>';
+    }
+    return out;
+  }
+  function linkPath(p, c) {
+    const off = p.children.length && p !== state.focus ? 20 : 0;
+    const x1 = c.side > 0 ? p.cx + p.m.w + off : p.cx - off;
+    const y1 = p.cy + p.m.h / 2;
+    const x2 = c.side > 0 ? c.cx : c.cx + c.m.w;
+    const y2 = c.cy + c.m.h / 2;
+    const mx = (x1 + x2) / 2;
+    return 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2;
+  }
+  let frame = 0;
+  function render(animate = true) {
+    const list = layout();
+    visible = list;
+    const shown = new Set(list.map((n) => n.id));
+    for (const [id, g] of nodeEls) if (!shown.has(id)) { g.remove(); nodeEls.delete(id); }
+    for (const [id, p] of linkEls) if (!shown.has(id) || id === state.focus.id) { p.remove(); linkEls.delete(id); }
+    for (const n of list) {
+      let g = nodeEls.get(n.id);
+      if (!g) {
+        g = document.createElementNS(NS, 'g');
+        g.setAttribute('class', 'node enter');
+        g.dataset.id = n.id;
+        nodeLayer.appendChild(g);
+        nodeEls.set(n.id, g);
+        const p = n.parent;
+        if (p && p.cx !== undefined && nodeEls.has(p.id) && animate) { n.cx = p.cx; n.cy = p.cy + p.m.h / 2 - n.m.h / 2; }
+        else { n.cx = n.tx; n.cy = n.ty; }
+        setTimeout(() => g.classList.remove('enter'), 320);
+      }
+      g.innerHTML = nodeMarkup(n);
+      if (n !== state.focus && n.parent) {
+        let path = linkEls.get(n.id);
+        if (!path) {
+          path = document.createElementNS(NS, 'path');
+          linkLayer.appendChild(path);
+          linkEls.set(n.id, path);
+        }
+        path.setAttribute('class', 'link');
+        path.setAttribute('stroke', n.depth <= 1 ? n.color : mix(n.color, 0.6));
+        path.setAttribute('stroke-width', [3.2, 2.6, 1.8, 1.4, 1.2][Math.min(n.depth, 4)]);
+      }
+    }
+    applyDim();
+    const from = list.map((n) => [n, n.cx, n.cy]);
+    const start = performance.now();
+    const duration = animate ? 280 : 0;
+    cancelAnimationFrame(frame);
+    const step = (t) => {
+      const k = duration ? Math.min(1, (t - start) / duration) : 1;
+      const e = 1 - Math.pow(1 - k, 3);
+      for (const [n, x0, y0] of from) {
+        n.cx = x0 + (n.tx - x0) * e;
+        n.cy = y0 + (n.ty - y0) * e;
+        nodeEls.get(n.id).setAttribute('transform', 'translate(' + n.cx + ',' + n.cy + ')');
+      }
+      for (const n of list) {
+        const path = linkEls.get(n.id);
+        if (path) path.setAttribute('d', linkPath(n.parent, n));
+      }
+      if (k < 1) frame = requestAnimationFrame(step);
+      else drawMini();
+    };
+    frame = requestAnimationFrame(step);
+    renderCrumbs();
+    renderPanel();
+  }
+
+  /* ---------- dim: spotlight and filters ---------- */
+  function filterMap() {
+    const statusAll = state.status.have && state.status.part && state.status.todo;
+    if (statusAll && !state.pri.size) return null;
+    const map = new Map();
+    const pass = (n) => {
+      const own = state.status[n.status] && (!state.pri.size || state.pri.has(n.pri));
+      if (!n.children.length) { map.set(n.id, own); return own; }
+      let any = false;
+      for (const c of n.children) any = pass(c) || any;
+      const ok = any || (state.pri.size > 0 && own);
+      map.set(n.id, ok);
+      return ok;
+    };
+    pass(ROOT);
+    return map;
+  }
+  function applyDim() {
+    let lit = null;
+    if (state.spotlight && state.selected && state.selected !== ROOT) {
+      lit = new Set([state.selected.id]);
+      ancestors(state.selected).forEach((p) => lit.add(p.id));
+      const down = (n) => n.children.forEach((c) => { lit.add(c.id); down(c); });
+      down(state.selected);
+    }
+    const pass = filterMap();
+    for (const n of visible) {
+      const dim = (lit && !lit.has(n.id)) || (pass && !pass.get(n.id));
+      nodeEls.get(n.id).classList.toggle('dim', !!dim);
+      const l = linkEls.get(n.id);
+      if (l) l.classList.toggle('dim', !!dim);
+    }
+  }
+
+  /* ---------- view: zoom and pan ---------- */
+  const stage = $('stage');
+  const view = { x: 0, y: 0, k: 1 };
+  let viewFrame = 0;
+  function applyView() {
+    viewport.setAttribute('transform', 'translate(' + view.x + ',' + view.y + ') scale(' + view.k + ')');
+    $('pct').textContent = Math.round(view.k * 100) + '%';
+    drawMini();
+  }
+  function animateView(target, duration = 340) {
+    cancelAnimationFrame(viewFrame);
+    const from = { ...view };
+    const start = performance.now();
+    const step = (t) => {
+      const k = Math.min(1, (t - start) / duration);
+      const e = 1 - Math.pow(1 - k, 3);
+      view.x = from.x + (target.x - from.x) * e;
+      view.y = from.y + (target.y - from.y) * e;
+      view.k = from.k + (target.k - from.k) * e;
+      applyView();
+      if (k < 1) viewFrame = requestAnimationFrame(step);
+    };
+    viewFrame = requestAnimationFrame(step);
+  }
+  function bounds(list) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const n of list) {
+      x0 = Math.min(x0, n.tx - 22); y0 = Math.min(y0, n.ty);
+      x1 = Math.max(x1, n.tx + n.m.w + 22); y1 = Math.max(y1, n.ty + n.m.h);
+    }
+    return { x0, y0, x1, y1 };
+  }
+  function fit(list = visible, pad = 44, animate = true) {
+    if (!list.length) return;
+    const b = bounds(list);
+    const W = stage.clientWidth;
+    const H = stage.clientHeight;
+    const k = Math.max(0.08, Math.min(1.2, (W - pad * 2) / (b.x1 - b.x0), (H - pad * 2) / (b.y1 - b.y0)));
+    const target = { k, x: W / 2 - ((b.x0 + b.x1) / 2) * k, y: H / 2 - ((b.y0 + b.y1) / 2) * k };
+    if (animate) animateView(target);
+    else { Object.assign(view, target); applyView(); }
+  }
+  function centerOn(n, minK = 0.9) {
+    const W = stage.clientWidth;
+    const H = stage.clientHeight;
+    const k = Math.max(view.k, minK);
+    animateView({ k, x: W / 2 - (n.tx + n.m.w / 2) * k, y: H / 2 - (n.ty + n.m.h / 2) * k });
+  }
+  function zoomAt(px, py, factor) {
+    const k = Math.max(0.06, Math.min(3, view.k * factor));
+    const wx = (px - view.x) / view.k;
+    const wy = (py - view.y) / view.k;
+    view.k = k;
+    view.x = px - wx * k;
+    view.y = py - wy * k;
+    applyView();
+  }
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    cancelAnimationFrame(viewFrame);
+    const r = stage.getBoundingClientRect();
+    zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0016)));
+  }, { passive: false });
+  let drag = null;
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('#mini') || e.target.closest('.focusbadge')) return;
+    drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false, target: e.target, pointer: e.pointerId };
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    if (!drag.moved) {
+      // Capture only once dragging starts, so clicks and double-clicks keep their node targets.
+      drag.moved = true;
+      stage.setPointerCapture(drag.pointer);
+      stage.classList.add('dragging');
+      cancelAnimationFrame(viewFrame);
+    }
+    view.x = drag.vx + dx;
+    view.y = drag.vy + dy;
+    applyView();
+  });
+  stage.addEventListener('pointerup', (e) => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    stage.classList.remove('dragging');
+    if (d.moved) return;
+    const g = d.target.closest && d.target.closest('.node');
+    if (!g) { select(null); return; }
+    const n = all[Number(g.dataset.id)];
+    if (d.target.closest('.tog')) { toggle(n); return; }
+    // Re-rendering replaces node contents after the first click, so detect the
+    // double click here instead of relying on the browser's dblclick target.
+    const now = performance.now();
+    if (lastClick.id === n.id && now - lastClick.t < 400) {
+      lastClick = { id: -1, t: 0 };
+      if (n.children.length) focus(n);
+      return;
+    }
+    lastClick = { id: n.id, t: now };
+    select(n);
+  });
+  let lastClick = { id: -1, t: 0 };
+
+  /* ---------- actions ---------- */
+  function toggle(n, force) {
+    if (n === state.focus) return;
+    const open = force !== undefined ? force : !isOpen(n);
+    if (open) expanded.add(n.id); else expanded.delete(n.id);
+    render();
+  }
+  function select(n, center = false) {
+    state.selected = n;
+    if (n && !inside(n, state.focus)) { state.focus = ROOT; }
+    if (n) openPath(n);
+    render();
+    if (n && center) setTimeout(() => centerOn(n), 20);
+    if (n) history.replaceState(null, '', '#' + encodeURIComponent(n.path || 'root'));
+    else history.replaceState(null, '', location.pathname + location.search);
+  }
+  function focus(n) {
+    state.focus = n || ROOT;
+    if (state.focus !== ROOT) expanded.add(state.focus.id);
+    if (state.selected && !inside(state.selected, state.focus)) state.selected = state.focus;
+    render(false);
+    setTimeout(() => fit(), 10);
+  }
+  function expandBranch(n, open) {
+    const visit = (x) => { if (x.children.length) { if (open) expanded.add(x.id); else expanded.delete(x.id); } x.children.forEach(visit); };
+    if (open) visit(n); else { n.children.forEach(visit); if (n !== state.focus) expanded.delete(n.id); }
+    render();
+  }
+
+  /* ---------- breadcrumb, totals, panel ---------- */
+  function renderCrumbs() {
+    const chain = [ROOT, ...ancestors(state.focus).reverse().filter((p) => p !== ROOT)];
+    if (state.focus !== ROOT) chain.push(state.focus);
+    const html = chain.map((n, i) => (i ? '<span class="sep">›</span>' : '') + '<a data-focus="' + n.id + '" class="' + (n === state.focus ? 'cur' : '') + '">' + esc(n === ROOT ? '全图' : n.label) + '</a>').join('');
+    $('crumbs').innerHTML = html;
+    $('focusbadge').classList.toggle('show', state.focus !== ROOT);
+    $('focusname').textContent = state.focus.path || '';
+  }
+  function barHtml(c, cls = 'sbar') {
+    return '<div class="' + cls + '">' + ['have', 'part', 'todo'].map((k) => (c[k] ? '<i style="width:' + (100 * c[k]) / c.total + '%;background:' + STATUS_COLOR[k] + '"></i>' : '')).join('') + '</div>';
+  }
+  function countText(c) { return '已有 ' + c.have + ' · 部分 ' + c.part + ' · 待做 ' + c.todo; }
+  function childList(n) {
+    return '<ul class="kids">' + n.children.map((c) => '<li data-sel="' + c.id + '"><span class="dot ' + c.status + '"></span><span class="nm">' + esc(c.label) + '</span>' + (c.pri ? '<span class="pill ' + c.pri + '">' + c.pri + '</span>' : '') + '<span class="n">' + (c.children.length ? c.count.total + ' 项' + barHtml(c.count, 'mini') : STATUS_NAME[c.status]) + '</span></li>').join('') + '</ul>';
+  }
+  function renderPanel() {
+    const n = state.selected;
+    const panel = $('panel');
+    if (!n) {
+      const c = ROOT.count;
+      panel.innerHTML = '<div class="path">产品功能结构</div><h2>Scientify</h2><p class="desc">' + esc(ROOT.desc) + '</p>' +
+        '<h3>整体完成度 · 共 ' + c.total + ' 项具体功能</h3>' + barHtml(c) + '<div class="slegend"><span><span class="dot have"></span>已有 ' + c.have + '</span><span><span class="dot part"></span>部分 ' + c.part + '</span><span><span class="dot todo"></span>待做 ' + c.todo + '</span></div>' +
+        '<h3>' + ROOT.children.length + ' 个大模块（点击查看）</h3>' + childList(ROOT) +
+        '<h3>怎么看</h3><ul class="tips"><li><b>缩放</b>：滚轮或触控板双指；<b>平移</b>：按住拖动。</li><li><b>聚焦</b>：双击一个模块，只看这一支；顶部面包屑或 Esc 返回。</li><li><b>展开</b>：点节点旁的圆圈；或用上方“展开到”。</li><li><b>聚光</b>：选中节点后，其他分支变淡。</li><li><b>筛选</b>：只看某种现状或某个优先级，其余变淡。</li><li><b>键盘</b>：方向键移动选中，空格展开或收起，F 聚焦，+ / − 缩放，0 适应窗口。</li></ul>' +
+        '<h3>图例</h3><ul class="tips"><li><span class="dot have"></span> 已有：已经实现</li><li><span class="dot part"></span> 部分：已实现但有明显缺口</li><li><span class="dot todo"></span> 待做：还没做或是占位页</li><li><span class="pill P0">P0</span> 让已有功能可靠、讲清楚；<span class="pill P1">P1</span> 补齐主线页面；<span class="pill P2">P2</span> 进阶能力（见《完善路线》）</li></ul>';
+      return;
+    }
+    const chain = ancestors(n).reverse();
+    const path = chain.map((p) => '<a data-sel="' + p.id + '">' + esc(p === ROOT ? 'Scientify' : p.label) + '</a>').join('<span>›</span>');
+    const doc = docOf(n);
+    let html = '<div class="path">' + (path || '产品') + '</div><h2><i style="background:' + (n.depth === 0 ? '#1f2328' : n.color) + '"></i>' + esc(n.label) + '</h2>' +
+      '<div class="pills"><span class="pill ' + n.status + '">' + STATUS_NAME[n.status] + '</span>' + (n.pri ? '<span class="pill ' + n.pri + '">' + n.pri + '</span>' : '') + '</div>' +
+      (n.desc ? '<p class="desc">' + esc(n.desc) + '</p>' : '');
+    if (n.children.length) {
+      html += '<h3>下含 ' + n.children.length + ' 项 · 共 ' + n.count.total + ' 项具体功能</h3>' + barHtml(n.count) + '<div class="slegend"><span><span class="dot have"></span>已有 ' + n.count.have + '</span><span><span class="dot part"></span>部分 ' + n.count.part + '</span><span><span class="dot todo"></span>待做 ' + n.count.todo + '</span></div>' + childList(n);
+      html += '<div class="actions"><button type="button" class="btn" data-act="focus">聚焦这一支</button><button type="button" class="btn" data-act="expandAll">全部展开</button><button type="button" class="btn" data-act="collapse">收起</button></div>';
+    } else {
+      html += '<div class="actions"><button type="button" class="btn" data-act="up">看所在分组</button></div>';
+    }
+    if (doc) html += '<div class="doc">详细设计：<a href="' + esc(encodeURI(doc.doc)) + '" target="_blank" rel="noopener">' + esc(doc.doc.replace(/^.*\//, '')) + '</a></div>';
+    panel.innerHTML = html;
+  }
+  $('panel').addEventListener('click', (e) => {
+    const sel = e.target.closest('[data-sel]');
+    if (sel) { select(all[Number(sel.dataset.sel)], true); return; }
+    const act = e.target.closest('[data-act]');
+    if (!act || !state.selected) return;
+    const n = state.selected;
+    if (act.dataset.act === 'focus') focus(n);
+    if (act.dataset.act === 'expandAll') { expandBranch(n, true); setTimeout(() => fit(visible.filter((x) => inside(x, n))), 30); }
+    if (act.dataset.act === 'collapse') expandBranch(n, false);
+    if (act.dataset.act === 'up' && n.parent) select(n.parent, true);
+  });
+  $('crumbs').addEventListener('click', (e) => {
+    const a = e.target.closest('[data-focus]');
+    if (a) focus(all[Number(a.dataset.focus)]);
+  });
+  $('focusup').addEventListener('click', () => focus(state.focus.parent || ROOT));
+  $('focusall').addEventListener('click', () => focus(ROOT));
+
+  /* ---------- toolbar ---------- */
+  $('levels').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    expandTo(Number(b.dataset.level));
+    render(false);
+    setTimeout(() => fit(), 10);
+  });
+  $('statusChips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-status]');
+    if (!b) return;
+    const k = b.dataset.status;
+    const on = Object.values(state.status).filter(Boolean).length;
+    if (state.status[k] && on === 1) return;
+    state.status[k] = !state.status[k];
+    b.classList.toggle('on', state.status[k]);
+    b.classList.toggle('off', !state.status[k]);
+    applyDim();
+  });
+  $('priChips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pri]');
+    if (!b) return;
+    const p = b.dataset.pri;
+    if (state.pri.has(p)) state.pri.delete(p); else state.pri.add(p);
+    b.classList.toggle('on', state.pri.has(p));
+    applyDim();
+  });
+  $('descToggle').addEventListener('click', (e) => {
+    state.showDesc = !state.showDesc;
+    e.currentTarget.classList.toggle('on', state.showDesc);
+    render(false);
+  });
+  $('spotToggle').addEventListener('click', (e) => {
+    state.spotlight = !state.spotlight;
+    e.currentTarget.classList.toggle('on', state.spotlight);
+    applyDim();
+  });
+  const centerPoint = () => [stage.clientWidth / 2, stage.clientHeight / 2];
+  $('zin').addEventListener('click', () => zoomAt(...centerPoint(), 1.25));
+  $('zout').addEventListener('click', () => zoomAt(...centerPoint(), 0.8));
+  $('fit').addEventListener('click', () => fit());
+  $('panelbtn').addEventListener('click', () => { $('aside').classList.toggle('hidden'); setTimeout(drawMini, 20); });
+
+  /* ---------- search ---------- */
+  function runSearch(q) {
+    state.query = q.trim().toLowerCase();
+    state.matches = state.query ? all.filter((n) => n.label.toLowerCase().includes(state.query) || n.desc.toLowerCase().includes(state.query)) : [];
+    state.matchSet = new Set(state.matches.map((n) => n.id));
+    state.matchIndex = -1;
+    $('qcount').textContent = state.query ? (state.matches.length ? state.matches.length + ' 项' : '无结果') : '';
+    if (state.matches.length && state.matches.length <= 80) {
+      if (state.matches.some((n) => !inside(n, state.focus))) state.focus = ROOT;
+      state.matches.forEach(openPath);
+    }
+    render();
+  }
+  function step(dir) {
+    if (!state.matches.length) return;
+    state.matchIndex = (state.matchIndex + dir + state.matches.length) % state.matches.length;
+    const n = state.matches[state.matchIndex];
+    $('qcount').textContent = state.matchIndex + 1 + ' / ' + state.matches.length;
+    select(n, true);
+  }
+  let timer = 0;
+  $('q').addEventListener('input', (e) => { clearTimeout(timer); timer = setTimeout(() => runSearch(e.target.value), 160); });
+  $('q').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer); if (state.query !== e.target.value.trim().toLowerCase()) runSearch(e.target.value); step(e.shiftKey ? -1 : 1); }
+    if (e.key === 'Escape') { e.target.value = ''; runSearch(''); stage.focus(); }
+  });
+  $('qnext').addEventListener('click', () => step(1));
+  $('qprev').addEventListener('click', () => step(-1));
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    const n = state.selected;
+    const [cx, cy] = centerPoint();
+    if (e.key === '+' || e.key === '=') zoomAt(cx, cy, 1.2);
+    else if (e.key === '-' || e.key === '_') zoomAt(cx, cy, 1 / 1.2);
+    else if (e.key === '0') fit();
+    else if (e.key === 'f' || e.key === 'F') { if (n && n.children.length) focus(n); }
+    else if (e.key === '/' ) { e.preventDefault(); $('q').focus(); }
+    else if (e.key === 'Escape') { if (state.focus !== ROOT) focus(state.focus.parent || ROOT); else select(null); }
+    else if (e.key === ' ' || e.key === 'Enter') { if (n && n.children.length) { e.preventDefault(); toggle(n); } }
+    else if (e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      if (!n) { select(state.focus, true); return; }
+      const sib = n.parent ? n.parent.children : [n];
+      const i = sib.indexOf(n);
+      const outward = (n.side || 1) > 0 ? 'ArrowRight' : 'ArrowLeft';
+      const inward = outward === 'ArrowRight' ? 'ArrowLeft' : 'ArrowRight';
+      if (e.key === 'ArrowDown' && i < sib.length - 1) select(sib[i + 1], true);
+      else if (e.key === 'ArrowUp' && i > 0) select(sib[i - 1], true);
+      else if (e.key === outward && n.children.length) { expanded.add(n.id); select(n === ROOT ? n.children.find((c) => c.side0 === (e.key === 'ArrowRight' ? 1 : -1)) : n.children[0], true); }
+      else if (e.key === inward && n.parent) select(n.parent, true);
+      else if (n === ROOT && e.key === 'ArrowLeft') select(n.children.find((c) => c.side0 === -1), true);
+    }
+  });
+
+  /* ---------- minimap ---------- */
+  const mini = $('mini');
+  const mc = mini.getContext('2d');
+  let miniMap = null;
+  function drawMini() {
+    if (!visible.length) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = mini.clientWidth;
+    const H = mini.clientHeight;
+    if (mini.width !== W * dpr) { mini.width = W * dpr; mini.height = H * dpr; }
+    mc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mc.clearRect(0, 0, W, H);
+    const b = bounds(visible);
+    const s = Math.min((W - 12) / (b.x1 - b.x0), (H - 12) / (b.y1 - b.y0));
+    const ox = (W - (b.x1 - b.x0) * s) / 2 - b.x0 * s;
+    const oy = (H - (b.y1 - b.y0) * s) / 2 - b.y0 * s;
+    miniMap = { s, ox, oy };
+    for (const n of visible) {
+      mc.fillStyle = n.depth === 0 ? '#1f2328' : n.depth === 1 ? n.color : mix(n.color, 0.45);
+      mc.fillRect(ox + n.tx * s, oy + n.ty * s, Math.max(1.5, n.m.w * s), Math.max(1.5, n.m.h * s));
+    }
+    const vx = (-view.x / view.k) * s + ox;
+    const vy = (-view.y / view.k) * s + oy;
+    const vw = (stage.clientWidth / view.k) * s;
+    const vh = (stage.clientHeight / view.k) * s;
+    mc.strokeStyle = '#d4a72c';
+    mc.lineWidth = 1.6;
+    mc.strokeRect(vx, vy, vw, vh);
+  }
+  function miniJump(e) {
+    if (!miniMap) return;
+    const r = mini.getBoundingClientRect();
+    const wx = (e.clientX - r.left - miniMap.ox) / miniMap.s;
+    const wy = (e.clientY - r.top - miniMap.oy) / miniMap.s;
+    view.x = stage.clientWidth / 2 - wx * view.k;
+    view.y = stage.clientHeight / 2 - wy * view.k;
+    applyView();
+  }
+  let miniDrag = false;
+  mini.addEventListener('pointerdown', (e) => { miniDrag = true; mini.setPointerCapture(e.pointerId); miniJump(e); e.stopPropagation(); });
+  mini.addEventListener('pointermove', (e) => { if (miniDrag) miniJump(e); });
+  mini.addEventListener('pointerup', () => { miniDrag = false; });
+
+  /* ---------- start ---------- */
+  const t = ROOT.count;
+  $('totals').innerHTML = ROOT.children.length + ' 个大模块 · ' + t.total + ' 项具体功能 · <span class="dot have"></span> ' + t.have + ' <span class="dot part"></span> ' + t.part + ' <span class="dot todo"></span> ' + t.todo;
+  expandTo(1);
+  const wanted = decodeURIComponent(location.hash.slice(1));
+  const target = wanted && all.find((n) => n.path === wanted);
+  render(false);
+  if (target) { select(target); setTimeout(() => centerOn(target, 1), 30); }
+  else fit(visible, 44, false);
+  window.addEventListener('resize', () => drawMini());
+  stage.focus();
+})();
+</script>
+</body>
+</html>
