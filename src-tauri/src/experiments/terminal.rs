@@ -192,6 +192,13 @@ impl TerminalState {
             command.env(key, value);
         }
         command.env("TERM", "xterm-256color");
+        // Children inherit "ignore Ctrl+C" from this process. When Scientify was
+        // itself started with Ctrl+C disabled, the shell or Python in the terminal
+        // would never see Ctrl+C, so restore normal handling before spawning.
+        #[cfg(windows)]
+        unsafe {
+            windows_sys::Win32::System::Console::SetConsoleCtrlHandler(None, 0);
+        }
         let mut child = pair
             .slave
             .spawn_command(command)
