@@ -92,7 +92,21 @@ jobs:
             if [ -n "$details" ]; then echo "::error title=cargo test failures::$(printf '%s\n' "$details" | escape)"; fi
             exit 1
           fi
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Rust lint
+        shell: bash
+        run: |
+          set -o pipefail
+          log="$RUNNER_TEMP/clippy.log"
+          if ! cargo clippy --workspace --all-targets --locked --message-format=short -- -D warnings 2>&1 | tee "$log"; then
+            # One annotation per finding, pointing at the file and line.
+            grep -E '^[^ :]+:[0-9]+:[0-9]+: error' "$log" | head -30 | while IFS= read -r line; do
+              file=${line%%:*}; rest=${line#*:}; row=${rest%%:*}; rest=${rest#*:}; col=${rest%%:*}; message=${rest#*: }
+              echo "::error file=$file,line=$row,col=$col,title=clippy::${message//%/%25}"
+            done
+            summary=$(grep -E '^(error|warning)' "$log" | head -20 | sed -e 's/%/%25/g' | awk 'BEGIN { ORS = "%0A" } { print }')
+            echo "::error title=clippy summary::$summary"
+            exit 1
+          fi
       - name: Build native verification app
         run: node node_modules/@tauri-apps/cli/tauri.js build --debug --no-bundle --ci -- --locked
       - name: Verify native browser, library and IPC
