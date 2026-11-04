@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scientify 页面结构与功能入口</title>
+<style>
+:root{--ink:#242727;--ink2:#555b5b;--muted:#6b7170;--line:#e5e7e6;--line2:#d1d6d4;--chrome:#f7f7f7;--sel:#eaeaea;--accent:#3d4643;--ok:#246b45;--warn:#865a16;--bad:#b03636;--info:#2e65a4;--pin:#e8590c;--font:"PingFang SC","Microsoft YaHei UI","Segoe UI",-apple-system,system-ui,sans-serif;--mono:"SF Mono","Cascadia Mono",Consolas,monospace}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:14px/1.65 var(--font);color:var(--ink);background:#fff;display:grid;grid-template-columns:270px minmax(0,1fr)}
+a{color:var(--info);text-decoration:none}
+a:hover{text-decoration:underline}
+.nav{height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fafafa;padding:18px 12px 24px}
+.brand{display:flex;gap:10px;align-items:center;margin:0 6px 16px}
+.brand img{width:30px;height:30px}
+.brand b{display:block;font-size:15px;line-height:1.3}
+.brand span{font-size:12px;color:var(--muted)}
+.plat{display:grid;grid-template-columns:1fr 1fr;background:#ececec;border-radius:7px;padding:2px;margin:0 4px 10px}
+.plat button{border:0;background:transparent;border-radius:5px;padding:5px 0;font:inherit;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.plat button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:0 6px 6px;font-size:11.5px;color:var(--muted)}
+#x-toc h4{margin:14px 8px 4px;font-size:11.5px;font-weight:600;color:var(--muted)}
+#x-toc a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;color:var(--ink);font-size:13px}
+#x-toc a:hover{background:#efefef;text-decoration:none}
+#x-toc a.on{background:#e4e6e5;font-weight:600}
+.meta{margin:18px 8px 0;font-size:11.5px;color:var(--muted);line-height:1.6}
+main{height:100vh;overflow:auto;padding:26px 36px 40px;min-width:0}
+.ph .crumb{font-size:12px;color:var(--muted)}
+.ph h1{margin:2px 0 6px;font-size:23px;line-height:1.3;display:flex;align-items:center;gap:10px}
+.tag{font-size:11px;font-weight:500;padding:0 7px;border-radius:9px;border:1px solid;white-space:nowrap;line-height:18px}
+.tag.have{color:var(--ok);border-color:#b9d8c6;background:#f1f8f4}
+.tag.adjust{color:var(--warn);border-color:#e6d2ad;background:#fbf6ec}
+.tag.todo{color:var(--info);border-color:#bcd0ea;background:#f1f6fc}
+.lead{margin:0 0 16px;color:var(--ink2);max-width:920px}
+.stage{position:relative;margin:0 0 22px;overflow:hidden}
+.stage .scr{transform-origin:0 0;width:max-content}
+.notes{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:30px;max-width:1300px}
+.notes h3{font-size:14px;margin:0 0 6px}
+.notes ol{list-style:none;margin:0 0 14px;padding:0}
+.notes ol li{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.notes ol li:first-child{border-top:0}
+.notes ol strong{font-size:13.5px}
+.notes ol p{margin:1px 0 0;font-size:13px;color:var(--ink2)}
+.notes ul{margin:0 0 16px;padding-left:18px;font-size:13px;color:var(--ink2)}
+.notes ul li{margin:3px 0}
+.notes ul.goes{list-style:none;padding:0}
+.goes li{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.goes .i{color:var(--muted)}
+.pager{display:flex;justify-content:space-between;margin-top:26px;max-width:1300px}
+.pager button{border:1px solid var(--line2);background:#fff;border-radius:6px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.pager button:disabled{visibility:hidden}
+.pin{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--pin);color:#fff;font:600 11px/1 var(--font);flex:none;box-shadow:0 0 0 2px #fff;vertical-align:middle}
+.doc{max-width:1120px}
+.doc h2{font-size:17px;margin:24px 0 8px}
+.doc p{margin:6px 0;color:var(--ink2)}
+.doc table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0 10px}
+.doc th,.doc td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+.doc th{background:#f6f6f6;font-weight:600;white-space:nowrap}
+.doc ul,.doc ol{padding-left:20px;color:var(--ink2);font-size:13.5px}
+.doc li{margin:3px 0}
+.sitemap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.sitemap .g{border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:13px}
+.sitemap .g b{display:block;margin-bottom:4px}
+.sitemap .g div{padding:2px 0;color:var(--ink2)}
+.sitemap .g div.l2{padding-left:16px}
+.sitemap .g div.l3{padding-left:32px}
+.cmp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin:10px 0 6px}
+.cmp figure{margin:0;min-width:0}
+.cmp figure>div{overflow:hidden}
+.cmp figcaption{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+/* ---------- mock screens ---------- */
+.scr{position:relative;font-size:12.5px;line-height:1.5;color:var(--ink);user-select:none;cursor:default}
+.scr.mac{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+.scr.win{font-family:"Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif}
+.scr [data-go]{cursor:pointer}
+.scr [data-go]:hover{outline:2px solid rgba(232,89,12,.45);outline-offset:1px}
+.desk{position:relative;background:#e3e7ea;padding:20px;border-radius:12px}
+.scr.mac .desk{padding-top:44px}
+.mbar{position:absolute;left:0;right:0;top:0;height:26px;background:rgba(255,255,255,.82);border-bottom:1px solid #d3d6d8;display:flex;align-items:center;gap:15px;padding:0 14px;font-size:12.5px;border-radius:12px 12px 0 0;z-index:3}
+.mbar b{font-weight:700}
+.mbar .on{background:#2f6fe4;color:#fff;border-radius:4px;padding:0 6px;margin:0 -6px}
+.mbar .r{margin-left:auto;display:flex;gap:14px;align-items:center;color:#333}
+.mbar .si2{display:flex;align-items:center;padding:1px 5px;border-radius:4px}
+.mbar .si2.on{background:rgba(0,0,0,.12);color:#111}
+.win{position:relative;background:#fff;border-radius:8px;box-shadow:0 16px 44px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.09);overflow:hidden;display:flex;flex-direction:column}
+.scr.mac .win{border-radius:11px}
+.win.inactive{box-shadow:0 8px 24px rgba(0,0,0,.10),0 0 0 1px rgba(0,0,0,.08)}
+.win.inactive .tl i{background:#d9d9d9!important}
+.tb{display:flex;align-items:center;gap:6px;flex:none;border-bottom:1px solid var(--line);padding:0 8px;background:#fff;position:relative}
+.scr.win .tb{height:40px}
+.scr.mac .tb{height:50px;background:#f5f5f5;border-bottom-color:#dadada;padding-left:16px}
+.tb .logo{width:18px;height:18px;margin:0 2px 0 4px}
+.tl{display:flex;gap:8px;margin-right:10px;flex:none}
+.tl i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)}
+.tl i:nth-child(2){background:#febc2e}
+.tl i:nth-child(3){background:#28c840}
+.wc{display:flex;align-self:stretch;margin:0 -8px 0 4px}
+.wc i{width:46px;display:grid;place-items:center;color:#333}
+.wc i.x{color:#333}
+.ibtn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:6px;color:var(--ink2);position:relative;flex:none}
+.ibtn.on{background:var(--sel);color:var(--ink)}
+.ibtn .badge{position:absolute;top:1px;right:0}
+.badge{display:inline-grid;place-items:center;min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--bad);color:#fff;font-size:10px;font-weight:600;line-height:1}
+.badge.gray{background:#8a9292}
+.switcher{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-weight:600;white-space:nowrap}
+.switcher small{font-weight:400;color:var(--muted);border:1px solid var(--line2);border-radius:4px;padding:0 4px;font-size:10.5px}
+.search{flex:0 1 360px;margin:0 auto;display:flex;align-items:center;gap:6px;height:28px;border:1px solid var(--line2);border-radius:7px;padding:0 9px;color:var(--muted);background:#fff}
+.scr.mac .search{background:rgba(0,0,0,.055);border-color:transparent}
+kbd{font:11px var(--font);color:var(--muted);border:1px solid var(--line2);border-radius:4px;padding:0 4px;background:#fff;white-space:nowrap}
+.search kbd{margin-left:auto}
+.sync{display:flex;align-items:center;gap:5px;color:var(--ok);font-size:12px;padding:0 6px;white-space:nowrap}
+.bd{display:flex;flex:1;min-height:0;position:relative}
+.rail{width:48px;flex:none;border-right:1px solid var(--line);background:var(--chrome);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.scr.mac .rail{background:#ebebed}
+.ri{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;color:var(--ink2);position:relative}
+.ri.on{background:#dfe2e1;color:var(--ink)}
+.ri.on::before{content:"";position:absolute;left:-6px;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--accent)}
+.rail .sp,.side .sp{flex:1}
+.side{width:236px;flex:none;border-right:1px solid var(--line);background:var(--chrome);overflow:hidden;display:flex;flex-direction:column}
+.scr.mac .side{background:#efeff1}
+.sh{display:flex;align-items:center;gap:6px;height:38px;padding:0 8px 0 14px;font-weight:600;flex:none}
+.sh .r{margin-left:auto;display:flex;gap:2px}
+.sg{padding:2px 6px 6px}
+.sg h6{margin:8px 8px 3px;font-size:11px;font-weight:600;color:var(--muted);display:flex;align-items:center}
+.sg h6 .r{margin-left:auto}
+.si{display:flex;align-items:center;gap:7px;height:26px;padding:0 8px;border-radius:5px;color:var(--ink);white-space:nowrap;overflow:hidden}
+.si .c{margin-left:auto;color:var(--muted);font-size:11px;display:flex;align-items:center;gap:4px}
+.si.on{background:var(--sel)}
+.scr.mac .si.on{background:rgba(0,0,0,.085)}
+.si.l2{padding-left:24px}
+.si.l3{padding-left:40px}
+.si .i{color:var(--ink2);flex:none}
+.acct{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);flex:none}
+.av{width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;background:#d8e1dd;color:#2c3a35;font-size:11px;font-weight:600;flex:none}
+.av.b{background:#dfe1ef;color:#2d3352}.av.c{background:#f0e1d6;color:#5a3a22}.av.d{background:#e6e6e6;color:#666}
+.avs{display:flex}
+.avs .av{width:20px;height:20px;font-size:10px;margin-left:-5px;box-shadow:0 0 0 2px #fff}
+.avs .av:first-child{margin-left:0}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;position:relative}
+.mh{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-bottom:1px solid var(--line);flex:none}
+.scr.mac .mh.tall{height:50px}
+.mh h2{font-size:14px;margin:0;font-weight:600;white-space:nowrap}
+.mh .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.tabs{display:flex;height:34px;border-bottom:1px solid var(--line);background:var(--chrome);flex:none}
+.tab{display:flex;align-items:center;gap:6px;padding:0 10px 0 12px;border-right:1px solid var(--line);color:var(--ink2);max-width:250px;white-space:nowrap;overflow:hidden}
+.tab.on{background:#fff;color:var(--ink);box-shadow:inset 0 2px 0 var(--accent)}
+.tab .x{margin-left:4px;color:var(--muted)}
+.vt{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line);height:36px;align-items:stretch;flex:none}
+.vt span{display:flex;align-items:center;gap:5px;padding:0 10px;color:var(--ink2);border-bottom:2px solid transparent}
+.vt span.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.vt .r{margin-left:auto;display:flex;gap:6px;align-items:center;border:0}
+.btn{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border:1px solid var(--line2);border-radius:5px;background:#fff;color:var(--ink);white-space:nowrap;font-size:12px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink2)}
+.btn.danger{color:var(--bad)}
+.btn.sm{height:22px;padding:0 8px;font-size:11.5px}
+.scr.mac .btn{border-radius:6px}
+.scr.mac .btn.pri{background:#2f7cf6;border-color:#2f7cf6}
+.inp{display:flex;align-items:center;gap:6px;height:28px;border:1px solid var(--line2);border-radius:5px;padding:0 8px;color:var(--muted);background:#fff;white-space:nowrap}
+.inp.f{color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;height:26px;flex:none}
+.seg span{padding:0 10px;display:flex;align-items:center;gap:4px;border-left:1px solid var(--line2);color:var(--ink2);font-size:12px;white-space:nowrap}
+.seg span:first-child{border-left:0}
+.seg span.on{background:var(--sel);color:var(--ink);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:10px;background:#f0f1f1;color:var(--ink2);font-size:11px;white-space:nowrap}
+.chip.ok{background:#eaf5ee;color:var(--ok)}
+.chip.warn{background:#fbf3e4;color:var(--warn)}
+.chip.bad{background:#fbecec;color:var(--bad)}
+.chip.info{background:#ecf2fa;color:var(--info)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none;background:#b9c0bf}
+.dot.ok{background:var(--ok)}.dot.run{background:var(--info)}.dot.bad{background:var(--bad)}.dot.warn{background:#d39b2a}
+table.t{border-collapse:collapse;width:100%;font-size:12px;table-layout:fixed}
+table.t th{background:#fafafa;text-align:left;font-weight:500;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden}
+table.t td{padding:6px 10px;border-bottom:1px solid #f0f1f1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.t tr.sel td{background:#edf1f0}
+table.t td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.t .i{vertical-align:-2px}
+.rp{width:320px;flex:none;border-left:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
+.rpt{display:flex;align-items:center;height:38px;border-bottom:1px solid var(--line);padding:0 6px;gap:2px;flex:none}
+.rpt span{padding:3px 9px;border-radius:5px;color:var(--ink2);white-space:nowrap}
+.rpt span.on{background:var(--sel);color:var(--ink);font-weight:600}
+.rpt .r{margin-left:auto}
+.st{height:24px;flex:none;border-top:1px solid var(--line);background:var(--chrome);display:flex;align-items:center;gap:14px;padding:0 10px;font-size:11.5px;color:var(--ink2);white-space:nowrap}
+.st .r{margin-left:auto;display:flex;gap:14px}
+.st span{display:flex;align-items:center;gap:4px}
+.sec{padding:12px 16px}
+.sec h5{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+.sec h5 .r{margin-left:auto;font-weight:400}
+.li{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;min-width:0}
+.li .m{margin-left:auto;color:var(--muted);font-size:11.5px;white-space:nowrap;display:flex;gap:6px;align-items:center}
+.li .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.li .sub{color:var(--muted);font-size:11.5px}
+.li.on{background:var(--sel)}
+.li .i{flex:none;color:var(--ink2)}
+.col{display:flex;flex-direction:column;min-height:0}
+.muted{color:var(--muted)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.info{color:var(--info)}
+.grid2{display:grid;grid-template-columns:1.45fr 1fr;gap:0;min-height:0}
+.grid2>.sec+.sec{border-left:1px solid var(--line)}
+.hr{border-top:1px solid var(--line)}
+.scrim{position:absolute;inset:0;background:rgba(18,22,21,.26)}
+.dialog{position:absolute;background:#fff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column}
+.scr.mac .dialog.sheet{border-radius:0 0 11px 11px;box-shadow:0 18px 40px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.1)}
+.dlg-h{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;font-size:13.5px;flex:none}
+.dlg-h .r{margin-left:auto}
+.dlg-b{padding:14px 16px;flex:1;min-height:0}
+.dlg-f{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex:none}
+.dlg-f .l{margin-right:auto}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-size:12px;color:var(--ink2)}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f0f1f1}
+.row .lbl{flex:1;min-width:0}
+.row .lbl small{display:block;color:var(--muted);font-size:11.5px}
+.sw{width:30px;height:18px;border-radius:9px;background:#c8cecc;position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.sw.on{background:var(--accent)}
+.sw.on::after{left:14px}
+.scr.mac .sw.on{background:#2f7cf6}
+.pop{position:absolute;background:#fff;border-radius:9px;box-shadow:0 12px 36px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.08);padding:5px;z-index:5}
+.scr.mac .pop.menu{background:rgba(246,246,246,.98);border-radius:7px}
+.menu .mi{display:flex;align-items:center;gap:8px;height:25px;padding:0 10px;border-radius:5px;white-space:nowrap}
+.menu .mi kbd{border:0;background:transparent;margin-left:auto;padding-left:26px;font-size:11.5px}
+.menu .mi .sub{margin-left:auto;color:var(--muted)}
+.menu .sep{height:1px;background:var(--line);margin:4px 6px}
+.menu .mi.on{background:var(--sel)}
+.scr.mac .menu .mi.on{background:#2f6fe4;color:#fff}
+.scr.mac .menu .mi.on kbd,.scr.mac .menu .mi.on .i{color:#fff}
+.menu .mi.dis{color:#a3a9a8}
+.menu .mi.dng{color:var(--bad)}
+.cover-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:22px;padding:18px 22px}
+.cv{display:flex;flex-direction:column;gap:5px;position:relative}
+.cv .bk{height:168px;border-radius:3px 8px 8px 3px;padding:14px 12px 10px 16px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:inset 7px 0 0 rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.14);font-weight:600;font-size:13px;line-height:1.35;color:#273330}
+.cv .bk small{font-weight:400;font-size:11px;opacity:.8;display:flex;align-items:center;gap:4px}
+.cv .nm{font-size:12.5px;font-weight:600}
+.cv .mt{font-size:11px;color:var(--muted);margin-top:-4px}
+.pdfwrap{flex:1;background:#e9ebeb;overflow:hidden;display:flex;justify-content:center;padding:16px 0;position:relative;min-height:0}
+.page{width:580px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);padding:34px 48px;font-family:"Times New Roman",Georgia,serif;color:#1f1f1f;overflow:hidden}
+.page h3{font-size:15px;text-align:center;margin:0 0 4px;line-height:1.35}
+.page .au{text-align:center;font-size:10.5px;color:#555;margin-bottom:12px}
+.page h4{font-size:12px;margin:12px 0 4px}
+.page p{font-size:11.2px;line-height:1.6;margin:5px 0;text-align:justify}
+.ln{height:7px;background:#e2e4e4;border-radius:2px;margin:8px 0}
+.mark{background:rgba(255,206,74,.55)}
+.selx{background:rgba(46,110,228,.25)}
+.ftb{position:absolute;display:flex;gap:1px;background:#262b2a;color:#fff;border-radius:8px;padding:3px;box-shadow:0 6px 18px rgba(0,0,0,.25);font-size:12px;z-index:4}
+.ftb span{padding:3px 8px;border-radius:5px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.readbar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.15);padding:4px 10px;font-size:12px;white-space:nowrap}
+.code{flex:1;font:12px/1.7 var(--mono);padding:6px 0;overflow:hidden;background:#fff;min-height:0}
+.code .l{display:flex;white-space:pre}
+.code .l.cur{background:#f4f6f5}
+.code .n{width:42px;text-align:right;padding-right:14px;color:#a5abab;flex:none}
+.kw{color:#8b2f8b}.str{color:#2b6a3d}.fn{color:#2457a6}.cm{color:#8a9090;font-style:italic}.num{color:#a14f12}
+.panel{height:186px;flex:none;border-top:1px solid var(--line);display:flex;flex-direction:column}
+.term{flex:1;background:#fbfbfb;font:11.5px/1.65 var(--mono);padding:6px 12px;color:#333;overflow:hidden;white-space:pre}
+.chat{flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:9px;font-size:12.5px;min-height:0}
+.msg.u{align-self:flex-end;background:#f0f1f1;border-radius:10px;padding:7px 10px;max-width:88%}
+.steps{border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:12px;color:var(--ink2)}
+.steps div{display:flex;gap:6px;align-items:center;padding:2px 0}
+.ans p{margin:0 0 6px;line-height:1.65}
+.cite{font-size:11px;color:var(--info);background:#ecf2fa;border-radius:4px;padding:0 4px;white-space:nowrap}
+.approve{border:1px solid #e6d2ad;background:#fffaf1;border-radius:8px;padding:8px 10px}
+.diff{font:11.5px/1.6 var(--mono);background:#fff;border:1px solid var(--line);border-radius:5px;padding:4px 7px;margin:6px 0}
+.diff .a{color:var(--ok)}
+.composer{border-top:1px solid var(--line);padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;flex:none}
+.cbox{border:1px solid var(--line2);border-radius:9px;padding:7px 9px;color:var(--muted);min-height:52px}
+.cbar{display:flex;align-items:center;gap:4px}
+.cbar .r{margin-left:auto;display:flex;gap:4px;align-items:center}
+.ed{flex:1;padding:16px 30px;overflow:hidden;min-height:0}
+.ed h1{font-size:19px;margin:0 0 6px;line-height:1.35}
+.ed .meta{display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.ed p{margin:0 0 8px;font-size:13px;line-height:1.75}
+.ed blockquote{margin:6px 0 10px;padding:4px 12px;border-left:3px solid #d6dad9;color:#444;font-size:12.5px;line-height:1.7}
+.ed ul{margin:0 0 8px;padding-left:20px;font-size:13px;line-height:1.75}
+.ed h3{font-size:14px;margin:12px 0 4px}
+.fmt{display:flex;gap:1px;padding:3px 12px;border-bottom:1px solid var(--line);color:var(--ink2);flex:none;align-items:center}
+.fmt .ibtn{width:26px;height:26px}
+.fmt .sep{width:1px;height:16px;background:var(--line);margin:0 4px}
+.setnav{width:196px;border-right:1px solid var(--line);background:var(--chrome);padding:8px 6px;flex:none}
+.mactabs{display:flex;justify-content:center;gap:1px;padding:4px 8px 6px;border-bottom:1px solid #d9d9d9;background:#f5f5f5;flex:none}
+.mactabs span{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 6px;border-radius:6px;font-size:11px;color:#444;min-width:54px}
+.mactabs span.on{background:rgba(0,0,0,.08);color:#111}
+.mactitle{height:30px;display:flex;align-items:center;justify-content:center;position:relative;background:#f5f5f5;font-weight:600;font-size:12.5px;flex:none}
+.mactitle .tl{position:absolute;left:12px}
+.tp{position:absolute;width:380px;background:#fff;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.08);overflow:hidden;font-size:12.5px;z-index:4}
+.scr.mac .tp{background:rgba(251,251,251,.97)}
+.tp-h{display:flex;align-items:center;gap:6px;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);color:var(--ink2)}
+.tp-h .r{margin-left:auto;display:flex}
+.tp-src{padding:8px 12px 2px;color:#6b7170;font-size:12px;line-height:1.55}
+.tp-dst{padding:4px 12px 10px;font-size:13.5px;line-height:1.7}
+.tp-a{display:flex;gap:2px;padding:3px 8px;border-top:1px solid var(--line);align-items:center}
+.tp-in{margin:6px 10px 10px;display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:8px;padding:5px 8px;color:var(--muted)}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:40px;background:rgba(240,242,243,.97);border-top:1px solid #d5d8da;display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:0 14px;font-size:11.5px;border-radius:0 0 12px 12px;color:#333}
+.taskbar .tray{display:flex;align-items:center;gap:10px;padding:4px 8px;border-radius:5px}
+.taskbar .tray .on{background:rgba(0,0,0,.08);border-radius:4px;padding:2px}
+.app3{position:absolute;background:#fff;border-radius:8px;box-shadow:0 12px 34px rgba(0,0,0,.15),0 0 0 1px rgba(0,0,0,.08);overflow:hidden}
+.scr.mac .app3{border-radius:11px}
+.app3 .bar{height:36px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid #e3e3e3;background:#f6f6f6;font-size:12px;color:#555}
+.app3 .url{flex:1;height:24px;border-radius:6px;background:#fff;border:1px solid #e0e0e0;display:flex;align-items:center;padding:0 10px}
+.app3 .pg{padding:18px 26px;font-family:Georgia,"Times New Roman",serif}
+.app3 .pg h3{font-size:17px;margin:0 0 6px;line-height:1.35}
+.app3 .pg p{font-size:12.5px;line-height:1.7;margin:6px 0;color:#222}
+.callout-box{border:1px dashed #c9cfcd;border-radius:6px;padding:10px;color:var(--muted);font-size:12px;text-align:center}
+.kv{display:grid;grid-template-columns:76px 1fr;gap:4px 10px;font-size:12px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mile{display:flex;gap:0;margin-top:4px}
+.mile div{flex:1;padding:6px 8px;border-top:3px solid #d5dad8;font-size:12px}
+.mile div.done{border-top-color:var(--ok)}
+.mile div.now{border-top-color:var(--info)}
+.mile small{display:block;color:var(--muted);font-size:11px}
+.tl2 div{display:flex;gap:10px;padding:4px 0;font-size:12px}
+.tl2 time{color:var(--muted);width:64px;flex:none}
+.cmpbox{display:grid;grid-template-columns:150px 1fr 1fr;font-size:12px;border-top:1px solid var(--line)}
+.cmpbox div{padding:5px 12px;border-bottom:1px solid #f0f1f1}
+.cmpbox .h{font-weight:600;background:#fafafa}
+.cmpbox .k{color:var(--muted)}
+</style>
+</head>
+<body>
+<aside class="nav">
+  <div class="brand"><img src="data:image/png;base64,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" alt=""><div><b>Scientify</b><span>页面结构与功能入口</span></div></div>
+  <div class="plat" role="group" aria-label="平台"><button type="button" data-plat="win">Windows</button><button type="button" data-plat="mac">macOS</button></div>
+  <div class="legend"><span class="tag have">已有</span><span class="tag adjust">需调整</span><span class="tag todo">待做</span></div>
+  <nav id="x-toc"></nav>
+  <p class="meta">2026-11-04 · 待评审<br>评审通过后，再同步修改《信息架构与页面结构》、各页面设计和代码。</p>
+</aside>
+<main id="x-main">
+  <header class="ph"><div class="crumb" id="x-crumb"></div><h1 id="x-title"></h1><p class="lead" id="x-lead"></p></header>
+  <section id="x-stage" class="stage"></section>
+  <section id="x-notes"></section>
+  <footer class="pager"><button type="button" id="x-prev"></button><button type="button" id="x-next"></button></footer>
+</main>
+<script>
+const ICONS = {"house":[["path",{"d":"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"}],["path",{"d":"M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}]],"folder-open":[["path",{"d":"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"}]],"folder":[["path",{"d":"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"}]],"book-open":[["path",{"d":"M12 5v16"}],["path",{"d":"M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"}]],"notebook-pen":[["path",{"d":"M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"}],["path",{"d":"M2 6h4"}],["path",{"d":"M2 10h4"}],["path",{"d":"M2 14h4"}],["path",{"d":"M2 18h4"}],["path",{"d":"M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"}]],"flask-conical":[["path",{"d":"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"}],["path",{"d":"M6.453 15h11.094"}],["path",{"d":"M8.5 2h7"}]],"pen-line":[["path",{"d":"M13 21h8"}],["path",{"d":"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"}]],"search":[["path",{"d":"m21 21-4.34-4.34"}],["circle",{"cx":"11","cy":"11","r":"8"}]],"bell":[["path",{"d":"M10.268 21a2 2 0 0 0 3.464 0"}],["path",{"d":"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"}]],"settings":[["path",{"d":"M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"}],["circle",{"cx":"12","cy":"12","r":"3"}]],"users":[["path",{"d":"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}],["path",{"d":"M16 3.128a4 4 0 0 1 0 7.744"}],["path",{"d":"M22 21v-2a4 4 0 0 0-3-3.87"}],["circle",{"cx":"9","cy":"7","r":"4"}]],"inbox":[["polyline",{"points":"22 12 16 12 14 15 10 15 8 12 2 12"}],["path",{"d":"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"}]],"sparkles":[["path",{"d":"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"}],["path",{"d":"M20 2v4"}],["path",{"d":"M22 4h-4"}],["circle",{"cx":"4","cy":"20","r":"2"}]],"chevron-down":[["path",{"d":"m6 9 6 6 6-6"}]],"chevron-right":[["path",{"d":"m9 18 6-6-6-6"}]],"chevron-left":[["path",{"d":"m15 18-6-6 6-6"}]],"plus":[["path",{"d":"M5 12h14"}],["path",{"d":"M12 5v14"}]],"refresh-cw":[["path",{"d":"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"}],["path",{"d":"M21 3v5h-5"}],["path",{"d":"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"}],["path",{"d":"M8 16H3v5"}]],"share-2":[["circle",{"cx":"18","cy":"5","r":"3"}],["circle",{"cx":"6","cy":"12","r":"3"}],["circle",{"cx":"18","cy":"19","r":"3"}],["line",{"x1":"8.59","x2":"15.42","y1":"13.51","y2":"17.49"}],["line",{"x1":"15.41","x2":"8.59","y1":"6.51","y2":"10.49"}]],"cloud":[["path",{"d":"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"}]],"cloud-check":[["path",{"d":"m17 15-5.5 5.5L9 18"}],["path",{"d":"M5.516 16.07A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 3.501 7.327"}]],"circle-help":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"}],["path",{"d":"M12 17h.01"}]],"list-filter":[["path",{"d":"M2 5h20"}],["path",{"d":"M6 12h12"}],["path",{"d":"M9 19h6"}]],"layout-grid":[["rect",{"width":"7","height":"7","x":"3","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"14","rx":"1"}],["rect",{"width":"7","height":"7","x":"3","y":"14","rx":"1"}]],"list":[["path",{"d":"M3 5h.01"}],["path",{"d":"M3 12h.01"}],["path",{"d":"M3 19h.01"}],["path",{"d":"M8 5h13"}],["path",{"d":"M8 12h13"}],["path",{"d":"M8 19h13"}]],"file-text":[["path",{"d":"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{"d":"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{"d":"M10 9H8"}],["path",{"d":"M16 13H8"}],["path",{"d":"M16 17H8"}]],"file-code":[["path",{"d":"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{"d":"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{"d":"M10 12.5 8 15l2 2.5"}],["path",{"d":"m14 12.5 2 2.5-2 2.5"}]],"panel-right":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}],["path",{"d":"M15 3v18"}]],"panel-left":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}],["path",{"d":"M9 3v18"}]],"terminal":[["path",{"d":"M12 19h8"}],["path",{"d":"m4 17 6-6-6-6"}]],"git-branch":[["path",{"d":"M15 6a9 9 0 0 0-9 9V3"}],["circle",{"cx":"18","cy":"6","r":"3"}],["circle",{"cx":"6","cy":"18","r":"3"}]],"git-commit-horizontal":[["circle",{"cx":"12","cy":"12","r":"3"}],["line",{"x1":"3","x2":"9","y1":"12","y2":"12"}],["line",{"x1":"15","x2":"21","y1":"12","y2":"12"}]],"play":[["path",{"d":"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"}]],"square":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}]],"x":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"minus":[["path",{"d":"M5 12h14"}]],"languages":[["path",{"d":"m5 8 6 6"}],["path",{"d":"m4 14 6-6 2-3"}],["path",{"d":"M2 5h12"}],["path",{"d":"M7 2h1"}],["path",{"d":"m22 22-5-10-5 10"}],["path",{"d":"M14 18h6"}]],"keyboard":[["path",{"d":"M10 8h.01"}],["path",{"d":"M12 12h.01"}],["path",{"d":"M14 8h.01"}],["path",{"d":"M16 12h.01"}],["path",{"d":"M18 8h.01"}],["path",{"d":"M6 8h.01"}],["path",{"d":"M7 16h10"}],["path",{"d":"M8 12h.01"}],["rect",{"width":"20","height":"16","x":"2","y":"4","rx":"2"}]],"database":[["ellipse",{"cx":"12","cy":"5","rx":"9","ry":"3"}],["path",{"d":"M3 5V19A9 3 0 0 0 21 19V5"}],["path",{"d":"M3 12A9 3 0 0 0 21 12"}]],"user":[["path",{"d":"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"}],["circle",{"cx":"12","cy":"7","r":"4"}]],"user-plus":[["path",{"d":"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}],["circle",{"cx":"9","cy":"7","r":"4"}],["line",{"x1":"19","x2":"19","y1":"8","y2":"14"}],["line",{"x1":"22","x2":"16","y1":"11","y2":"11"}]],"log-out":[["path",{"d":"m16 17 5-5-5-5"}],["path",{"d":"M21 12H9"}],["path",{"d":"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"}]],"log-in":[["path",{"d":"m10 17 5-5-5-5"}],["path",{"d":"M15 12H3"}],["path",{"d":"M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"}]],"circle-alert":[["circle",{"cx":"12","cy":"12","r":"10"}],["line",{"x1":"12","x2":"12","y1":"8","y2":"12"}],["line",{"x1":"12","x2":"12.01","y1":"16","y2":"16"}]],"circle-check":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m16 9-5.5 5.5L8 12"}]],"circle-x":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m15 9-6 6"}],["path",{"d":"m9 9 6 6"}]],"check":[["path",{"d":"M20 6 9 17l-5-5"}]],"star":[["path",{"d":"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"}]],"tag":[["path",{"d":"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"}],["circle",{"cx":"7.5","cy":"7.5","r":".5","fill":"currentColor"}]],"rss":[["path",{"d":"M4 11a9 9 0 0 1 9 9"}],["path",{"d":"M4 4a16 16 0 0 1 16 16"}],["circle",{"cx":"5","cy":"19","r":"1"}]],"globe":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"}],["path",{"d":"M2 12h20"}]],"history":[["path",{"d":"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"}],["path",{"d":"M3 3v5h5"}],["path",{"d":"M12 7v5l4 2"}]],"arrow-up-right":[["path",{"d":"M7 7h10v10"}],["path",{"d":"M7 17 17 7"}]],"arrow-left":[["path",{"d":"m12 19-7-7 7-7"}],["path",{"d":"M19 12H5"}]],"paperclip":[["path",{"d":"m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"}]],"send":[["path",{"d":"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"}],["path",{"d":"m21.854 2.147-10.94 10.939"}]],"ellipsis":[["circle",{"cx":"12","cy":"12","r":"1"}],["circle",{"cx":"19","cy":"12","r":"1"}],["circle",{"cx":"5","cy":"12","r":"1"}]],"funnel":[["path",{"d":"M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"}]],"copy":[["rect",{"width":"14","height":"14","x":"8","y":"8","rx":"2","ry":"2"}],["path",{"d":"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"}]],"maximize-2":[["path",{"d":"M15 3h6v6"}],["path",{"d":"m21 3-7 7"}],["path",{"d":"m3 21 7-7"}],["path",{"d":"M9 21H3v-6"}]],"pin":[["path",{"d":"M12 17v5"}],["path",{"d":"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"}]],"layout-dashboard":[["rect",{"width":"7","height":"9","x":"3","y":"3","rx":"1"}],["rect",{"width":"7","height":"5","x":"14","y":"3","rx":"1"}],["rect",{"width":"7","height":"9","x":"14","y":"12","rx":"1"}],["rect",{"width":"7","height":"5","x":"3","y":"16","rx":"1"}]],"activity":[["path",{"d":"M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"}]],"chart-line":[["path",{"d":"M3 3v16a2 2 0 0 0 2 2h16"}],["path",{"d":"m19 9-5 5-4-4-3 3"}]],"box":[["path",{"d":"M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"}],["path",{"d":"m3.3 7 8.7 5 8.7-5"}],["path",{"d":"M12 22V12"}]],"list-checks":[["path",{"d":"M13 5h8"}],["path",{"d":"M13 12h8"}],["path",{"d":"M13 19h8"}],["path",{"d":"m3 17 2 2 4-4"}],["path",{"d":"m3 7 2 2 4-4"}]],"message-square":[["path",{"d":"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"}]],"highlighter":[["path",{"d":"m9 11-6 6v3h9l3-3"}],["path",{"d":"m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"}]],"quote":[["path",{"d":"M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"}],["path",{"d":"M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"}]],"book-marked":[["path",{"d":"M10 2v7.751a.25.25 0 00.407.195l2.28-1.834a.5.5 0 01.627 0l2.28 1.834A.25.25 0 0016 9.751V2"}],["path",{"d":"M4 19.5v-15A2.5 2.5 0 016.5 2H19a1 1 0 011 1v18a1 1 0 01-1 1H6.5a1 1 0 010-5H20"}]],"upload":[["path",{"d":"M12 3v12"}],["path",{"d":"m17 8-5-5-5 5"}],["path",{"d":"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}]],"download":[["path",{"d":"M12 15V3"}],["path",{"d":"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}],["path",{"d":"m7 10 5 5 5-5"}]],"link":[["path",{"d":"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"}],["path",{"d":"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"}]],"lock":[["rect",{"width":"18","height":"11","x":"3","y":"11","rx":"2","ry":"2"}],["path",{"d":"M7 11V7a5 5 0 0 1 10 0v4"}]],"shield-check":[["path",{"d":"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"}],["path",{"d":"m9 12 2 2 4-4"}]],"info":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 16v-4"}],["path",{"d":"M12 8h.01"}]],"calendar":[["path",{"d":"M8 2v3"}],["path",{"d":"M16 2v3"}],["rect",{"x":"3","y":"3","width":"18","height":"18","rx":"2"}],["path",{"d":"M3 9h18"}]],"clock":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 6v6l4 2"}]],"smartphone":[["rect",{"width":"14","height":"20","x":"5","y":"2","rx":"2","ry":"2"}],["path",{"d":"M12 18h.01"}]],"monitor":[["rect",{"width":"20","height":"14","x":"2","y":"3","rx":"2"}],["line",{"x1":"8","x2":"16","y1":"21","y2":"21"}],["line",{"x1":"12","x2":"12","y1":"17","y2":"21"}]],"cpu":[["path",{"d":"M12 20v2"}],["path",{"d":"M12 2v2"}],["path",{"d":"M17 20v2"}],["path",{"d":"M17 2v2"}],["path",{"d":"M2 12h2"}],["path",{"d":"M2 17h2"}],["path",{"d":"M2 7h2"}],["path",{"d":"M20 12h2"}],["path",{"d":"M20 17h2"}],["path",{"d":"M20 7h2"}],["path",{"d":"M7 20v2"}],["path",{"d":"M7 2v2"}],["rect",{"x":"4","y":"4","width":"16","height":"16","rx":"2"}],["rect",{"x":"8","y":"8","width":"8","height":"8","rx":"1"}]],"package":[["path",{"d":"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"}],["path",{"d":"M12 22V12"}],["polyline",{"points":"3.29 7 12 12 20.71 7"}],["path",{"d":"m7.5 4.27 9 5.15"}]],"bug":[["path",{"d":"M12 20v-9"}],["path",{"d":"M14 7a4 4 0 0 1 4 4v3a6 6 0 0 1-12 0v-3a4 4 0 0 1 4-4z"}],["path",{"d":"M14.12 3.88 16 2"}],["path",{"d":"M21 21a4 4 0 0 0-3.81-4"}],["path",{"d":"M21 5a4 4 0 0 1-3.55 3.97"}],["path",{"d":"M22 13h-4"}],["path",{"d":"M3 21a4 4 0 0 1 3.81-4"}],["path",{"d":"M3 5a4 4 0 0 0 3.55 3.97"}],["path",{"d":"M6 13H2"}],["path",{"d":"m8 2 1.88 1.88"}],["path",{"d":"M9 7.13V6a3 3 0 1 1 6 0v1.13"}]],"archive":[["rect",{"width":"20","height":"5","x":"2","y":"3","rx":"1"}],["path",{"d":"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"}],["path",{"d":"M10 12h4"}]],"trash-2":[["path",{"d":"M10 11v6"}],["path",{"d":"M14 11v6"}],["path",{"d":"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"}],["path",{"d":"M3 6h18"}],["path",{"d":"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"}]],"pencil":[["path",{"d":"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"}],["path",{"d":"m15 5 4 4"}]],"eye":[["path",{"d":"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"}],["circle",{"cx":"12","cy":"12","r":"3"}]],"moon":[["path",{"d":"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"}]],"sun":[["circle",{"cx":"12","cy":"12","r":"4"}],["path",{"d":"M12 2v2"}],["path",{"d":"M12 20v2"}],["path",{"d":"m4.93 4.93 1.41 1.41"}],["path",{"d":"m17.66 17.66 1.41 1.41"}],["path",{"d":"M2 12h2"}],["path",{"d":"M20 12h2"}],["path",{"d":"m6.34 17.66-1.41 1.41"}],["path",{"d":"m19.07 4.93-1.41 1.41"}]],"command":[["path",{"d":"M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"}]],"hash":[["line",{"x1":"4","x2":"20","y1":"9","y2":"9"}],["line",{"x1":"4","x2":"20","y1":"15","y2":"15"}],["line",{"x1":"10","x2":"8","y1":"3","y2":"21"}],["line",{"x1":"16","x2":"14","y1":"3","y2":"21"}]],"at-sign":[["circle",{"cx":"12","cy":"12","r":"4"}],["path",{"d":"M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"}]],"arrow-right":[["path",{"d":"M5 12h14"}],["path",{"d":"m12 5 7 7-7 7"}]],"mic":[["path",{"d":"M12 19v3"}],["path",{"d":"M19 10v2a7 7 0 0 1-14 0v-2"}],["rect",{"x":"9","y":"2","width":"6","height":"13","rx":"3"}]],"sliders-horizontal":[["path",{"d":"M10 5H3"}],["path",{"d":"M12 19H3"}],["path",{"d":"M14 3v4"}],["path",{"d":"M16 17v4"}],["path",{"d":"M21 12h-9"}],["path",{"d":"M21 19h-5"}],["path",{"d":"M21 5h-7"}],["path",{"d":"M8 10v4"}],["path",{"d":"M8 12H3"}]],"table-2":[["path",{"d":"M3 9h18"}],["path",{"d":"M9 3v18"}],["rect",{"x":"3","y":"3","width":"18","height":"18","rx":"2"}]],"bookmark":[["path",{"d":"M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"}]],"external-link":[["path",{"d":"M15 3h6v6"}],["path",{"d":"M10 14 21 3"}],["path",{"d":"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"}]],"file-down":[["path",{"d":"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{"d":"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{"d":"M12 18v-6"}],["path",{"d":"m9 15 3 3 3-3"}]],"circle":[["circle",{"cx":"12","cy":"12","r":"10"}]],"git-compare":[["circle",{"cx":"18","cy":"18","r":"3"}],["circle",{"cx":"6","cy":"6","r":"3"}],["path",{"d":"M13 6h3a2 2 0 0 1 2 2v7"}],["path",{"d":"M11 18H8a2 2 0 0 1-2-2V9"}]],"menu":[["path",{"d":"M4 5h16"}],["path",{"d":"M4 12h16"}],["path",{"d":"M4 19h16"}]],"bold":[["path",{"d":"M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"}]],"italic":[["line",{"x1":"19","x2":"10","y1":"4","y2":"4"}],["line",{"x1":"14","x2":"5","y1":"20","y2":"20"}],["line",{"x1":"15","x2":"9","y1":"4","y2":"20"}]],"heading":[["path",{"d":"M6 12h12"}],["path",{"d":"M6 20V4"}],["path",{"d":"M18 20V4"}]],"list-ordered":[["path",{"d":"M11 5h10"}],["path",{"d":"M11 12h10"}],["path",{"d":"M11 19h10"}],["path",{"d":"M4 4h1v5"}],["path",{"d":"M4 9h2"}],["path",{"d":"M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02"}]],"image":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2","ry":"2"}],["circle",{"cx":"9","cy":"9","r":"2"}],["path",{"d":"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"}]],"sigma":[["path",{"d":"M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2"}]],"folder-plus":[["path",{"d":"M12 10v6"}],["path",{"d":"M9 13h6"}],["path",{"d":"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"}]]};
+const LOGO = 'data:image/png;base64,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';
+const requested = new URLSearchParams(location.search).get('plat');
+let plat = (requested === 'mac' || requested === 'win' ? requested : null) || localStorage.getItem('scientify-demo-platform') || (/Mac/.test(navigator.platform) ? 'mac' : 'win');
+
+/* ---------- helpers ---------- */
+const $ = (s) => document.querySelector(s);
+function I(name, size = 14, cls = '') {
+  const nodes = ICONS[name];
+  if (!nodes) return '';
+  const inner = nodes.map(([tag, attrs]) => '<' + tag + ' ' + Object.entries(attrs).map(([a, v]) => a + '="' + v + '"').join(' ') + '/>').join('');
+  return '<svg class="i ' + cls + '" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+}
+const P = (n) => '<b class="pin">' + n + '</b>';
+const isMac = () => plat === 'mac';
+// k('Shift+L') -> ⇧⌘L on macOS, Ctrl+Shift+L on Windows
+function k(combo) {
+  const parts = combo.split('+');
+  const key = parts.pop();
+  if (isMac()) {
+    const order = [['Ctrl', '⌃'], ['Alt', '⌥'], ['Shift', '⇧']];
+    return order.filter(([m]) => parts.includes(m)).map(([, g]) => g).join('') + '⌘' + key;
+  }
+  return ['Ctrl', ...parts].join('+') + '+' + key;
+}
+const kb = (combo) => '<kbd>' + k(combo) + '</kbd>';
+const fm = isMacName => isMacName;
+const fileManager = () => (isMac() ? '在 Finder 中显示' : '在资源管理器中显示');
+
+function tlights() { return '<span class="tl"><i></i><i></i><i></i></span>'; }
+function wctl() { return '<span class="wc"><i>' + I('minus', 14) + '</i><i>' + I('square', 11) + '</i><i class="x">' + I('x', 15) + '</i></span>'; }
+function screen(inner, opts = {}) {
+  const bar = isMac() && opts.menubar !== false ? macBar(opts.menu || '') : '';
+  return '<div class="scr ' + plat + '"><div class="desk" style="' + (opts.deskStyle || '') + '">' + bar + inner + (opts.after || '') + '</div></div>';
+}
+function macBar(active) {
+  const items = ['文件', '编辑', '显示', '前往', '窗口', '帮助'].map((m) => '<span class="' + (m === active ? 'on' : '') + '">' + m + '</span>').join('');
+  return '<div class="mbar"><b>Scientify</b>' + items + '<span class="r"><span class="si2 ' + (active === 'tray' ? 'on' : '') + '" title="划词翻译">' + I('languages', 14) + '</span>' + I('search', 13) + '<span>11月4日 周三 11:40</span></span></div>';
+}
+
+/* ---------- project window ---------- */
+const MODULES = [
+  ['overview', '概览', 'layout-dashboard', 'proj-overview'],
+  ['lit', '文献', 'book-open', 'lit-library'],
+  ['notes', '笔记', 'notebook-pen', 'notes'],
+  ['exp', '实验', 'flask-conical', 'exp-list'],
+  ['write', '写作', 'pen-line', 'writing'],
+];
+function rail(active, pin) {
+  const items = MODULES.map(([id, label, icon, page], i) => '<div class="ri ' + (id === active ? 'on' : '') + '" data-go="' + page + '" title="' + label + ' ' + k(String(i + 1)) + '">' + I(icon, 19) + '</div>').join('');
+  const bottom = '<div class="ri" title="帮助">' + I('circle-help', 18) + '</div>' + (isMac() ? '' : '<div class="ri" data-go="settings" title="设置">' + I('settings', 18) + '</div>');
+  return '<div class="rail">' + (pin ? P(pin) : '') + items + '<div class="sp"></div>' + bottom + '</div>';
+}
+function projTop(o = {}) {
+  const pins = o.pins || {};
+  const left = isMac()
+    ? tlights() + '<span class="ibtn" title="显示或隐藏边栏">' + I('panel-left', 16) + '</span>'
+    : '<img class="logo" src="' + LOGO + '" alt=""><span class="ibtn" data-go="menus" title="菜单 Alt">' + I('menu', 16) + '</span>';
+  return '<div class="tb">' + (pins.ctl ? P(pins.ctl) : '') + left +
+    '<span class="ibtn" data-go="center-home" title="项目中心">' + I('house', 15) + '</span>' +
+    (pins.nav ? P(pins.nav) : '') +
+    '<span class="switcher">' + (o.project || '多模态幻觉评测') + (o.team ? '<small>团队</small>' : '') + I('chevron-down', 13) + '</span>' +
+    '<span class="search" data-go="search">' + (pins.search ? P(pins.search) : '') + I('search', 13) + '搜索或输入命令' + kb('K') + '</span>' +
+    (pins.right ? P(pins.right) : '') +
+    '<span class="sync">' + I('cloud-check', 14) + '已同步</span>' +
+    '<span class="btn sm" data-go="share">' + I('users', 13) + '共享</span>' +
+    '<span class="ibtn" data-go="notify" title="通知">' + I('bell', 16) + '<span class="badge">3</span></span>' +
+    '<span class="ibtn ' + (o.ai ? 'on' : '') + '" data-go="ai" title="AI 助手 ' + k('Shift+L') + '">' + I('sparkles', 16) + '</span>' +
+    (isMac() ? '' : wctl()) + '</div>';
+}
+function statusBar(extra = '', pin) {
+  return '<div class="st">' + (pin ? P(pin) : '') + '<span>' + I('check', 12) + '已保存</span><span>' + I('cloud-check', 12) + '已同步 · 2 分钟前</span>' + extra +
+    '<span class="r"><span>' + I('activity', 12) + '后台任务 1</span><span>' + I('bell', 12) + '3</span></span></div>';
+}
+function rpanel(active, body, pin) {
+  const tabs = [['ai', 'AI 助手'], ['note', '速记'], ['info', '详情']].map(([id, l]) => '<span class="' + (id === active ? 'on' : '') + '"' + (id === 'ai' ? ' data-go="ai"' : '') + '>' + l + '</span>').join('');
+  return '<div class="rp"><div class="rpt">' + (pin ? P(pin) : '') + tabs + '<span class="r ibtn">' + I('x', 14) + '</span></div>' + body + '</div>';
+}
+function projWin(o) {
+  return '<div class="win ' + (o.cls || '') + '" style="width:' + (o.w || 1280) + 'px;height:' + (o.h || 780) + 'px">' + projTop(o.top || {}) +
+    '<div class="bd">' + rail(o.module, o.railPin) + (o.side ? '<div class="side">' + o.side + '</div>' : '') + '<div class="main">' + o.main + '</div>' + (o.right || '') + '</div>' +
+    (o.status !== undefined ? o.status : statusBar()) + (o.over || '') + '</div>';
+}
+
+/* ---------- project center window ---------- */
+function centerWin(active, main, o = {}) {
+  const nav = [['center-home', '首页', 'house'], ['center-projects', '我的项目', 'folder'], ['center-team', '团队', 'users', '<span class="badge">1</span>'], ['center-inbox', '收集箱', 'inbox', '6']]
+    .map(([id, l, ic, c]) => '<div class="si ' + (id === active ? 'on' : '') + '" data-go="' + id + '">' + I(ic, 15) + l + (c ? '<span class="c">' + c + '</span>' : '') + '</div>').join('');
+  const winBar = isMac() ? '' : '<div class="tb" style="height:36px"><img class="logo" src="' + LOGO + '" alt=""><b style="font-weight:600">Scientify</b><span style="flex:1"></span>' + wctl() + '</div>';
+  const side = '<div class="side" style="width:220px">' + (isMac() ? '<div style="height:50px;display:flex;align-items:center;padding-left:16px">' + tlights() + '</div>' : '<div style="height:8px"></div>') +
+    (o.navPin ? '<div style="padding:0 14px">' + P(o.navPin) + '</div>' : '') + '<div class="sg">' + nav + '</div><div class="sp"></div>' +
+    '<div class="acct" data-go="login">' + (o.acctPin ? P(o.acctPin) : '') + '<span class="av">张</span><div style="min-width:0;line-height:1.3"><div>张一鸣</div><div class="muted" style="font-size:11px">138****5021</div></div><span style="margin-left:auto;display:flex;gap:2px"><span class="ibtn" title="帮助">' + I('circle-help', 15) + '</span><span class="ibtn" data-go="settings" title="设置 ' + k(',') + '">' + I('settings', 15) + '</span></span></div></div>';
+  return '<div class="win" style="width:' + (o.w || 1180) + 'px;height:' + (o.h || 720) + 'px">' + winBar + '<div class="bd">' + side + '<div class="main">' + main + '</div></div>' + (o.over || '') + '</div>';
+}
+function centerHead(title, right = '', pin = '') {
+  return '<div class="mh tall">' + pin + '<h2>' + title + '</h2><span class="r">' + right + '</span></div>';
+}
+
+/* ---------- sample data ---------- */
+const PAPERS = [
+  ['Evaluating Object Hallucination in Large Vision-Language Models', 'Li, Du, Zhou 等', 2023, 'EMNLP', '在读', 3, true],
+  ['Mitigating Object Hallucinations via Visual Contrastive Decoding', 'Leng, Zhang, Chen 等', 2024, 'CVPR', '在读', 2, false],
+  ['Improved Baselines with Visual Instruction Tuning', 'Liu, Li, Li, Lee', 2024, 'CVPR', '已读', 1, true],
+  ['Visual Instruction Tuning', 'Liu, Li, Wu, Lee', 2023, 'NeurIPS', '已读', 0, false],
+  ['HallusionBench: An Advanced Diagnostic Suite for Entangled Language Hallucination', 'Guan, Liu, Wu 等', 2024, 'CVPR', '未读', 0, false],
+  ['Woodpecker: Hallucination Correction for Multimodal Large Language Models', 'Yin, Fu, Zhao 等', 2023, 'arXiv', '未读', 0, false],
+  ['Analyzing and Mitigating Object Hallucination in Large Vision-Language Models', 'Zhou, Cui, Yoon 等', 2024, 'ICLR', '未读', 0, false],
+  ['Hallucination Augmented Contrastive Learning for Multimodal LLMs', 'Jiang, Xu, Ye 等', 2024, 'CVPR', '未读', 0, false],
+];
+const stateChip = (s) => '<span class="chip ' + (s === '在读' ? 'info' : s === '已读' ? 'ok' : '') + '">' + s + '</span>';
+const EXPS = [
+  ['pope-baseline', 'LLaVA-1.5 7B 在 POPE 上的基线', 'ok', '成功 · 2 小时前', 3],
+  ['token-pruning-ablation', '比较不同剪枝比例下的物体幻觉', 'run', '运行中 · 18 分钟', 6],
+  ['vcd-decoding', '复现对比解码（VCD）', 'bad', '失败 · 昨天', 4],
+];
+function expSide(active) {
+  return '<div class="sh">实验<span class="r"><span class="ibtn" title="新建实验">' + I('plus', 15) + '</span></span></div><div class="sg">' +
+    EXPS.map(([n, , d]) => '<div class="si ' + (n === active ? 'on' : '') + '" data-go="exp-detail"><span class="dot ' + d + '"></span>' + n + '</div>').join('') +
+    '<h6>已归档</h6><div class="si muted">' + I('archive', 14) + '2 个实验</div></div><div class="sp"></div>' +
+    '<div class="sg"><h6>后台任务</h6><div class="si">' + I('activity', 14) + 'prune-0.75<span class="c">18:02</span></div></div>';
+}
+
+/* ---------- pages ---------- */
+const PAGES = [];
+const add = (p) => PAGES.push(p);
+
+add({
+  id: 'map', group: '开始', title: '总览与页面地图', crumb: '说明',
+  lead: '整个产品分为两个窗口：项目中心（选项目、团队、收集箱、账号）和项目窗口（做研究）。设置、登录、共享、划词翻译是附属的窗口或面板。本页给出页面地图、层次规则和入口矩阵；后面每一页渲染一个界面，并标出区域、入口和去向。',
+  doc: () => `
+<div class="doc">
+<h2>一、两个窗口，各管一件事</h2>
+<table><tr><th>窗口</th><th>用来做什么</th><th>里面有什么</th><th>怎么打开</th></tr>
+<tr><td><a href="#center-home">项目中心</a></td><td>决定今天做哪项研究；管理项目、团队和账号</td><td>首页、我的项目、团队、收集箱；左下角账号与设置</td><td>启动应用；项目窗口顶栏的 ${I('house', 13)}；${k('Shift+H')}</td></tr>
+<tr><td><a href="#proj-frame">项目窗口</a></td><td>在一个项目里读文献、记笔记、跑实验、写论文</td><td>五个模块：概览、文献、笔记、实验、写作；右侧栏是 AI 助手、速记、详情</td><td>在项目中心打开项目；搜索结果和通知直接跳到项目里的对象</td></tr>
+<tr><td>附属窗口与面板</td><td>短任务和全局能力</td><td><a href="#settings">设置</a>、<a href="#login">登录</a>、<a href="#share">成员与共享</a>、<a href="#search">搜索与命令</a>、<a href="#notify">通知</a>、<a href="#translate">划词翻译</a></td><td>快捷键、菜单、顶栏按钮；划词翻译在任何软件里选中文字即可</td></tr>
+</table>
+
+<h2>二、页面地图</h2>
+<div class="sitemap">
+<div class="g"><b>项目中心</b>
+<div><a href="#center-home">首页</a>：继续工作、待处理、快速开始</div>
+<div><a href="#center-projects">我的项目</a>：书架、筛选、排序</div>
+<div><a href="#center-team">团队</a>：团队项目、成员</div>
+<div><a href="#center-inbox">收集箱</a>：随手笔记、快速问答</div>
+<div><a href="#login">登录</a>、<a href="#onboarding">首次使用引导</a></div>
+</div>
+<div class="g"><b>项目窗口</b>
+<div><a href="#proj-frame">窗口框架</a></div>
+<div><a href="#proj-overview">概览</a>：项目主页、活动、待办、项目设置</div>
+<div>文献</div>
+<div class="l2"><a href="#lit-library">文献库</a> → <a href="#lit-reader">论文阅读</a></div>
+<div class="l2"><a href="#lit-feeds">订阅</a>：新论文、信息源</div>
+<div><a href="#notes">笔记</a>：分组 → 列表 → 编辑</div>
+<div>实验</div>
+<div class="l2"><a href="#exp-list">实验列表</a> → <a href="#exp-detail">实验</a></div>
+<div class="l3"><a href="#exp-detail">概览</a> · <a href="#exp-code">代码</a> · <a href="#exp-runs">运行记录</a> · 环境 · 版本</div>
+<div><a href="#writing">写作</a>：稿件、参考文献、图表</div>
+<div><a href="#ai">AI 助手</a>（右侧栏）</div>
+</div>
+<div class="g"><b>全局与系统</b>
+<div><a href="#search">搜索与命令</a>（${k('K')}）</div>
+<div><a href="#notify">通知</a></div>
+<div><a href="#share">成员与共享</a></div>
+<div><a href="#settings">设置</a>（${k(',')}）</div>
+<div><a href="#translate">划词翻译</a>：浮窗、问答、${isMac() ? '菜单栏图标' : '托盘'}</div>
+<div><a href="#menus">菜单与快捷键</a></div>
+<div><a href="#platforms">Windows 与 macOS</a></div>
+</div>
+</div>
+
+<h2>三、层次规则</h2>
+<ol>
+<li><b>窗口 → 模块 → 范围 → 对象</b>：项目窗口里，左侧模块栏选模块，侧栏选范围（分组、文件夹、实验），主区显示列表，打开的对象（论文、笔记、运行、稿件）进标签页。任何对象最多点三次就能到。</li>
+<li><b>每类对象只有一个家</b>：论文的家在文献，运行的家在实验。其他地方只放链接，点了回到它的家，不重复做页面。</li>
+<li><b>右侧栏放跨模块的工具</b>：AI 助手、速记、详情（当前选中对象的信息）。它们跟着你在模块之间走，不占一级入口。</li>
+<li><b>账号、团队、同步分开</b>：账号（我是谁）在项目中心左下角；团队（和谁合作）在项目中心的“团队”；同步（数据到哪了）在项目窗口顶栏和“成员与共享”。设置里分别是“账号”和“同步与协作”两个分区。</li>
+<li><b>功能页不写宣传语</b>：标题用名词，按钮用“动词 + 对象”，空状态一句话说明缺什么，再给一个操作。</li>
+</ol>
+
+<h2>四、入口矩阵：每类对象从哪里打开</h2>
+<table><tr><th>对象</th><th>家（列表在哪）</th><th>打开后</th><th>还能从这些地方打开</th></tr>
+<tr><td>项目</td><td>项目中心 · 我的项目、团队</td><td>项目窗口，回到上次的位置</td><td>首页“继续工作”、搜索、通知、${isMac() ? 'Dock 菜单' : '任务栏跳转列表'}</td></tr>
+<tr><td>论文</td><td>文献 · 文献库</td><td>论文阅读页（标签页）</td><td>概览“核心文献”、笔记来源、AI 回答、稿件引用、搜索</td></tr>
+<tr><td>笔记</td><td>笔记</td><td>笔记编辑（主区）</td><td>概览“最近笔记”、反向链接、速记、搜索</td></tr>
+<tr><td>实验</td><td>实验 · 实验列表</td><td>实验（概览、代码、运行记录、环境、版本）</td><td>概览“实验动态”、运行记录、AI 对话</td></tr>
+<tr><td>运行</td><td>实验 · 运行记录</td><td>运行详情（标签页）</td><td>通知、笔记来源、AI 回答、稿件里的图表</td></tr>
+<tr><td>稿件</td><td>写作</td><td>稿件编辑（源码 + 预览）</td><td>概览、搜索</td></tr>
+<tr><td>AI 对话</td><td>右侧栏 · 对话历史</td><td>右侧栏</td><td>运行详情“发起的对话”、划词翻译的问答浮窗、收集箱</td></tr>
+<tr><td>成员</td><td>成员与共享</td><td>—</td><td>团队页、项目顶栏“共享”、通知（邀请）</td></tr>
+</table>
+
+<h2>五、和现在相比的主要调整</h2>
+<ul>
+<li><b>macOS 用原生窗口结构</b>：红绿灯、统一工具栏、屏幕顶部菜单栏、独立设置窗口、sheet 弹出、关闭窗口后留在菜单栏。现在 Mac 版和 Windows 一样画了右上角的三个按钮。</li>
+<li><b>“团队协作空间”改为“团队”</b>：去掉三段宣传卡片和标语，改成团队项目表格 + 右侧成员详情；成员管理统一进“成员与共享”。</li>
+<li><b>项目窗口顶栏补齐</b>：搜索框（${k('K')}）、同步状态、共享、通知、AI 开关；Windows 加 ${I('menu', 13)} 应用菜单。</li>
+<li><b>右侧栏增加“详情”</b>：显示当前选中的论文、笔记、运行的属性，代替各页自己塞的信息区。</li>
+<li><b>实验改为三层</b>：实验列表 → 某个实验 → 概览 / 代码 / 运行记录 / 环境 / 版本。现在的“实验活动栏”把各种工具放在一排，层次不清。</li>
+<li><b>收集箱进入项目中心侧栏</b>：现在只能用快捷键进入。</li>
+<li><b>新增</b>：项目中心首页、项目概览、通知中心、首次使用引导、写作页、新论文收件箱。</li>
+<li><b>设置拆为 9 个分区</b>：新增“AI 模型”，“协作”拆成“账号”和“同步与协作”；改动立即生效。</li>
+<li><b>快捷键</b>：${k('1')}–${k('5')} 切换模块，${k(',')} 打开设置，Windows 和 macOS 菜单结构一致。</li>
+</ul>
+</div>`,
+});
+
+add({
+  id: 'platforms', group: '开始', title: 'Windows 与 macOS', crumb: '说明', status: 'todo',
+  lead: '两个平台的页面结构完全一样，窗口外壳和系统约定各按平台来。下面左边是 Windows，右边是 macOS。',
+  doc: () => {
+    const save = plat;
+    plat = 'win';
+    const w = screen(projWin({ module: 'lit', w: 1000, h: 360, side: '<div class="sh">文献</div>', main: '<div class="mh"><h2>全部论文</h2></div>', status: '' }), { menubar: false });
+    plat = 'mac';
+    const m = screen(projWin({ module: 'lit', w: 1000, h: 360, side: '<div class="sh">文献</div>', main: '<div class="mh"><h2>全部论文</h2></div>', status: '' }), { menubar: true });
+    plat = save;
+    return `<div class="doc">
+<div class="cmp"><figure class="mini"><div class="mini-box">${w}</div><figcaption>Windows：自绘标题栏，左侧 ${I('menu', 13)} 应用菜单，右上角最小化、最大化、关闭。</figcaption></figure><figure class="mini"><div class="mini-box">${m}</div><figcaption>macOS：屏幕顶部是菜单栏；窗口左上角是系统红绿灯，工具栏和标题栏合一。</figcaption></figure></div>
+<h2>差异对照</h2>
+<table><tr><th>方面</th><th>Windows</th><th>macOS</th></tr>
+<tr><td>窗口按钮</td><td>右上角最小化、最大化、关闭（自绘，支持贴靠布局）</td><td>左上角红绿灯（系统原生），绿灯进入全屏</td></tr>
+<tr><td>标题栏</td><td>自绘标题栏，左侧 Logo 和 ${I('menu', 13)} 应用菜单</td><td>统一工具栏，隐藏窗口标题；工具栏空白处可拖动、双击缩放</td></tr>
+<tr><td>菜单</td><td>${I('menu', 13)} 应用菜单，按 Alt 打开；结构和 macOS 菜单栏相同</td><td>屏幕顶部原生菜单栏：Scientify、文件、编辑、显示、前往、窗口、帮助</td></tr>
+<tr><td>设置</td><td>应用内弹窗，Ctrl+, 打开</td><td>独立的设置窗口，⌘, 打开；顶部是分区图标</td></tr>
+<tr><td>确认和表单</td><td>居中的对话框</td><td>从工具栏下方滑出的 sheet</td></tr>
+<tr><td>关闭窗口</td><td>关闭项目中心即退出；可在设置里改为“关闭后留在托盘”</td><td>关闭最后一个窗口不退出，应用留在 Dock 和菜单栏；⌘Q 退出</td></tr>
+<tr><td>常驻图标</td><td>通知区域（托盘）图标</td><td>菜单栏右侧图标</td></tr>
+<tr><td>划词翻译</td><td>不需要额外授权</td><td>首次使用需要在“系统设置 → 隐私与安全性 → 辅助功能”里允许 Scientify；设置里显示授权状态</td></tr>
+<tr><td>快捷键</td><td>Ctrl，例如 Ctrl+K 搜索、Ctrl+1 到 Ctrl+5 切换模块；F11 全屏</td><td>⌘，例如 ⌘K 搜索、⌘1 到 ⌘5 切换模块；另有 ⌘H 隐藏、⌘M 最小化、⌃⌘F 全屏等系统约定</td></tr>
+<tr><td>侧栏和字体</td><td>纯色侧栏；Segoe UI、微软雅黑</td><td>半透明侧栏；系统字体（SF Pro、苹方）</td></tr>
+<tr><td>文件位置</td><td>在资源管理器中显示</td><td>在 Finder 中显示</td></tr>
+</table>
+<h2>实现要点（评审通过后实施）</h2>
+<ul>
+<li>macOS 窗口改用 Tauri 的 <code>titleBarStyle: Overlay</code>、<code>hiddenTitle</code> 和 <code>trafficLightPosition</code>，保留系统红绿灯；前端在 macOS 上不渲染自绘的三个按钮，并给红绿灯留出左侧空间。</li>
+<li>用 Tauri 菜单 API 生成原生菜单栏；Windows 的 ${I('menu', 13)} 菜单读取同一份菜单定义，保证两边一致。</li>
+<li>macOS 上设置改为独立窗口；关闭最后一个窗口时拦截退出，应用留在菜单栏，划词翻译继续可用。</li>
+<li>划词翻译：检查辅助功能授权，未授权时引导打开系统设置；菜单栏图标显示状态。没有 Developer ID 签名时，每次更新后系统可能要求重新授权，正式发布前需要签名和公证。</li>
+<li>现在 Mac 版的问题：窗口外壳和 Windows 完全一样（<code>decorations: false</code> 加自绘按钮），没有原生菜单栏，设置是弹窗，关闭窗口即退出。</li>
+</ul>
+</div>`;
+  },
+});
+
+/* ----- project center ----- */
+add({
+  id: 'center-home', group: '项目中心窗口', title: '首页', crumb: '项目中心 · 一级页面', status: 'todo',
+  lead: '打开应用的第一页：接着上次的工作、处理需要你决定的事、开始新的工作。只显示真实内容，没有欢迎横幅和统计卡片。',
+  render: () => screen(centerWin('center-home', centerHead('首页', '<span class="btn">' + I('folder-open', 13) + '打开文件夹作为项目</span><span class="btn pri">' + I('plus', 13) + '新建项目</span>' + P(6)) +
+    '<div class="grid2" style="flex:1">' +
+    '<div class="sec">' + '<h5>' + P(2) + '继续工作</h5>' +
+    [['book-open', 'Evaluating Object Hallucination in Large Vision-Language Models', '多模态幻觉评测 · 读到第 6 页', '10 分钟前'],
+     ['notebook-pen', '假设：视觉 token 剪枝会加剧物体幻觉', '多模态幻觉评测 · 笔记', '1 小时前'],
+     ['flask-conical', 'token-pruning-ablation / prune-0.75', '多模态幻觉评测 · 运行中 18 分钟', '运行中'],
+     ['pen-line', 'main.tex', 'VLM 幻觉机制 · 稿件 · 第 3 节', '昨天'],
+     ['message-square', '比较 POPE 与 HallusionBench', '多模态幻觉评测 · AI 对话', '昨天']]
+      .map(([ic, t, s, m]) => '<div class="li" data-go="proj-overview">' + I(ic, 15) + '<div style="min-width:0"><div class="tt">' + t + '</div><div class="sub">' + s + '</div></div><span class="m">' + m + '</span></div>').join('') +
+    '<div class="hr" style="margin:10px 0 0"></div><h5 style="margin-top:10px">' + P(4) + '快速开始</h5><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btn">' + I('plus', 13) + '新建项目</span><span class="btn">' + I('upload', 13) + '导入论文</span><span class="btn">' + I('box', 13) + '打开示例项目</span><span class="btn">' + I('circle-help', 13) + '使用说明</span></div>' +
+    '</div>' +
+    '<div class="sec"><h5>' + P(3) + '待处理<span class="r">4</span></h5>' +
+    [['user-plus', '李同学邀请你加入「视觉 token 剪枝」', '编辑者', '<span class="btn sm pri">接受</span><span class="btn sm">忽略</span>'],
+     ['sparkles', 'AI 等待审批：修改 vcd-decoding/run.py', '多模态幻觉评测', '<span class="btn sm">查看</span>'],
+     ['circle-x', '运行失败：vcd-decoding / run-04', '退出码 1 · 昨天 21:14', '<span class="btn sm">查看日志</span>'],
+     ['refresh-cw', '同步冲突：组会纪要-1105.md', 'VLM 幻觉机制 · 两份都已保留', '<span class="btn sm">处理</span>']]
+      .map(([ic, t, s, a]) => '<div class="li" style="align-items:flex-start;padding:7px 8px">' + I(ic, 15) + '<div style="min-width:0;flex:1"><div class="tt">' + t + '</div><div class="sub">' + s + '</div><div style="display:flex;gap:6px;margin-top:5px">' + a + '</div></div></div>').join('') +
+    '</div></div>', { navPin: 1, acctPin: 5 })),
+  regions: () => [
+    [1, '侧栏', '首页、我的项目、团队、收集箱四个入口；团队旁的数字是待接受的邀请。'],
+    [2, '继续工作', '最近打开过的论文（含读到的页码）、笔记、运行、稿件和 AI 对话，跨项目按时间排序。点击直接进入项目窗口里的这个对象。'],
+    [3, '待处理', '需要你决定的事：项目邀请、等待审批的 AI 操作、失败的运行、同步冲突。处理后自动消失。和项目窗口的通知中心是同一份数据。'],
+    [4, '快速开始', '没有项目时这里是主要内容；有项目后缩成一行。'],
+    [5, '账号', '头像、名字和部分隐藏的手机号；点击打开账号菜单（账号与设备、退出登录）。未登录时显示“登录”。'],
+    [6, '新建与打开', '新建项目（向导：名称、研究问题、文件夹）；打开已有文件夹作为项目。'],
+  ],
+  goes: [['继续工作的条目', '项目窗口里的对象', 'proj-overview'], ['邀请 → 接受', '团队', 'center-team'], ['审批、失败、冲突', '项目窗口对应的页面', 'notify'], ['账号', '登录 / 账号菜单', 'login'], ['设置', '设置', 'settings']],
+  states: ['第一次打开：先显示首次使用引导，完成后首页只有“快速开始”。', '没有待处理：右栏显示“没有需要处理的事”。', '离线：邀请和冲突显示上次的结果，并标注“离线”。'],
+  changes: ['新增页面。现在启动后直接是项目书架，接着上次工作需要自己找。'],
+});
+
+add({
+  id: 'center-projects', group: '项目中心窗口', title: '我的项目', crumb: '项目中心 · 一级页面', status: 'adjust',
+  lead: '本机的全部项目，以书本封面展示（沿用现在确认过的书架样式），补上筛选、排序和完整的项目菜单。',
+  render: () => {
+    const colors = ['#dfe8e2', '#e5dfd2', '#dde2ef', '#efdede', '#e6e1ef', '#d9e7e8', '#ece6d8', '#e2e2e2', '#dbe6dc', '#ebe0e7'];
+    const items = [['多模态幻觉评测', '视觉 token 剪枝是否加剧物体幻觉？', '10 分钟前', true], ['VLM 幻觉机制', '团队项目', '昨天', true], ['RAG 评测基准调研', '检索增强生成的评测方法综述', '3 天前'], ['毕业论文', '第 2–4 章', '上周'], ['课程：深度学习', '作业与报告', '10-20'], ['Agent 记忆机制', '长期记忆的组织方式', '10-18'], ['开题报告', '2025 秋', '09-30'], ['示例项目', '内置示例，不需要模型密钥', '09-24']];
+    const covers = items.map(([n, q, t, c], i) => '<div class="cv" data-go="proj-overview"><div class="bk" style="background:' + colors[i] + '">' + n + '<small>' + (c ? I('cloud-check', 12) : '') + q + '</small></div><div class="mt">' + t + '</div></div>').join('');
+    const menu = '<div class="pop menu" style="left:520px;top:150px;width:220px">' + [['folder-open', '打开'], ['pencil', '编辑信息…'], ['star', '收藏'], ['sep'], ['users', '共享给团队…'], ['cloud', '在多台设备上同步'], ['folder', fileManager()], ['sep'], ['archive', '归档'], ['trash-2', '删除…', 'dng']].map(([ic, l, c]) => ic === 'sep' ? '<div class="sep"></div>' : '<div class="mi ' + (c || '') + (l === '共享给团队…' ? ' on' : '') + '">' + I(ic, 14) + l + '</div>').join('') + '</div>';
+    return screen(centerWin('center-projects', centerHead('我的项目', '<span class="seg"><span class="on">全部 10</span><span>收藏 3</span><span>已归档 2</span></span><span class="inp" style="width:180px">' + I('search', 13) + '搜索项目</span><span class="btn ghost">' + I('list-filter', 13) + '最近打开' + I('chevron-down', 12) + '</span><span class="seg"><span class="on">' + I('layout-grid', 13) + '</span><span>' + I('list', 13) + '</span></span><span class="btn pri">' + I('plus', 13) + '新建项目</span>', P(1)) + '<div style="position:relative">' + P(2) + '<div class="cover-grid">' + covers + '</div>' + '<div style="position:absolute;left:500px;top:130px">' + P(3) + '</div>' + menu + '</div>'));
+  },
+  regions: () => [
+    [1, '工具栏', '全部、收藏、已归档；搜索项目名和研究问题；排序（最近打开、名称、创建时间）；封面或列表视图；新建项目。'],
+    [2, '项目书架', '封面颜色来自项目设置；云朵图标表示在多台设备上同步。点击进入项目窗口，回到这个项目上次的位置。'],
+    [3, '项目菜单', '右键或更多按钮：打开、编辑信息、收藏、共享给团队、在多台设备上同步、' + fileManager() + '、归档、删除。删除前说明哪些内容会删、哪些文件会保留。'],
+  ],
+  goes: [['项目', '项目窗口', 'proj-overview'], ['共享给团队…', '成员与共享', 'share'], ['新建项目', '新建向导（弹窗）', 'onboarding']],
+  states: ['没有项目：书架位置显示“还没有项目”，并给出新建项目、打开文件夹、打开示例项目。', '关联的文件夹找不到：封面标灰，点击时提供重新选择位置。'],
+  changes: ['补上筛选（全部、收藏、已归档）和排序；现在只能按更新时间。', '菜单补上“共享给团队”“在多台设备上同步”“' + fileManager() + '”。'],
+});
+
+add({
+  id: 'center-team', group: '项目中心窗口', title: '团队', crumb: '项目中心 · 一级页面', status: 'adjust',
+  lead: '和团队共享的项目，以及每个项目的成员。用表格列出项目和本机同步状态，右侧显示选中项目的成员；不放宣传文案。',
+  render: () => {
+    const rows = [['VLM 幻觉机制', '所有者', ['张', '李', '王', '+1'], '<span class="ok">' + I('cloud-check', 13) + ' 已同步</span>', '10 分钟前 · 李同学', true],
+      ['视觉 token 剪枝', '编辑者', ['李', '张', '赵'], '<span class="muted">' + I('download', 13) + ' 未下载</span>', '昨天 · 李同学'],
+      ['组会材料 2026 秋', '查看者', ['王', '张', '李', '+3'], '<span class="ok">' + I('cloud-check', 13) + ' 已同步</span>', '11-01 · 王老师']];
+    const avs = (a) => '<span class="avs">' + a.map((x, i) => '<span class="av ' + ['', 'b', 'c', 'd'][i % 4] + '">' + x + '</span>').join('') + '</span>';
+    const table = '<table class="t"><colgroup><col style="width:27%"><col style="width:11%"><col style="width:16%"><col style="width:14%"><col style="width:21%"><col style="width:11%"></colgroup><tr><th>项目</th><th>我的角色</th><th>成员</th><th>本机</th><th>最近更新</th><th></th></tr>' +
+      rows.map(([n, r, a, s, u, sel]) => '<tr class="' + (sel ? 'sel' : '') + '"><td><b style="font-weight:600">' + n + '</b></td><td>' + r + '</td><td>' + avs(a) + '</td><td>' + s + '</td><td class="muted">' + u + '</td><td><span class="btn sm" data-go="proj-overview">' + (s.includes('未下载') ? '下载' : '打开') + '</span></td></tr>').join('') + '</table>';
+    const members = [['张', '张一鸣（我）', '所有者', ''], ['李', '李同学', '编辑者', 'b'], ['王', '王老师', '审阅者', 'c'], ['?', '138****0001', '待注册 · 编辑者', 'd']];
+    const insp = '<div class="rp" style="width:300px">' + '<div class="rpt"><span class="on">VLM 幻觉机制</span></div><div class="sec">' + P(4) + '<dl class="kv" style="margin-top:6px"><dt>所有者</dt><dd>张一鸣</dd><dt>创建</dt><dd>10-31</dd><dt>本机位置</dt><dd>文档/Scientify/VLM 幻觉机制</dd><dt>同步</dt><dd class="ok">已同步 · 2 分钟前</dd></dl></div>' +
+      '<div class="sec hr"><h5>' + P(5) + '成员 4<span class="r"><span class="btn sm" data-go="share">管理成员</span></span></h5>' + members.map(([a, n, r, c]) => '<div class="li"><span class="av ' + c + '">' + a + '</span><span class="tt">' + n + '</span><span class="m">' + r + '</span></div>').join('') + '</div></div>';
+    const main = centerHead('<span class="switcher" style="padding:0">视觉语言课题组' + I('chevron-down', 13) + '</span>', '<span class="inp" style="width:170px">' + I('search', 13) + '搜索团队项目</span><span class="btn">' + I('share-2', 13) + '共享本机项目</span><span class="btn pri">' + I('plus', 13) + '新建团队项目</span>' + P(2), P(1)) +
+      '<div style="display:flex;flex:1;min-height:0"><div style="flex:1;min-width:0;position:relative">' + '<div style="padding:8px 12px 0">' + P(3) + '</div>' + table + '</div>' + insp + '</div>';
+    return screen(centerWin('center-team', main));
+  },
+  regions: () => [
+    [1, '团队切换', '当前团队的名称。以后一个账号可以加入多个团队，在这里切换；现在只有一个团队时也显示名称，让人知道自己在哪个团队。'],
+    [2, '操作', '新建团队项目；把本机的个人项目共享给团队（项目 ID 不变，原文件夹继续使用）；搜索团队项目。'],
+    [3, '团队项目表格', '项目名、我的角色、成员头像、本机状态（已同步、同步中、未下载、有冲突）、最近更新和更新人。未下载的项目点“下载”取回整个项目。'],
+    [4, '项目信息', '选中项目的所有者、创建时间、本机位置和同步状态。'],
+    [5, '成员', '成员和角色、待注册的邀请。“管理成员”打开成员与共享，在那里邀请、改角色、移除、退出。'],
+  ],
+  goes: [['打开 / 下载', '项目窗口', 'proj-overview'], ['管理成员', '成员与共享', 'share'], ['未登录时“登录”', '登录', 'login']],
+  states: ['未登录：只显示一句话“登录后可以和团队共享项目，或在多台设备上同步自己的项目。”和“登录”按钮。', '没有团队项目：表格位置显示“还没有团队项目”，并给出新建团队项目、共享本机项目。', '离线：显示上次的列表，标注“离线，显示的是上次同步的结果”。'],
+  changes: ['“团队协作空间”改名“团队”。', '删掉三段宣传卡片（多设备同步、多人协同、本地优先）和“让研究资料和团队进度自然流转”“同一账号，多端继续”等标语。', '项目和成员不再是左右两个大面板：项目用表格，成员放右侧详情；成员管理统一进“成员与共享”。', '表格里直接看到每个项目的同步状态。'],
+});
+
+add({
+  id: 'center-inbox', group: '项目中心窗口', title: '收集箱', crumb: '项目中心 · 一级页面', status: 'adjust',
+  lead: '还没归到任何项目的随手笔记和 AI 快速问答。整理时移到项目里。',
+  render: () => screen(centerWin('center-inbox', centerHead('收集箱', '<span class="seg"><span class="on">笔记 4</span><span>对话 2</span></span><span class="btn pri">' + I('plus', 13) + '新建笔记</span>', P(1)) +
+    '<div style="display:flex;flex:1;min-height:0"><div style="width:280px;border-right:1px solid var(--line);padding:6px">' + P(2) +
+    [['ACL 2027 投稿要求', '页数 8 + 无限参考文献；匿名…', '今天'], ['周五要问王老师的问题', '1. 剪枝比例是否需要更细…', '昨天'], ['Rebuttal 模板', 'We thank the reviewers…', '10-28'], ['看到的 Python 环境技巧', 'uv venv --python 3.11…', '10-21']]
+      .map(([t, s, d], i) => '<div class="li ' + (i === 1 ? 'on' : '') + '" style="align-items:flex-start"><div style="min-width:0;flex:1"><div class="tt" style="font-weight:600">' + t + '</div><div class="sub tt">' + s + '</div></div><span class="m">' + d + '</span></div>').join('') +
+    '</div><div class="col" style="flex:1"><div class="mh">' + '<span class="muted">收集箱 · 笔记</span><span class="r"><span class="btn">' + I('arrow-right', 13) + '移到项目…</span>' + P(3) + '<span class="ibtn">' + I('ellipsis', 15) + '</span></span></div><div class="ed"><h1>周五要问王老师的问题</h1><ul><li>剪枝比例是否需要更细（0.1 一档）？</li><li>POPE 的 adversarial 设置能否作为主实验？</li><li>写作目标会议：ACL 还是 EMNLP？</li></ul><p class="muted">在项目中心打开速记（' + k('Shift+O') + '）时，笔记记到这里。</p></div></div></div>')),
+  regions: () => [
+    [1, '笔记和对话', '切换随手笔记和不绑定项目的 AI 快速问答（只能对话，不能读写文件）。'],
+    [2, '列表', '按时间排序，显示标题、摘要和日期。'],
+    [3, '移到项目', '把笔记或对话移到某个项目；移过去的对话在项目里改用 Agent，可以读这个项目的论文。'],
+  ],
+  goes: [['移到项目…', '项目窗口 · 笔记', 'notes'], ['划词翻译的问答', '进入收集箱的对话', 'translate']],
+  states: ['空：“收集箱是空的。在项目中心按 ' + k('Shift+O') + ' 随手记一笔。”'],
+  changes: ['在项目中心侧栏有了可见入口；现在只能用快捷键或搜索进入。', '对话也放进收集箱，划词翻译转来的问答有地方找。'],
+});
+
+add({
+  id: 'login', group: '项目中心窗口', title: '登录', crumb: '项目中心 · 附属', status: 'adjust',
+  lead: '只有团队和多设备同步需要登录，本机使用不需要。Windows 用应用内对话框；macOS 用从工具栏滑出的 sheet。',
+  render: () => {
+    const form = '<div class="dlg-h">' + P(1) + '登录 Scientify<span class="r ibtn">' + I('x', 14) + '</span></div><div class="dlg-b"><p class="muted" style="margin:0 0 12px">登录后可以使用团队项目和多设备同步。本机项目不需要登录。</p>' +
+      '<div class="field"><label>手机号</label><div style="display:flex;gap:6px"><span class="inp" style="width:78px">+86' + I('chevron-down', 12) + '</span><span class="inp f" style="flex:1">138 0013 5021</span></div></div>' +
+      '<div class="field"><label>验证码</label><div style="display:flex;gap:6px"><span class="inp f" style="flex:1">4 8 2 _ _ _</span><span class="btn" style="height:28px">重新获取（42 秒）</span></div></div>' + P(2) +
+      '<p class="muted" style="font-size:11.5px;margin:4px 0 0">未注册的手机号验证后自动创建账号。</p></div><div class="dlg-f"><span class="l"><a>' + I('globe', 12) + ' 使用自托管服务</a> ' + P(3) + '</span><span class="btn">取消</span><span class="btn pri">登录</span></div>';
+    const dlg = isMac()
+      ? '<div class="scrim" style="top:50px;background:rgba(0,0,0,.06)"></div><div class="dialog sheet" style="left:380px;top:50px;width:420px">' + form + '</div>'
+      : '<div class="scrim"></div><div class="dialog" style="left:380px;top:150px;width:420px">' + form + '</div>';
+    return screen(centerWin('center-team', centerHead('团队') + '<div class="sec muted">登录后可以和团队共享项目，或在多台设备上同步自己的项目。<div style="margin-top:8px"><span class="btn pri">登录</span></div></div>', { over: dlg }));
+  },
+  regions: () => [
+    [1, isMac() ? 'sheet' : '对话框', isMac() ? '从窗口工具栏下方滑出，挡住当前窗口但不遮其他窗口；Esc 或“取消”关闭。' : '居中的对话框，背景变暗；Esc 或“取消”关闭。'],
+    [2, '手机号和验证码', '验证码 60 秒内只能获取一次，按钮显示倒计时。'],
+    [3, '自托管服务', '展开后填写团队自己的服务地址；也可以在设置的“同步与协作”里改。'],
+  ],
+  goes: [['左下角“登录”、团队页、设置 · 账号', '这里', 'login'], ['登录成功', '回到原来的页面', 'center-team']],
+  states: ['验证码错误：在输入框下方说明，并保留手机号。', '服务不可用：说明原因和重试；本机功能不受影响。'],
+  changes: ['现在是覆盖整个窗口的登录页，左侧是产品介绍。改为对话框（Windows）和 sheet（macOS），文案只说明登录用来做什么。'],
+});
+
+add({
+  id: 'onboarding', group: '项目中心窗口', title: '首次使用引导', crumb: '项目中心 · 附属', status: 'todo',
+  lead: '第一次打开时出现，每一步都能跳过。macOS 多一步：为划词翻译授予“辅助功能”权限。',
+  render: () => {
+    const steps = [['语言与外观', 'done'], ['数据位置', 'done'], ['连接模型', 'now'], ...(isMac() ? [['划词翻译权限', '']] : []), ['开始', '']];
+    const left = '<div class="setnav" style="width:200px;padding:14px 10px">' + P(1) + steps.map(([s, st], i) => '<div class="li ' + (st === 'now' ? 'on' : '') + '">' + (st === 'done' ? '<span class="ok">' + I('circle-check', 15) + '</span>' : '<span class="dot" style="width:15px;height:15px;border:1.5px solid #b9c0bf;background:#fff"></span>') + (i + 1) + '. ' + s + '</div>').join('') + '</div>';
+    const providers = ['DeepSeek', 'OpenAI', '通义千问', 'Anthropic', 'Moonshot', 'Ollama（本机）', '自定义'].map((p, i) => '<span class="btn ' + (i === 0 ? 'pri' : '') + '" style="height:30px">' + p + '</span>').join('');
+    const right = '<div class="col" style="flex:1"><div class="dlg-b"><h3 style="margin:0 0 4px;font-size:16px">连接一个模型' + P(2) + '</h3><p class="muted" style="margin:0 0 14px">AI 助手用它读论文、回答问题和执行任务。也可以跳过，以后在设置里配置。</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">' + providers + '</div><div class="field"><label>API 密钥（只保存在本机）</label><span class="inp f">sk-••••••••••••••••3a9f</span></div><div style="display:flex;gap:8px;align-items:center"><span class="btn">测试连接</span><span class="ok">' + I('circle-check', 14) + ' 已连接 · 可以使用 Agent</span></div><div class="hr" style="margin:16px 0 10px"></div><p class="muted" style="margin:0">没有密钥？<a>登录后使用 Scientify 官方模型</a> ' + P(3) + '</p></div><div class="dlg-f"><span class="l"><a>跳过引导</a></span><span class="btn">上一步</span><span class="btn">跳过这一步</span><span class="btn pri">下一步</span></div></div>';
+    const dlg = '<div class="scrim"></div><div class="dialog" style="left:220px;top:90px;width:760px;height:500px;flex-direction:row">' + left + right + '</div>';
+    return screen(centerWin('center-home', centerHead('首页'), { over: dlg }));
+  },
+  regions: () => [
+    [1, '步骤', '语言与外观 → 数据位置（显示默认位置，可以更改）→ 连接模型 → ' + (isMac() ? '划词翻译权限（打开系统设置的辅助功能）→ ' : '') + '开始（打开示例项目、新建项目、打开文件夹）。'],
+    [2, '连接模型', '选服务商、填密钥、测试连接；测试结果说明能否使用 Agent。'],
+    [3, '官方模型', '没有密钥的人登录后使用 Scientify 官方模型。'],
+  ],
+  goes: [['开始 → 打开示例项目', '项目窗口（示例项目）', 'proj-overview'], ['帮助菜单 → 重新查看引导', '这里', 'menus']],
+  states: ['任何一步都能跳过；跳过模型后 AI 助手里会提示去设置连接。'],
+  changes: ['新增。现在第一次打开直接是空书架。'],
+});
+
+/* ----- project window ----- */
+function libSide(active = '全部论文') {
+  const lib = [['全部论文', 'book-open', 128], ['未读', 'circle', 42], ['在读', 'book-marked', 6], ['收藏', 'star', 15], ['最近添加', 'clock', 9], ['有笔记', 'notebook-pen', 31]];
+  return '<div class="sh">文献<span class="r"><span class="ibtn" title="导入">' + I('plus', 15) + '</span></span></div><div class="sg"><h6>库</h6>' +
+    lib.map(([n, ic, c]) => '<div class="si ' + (n === active ? 'on' : '') + '" data-go="lit-library">' + I(ic, 14) + n + '<span class="c">' + c + '</span></div>').join('') +
+    '<h6>文件夹<span class="r">' + I('plus', 12) + '</span></h6><div class="si">' + I('folder-open', 14) + 'Proactive<span class="c">86</span></div><div class="si l2">' + I('folder', 14) + '评测</div><div class="si l2">' + I('folder', 14) + '解码</div><div class="si">' + I('folder', 14) + 'AgentMemory<span class="c">42</span></div>' +
+    '<h6>标签</h6><div class="si">' + I('hash', 14) + '幻觉<span class="c">38</span></div><div class="si">' + I('hash', 14) + '对比解码<span class="c">7</span></div>' +
+    '<h6>订阅</h6><div class="si" data-go="lit-feeds">' + I('rss', 14) + '新论文<span class="c"><span class="badge gray">12</span></span></div><div class="si" data-go="lit-feeds">' + I('globe', 14) + '信息源</div></div>';
+}
+function paperInfo() {
+  return '<div class="sec"><div style="font-weight:600;line-height:1.4">Evaluating Object Hallucination in Large Vision-Language Models</div><div class="muted" style="font-size:11.5px;margin:4px 0 8px">Li, Du, Zhou, Wang, Zhao, Wen · EMNLP 2023</div>' +
+    '<dl class="kv"><dt>DOI</dt><dd><a>10.18653/v1/2023.emnlp-main.20</a></dd><dt>阅读状态</dt><dd><span class="chip info">在读 · 第 6 页</span></dd><dt>标签</dt><dd><span class="chip">幻觉</span> <span class="chip">评测</span></dd><dt>文件</dt><dd>Proactive/评测/li2023-pope.pdf</dd><dt>添加</dt><dd>10-12</dd></dl></div>' +
+    '<div class="sec hr"><h5>论文笔记<span class="r">3 条摘录</span></h5><div class="muted" style="font-size:12px;line-height:1.6">“POPE 用是/否问答探测物体存在……”（p.4）<br>“adversarial 设置选高频共现物体……”（p.6）</div></div>' +
+    '<div class="sec hr"><h5>被引用</h5><div class="li" data-go="writing">' + I('pen-line', 14) + '<span class="tt">main.tex · 第 2 节</span></div><div class="li" data-go="notes">' + I('notebook-pen', 14) + '<span class="tt">假设：视觉 token 剪枝会加剧…</span></div></div>' +
+    '<div class="sec hr" style="display:flex;gap:6px"><span class="btn pri" data-go="lit-reader">' + I('book-open', 13) + '打开</span><span class="btn" data-go="ai">' + I('sparkles', 13) + '问 AI</span><span class="btn">' + I('quote', 13) + '复制引用</span></div>';
+}
+
+add({
+  id: 'proj-frame', group: '项目窗口', title: '窗口框架', crumb: '项目窗口 · 固定框架', status: 'adjust',
+  lead: '项目窗口的固定区域。所有模块共用这套框架：顶栏、模块栏、侧栏、主区、右侧栏、状态栏。',
+  render: () => screen(projWin({ module: 'lit', railPin: 5, top: { pins: { ctl: 1, nav: 2, search: 3, right: 4 } },
+    side: '<div style="padding:6px 14px 0">' + P(6) + '</div>' + libSide(),
+    main: '<div class="tabs"><span style="display:flex;align-items:center;padding:0 6px">' + P(7) + '</span><span class="tab on">' + I('book-open', 13) + '全部论文</span><span class="tab">' + I('file-text', 13) + 'Li 2023 · POPE<span class="x">' + I('x', 12) + '</span></span><span class="tab">' + I('notebook-pen', 13) + '假设：视觉 token…<span class="x">' + I('x', 12) + '</span></span></div>' +
+      '<table class="t"><colgroup><col style="width:56%"><col style="width:22%"><col style="width:10%"><col style="width:12%"></colgroup><tr><th>标题</th><th>作者</th><th>年份</th><th>状态</th></tr>' + PAPERS.slice(0, 6).map((p, i) => '<tr class="' + (i === 0 ? 'sel' : '') + '"><td>' + p[0] + '</td><td>' + p[1] + '</td><td>' + p[2] + '</td><td>' + stateChip(p[4]) + '</td></tr>').join('') + '</table>',
+    right: rpanel('info', paperInfo(), 8), status: statusBar('', 9) })),
+  regions: () => [
+    [1, isMac() ? '红绿灯' : '标题栏', isMac() ? '系统的关闭、最小化、全屏按钮，旁边是显示或隐藏边栏。' : 'Logo 和 ' + I('menu', 13) + ' 应用菜单（Alt），右上角是最小化、最大化、关闭。'],
+    [2, '项目中心与项目切换', I('house', 13) + ' 回到项目中心（' + k('Shift+H') + '）；项目名旁的下拉菜单原地切换项目，团队项目带“团队”标记。'],
+    [3, '搜索与命令', '搜索所有项目里的论文、笔记、实验、运行和稿件，输入 &gt; 执行命令（' + k('K') + '）。'],
+    [4, '同步、共享、通知、AI', '同步状态（点开看详情）、共享（成员与共享）、通知中心、AI 助手开关（' + k('Shift+L') + '）。'],
+    [5, '模块栏', '概览、文献、笔记、实验、写作（' + k('1') + '–' + k('5') + '）；底部是帮助' + (isMac() ? '（设置在菜单栏，' + k(',') + '）' : '和设置') + '。'],
+    [6, '侧栏', '当前模块的范围：分组、文件夹、标签、实验列表。可调宽度，可收起。'],
+    [7, '主区与标签页', '列表和打开的对象。每个打开的论文、笔记、运行、稿件都是一个标签页，切换模块时保留。'],
+    [8, '右侧栏', 'AI 助手、速记、详情三个标签。详情显示当前选中对象的属性和关联；窗口窄于 900 时浮在主区上方。'],
+    [9, '状态栏', '保存状态、同步状态、模块相关信息（例如 Git 分支、Python 解释器）、后台任务和通知数。'],
+  ],
+  goes: [['顶栏 ' + I('house', 12), '项目中心', 'center-home'], ['搜索框', '搜索与命令', 'search'], ['共享', '成员与共享', 'share'], ['铃铛', '通知', 'notify'], ['AI', 'AI 助手', 'ai']],
+  states: ['窗口宽度不足 1000 时，侧栏自动收起为图标；不足 900 时右侧栏浮在主区上方。', '离线：同步状态显示“离线”，其他功能照常。'],
+  changes: ['顶栏加入搜索框、同步状态、共享、通知（现在只有品牌、项目切换和亮暗切换）。', '右侧栏增加“详情”。', 'macOS 改为红绿灯和统一工具栏。'],
+});
+
+add({
+  id: 'proj-overview', group: '项目窗口', title: '概览', crumb: '项目窗口 · 模块', status: 'todo',
+  lead: '项目的主页：研究问题、做到哪了、下一步、最近发生了什么。所有内容都来自项目里的真实对象，点了就进入对应模块。',
+  render: () => screen(projWin({ module: 'overview',
+    side: '<div class="sh">概览</div><div class="sg"><div class="si on">' + I('layout-dashboard', 14) + '主页</div><div class="si">' + I('activity', 14) + '活动</div><div class="si">' + I('list-checks', 14) + '待办<span class="c">3</span></div></div><div class="sp"></div><div class="sg"><div class="si" data-go="share">' + I('users', 14) + '成员与共享</div><div class="si">' + I('settings', 14) + '项目设置…' + P(6) + '</div></div>',
+    main: '<div class="mh"><h2>多模态幻觉评测</h2><span class="chip">个人项目</span><span class="r"><span class="btn">' + I('pencil', 13) + '编辑</span></span></div>' +
+      '<div class="grid2" style="flex:1;overflow:hidden">' +
+      '<div class="col"><div class="sec"><h5>' + P(1) + '研究问题</h5><div style="font-size:13.5px;line-height:1.7">视觉 token 剪枝是否会加剧大型视觉语言模型的物体幻觉？在 POPE 和 HallusionBench 上验证，并给出剪枝比例的安全范围。</div></div>' +
+      '<div class="sec hr"><h5>' + P(2) + '进展</h5><div class="mile"><div class="done">文献调研<small>10-12 完成</small></div><div class="done">基线复现<small>10-28 完成</small></div><div class="now">剪枝消融<small>进行中 · 2/3</small></div><div>写作<small>未开始</small></div></div></div>' +
+      '<div class="sec hr"><h5>' + P(3) + '下一步<span class="r"><a>' + I('plus', 12) + ' 添加</a></span></h5>' + ['等 prune-0.75 跑完，比较三个比例的 F1', '补读 HallusionBench 的 VD 设置', '写 Related Work 初稿'].map((t) => '<div class="li">' + I('circle', 14) + '<span class="tt">' + t + '</span></div>').join('') + '</div>' +
+      '<div class="sec hr"><h5>' + P(4) + '最近活动</h5><div class="tl2">' + [['10:42', 'AI 启动运行 prune-0.75（对话：扫描剪枝比例）'], ['09:15', '新增笔记「假设：视觉 token 剪枝会加剧物体幻觉」'], ['昨天', '摘录 Li 2023 第 6 页到论文笔记'], ['昨天', 'prune-0.50 完成，F1 82.4']].map(([t, s]) => '<div><time>' + t + '</time><span>' + s + '</span></div>').join('') + '</div></div></div>' +
+      '<div class="col"><div class="sec"><h5>' + P(5) + '核心文献<span class="r"><a data-go="lit-library">全部 128</a></span></h5>' + PAPERS.slice(0, 3).map((p) => '<div class="li" data-go="lit-reader">' + I('book-open', 14) + '<span class="tt">' + p[0] + '</span></div>').join('') + '</div>' +
+      '<div class="sec hr"><h5>实验动态<span class="r"><a data-go="exp-list">全部实验</a></span></h5>' + [['run', 'prune-0.75', '运行中 · 18 分钟'], ['ok', 'prune-0.50', 'F1 82.4 · 昨天'], ['bad', 'vcd-decoding / run-04', '失败 · 昨天']].map(([d, n, m]) => '<div class="li" data-go="exp-runs"><span class="dot ' + d + '"></span><span class="tt">' + n + '</span><span class="m">' + m + '</span></div>').join('') + '</div>' +
+      '<div class="sec hr"><h5>最近笔记<span class="r"><a data-go="notes">全部 46</a></span></h5>' + ['假设：视觉 token 剪枝会加剧物体幻觉', '11-05 组会纪要', 'VCD 复现记录'].map((t) => '<div class="li" data-go="notes">' + I('notebook-pen', 14) + '<span class="tt">' + t + '</span></div>').join('') + '</div></div></div>' })),
+  regions: () => [
+    [1, '研究问题', '项目要回答的问题，直接在这里编辑。'],
+    [2, '进展', '里程碑：手动添加，或标记完成；当前阶段高亮。'],
+    [3, '下一步', '项目待办，勾选完成；也可以从笔记和 AI 回答里添加。'],
+    [4, '最近活动', '项目里真实发生的事：运行、笔记、摘录、成员的修改。'],
+    [5, '核心文献、实验动态、最近笔记', '各取几条，点击进入对应模块的对象；“全部”进入模块。'],
+    [6, '项目设置', '弹窗：名称、研究问题、封面颜色、关联的文件夹、归档与删除。成员和同步在“成员与共享”。'],
+  ],
+  goes: [['核心文献', '论文阅读', 'lit-reader'], ['实验动态', '运行记录', 'exp-runs'], ['最近笔记', '笔记', 'notes'], ['成员与共享', '成员与共享', 'share']],
+  states: ['新项目：研究问题为空时提示填写；没有文献、实验、笔记的区域显示一句话和对应的第一步（例如“关联文献文件夹”）。'],
+  changes: ['新增。现在概览是“开发中”的占位页。'],
+});
+
+add({
+  id: 'lit-library', group: '项目窗口', title: '文献库', crumb: '项目窗口 · 文献', status: 'adjust',
+  lead: '管理项目的全部论文：侧栏选范围（智能分组、文件夹、标签、订阅），主区是可排序的表格，右侧详情显示选中论文的信息。PDF 和笔记留在原文件夹。',
+  render: () => screen(projWin({ module: 'lit',
+    side: '<div style="padding:6px 14px 0">' + P(1) + '</div>' + libSide(),
+    main: '<div class="mh"><h2>全部论文</h2><span class="muted">128</span><span class="r"><span class="inp" style="width:200px">' + I('search', 13) + '搜索标题、作者、全文</span><span class="btn ghost">' + I('funnel', 13) + '筛选</span><span class="btn pri">' + I('plus', 13) + '导入' + I('chevron-down', 12) + '</span>' + P(2) + '</span></div>' +
+      '<div style="position:relative">' + '<div style="position:absolute;left:6px;top:6px">' + P(3) + '</div><table class="t"><colgroup><col style="width:24px"><col style="width:44%"><col style="width:18%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:7%"></colgroup><tr><th></th><th>标题</th><th>作者</th><th>年份</th><th>来源</th><th>状态</th><th>笔记</th></tr>' +
+      PAPERS.map((p, i) => '<tr class="' + (i === 0 ? 'sel' : '') + '" data-go="lit-reader"><td>' + (p[6] ? '<span class="warn">' + I('star', 12) + '</span>' : '') + '</td><td>' + p[0] + '</td><td>' + p[1] + '</td><td>' + p[2] + '</td><td>' + p[3] + '</td><td>' + stateChip(p[4]) + '</td><td class="n">' + (p[5] || '') + '</td></tr>').join('') + '</table>' +
+      '<div class="pop menu" style="right:30px;top:0;width:220px">' + [['plus', '添加 PDF 文件…'], ['link', '用 DOI 或 arXiv 编号添加…'], ['file-down', '导入 BibTeX、RIS…'], ['book-marked', '从 Zotero 导入…'], ['sep'], ['folder-plus', '关联文件夹…']].map(([ic, l]) => ic === 'sep' ? '<div class="sep"></div>' : '<div class="mi ' + (l.startsWith('用 DOI') ? 'on' : '') + '">' + I(ic, 14) + l + '</div>').join('') + '</div></div>',
+    right: rpanel('info', paperInfo(), 4) })),
+  regions: () => [
+    [1, '侧栏', '库（全部、未读、在读、收藏、最近添加、有笔记）是按阅读状态自动分的组；文件夹是关联的磁盘目录，可以展开、拖动整理；标签；订阅。'],
+    [2, '工具栏', '搜索（标题、作者，之后加全文）；筛选（年份、来源、标签）；导入菜单：PDF 文件、DOI 或 arXiv 编号、BibTeX/RIS、Zotero、关联文件夹。'],
+    [3, '论文表格', '可排序的列；星标是收藏；双击打开阅读页；多选后可以移动、加标签、标记已读、导出引用。'],
+    [4, '详情', '选中论文的元数据、阅读状态、标签、文件位置、论文笔记摘录、被哪些稿件和笔记引用；打开、问 AI、复制引用。'],
+  ],
+  goes: [['双击论文 / 打开', '论文阅读', 'lit-reader'], ['新论文、信息源', '订阅', 'lit-feeds'], ['被引用', '写作、笔记', 'writing'], ['问 AI', 'AI 助手', 'ai']],
+  states: ['还没关联文件夹：主区说明“PDF 和笔记会留在原来的文件夹”，给出“关联文件夹”和“添加 PDF”。', '文件被移走：在表格里标出“找不到文件”，可以重新关联或移除记录。', '扫描或导入中：工具栏下方显示进度，例如“导入 3/12”。'],
+  changes: ['主区从“只有目录树”改为表格 + 智能分组；目录树留在侧栏“文件夹”。', '增加论文详情（元数据、状态、标签、被引用）。', '导入补上 DOI、arXiv、BibTeX、Zotero。'],
+});
+
+add({
+  id: 'lit-reader', group: '项目窗口', title: '论文阅读', crumb: '项目窗口 · 文献 · 论文', status: 'adjust',
+  lead: '读论文、摘录、提问。侧栏切换为这篇论文的目录，右侧栏是论文笔记；选中文字后出现浮动工具条。',
+  render: () => screen(projWin({ module: 'lit',
+    side: '<div class="sh" data-go="lit-library" style="font-weight:400;color:var(--ink2)">' + I('arrow-left', 14) + ' 全部论文</div><div class="sg"><h6>' + P(2) + ' 目录</h6>' + ['Abstract', '1 Introduction', '2 Related Work', '3 Object Hallucination', '3.1 Evaluation Settings', '4 POPE', '4.1 Sampling Strategies', '5 Experiments', '6 Conclusion'].map((t, i) => '<div class="si ' + (i === 6 ? 'on' : '') + (t.match(/^\d\.\d/) ? ' l2' : '') + '">' + t + '</div>').join('') + '</div>',
+    main: '<div class="tabs"><span class="tab">' + I('book-open', 13) + '全部论文</span><span class="tab on">' + I('file-text', 13) + 'Li 2023 · POPE<span class="x">' + I('x', 12) + '</span></span><span class="tab">' + I('file-text', 13) + 'Leng 2024 · VCD<span class="x">' + I('x', 12) + '</span></span><span style="display:flex;align-items:center;padding:0 6px">' + P(1) + '</span></div>' +
+      '<div class="pdfwrap"><div class="page"><h4>4.1 Sampling Strategies</h4><p>To construct the evaluation set, we consider three strategies for selecting the negative objects. In the <i>random</i> setting, objects absent from the image are sampled uniformly.</p><p>In the <i>popular</i> setting, we select the top-k most frequent objects in the dataset that are not present in the image. <span class="selx">In the adversarial setting, we first rank all objects by their co-occurring frequency with the ground-truth objects, and then select the top-k frequent ones that do not exist in the image.</span></p><div class="ln" style="width:96%"></div><div class="ln" style="width:92%"></div><div class="ln" style="width:97%"></div><div class="ln" style="width:60%"></div><h4>5 Experiments</h4><p><span class="mark">LVLMs tend to answer “Yes” for objects that frequently co-occur with the ground-truth ones,</span> suggesting that object hallucination is largely driven by co-occurrence statistics.</p><div class="ln" style="width:95%"></div><div class="ln" style="width:98%"></div><div class="ln" style="width:91%"></div><div class="ln" style="width:94%"></div><div class="ln" style="width:72%"></div></div>' +
+      '<div class="ftb" style="left:300px;top:96px">' + P(3) + '<span data-go="ai">' + I('sparkles', 13) + '提问</span><span>' + I('quote', 13) + '摘录到笔记</span><span>' + I('highlighter', 13) + '高亮</span><span data-go="translate">' + I('languages', 13) + '翻译</span><span>' + I('copy', 13) + '</span></div>' +
+      '<div class="readbar">' + P(4) + I('chevron-left', 14) + '<b>6</b> / 14' + I('chevron-right', 14) + '<span class="muted">|</span>' + I('minus', 13) + '125%' + I('plus', 13) + '<span class="muted">|</span><span class="seg" style="height:22px"><span class="on">单页</span><span>连续</span></span><span class="muted">|</span><span data-go="lit-library">' + I('info', 13) + ' 详情</span></div></div>',
+    right: rpanel('note', '<div class="mh" style="height:38px">' + P(5) + '<span class="tt" style="font-weight:600">li2023-pope.notes.md</span><span class="r muted" style="font-size:11.5px">已保存</span></div><div class="ed" style="padding:12px 16px"><blockquote>In the adversarial setting, we first rank all objects by their co-occurring frequency…<br><a>（p.4）</a></blockquote><p style="font-size:12.5px">对抗设置专挑和真实物体常一起出现的物体，最能暴露“共现偏差”。我们的剪枝实验应以这个设置为主。</p><blockquote>LVLMs tend to answer “Yes” for objects that frequently co-occur…<br><a>（p.6）</a></blockquote><p style="font-size:12.5px">记下 Yes 比例，作为剪枝后偏差变化的指标。</p></div>') })),
+  regions: () => [
+    [1, '论文标签页', '一篇论文一个标签页，可以同时开多篇；标签页在切换模块后保留。'],
+    [2, '目录', '侧栏换成这篇论文的目录（也可切到缩略图）；顶部“全部论文”返回文献库。'],
+    [3, '选中文字工具条', '提问（带上选中的文字问 AI）、摘录到笔记（自动带页码）、高亮、翻译、复制。'],
+    [4, '阅读控制', '翻页、页码、缩放、单页或连续；“详情”打开右侧栏的论文详情。重新打开时回到上次的位置。'],
+    [5, '论文笔记', '和 PDF 放在一起的 .notes.md。摘录带页码，点页码跳回原文；自动保存。'],
+  ],
+  goes: [['提问', 'AI 助手（Agent 能读完整篇论文）', 'ai'], ['翻译', '划词翻译浮窗', 'translate'], ['全部论文', '文献库', 'lit-library']],
+  states: ['扫描版没有文字：选中时提示“这一页没有可选的文字”。', '文件被移动或删除：显示原路径和“重新关联”。'],
+  changes: ['新增选中文字的浮动工具条和高亮；现在紧凑模式下“提问”“记笔记”按钮会被隐藏。', '侧栏在阅读时显示目录，不再一直是目录树。'],
+});
+
+add({
+  id: 'lit-feeds', group: '项目窗口', title: '订阅', crumb: '项目窗口 · 文献', status: 'adjust',
+  lead: '跟踪新论文和常看的网站。新论文按订阅进收件箱，可以加入文献库、稍后读或忽略；信息源是常用网站的收藏，在内置浏览器中打开。',
+  render: () => screen(projWin({ module: 'lit',
+    side: '<div class="sh">订阅<span class="r"><span class="ibtn">' + I('plus', 15) + '</span></span></div><div class="sg"><h6>' + P(1) + ' 新论文</h6><div class="si on">' + I('inbox', 14) + '收件箱<span class="c">12</span></div><div class="si l2">' + I('rss', 14) + 'arXiv cs.CV · hallucination<span class="c">8</span></div><div class="si l2">' + I('search', 14) + '关键词：object hallucination<span class="c">4</span></div><div class="si">' + I('bookmark', 14) + '稍后读<span class="c">3</span></div>' +
+      '<h6>' + P(2) + ' 信息源</h6><div class="si">' + I('folder', 14) + '论文网站</div><div class="si l2">' + I('globe', 14) + 'arXiv</div><div class="si l2">' + I('globe', 14) + 'OpenReview</div><div class="si l2">' + I('globe', 14) + 'Papers with Code</div><div class="si">' + I('folder', 14) + '课题组</div><div class="si l2">' + I('globe', 14) + 'Hugging Face Papers</div>' +
+      '<h6>推荐</h6><div class="si muted">' + I('sparkles', 14) + '根据项目推荐<span class="c">开发中</span></div></div>',
+    main: '<div class="mh"><h2>收件箱</h2><span class="seg"><span class="on">未读 12</span><span>全部</span></span><span class="r"><span class="btn ghost">全部标为已读</span></span></div>' +
+      '<div style="display:flex;flex:1;min-height:0"><div style="width:52%;border-right:1px solid var(--line);overflow:hidden">' + P(3) +
+      [['Token Pruning and Visual Grounding: A Hallucination Perspective', 'Chen, Wang 等', 'arXiv cs.CV', '今天', true],
+       ['Do LVLMs Hallucinate Less with Fewer Visual Tokens?', 'Kumar, Lee', 'arXiv cs.CV', '今天'],
+       ['HalluDetect: A Benchmark for Fine-grained Hallucination', 'Zhang 等', '关键词', '昨天'],
+       ['Contrastive Decoding at Scale', 'Ortiz 等', 'arXiv cs.CL', '昨天']].map(([t, a, s, d, sel]) => '<div class="li ' + (sel ? 'on' : '') + '" style="align-items:flex-start;border-bottom:1px solid #f0f1f1;border-radius:0;padding:9px 12px"><span class="dot run" style="margin-top:6px"></span><div style="min-width:0;flex:1"><div style="font-weight:600;line-height:1.4">' + t + '</div><div class="sub">' + a + ' · <span class="chip">' + s + '</span> · ' + d + '</div></div></div>').join('') + '</div>' +
+      '<div class="col" style="flex:1"><div class="sec"><div style="font-weight:600;font-size:14px;line-height:1.4">Token Pruning and Visual Grounding: A Hallucination Perspective</div><div class="muted" style="font-size:11.5px;margin:4px 0 10px">Chen, Wang, Liu · arXiv 2611.01234 · 今天</div><p style="margin:0;font-size:12.5px;line-height:1.7">Visual token pruning accelerates inference of large vision-language models, but its effect on grounding is unclear. We show that aggressive pruning increases object hallucination on POPE…</p><div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">' + P(4) + '<span class="btn pri">' + I('plus', 13) + '加入文献库</span><span class="btn">' + I('bookmark', 13) + '稍后读</span><span class="btn">忽略</span><span class="btn" data-go="ai">' + I('sparkles', 13) + '交给 AI 分析</span><span class="btn">' + I('external-link', 13) + '打开网页</span></div></div></div></div>' })),
+  regions: () => [
+    [1, '新论文', '按 arXiv 分类、关键词、RSS 订阅；新论文进收件箱，各订阅显示未读数；“稍后读”单独一组。应用打开时增量获取，不在后台推送。'],
+    [2, '信息源', '常用网站的收藏，一级分组，所有项目共用；点击在内置浏览器标签中打开。'],
+    [3, '收件箱列表', '标题、作者、来源、日期，未读有圆点；新论文到达不会打断当前阅读。'],
+    [4, '操作', '加入文献库（下载 PDF、补全元数据，放进指定文件夹）、稍后读、忽略、交给 AI 分析、打开网页。'],
+  ],
+  goes: [['加入文献库', '文献库', 'lit-library'], ['交给 AI 分析', 'AI 助手', 'ai']],
+  states: ['没有订阅：说明可以订阅 arXiv 分类、关键词或 RSS，并给出“添加订阅”。', '推荐：开发中，只显示可关闭的占位，不显示假内容。'],
+  changes: ['新增新论文收件箱；现在“订阅”只有信息源和内置浏览器。'],
+});
+
+add({
+  id: 'notes', group: '项目窗口', title: '笔记', crumb: '项目窗口 · 模块', status: 'adjust',
+  lead: '项目里的研究笔记。侧栏选分组或标签，中间是笔记列表，右边编辑；笔记可以带来源（论文页码、运行、文件），并显示反向链接。',
+  render: () => screen(projWin({ module: 'notes',
+    side: '<div class="sh">笔记<span class="r"><span class="ibtn" title="新建笔记">' + I('plus', 15) + '</span></span></div><div class="sg">' + P(1) + '<div class="si">' + I('notebook-pen', 14) + '全部笔记<span class="c">46</span></div><div class="si">' + I('clock', 14) + '最近</div><div class="si">' + I('star', 14) + '收藏<span class="c">5</span></div>' +
+      '<h6>分组</h6><div class="si on">' + I('folder', 14) + '研究笔记<span class="c">12</span></div><div class="si">' + I('folder', 14) + '阅读小结<span class="c">18</span></div><div class="si">' + I('folder', 14) + '组会纪要<span class="c">7</span></div><div class="si">' + I('folder', 14) + '实验分析<span class="c">9</span></div>' +
+      '<h6>标签</h6><div class="si">' + I('hash', 14) + '剪枝</div><div class="si">' + I('hash', 14) + 'POPE</div><h6>来自文献</h6><div class="si" data-go="lit-library">' + I('book-open', 14) + '论文笔记<span class="c">31</span></div></div>',
+    main: '<div style="display:flex;flex:1;min-height:0"><div style="width:250px;border-right:1px solid var(--line);display:flex;flex-direction:column"><div class="mh"><span class="inp" style="flex:1">' + I('search', 13) + '搜索笔记</span></div><div style="padding:6px 10px 0">' + P(2) + '</div>' +
+      [['假设：视觉 token 剪枝会加剧物体幻觉', '剪枝去掉的多是背景 token……', '09:15', '假设', 'warn', true], ['剪枝比例与 F1', 'prune-0.25 几乎无损……', '昨天', '实验分析'], ['VCD 复现记录', '温度 1.0 时复现结果……', '10-30', '实验分析'], ['POPE 三种设置', 'random、popular、adversarial……', '10-12', '阅读小结']]
+        .map(([t, s, d, c, cc, sel]) => '<div class="li ' + (sel ? 'on' : '') + '" style="align-items:flex-start;padding:8px 10px;border-radius:0;border-bottom:1px solid #f0f1f1"><div style="min-width:0;flex:1"><div class="tt" style="font-weight:600">' + t + '</div><div class="sub tt">' + s + '</div><div style="margin-top:3px;display:flex;gap:4px"><span class="chip ' + (cc || '') + '">' + c + '</span><span class="sub">' + d + '</span></div></div></div>').join('') + '</div>' +
+      '<div class="col" style="flex:1"><div class="fmt">' + P(3) + ['bold', 'italic', 'heading', 'sep', 'list', 'list-ordered', 'list-checks', 'quote', 'sep', 'link', 'image', 'table-2', 'sigma', 'file-code'].map((x) => x === 'sep' ? '<span class="sep"></span>' : '<span class="ibtn">' + I(x, 14) + '</span>').join('') + '<span style="margin-left:auto" class="muted">已保存</span></div>' +
+      '<div class="ed"><h1>假设：视觉 token 剪枝会加剧物体幻觉</h1><div class="meta">' + P(4) + '<span class="chip warn">假设 · 待验证</span><span class="chip">#剪枝</span><span class="chip">#POPE</span><span class="muted" style="font-size:11.5px">研究笔记 · 10-30 创建</span></div>' +
+      '<p>剪枝去掉的多是背景 token，模型更依赖语言先验，可能更容易对常共现的物体回答“是”。</p><blockquote>LVLMs tend to answer “Yes” for objects that frequently co-occur with the ground-truth ones. — <a data-go="lit-reader">Li 2023，p.6</a></blockquote><h3>验证方式</h3><ul><li>在 POPE adversarial 设置下比较剪枝比例 0、0.25、0.5、0.75</li><li>同时记录 Yes 比例，见运行 <a data-go="exp-runs">prune-0.50</a></li></ul><p class="muted">输入 [[ 链接其他笔记，输入 / 插入论文、运行或图表。</p></div></div></div>',
+    right: rpanel('info', '<div class="sec">' + P(5) + '<h5>来源</h5><div class="li" data-go="lit-reader">' + I('book-open', 14) + '<span class="tt">Li 2023 · p.6</span></div><div class="li" data-go="exp-runs">' + I('flask-conical', 14) + '<span class="tt">运行 prune-0.50</span></div></div><div class="sec hr"><h5>反向链接</h5><div class="li" data-go="writing">' + I('pen-line', 14) + '<span class="tt">main.tex · 第 3 节</span></div><div class="li">' + I('notebook-pen', 14) + '<span class="tt">11-05 组会纪要</span></div></div><div class="sec hr"><h5>大纲</h5><div class="li">验证方式</div></div>') })),
+  regions: () => [
+    [1, '分组与标签', '全部、最近、收藏；分组（研究笔记、阅读小结、组会纪要、实验分析，可以自建）；标签；“论文笔记”汇总文献里每篇论文旁边的笔记。'],
+    [2, '笔记列表', '标题、摘要、类型和日期；搜索标题和正文；排序（更新时间、创建时间、标题）。'],
+    [3, '编辑工具栏', '格式、列表、引用、链接、图片、表格、公式、代码；实时预览，自动保存。'],
+    [4, '类型与状态', '笔记类型（假设、阅读小结、实验分析、组会、自由）和判断状态（待验证、支持、不支持、证据不足）、标签。'],
+    [5, '详情', '来源（论文页码、运行、文件，点击跳回）、反向链接（哪些笔记和稿件引用了它）、大纲。'],
+  ],
+  goes: [['来源', '论文阅读、运行记录', 'lit-reader'], ['反向链接', '写作', 'writing'], ['论文笔记', '文献库', 'lit-library']],
+  states: ['没有笔记：说明笔记能挂来源，给出“新建笔记”和模板。', '保存失败：保留内容，标出“保存失败”和重试。', '删除：进入回收站，30 天内可以恢复。'],
+  changes: ['列表和编辑分成两栏，侧栏专门放分组和标签；现在列表和侧栏挤在一起。', '新增类型、状态、标签、[[ 链接、反向链接、删除。'],
+});
+
+add({
+  id: 'exp-list', group: '项目窗口', title: '实验列表', crumb: '项目窗口 · 实验', status: 'adjust',
+  lead: '项目里的全部实验。每个实验是一个目的、一个代码目录、一个 Python 环境；在这里新建、找到、进入。',
+  render: () => screen(projWin({ module: 'exp',
+    side: '<div style="padding:6px 14px 0">' + P(1) + '</div>' + expSide(''),
+    main: '<div class="mh"><h2>实验</h2><span class="muted">3</span><span class="r"><span class="inp" style="width:180px">' + I('search', 13) + '搜索实验</span><span class="seg"><span>' + I('layout-grid', 13) + '</span><span class="on">' + I('list', 13) + '</span></span><span class="btn pri">' + I('plus', 13) + '新建实验</span>' + P(2) + '</span></div>' +
+      '<div style="position:relative"><table class="t"><colgroup><col style="width:21%"><col style="width:27%"><col style="width:20%"><col style="width:11%"><col style="width:13%"><col style="width:8%"></colgroup><tr><th>' + P(3) + ' 实验</th><th>目的</th><th>代码目录</th><th>Python</th><th>最近一次运行</th><th>运行</th></tr>' +
+      EXPS.map(([n, g, d, l, c]) => '<tr data-go="exp-detail"><td><span class="dot ' + d + '"></span> <b style="font-weight:600">' + n + '</b></td><td>' + g + '</td><td class="muted">Proactive/' + n.split('-')[0] + '</td><td>3.11 · .venv</td><td>' + l + '</td><td class="n">' + c + '</td></tr>').join('') + '</table></div>' +
+      '<div class="dialog" style="left:330px;top:210px;width:440px;box-shadow:0 14px 40px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.1)"><div class="dlg-h">' + P(4) + '新建实验</div><div class="dlg-b"><div class="field"><label>名称</label><span class="inp f">decoding-temperature</span></div><div class="field"><label>目的</label><span class="inp f">温度对 VCD 效果的影响</span></div><div class="field"><label>代码从哪里来</label><div class="seg"><span>新建空文件夹</span><span class="on">使用已有文件夹</span><span>从分支新建 Worktree</span></div></div><div class="field"><label>文件夹</label><span class="inp f">D:/AScience/Proactive/vcd ' + I('folder-open', 13) + '</span></div></div><div class="dlg-f"><span class="btn">取消</span><span class="btn pri">创建</span></div></div>' })),
+  regions: () => [
+    [1, '侧栏实验列表', '所有模块里都能看到的实验列表，圆点是最近一次运行的状态；下面是已归档和正在运行的后台任务。'],
+    [2, '新建实验', '名称、目的和代码来源：新建空文件夹、使用已有文件夹、从分支新建 Worktree。'],
+    [3, '实验表格', '目的、代码目录、Python 环境、最近一次运行和运行次数；可切换卡片视图。'],
+    [4, '新建实验弹窗', '同一个文件夹不能登记两次；外部文件夹第一次运行前要确认信任。'],
+  ],
+  goes: [['实验', '实验（概览）', 'exp-detail'], ['后台任务', '运行详情', 'exp-runs']],
+  states: ['只有默认实验：表格上方说明可以为不同目的建多个实验。', '有任务在运行的实验不能归档或移除，按钮旁说明原因。'],
+  changes: ['侧栏固定显示实验列表；进入某个实验后，代码、运行、环境、版本都是它的子视图（见下一页）。现在的“实验活动栏”把列表、代码、搜索、版本、运行记录、Worktree 并排放在一起。'],
+});
+
+function expMain(view, body, pins = {}) {
+  const tabs = (pins.tabs ? '<span style="border:0;padding:0 2px">' + P(pins.tabs) + '</span>' : '') + [['概览', 'exp-detail'], ['代码', 'exp-code'], ['运行记录', 'exp-runs'], ['环境', ''], ['版本', '']].map(([l, g]) => '<span class="' + (l === view ? 'on' : '') + '"' + (g ? ' data-go="' + g + '"' : '') + '>' + l + (l === '运行记录' ? ' <span class="badge gray">6</span>' : '') + (l === '版本' ? ' <span class="muted" style="font-weight:400">3</span>' : '') + '</span>').join('');
+  return '<div class="mh"><span class="dot run"></span><h2>token-pruning-ablation</h2><span class="chip info">运行中 1</span><span class="r">' + (pins.run ? P(pins.run) : '') + '<span class="btn">' + I('file-code', 13) + 'prune-0.75.yaml' + I('chevron-down', 12) + '</span><span class="btn pri">' + I('play', 13) + '运行</span><span class="btn">' + I('square', 12) + '停止</span></span></div><div class="vt">' + tabs + '</div>' + body;
+}
+
+add({
+  id: 'exp-detail', group: '项目窗口', title: '实验 · 概览', crumb: '项目窗口 · 实验 · 某个实验', status: 'todo',
+  lead: '一个实验的总览：做什么、代码在哪、用什么环境、跑得怎么样。顶部一直有运行配置、运行和停止；下面的标签切换概览、代码、运行记录、环境、版本。',
+  render: () => screen(projWin({ module: 'exp', side: expSide('token-pruning-ablation'),
+    main: expMain('概览',
+      '<div class="grid2" style="flex:1;overflow:hidden"><div class="col"><div class="sec"><h5>' + P(3) + '目的与假设</h5><div>比较剪枝比例 0、0.25、0.5、0.75 下 POPE adversarial 的 F1 和 Yes 比例。</div><div style="margin-top:6px"><span class="chip" data-go="notes">' + I('notebook-pen', 11) + ' 假设：视觉 token 剪枝会加剧物体幻觉</span></div></div>' +
+      '<div class="sec hr"><h5>' + P(4) + '结果</h5><table class="t" style="table-layout:auto"><tr><th>运行</th><th>剪枝比例</th><th>F1</th><th>Yes 比例</th></tr><tr><td>baseline</td><td>0</td><td class="n">86.0</td><td class="n">47.1%</td></tr><tr><td>prune-0.25</td><td>0.25</td><td class="n">85.1</td><td class="n">48.2%</td></tr><tr><td>prune-0.50</td><td>0.50</td><td class="n">82.4</td><td class="n">52.9%</td></tr><tr><td>prune-0.75</td><td>0.75</td><td class="muted">运行中</td><td class="muted">—</td></tr></table><div class="callout-box" style="margin-top:8px">有 3 次以上可比的运行时，这里显示指标随参数变化的图；只用真实数据，不画示意曲线。</div></div></div>' +
+      '<div class="col"><div class="sec"><h5>' + P(5) + '代码与环境</h5><dl class="kv"><dt>代码目录</dt><dd>D:/AScience/Proactive/pruning</dd><dt>Git</dt><dd>' + I('git-branch', 12) + ' ablation · 3 个未提交的改动</dd><dt>Python</dt><dd>3.11.9 · .venv · 37 个包</dd><dt>运行配置</dt><dd>prune-0.25 / 0.50 / 0.75.yaml</dd></dl><div style="display:flex;gap:6px;margin-top:8px"><span class="btn sm" data-go="exp-code">打开代码</span><span class="btn sm">管理环境</span></div></div>' +
+      '<div class="sec hr"><h5>' + P(6) + '相关材料</h5><div class="li" data-go="lit-reader">' + I('book-open', 14) + '<span class="tt">Leng 2024 · Visual Contrastive Decoding</span></div><div class="li" data-go="ai">' + I('message-square', 14) + '<span class="tt">AI 对话：扫描剪枝比例（启动了 2 次运行）</span></div><div class="li" data-go="notes">' + I('notebook-pen', 14) + '<span class="tt">剪枝比例与 F1</span></div></div><div class="sec hr" style="display:flex;gap:6px"><span class="btn sm">' + I('notebook-pen', 12) + '写实验记录</span><span class="btn sm" data-go="ai">' + I('sparkles', 12) + '让 AI 分析结果</span></div></div></div>', { run: 1, tabs: 2 }) })),
+  regions: () => [
+    [1, '运行控制', '运行配置下拉、运行、停止；在实验的任何子视图里都在同一位置。'],
+    [2, '子视图', '概览、代码、运行记录、环境、版本；运行记录旁是次数，版本旁是未提交的改动数。'],
+    [3, '目的与假设', '实验要验证什么，可以关联一条假设笔记。'],
+    [4, '结果', '各次运行的关键指标；缺失的值显示“—”，不显示 0。有足够可比的运行时才画趋势图。'],
+    [5, '代码与环境', '代码目录、Git 分支和未提交的改动、Python 解释器和包数量、运行配置。'],
+    [6, '相关材料', '相关论文、笔记、发起过运行的 AI 对话；写实验记录、让 AI 分析结果。'],
+  ],
+  goes: [['代码', '实验 · 代码', 'exp-code'], ['运行记录', '实验 · 运行记录', 'exp-runs'], ['相关材料', '论文、笔记、AI 对话', 'lit-reader']],
+  states: ['还没有运行：结果区说明“还没有运行”，给出运行和新建手动记录。', '代码目录找不到：显示原路径，提供重新选择。'],
+  changes: ['新增实验概览；现在只有实验卡片上的简要信息。'],
+});
+
+add({
+  id: 'exp-code', group: '项目窗口', title: '实验 · 代码', crumb: '项目窗口 · 实验 · 某个实验', status: 'have',
+  lead: '在实验目录里写代码、运行、看日志。文件树、编辑器和底部面板都在“代码”子视图里，状态栏显示分支和解释器。',
+  render: () => screen(projWin({ module: 'exp', side: expSide('token-pruning-ablation'),
+    main: expMain('代码', '<div style="display:flex;flex:1;min-height:0"><div style="width:200px;border-right:1px solid var(--line);background:#fafafa;padding:4px">' + P(1) + '<div class="sg" style="padding:0"><h6>pruning<span class="r">' + I('plus', 12) + ' ' + I('refresh-cw', 12) + '</span></h6>' + [['folder', 'configs', ''], ['file-code', 'prune-0.75.yaml', 'l2'], ['folder', 'scripts', ''], ['file-code', 'eval_pope.py', 'l2 on'], ['file-code', 'prune.py', 'l2'], ['file-text', 'README.md', ''], ['file-text', 'requirements.txt', '']].map(([ic, n, c]) => '<div class="si ' + c + '">' + I(ic, 14) + n + '</div>').join('') + '</div></div>' +
+      '<div class="col" style="flex:1;min-width:0"><div class="tabs"><span class="tab on">eval_pope.py ●</span><span class="tab">prune.py</span><span style="display:flex;align-items:center;padding:0 6px">' + P(2) + '</span></div><div class="code">' +
+      [['1', '<span class="kw">import</span> argparse'], ['2', '<span class="kw">from</span> prune <span class="kw">import</span> prune_visual_tokens'], ['3', ''], ['4', '<span class="kw">def</span> <span class="fn">evaluate</span>(model, split, ratio):'], ['5', '    <span class="cm"># POPE: answer yes/no for each probed object</span>'], ['6', '    tokens = prune_visual_tokens(model.vision(split.images), ratio)'], ['7', '    answers = model.generate(tokens, split.questions, max_new_tokens=<span class="num">4</span>)'], ['8', '    <span class="kw">return</span> score(answers, split.labels)  <span class="cm"># acc, f1, yes_ratio</span>', 'cur'], ['9', ''], ['10', '<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:'], ['11', '    parser = argparse.ArgumentParser()'], ['12', '    parser.add_argument(<span class="str">"--ratio"</span>, type=float, default=<span class="num">0.5</span>)']]
+        .map(([n, c, cls]) => '<div class="l ' + (cls || '') + '"><span class="n">' + n + '</span><span>' + c + '</span></div>').join('') +
+      '</div><div class="panel"><div class="vt" style="height:32px"><span>终端</span><span class="on">日志</span><span>产物 3</span><span>问题</span><span class="r">' + P(3) + '<span class="ibtn">' + I('plus', 13) + '</span><span class="ibtn">' + I('x', 13) + '</span></span></div><div class="term">[prune-0.75] 加载 LLaVA-1.5-7B …… 完成（12.4 秒）\n[prune-0.75] POPE adversarial：1800/3000  ████████████░░░░░░░░  60%\n[prune-0.75] 最后输出于 11:39:58\n</div></div></div></div>'),
+    status: '<div class="st">' + P(4) + '<span>' + I('git-branch', 12) + 'ablation ↑1</span><span>3 处改动</span><span>Python 3.11.9 (.venv)</span><span class="r"><span>行 8，列 52</span><span>UTF-8</span><span>' + I('activity', 12) + '后台任务 1</span></span></div>' })),
+  regions: () => [
+    [1, '文件树', '实验目录的文件；新建、刷新、筛选、全部折叠；右键重命名、删除、在终端中打开。'],
+    [2, '编辑器', '标签页，未保存有圆点；查找替换、自动换行；编辑器里的运行按钮保存并运行当前文件。'],
+    [3, '底部面板', '终端（多个会话、可分屏）、日志（实时，停在底部时跟随）、产物（这次运行生成的文件）、问题（之后接入语言服务）。'],
+    [4, '状态栏', 'Git 分支和未推送的提交、改动数、Python 解释器（点击切换）、光标位置、编码。'],
+  ],
+  goes: [['运行', '日志面板与运行记录', 'exp-runs'], ['分支', '实验 · 版本', 'exp-detail']],
+  states: ['第一次运行外部目录：先确认信任这个目录、保存未保存的文件、选择解释器。', '文件被外部程序改过：提示查看磁盘内容、另存一份或重新读取。'],
+  changes: ['功能已有。文件树从左侧“实验活动栏”移到代码子视图里，侧栏一直是实验列表。'],
+});
+
+add({
+  id: 'exp-runs', group: '项目窗口', title: '实验 · 运行记录', crumb: '项目窗口 · 实验 · 某个实验', status: 'adjust',
+  lead: '每次运行的完整记录。勾选 2–4 条比较，只有指标名称、数据划分和评价方式都相同时才标出最好的值。',
+  render: () => screen(projWin({ module: 'exp', side: expSide('token-pruning-ablation'),
+    main: expMain('运行记录', '<div class="mh" style="height:40px">' + P(1) + '<span class="inp" style="width:180px">' + I('search', 13) + '搜索运行</span><span class="btn ghost">状态：全部' + I('chevron-down', 12) + '</span><span class="btn ghost">来源：全部' + I('chevron-down', 12) + '</span><span class="r"><span class="btn">' + I('plus', 13) + '手动记录</span><span class="btn pri">' + I('git-compare', 13) + '比较 2 条</span>' + P(2) + '</span></div>' +
+      '<table class="t"><colgroup><col style="width:40px"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:10%"><col style="width:9%"><col style="width:9%"><col style="width:11%"><col style="width:9%"><col></colgroup><tr><th></th><th>运行</th><th>状态</th><th>来源</th><th>剪枝比例</th><th>Acc</th><th>F1</th><th>Yes 比例</th><th>用时</th><th>开始</th></tr>' +
+      [[1, 'prune-0.75', '<span class="chip info">运行中</span>', '本地', '0.75', '—', '—', '—', '18 分', '11:21'], [1, 'prune-0.50', '<span class="chip ok">成功</span>', 'AI 对话', '0.50', '83.7', '82.4', '52.9%', '39 分', '昨天'], [0, 'prune-0.25', '<span class="chip ok">成功</span>', 'AI 对话', '0.25', '85.9', '85.1', '48.2%', '41 分', '昨天'], [1, 'baseline', '<span class="chip ok">成功</span>', '本地', '0', '86.8', '86.0', '47.1%', '44 分', '10-29'], [0, 'notes-run', '<span class="chip">手动</span>', '手动记录', '0.50', '未记录', '81.9', '未记录', '—', '10-28']]
+        .map(([c, ...v], i) => '<tr class="' + (c && i ? 'sel' : '') + '"><td>' + (c && i ? '<span class="ok">' + I('circle-check', 14) + '</span>' : '<span class="dot" style="width:12px;height:12px;border:1.5px solid #c3c9c8;background:#fff"></span>') + '</td>' + v.map((x, j) => '<td' + (j >= 4 && j <= 7 ? ' class="n"' : '') + '>' + x + '</td>').join('') + '</tr>').join('') + '</table>' +
+      '<div class="sec hr" style="padding-bottom:0"><h5>' + P(3) + '比较 · 2 条<span class="r"><span class="chip ok">可比：同一数据划分和评价方式</span></span></h5></div><div class="cmpbox"><div class="h">项</div><div class="h">baseline（基准）</div><div class="h">prune-0.50</div><div class="k">剪枝比例</div><div>0</div><div><b>0.50</b></div><div class="k">F1</div><div><b class="ok">86.0</b></div><div>82.4（−3.6）</div><div class="k">Yes 比例</div><div>47.1%</div><div>52.9%（+5.8）</div><div class="k">代码版本</div><div>a1c9f2e</div><div>a1c9f2e + 2 处未提交的改动</div></div>' +
+      '<div style="padding:8px 16px" class="muted">' + P(4) + ' 双击一行打开运行详情：结果、日志、产物、环境与版本，以及发起它的 AI 对话。</div>') })),
+  regions: () => [
+    [1, '筛选', '按状态、来源（本地、AI 对话、手动记录）筛选，搜索运行名。'],
+    [2, '操作', '新建手动记录；勾选 2–4 条后比较；右键：再次运行、复制配置、重命名、归档、删除（默认只删记录，日志和产物另选）。'],
+    [3, '比较', '一条设为基准，只看不同的项；能比较时才标出最好的值，否则写“可比性未确认”。'],
+    [4, '运行详情', '双击打开标签页：结果、日志、产物、环境与版本（命令、目录、分支、提交、解释器），以及发起它的 AI 对话。'],
+  ],
+  goes: [['运行详情 · 发起的对话', 'AI 助手', 'ai'], ['产物中的图', '写作 · 图表', 'writing']],
+  states: ['没有运行：“还没有运行记录”，给出运行和手动记录。', '应用意外退出：结果无法确认的运行标为“中断”，不会自动重跑。', '没有指标：显示“未记录”，不显示 0。'],
+  changes: ['新增删除、指标图表和导出；比较移到表格下方，不再单独开页面。'],
+});
+
+add({
+  id: 'writing', group: '项目窗口', title: '写作', crumb: '项目窗口 · 模块', status: 'todo',
+  lead: '把文献、笔记和实验结果写成论文。左边源码，右边 PDF 预览，详情里检查参考文献和图表的来源。',
+  render: () => screen(projWin({ module: 'write',
+    side: '<div class="sh">写作<span class="r"><span class="ibtn">' + I('plus', 15) + '</span></span></div><div class="sg">' + P(1) + '<h6>稿件</h6><div class="si on">' + I('file-text', 14) + 'ACL 2027 投稿<span class="c">LaTeX</span></div><div class="si">' + I('file-text', 14) + '组会报告 11-05<span class="c">Markdown</span></div><h6>大纲</h6>' + ['Abstract', '1 Introduction', '2 Related Work', '3 Method', '4 Experiments', '4.1 Setup', '4.2 Results', '5 Conclusion'].map((t, i) => '<div class="si ' + (t.match(/^\d\.\d/) ? 'l2' : '') + (i === 6 ? ' on' : '') + '">' + t + '</div>').join('') + '</div>',
+    main: '<div class="mh">' + P(2) + '<span class="seg"><span class="on">main.tex</span><span>refs.bib</span><span>figures/</span></span><span class="r"><span class="muted">' + I('circle-check', 13) + ' 已编译 · 2.4 秒 · 1 个警告</span><span class="btn pri">' + I('play', 13) + '编译 ' + kb('Enter') + '</span><span class="btn">' + I('download', 13) + '导出</span></span></div>' +
+      '<div style="display:flex;flex:1;min-height:0"><div class="code" style="flex:1;border-right:1px solid var(--line)">' + [['41', '&#92;section{Results}'], ['42', 'Table~&#92;ref{tab:pope} shows that pruning half of the visual'], ['43', 'tokens lowers F1 by 3.6 points while the yes-ratio rises'], ['44', 'from 47.1&#92;% to 52.9&#92;% &#92;cite{li2023pope}. This supports'], ['45', 'the co-occurrence account of &#92;cite{zhou2024analyzing}.', 'cur'], ['46', ''], ['47', '&#92;begin{figure}[t]'], ['48', '  &#92;includegraphics[width=&#92;linewidth]{fig_prune_f1}'], ['49', '  &#92;caption{F1 and yes-ratio across pruning ratios.}'], ['50', '&#92;end{figure}']].map(([n, c, cls]) => '<div class="l ' + (cls || '') + '"><span class="n">' + n + '</span><span>' + c + '</span></div>').join('') + '</div>' +
+      '<div class="pdfwrap" style="flex:1;padding:14px 0"><div class="page" style="width:420px;padding:26px 30px"><h3 style="font-size:13px">Token Pruning Amplifies Object Hallucination in Large Vision-Language Models</h3><div class="au">Anonymous ACL submission</div><h4>4.2 Results</h4><p style="font-size:10px">Table 2 shows that pruning half of the visual tokens lowers F1 by 3.6 points while the yes-ratio rises from 47.1% to 52.9% (Li et al., 2023). This supports the co-occurrence account of <span class="mark">[?]</span>.</p><div class="callout-box" style="height:120px;display:grid;place-items:center;margin:8px 0">Figure 3 · fig_prune_f1.pdf<br>来自运行 baseline、prune-0.25、prune-0.50</div><div class="ln" style="width:96%"></div><div class="ln" style="width:90%"></div></div><div style="position:absolute;left:12px;top:10px">' + P(3) + '</div></div></div>' +
+      '<div class="st" style="height:28px;background:#fffaf1;color:var(--warn)">' + I('circle-alert', 12) + ' 第 45 行：引用 zhou2024analyzing 不在 refs.bib 中 · <a>从文献库加入</a></div>',
+    right: rpanel('info', '<div class="sec">' + P(4) + '<h5>参考文献<span class="r">引用 18 · 缺 1</span></h5><div class="li">' + I('circle-alert', 14, 'warn') + '<span class="tt">zhou2024analyzing</span><span class="m"><span class="btn sm">加入</span></span></div><div class="li">' + I('check', 14) + '<span class="tt">li2023pope</span><span class="m">文献库</span></div><div class="li">' + I('check', 14) + '<span class="tt">leng2024vcd</span><span class="m">文献库</span></div></div>' +
+      '<div class="sec hr"><h5>' + P(5) + '图表</h5><div class="li" data-go="exp-runs">' + I('chart-line', 14) + '<div style="min-width:0"><div class="tt">fig_prune_f1.pdf</div><div class="sub">来自 3 次运行 · prune-0.75 完成后需要更新</div></div></div><div style="padding:4px 8px"><span class="btn sm">用新结果替换</span></div></div>' +
+      '<div class="sec hr"><h5>AI 修改</h5><div class="muted" style="font-size:12px">选中段落后让 AI 润色，修改先以对比显示，确认后才写入。</div></div>') })),
+  regions: () => [
+    [1, '稿件与大纲', '项目里的稿件（LaTeX 或 Markdown），当前稿件的章节大纲，点击跳到对应位置。'],
+    [2, '文件与编译', '稿件里的文件（tex、bib、图）；编译（' + k('Enter') + '）、编译结果、导出 PDF 或源码包。'],
+    [3, '源码与预览', '左边源码，右边 PDF；两边可以互相定位；输入 &#92;cite 时从文献库补全。'],
+    [4, '参考文献', '稿件引用的论文、缺失或重复的条目；缺失的可以直接从文献库加入 refs.bib。'],
+    [5, '图表', '运行产物生成的图，标明来自哪些运行；运行更新后提示替换。'],
+  ],
+  goes: [['参考文献', '文献库', 'lit-library'], ['图表来源', '运行记录', 'exp-runs']],
+  states: ['没有 TeX 环境：说明怎样安装，或使用内置的编译器。', '编译失败：日志标出出错的行，点击跳转。', '没有稿件：介绍写作页能做什么，给出“新建稿件”和模板（空白 LaTeX、常见会议模板、Markdown 报告）。'],
+  changes: ['新增。现在“写作”是“LaTeX 论文撰写”的占位页。'],
+});
+
+add({
+  id: 'ai', group: '项目窗口', title: 'AI 助手', crumb: '项目窗口 · 右侧栏', status: 'adjust',
+  lead: '在项目的任何页面旁边。在项目里以 Agent 方式工作：能读全部论文、读写笔记、运行实验，每一步可见，改动先审批。对话顶部始终显示当前模式。',
+  render: () => screen(projWin({ module: 'lit', top: { ai: true },
+    side: libSide(),
+    main: '<div class="mh"><h2>全部论文</h2><span class="muted">128</span></div><table class="t"><colgroup><col style="width:62%"><col style="width:24%"><col style="width:14%"></colgroup><tr><th>标题</th><th>作者</th><th>状态</th></tr>' + PAPERS.slice(0, 7).map((p, i) => '<tr class="' + (i === 0 || i === 4 ? 'sel' : '') + '"><td>' + p[0] + '</td><td>' + p[1] + '</td><td>' + stateChip(p[4]) + '</td></tr>').join('') + '</table>',
+    right: rpanel('ai', '<div class="mh" style="height:40px;padding:0 10px">' + P(1) + '<span class="tt" style="font-weight:600">POPE 与 HallusionBench</span>' + I('chevron-down', 13) + '<span class="r"><span class="chip ok">' + P(2) + 'Agent · 文献</span><span class="ibtn">' + I('plus', 14) + '</span></span></div>' +
+      '<div class="chat"><div class="msg u">比较这两篇的评测方式，哪个更适合我们的剪枝实验？</div><div class="steps">' + P(3) + '<div>' + I('circle-check', 13, 'ok') + '读取 Li 2023，第 1–8 页</div><div>' + I('circle-check', 13, 'ok') + '读取 Guan 2024，第 1–8 页</div><div>' + I('circle-check', 13, 'ok') + '在项目论文中搜索 “yes ratio”</div></div>' +
+      '<div class="ans">' + P(4) + '<p>POPE 用是/否问答探测物体是否存在，对抗设置专门选常共现的物体 <span class="cite">Li 2023 p.4</span>；HallusionBench 侧重图表和视觉错觉 <span class="cite">Guan 2024 p.3</span>。</p><p>剪枝主要影响物体级别的定位，建议以 POPE adversarial 为主实验，HallusionBench 的 VD 子集作补充。</p></div>' +
+      '<div class="approve">' + P(5) + ' <b>修改笔记</b>「假设：视觉 token 剪枝…」<div class="diff"><div class="a">+ 主实验：POPE adversarial（Li 2023 p.4）</div><div class="a">+ 补充：HallusionBench VD 子集</div></div><div style="display:flex;gap:6px"><span class="btn sm pri">允许</span><span class="btn sm">本对话允许</span><span class="btn sm">拒绝</span></div></div></div>' +
+      '<div class="composer"><div style="display:flex;gap:4px;flex-wrap:wrap">' + P(6) + '<span class="chip">' + I('book-open', 11) + ' Li 2023 · p.6</span><span class="chip">' + I('book-open', 11) + ' Guan 2024</span><span class="chip">' + I('x', 10) + '</span></div><div class="cbox">继续提问，输入 / 使用命令…</div><div class="cbar"><span class="ibtn">' + I('paperclip', 14) + '</span><span class="ibtn">' + I('command', 14) + '</span>' + P(7) + '<span class="btn sm ghost">deepseek-chat' + I('chevron-down', 11) + '</span><span class="btn sm ghost">' + I('shield-check', 12) + '询问' + I('chevron-down', 11) + '</span><span class="r"><span class="btn sm pri">' + I('send', 12) + '</span></span></div></div>') })),
+  regions: () => [
+    [1, '对话', '对话标题，点开是对话历史（可重命名、删除）；后台运行的其他对话在这里提示。新建对话 ' + k('Shift+N') + '。'],
+    [2, '模式', '“Agent · 文献/代码”表示能读写项目里的文件；“快速问答”表示只能看到当前页和附件，旁边写明原因（例如模型连接不支持 Agent），并提供“用 Agent 读全文”。'],
+    [3, '执行步骤', '读了哪些论文的哪几页、搜索了什么、运行了什么，每一步可展开。'],
+    [4, '回答与来源', '来源标注到论文页码，点击打开阅读页对应位置。'],
+    [5, '审批卡', '修改笔记、执行越权命令、Git 操作前先审批：允许、本对话允许、拒绝。'],
+    [6, '材料', '自动附带当前论文和选中的文字，可以去掉；拖入或粘贴附件。'],
+    [7, '模型与权限', '模型菜单（切换模型、配置连接）；权限：询问或完全允许，按对话保存。'],
+  ],
+  goes: [['来源', '论文阅读', 'lit-reader'], ['AI 启动的运行', '运行记录', 'exp-runs'], ['模型设置', '设置 · AI 模型', 'settings']],
+  states: ['连接验证失败：说明原因，给出重新验证和模型设置。', '快速问答模式问整篇论文：提示“只能看到当前页”，并给出“用 Agent 读全文”。', '停止对话不会停止它启动的实验，卡片上保留“停止实验”。'],
+  changes: ['对话顶部显示模式（现在看不出来，导致划词转来的对话只能看到一页）。', '模型设置同时出现在设置的“AI 模型”分区。'],
+});
+
+/* ----- global ----- */
+add({
+  id: 'search', group: '全局', title: '搜索与命令', crumb: '全局 · 浮层', status: 'adjust',
+  lead: '一个入口找到任何对象、执行任何命令。在项目里默认搜当前项目，可以切到全部项目；输入 &gt; 进入命令模式。',
+  render: () => screen(projWin({ module: 'lit', side: libSide(), main: '<div class="mh"><h2>全部论文</h2></div>',
+    over: '<div class="scrim"></div><div class="dialog" style="left:330px;top:70px;width:620px"><div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)">' + P(1) + I('search', 16) + '<span style="font-size:15px">hallu<span style="border-left:1.5px solid var(--ink);margin-left:1px"></span></span><span style="margin-left:auto" class="seg">' + P(2) + '<span class="on">当前项目</span><span>全部项目</span></span></div>' +
+      '<div style="padding:6px">' + P(3) + '<div class="sec" style="padding:4px 8px 0"><h5>论文 3</h5></div>' + PAPERS.slice(4, 7).map((p, i) => '<div class="li ' + (i === 0 ? 'on' : '') + '" data-go="lit-reader">' + I('book-open', 14) + '<span class="tt">' + p[0] + '</span><span class="m">' + p[2] + '</span></div>').join('') +
+      '<div class="sec" style="padding:4px 8px 0"><h5>笔记 2</h5></div><div class="li" data-go="notes">' + I('notebook-pen', 14) + '<span class="tt">假设：视觉 token 剪枝会加剧物体<b>幻</b>觉</span></div><div class="li" data-go="notes">' + I('notebook-pen', 14) + '<span class="tt">POPE 三种设置</span><span class="m">正文匹配</span></div>' +
+      '<div class="sec" style="padding:4px 8px 0"><h5>运行 1</h5></div><div class="li" data-go="exp-runs">' + I('flask-conical', 14) + '<span class="tt">hallu-sweep · token-pruning-ablation</span></div>' +
+      '<div class="li muted">' + P(4) + I('command', 14) + '输入 &gt; 执行命令，例如 &gt; 新建笔记、&gt; 运行当前配置</div></div>' +
+      '<div class="dlg-f" style="justify-content:flex-start;gap:14px;color:var(--muted);font-size:11.5px"><span><kbd>↑</kbd> <kbd>↓</kbd> 选择</span><span><kbd>Enter</kbd> 打开</span><span>' + kb('Enter') + ' 在新标签页打开</span><span><kbd>Esc</kbd> 关闭</span></div></div>' })),
+  regions: () => [
+    [1, '输入框', k('K') + ' 打开，项目中心和项目窗口都能用；没输入时显示最近打开的对象和用过的命令。'],
+    [2, '范围', '在项目里默认当前项目；切到全部项目时，结果标出所属项目。'],
+    [3, '分组结果', '论文（标题、作者、文件名，之后加全文）、笔记（标题、正文）、实验和运行、稿件、AI 对话。'],
+    [4, '命令', '输入 &gt; 列出命令：打开模块、新建笔记或实验、运行当前配置、切换项目、打开设置、切换主题……每条显示快捷键。'],
+  ],
+  goes: [['论文', '论文阅读', 'lit-reader'], ['笔记', '笔记', 'notes'], ['运行', '运行记录', 'exp-runs']],
+  states: ['没有结果：说明搜索范围，给出“在全部项目里搜索”。', '结果太多：只显示每组前几条，“显示全部”展开。'],
+  changes: ['顶栏有搜索框入口（现在只能用快捷键）。', '能搜到文献文件夹里的论文、实验、运行、稿件和对话；新增命令模式。'],
+});
+
+add({
+  id: 'notify', group: '全局', title: '通知', crumb: '全局 · 浮层', status: 'todo',
+  lead: '集中显示需要你处理的事和动态，不弹窗打断工作。“需要处理”处理完自动消失；应用在后台时，运行结束和等待审批另发系统通知。',
+  render: () => screen(projWin({ module: 'exp', side: expSide('token-pruning-ablation'), main: expMain('概览', '<div class="sec muted">…</div>'),
+    over: '<div class="pop" style="right:' + (isMac() ? 36 : 120) + 'px;top:' + (isMac() ? 46 : 38) + 'px;width:380px;padding:0"><div class="dlg-h" style="padding:10px 12px">' + P(1) + '通知<span class="r seg"><span class="on">需要处理 3</span><span>动态</span></span></div>' +
+      [['sparkles', 'AI 等待审批', '修改 vcd-decoding/run.py · 对话「排查解码错误」', '查看', 'ai'], ['circle-x', '运行失败', 'vcd-decoding / run-04 · 退出码 1', '查看日志', 'exp-runs'], ['refresh-cw', '同步冲突', '组会纪要-1105.md · 两份都已保留', '处理', 'share']].map(([ic, t, s, a, g]) => '<div class="li" style="align-items:flex-start;padding:9px 12px;border-bottom:1px solid #f0f1f1;border-radius:0">' + I(ic, 15) + '<div style="flex:1;min-width:0"><div style="font-weight:600">' + t + '</div><div class="sub">' + s + '</div></div><span class="btn sm" data-go="' + g + '">' + a + '</span></div>').join('') +
+      '<div class="sec" style="padding:8px 12px"><h5>' + P(2) + '动态（点“动态”查看全部）</h5><div class="li">' + I('circle-check', 14, 'ok') + '<span class="tt">prune-0.50 完成 · F1 82.4</span><span class="m">昨天</span></div><div class="li">' + I('user-plus', 14) + '<span class="tt">李同学加入了「VLM 幻觉机制」</span><span class="m">昨天</span></div><div class="li">' + I('rss', 14) + '<span class="tt">新论文 12 篇</span><span class="m">今天</span></div></div><div class="dlg-f" style="padding:8px 12px">' + P(3) + '<span class="l muted" style="font-size:11.5px">在设置里选择哪些事件发系统通知</span><span class="btn sm">全部已读</span></div></div>' })),
+  regions: () => [
+    [1, '需要处理', 'AI 等待审批、运行失败、同步冲突、登录过期、数据迁移失败；处理完自动消失。项目中心首页的“待处理”是同一份。'],
+    [2, '动态', '运行结束、后台 AI 任务完成、有人加入项目、订阅有新论文、有新版本；可以标为已读。'],
+    [3, '系统通知', '应用在后台时，运行结束和等待审批另发系统通知；可以在设置里关闭。'],
+  ],
+  goes: [['审批', 'AI 助手', 'ai'], ['运行失败', '运行记录', 'exp-runs'], ['同步冲突', '成员与共享 · 同步', 'share']],
+  states: ['没有通知：“没有需要处理的事”。'],
+  changes: ['新增。现在运行状态、AI 任务、同步冲突分散在实验页、AI 面板和设置里。'],
+});
+
+add({
+  id: 'share', group: '全局', title: '成员与共享', crumb: '项目窗口 · 附属', status: 'adjust',
+  lead: '一个项目的成员、角色和同步，都在这一个地方管理。从顶栏“共享”、团队页“管理成员”、项目菜单进入。',
+  render: () => {
+    const body = '<div class="dlg-h">' + P(1) + '成员与共享 · VLM 幻觉机制<span class="r ibtn">' + I('x', 14) + '</span></div><div class="dlg-b">' +
+      '<div style="display:flex;gap:6px;margin-bottom:12px">' + P(2) + '<span class="inp" style="flex:1">' + I('smartphone', 13) + '输入手机号邀请成员</span><span class="btn" style="height:28px">编辑者' + I('chevron-down', 12) + '</span><span class="btn pri" style="height:28px">邀请</span></div>' +
+      '<div class="sec" style="padding:0"><h5>' + P(3) + '成员 4</h5></div>' +
+      [['张', '张一鸣（我）', '138****5021', '所有者', ''], ['李', '李同学', '138****2210', '编辑者', 'b'], ['王', '王老师', '139****8812', '审阅者', 'c'], ['?', '138****0001', '还没注册，首次登录后自动加入', '编辑者', 'd', true]].map(([a, n, s, r, c, p]) => '<div class="li" style="padding:7px 4px;border-bottom:1px solid #f0f1f1;border-radius:0"><span class="av ' + c + '">' + a + '</span><div style="min-width:0;flex:1"><div>' + n + '</div><div class="sub">' + s + '</div></div>' + (r === '所有者' ? '<span class="muted">所有者</span>' : '<span class="btn sm">' + r + I('chevron-down', 11) + '</span>') + (p ? '<span class="btn sm ghost">撤销邀请</span>' : (r === '所有者' ? '' : '<span class="ibtn">' + I('ellipsis', 14) + '</span>')) + '</div>').join('') +
+      '<div class="muted" style="font-size:11.5px;margin:8px 0 12px">' + P(4) + ' 所有者、编辑者可以修改全部内容；审阅者只能改笔记；查看者只读。</div>' +
+      '<div class="row" style="border-top:1px solid #f0f1f1">' + P(5) + I('cloud-check', 16, 'ok') + '<div class="lbl">已同步 · 2 分钟前<small>本机位置：文档/Scientify/VLM 幻觉机制 · 冲突 1 个</small></div><span class="btn sm">处理冲突</span><span class="btn sm">立即同步</span></div></div>' +
+      '<div class="dlg-f"><span class="l">' + P(6) + ' <span class="btn sm ghost">转让所有权…</span><span class="btn sm ghost danger">删除团队项目…</span></span><span class="btn pri">完成</span></div>';
+    const dlg = isMac() ? '<div class="dialog sheet" style="left:340px;top:50px;width:560px">' + body + '</div>' : '<div class="scrim"></div><div class="dialog" style="left:340px;top:90px;width:560px">' + body + '</div>';
+    return screen(projWin({ module: 'overview', top: { project: 'VLM 幻觉机制', team: true }, side: '<div class="sh">概览</div>', main: '<div class="mh"><h2>VLM 幻觉机制</h2></div>', over: dlg }));
+  },
+  regions: () => [
+    [1, isMac() ? 'sheet' : '对话框', '项目窗口里的短任务，完成后回到原处。'],
+    [2, '邀请', '手机号 + 角色；号码还没注册时保留邀请，对方首次登录后自动加入。只有所有者能邀请。'],
+    [3, '成员', '每人一行：头像、名字、部分隐藏的手机号、角色（所有者可以改）；更多菜单里移除；待注册的邀请可以撤销。不是所有者时只显示列表和“退出项目”。'],
+    [4, '角色说明', '一句话说明每个角色能做什么。'],
+    [5, '同步', '同步状态、本机位置、冲突数；处理冲突（逐条对比、选择保留哪份）、立即同步。'],
+    [6, '危险操作', '所有者：转让所有权、删除团队项目；成员：退出项目。都要再次确认。'],
+  ],
+  goes: [['处理冲突', '冲突对比（逐条）', 'notify'], ['个人项目“共享”', '同一窗口：开启多设备同步或共享给团队', 'center-projects']],
+  states: ['个人项目：窗口里是两个选项，“在我的多台设备上同步”和“共享给团队”。', '离线：成员列表只读，管理操作不可用并说明原因。'],
+  changes: ['移除成员、撤销邀请、改角色、退出、转让、删除的界面补齐（接口已有）。', '成员和同步合到一个窗口；现在同步在设置里，成员在团队页。'],
+});
+
+add({
+  id: 'settings', group: '全局', title: '设置', crumb: '全局 · ' + (isMac() ? '独立窗口' : '弹窗'), status: 'adjust',
+  lead: '应用级的偏好，改动立即生效。Windows 是应用内弹窗；macOS 是独立的设置窗口。共 9 个分区，这里展示“划词翻译”。',
+  render: () => {
+    const panes = [['settings', '通用'], ['sun', '外观'], ['keyboard', '快捷键'], ['sparkles', 'AI 模型'], ['languages', '划词翻译'], ['user', '账号'], ['cloud', '同步与协作'], ['database', '数据与备份'], ['info', '关于']];
+    const rows = '<div class="row">' + P(2) + '<div class="lbl">启用划词翻译<small>在任何软件里选中文字后翻译</small></div><span class="sw on"></span></div>' +
+      '<div class="row"><div class="lbl">选中文字后</div><span class="btn">显示翻译图标' + I('chevron-down', 12) + '</span></div>' +
+      '<div class="row">' + P(3) + '<div class="lbl">翻译剪贴板</div><kbd style="font-size:12px;padding:2px 8px">' + (isMac() ? '⌃⌘T' : 'Ctrl+Shift+T') + '</kbd><span class="btn sm ghost">修改</span></div>' +
+      '<div class="row"><div class="lbl">翻译成</div><span class="btn">简体中文' + I('chevron-down', 12) + '</span></div>' +
+      '<div class="row"><div class="lbl">问答使用的模型<small>转到 Scientify 后在项目里改用 Agent</small></div><span class="btn">跟随 AI 助手（deepseek-chat）' + I('chevron-down', 12) + '</span></div>' +
+      '<div class="row">' + P(4) + '<div class="lbl">' + (isMac() ? '关闭所有窗口后保留在菜单栏' : '关闭窗口后保留在托盘') + '<small>这样没有打开窗口时也能划词翻译</small></div><span class="sw on"></span></div>' +
+      (isMac() ? '<div class="row" style="background:#f6f9ff;margin:6px -8px 0;padding:9px 8px;border-radius:6px">' + P(5) + I('shield-check', 16, 'ok') + '<div class="lbl">辅助功能权限：已允许<small>读取选中的文字需要这项权限。更新到未签名的新版本后可能要重新允许。</small></div><span class="btn sm">打开系统设置</span></div>' : '<div class="row"><div class="lbl">不在这些软件里划词</div><span class="btn sm">' + I('plus', 12) + '添加软件</span></div>');
+    if (isMac()) {
+      const tabs = '<div class="mactabs">' + panes.map(([ic, l]) => '<span class="' + (l === '划词翻译' ? 'on' : '') + '">' + I(ic, 18) + l + '</span>').join('') + '</div>';
+      const setwin = '<div class="win" style="position:absolute;left:300px;top:60px;width:700px;height:540px"><div class="mactitle">' + tlights() + '划词翻译</div>' + '<div style="position:absolute;left:20px;top:36px">' + P(1) + '</div>' + tabs + '<div class="dlg-b" style="padding:12px 28px">' + rows + '</div></div>';
+      return screen('<div style="position:relative;width:1280px;height:740px"><div class="win inactive" style="width:1280px;height:740px">' + projTop() + '<div class="bd">' + rail('lit') + '<div class="side">' + libSide() + '</div><div class="main"></div></div></div>' + setwin + '</div>');
+    }
+    const nav = '<div class="setnav">' + P(1) + panes.map(([ic, l]) => '<div class="si ' + (l === '划词翻译' ? 'on' : '') + '">' + I(ic, 14) + l + '</div>').join('') + '</div>';
+    return screen(projWin({ module: 'lit', side: libSide(), main: '', over: '<div class="scrim"></div><div class="dialog" style="left:250px;top:70px;width:780px;height:560px"><div class="dlg-h">设置<span class="r ibtn">' + I('x', 14) + '</span></div><div style="display:flex;flex:1;min-height:0">' + nav + '<div class="dlg-b" style="padding:8px 22px">' + rows + '</div></div></div>' }));
+  },
+  regions: () => [
+    [1, '分区', '通用、外观、快捷键、AI 模型、划词翻译、账号、同步与协作、数据与备份、关于。' + (isMac() ? '窗口标题显示当前分区名，' + k(',') + ' 打开。' : k(',') + ' 打开，Esc 关闭。')],
+    [2, '开关', '改动立即生效，没有“保存”按钮；只有更改数据位置这类需要重启的操作有明确的按钮和说明。'],
+    [3, '快捷键', '点击后按新的组合键；和其他快捷键冲突时直接标出。'],
+    [4, isMac() ? '菜单栏常驻' : '托盘常驻', isMac() ? '关闭所有窗口后应用留在菜单栏，划词翻译继续可用；' + k('Q') + ' 才退出。' : '关闭窗口后留在托盘，划词翻译继续可用；托盘菜单里退出。'],
+    ...(isMac() ? [[5, '辅助功能权限', '显示是否已允许；没允许时这一行变成提醒，“打开系统设置”直接跳到辅助功能。']] : []),
+  ],
+  goes: [['AI 模型', 'AI 助手的模型设置（同一份）', 'ai'], ['账号', '登录 / 账号', 'login'], ['同步与协作', '成员与共享', 'share']],
+  states: ['数据与备份：有未保存内容或任务在运行时，迁移和恢复按钮不可用，并说明原因。'],
+  changes: ['新增“AI 模型”分区；“协作”拆为“账号”和“同步与协作”。', '改动一律立即生效（现在部分分区要点“保存偏好”）。', 'macOS 改为独立的设置窗口。'],
+});
+
+add({
+  id: 'translate', group: '全局', title: '划词翻译', crumb: '系统级', status: 'adjust',
+  lead: '在任何软件里选中文字就能翻译，追问的对话可以转到 Scientify 的 AI 助手继续。Windows 用托盘图标，macOS 用菜单栏图标；两个平台功能相同。',
+  render: () => {
+    const app = '<div class="app3" style="left:' + (isMac() ? 30 : 30) + 'px;top:' + (isMac() ? 20 : 10) + 'px;width:760px;height:470px"><div class="bar">' + (isMac() ? tlights() : '') + '<span class="url">arxiv.org/abs/2305.10355</span>' + (isMac() ? '' : wctl()) + '</div><div class="pg"><h3>Evaluating Object Hallucination in Large Vision-Language Models</h3><p style="color:#666;font-size:12px">Yifan Li, Yifan Du, Kun Zhou, Jinpeng Wang, Wayne Xin Zhao, Ji-Rong Wen</p><p>Inspired by the superior language abilities of large language models (LLM), large vision-language models (LVLM) have been recently explored by integrating powerful LLMs for improving the performance on complex multimodal tasks. <span class="selx">Despite the promising progress on LVLMs, we find that LVLMs suffer from the hallucination problem, i.e. they tend to generate objects that are inconsistent with the target images in the descriptions.</span> To investigate it, this work presents the first systematic study on object hallucination of LVLMs.</p><p>We conduct the evaluation experiments on several representative LVLMs, and show that they mostly suffer from severe object hallucination issue.</p></div></div>';
+    const tp = '<div class="tp" style="left:240px;top:' + (isMac() ? 250 : 240) + 'px">' + '<div class="tp-h">' + P(1) + '英语 → 简体中文' + I('chevron-down', 12) + '<span class="r"><span class="ibtn" title="固定">' + I('pin', 14) + '</span><span class="ibtn">' + I('x', 14) + '</span></span></div><div class="tp-src">Despite the promising progress on LVLMs, we find that LVLMs suffer from the hallucination problem…</div><div class="tp-dst">尽管大型视觉语言模型进展可观，我们发现它们存在幻觉问题，即倾向于在描述中生成与目标图像不一致的物体。</div><div class="tp-a">' + P(2) + '<span class="btn sm ghost">' + I('copy', 12) + '复制</span><span class="btn sm ghost">解释</span><span class="btn sm ghost">纠错</span><span class="btn sm ghost">原文</span></div><div class="tp-in">' + P(3) + '追问这段内容…<span style="margin-left:auto">' + I('send', 13) + '</span></div></div>';
+    const qa = '<div class="tp" style="left:' + (isMac() ? 640 : 600) + 'px;top:' + (isMac() ? 300 : 290) + 'px;width:340px"><div class="tp-h">' + P(4) + I('sparkles', 13) + ' 问答<span class="r"><span class="btn sm ghost" data-go="ai">' + I('arrow-up-right', 12) + '在 Scientify 中继续</span><span class="ibtn">' + I('x', 14) + '</span></span></div><div class="chat" style="padding:10px;gap:7px"><div class="msg u">这里说的 hallucination 和 NLP 里的有什么不同？</div><div class="ans"><p>这里专指“物体幻觉”：描述里出现图像中不存在的物体……</p></div></div><div class="tp-in">继续提问…</div></div>';
+    const trayMenu = [['monitor', '打开 Scientify'], ['languages', '翻译剪贴板', isMac() ? '⌃⌘T' : 'Ctrl+Shift+T'], ['pause', '暂停划词翻译'], ['sep'], ['settings', '翻译设置…'], ['refresh-cw', '修复取词'], ['sep'], ['x', '退出 Scientify']]
+      .map(([ic, l, kk]) => ic === 'sep' ? '<div class="sep"></div>' : '<div class="mi ' + (l === '翻译剪贴板' ? 'on' : '') + '">' + I(ic === 'pause' ? 'square' : ic, 14) + l + (kk ? '<kbd>' + kk + '</kbd>' : '') + '</div>').join('');
+    if (isMac()) {
+      return screen('<div style="position:relative;width:1240px;height:560px">' + app + tp + qa + '<div class="pop menu" style="right:150px;top:-14px;width:250px">' + P(5) + '<div class="mi dis">' + I('shield-check', 14) + '辅助功能：已允许</div><div class="sep"></div>' + trayMenu + '</div></div>', { menu: 'tray' });
+    }
+    return screen('<div style="position:relative;width:1240px;height:600px">' + app + tp + qa + '<div class="pop menu" style="right:40px;bottom:50px;width:250px">' + trayMenu + '</div></div>', { after: '<div class="taskbar">' + P(5) + '<span class="tray"><span class="on">' + I('languages', 15) + '</span>' + I('cloud', 14) + I('monitor', 14) + '</span><span>11:40<br>2026/11/4</span></div>', deskStyle: 'padding-bottom:56px' });
+  },
+  regions: () => [
+    [1, '翻译浮窗', '选中文字后出现（或按 ' + (isMac() ? '⌃⌘T' : 'Ctrl+Shift+T') + ' 翻译剪贴板）：语言、原文和译文、固定、移动和缩放。'],
+    [2, '操作', '复制、解释、纠错、只看原文。'],
+    [3, '追问', '在浮窗底部直接提问，打开问答浮窗。'],
+    [4, '问答浮窗', '“在 Scientify 中继续”把同一个对话转到 AI 助手：在项目里时改用 Agent，可以读整篇论文；不在项目里时进入收集箱。'],
+    [5, isMac() ? '菜单栏图标' : '托盘图标', '打开 Scientify、翻译剪贴板、暂停划词翻译、翻译设置、修复取词、退出。' + (isMac() ? '没有辅助功能权限时，菜单第一行提示并给出“允许…”。' : '')],
+  ],
+  goes: [['在 Scientify 中继续', 'AI 助手', 'ai'], ['翻译设置…', '设置 · 划词翻译', 'settings'], ['不在项目里时', '收集箱 · 对话', 'center-inbox']],
+  states: isMac() ? ['没有辅助功能权限：选中文字不会触发；菜单栏图标显示提醒，点击打开系统设置。', '应用没有打开窗口时仍然可用（关闭窗口后留在菜单栏）。'] : ['取词失败：托盘菜单“修复取词”重启取词组件。', '关闭窗口后仍然可用（留在托盘）。'],
+  changes: ['从浮窗转来的对话在项目里改用 Agent（现在停留在快速问答，问整篇论文时只看得到当前页）。', 'macOS：补上辅助功能授权的引导和状态，关闭窗口后应用留在菜单栏。现在 Mac 版关闭窗口即退出，划词也随之停止。'],
+});
+
+add({
+  id: 'menus', group: '全局', title: '菜单与快捷键', crumb: '全局', status: 'todo',
+  lead: 'macOS 用屏幕顶部的原生菜单栏；Windows 用标题栏左侧的应用菜单，结构相同。每个菜单项都显示快捷键，所有功能都能从菜单找到。',
+  render: () => {
+    const fileMenu = [['新建项目…', k('N')], ['打开项目…', k('O')], ['打开最近', '▸'], ['sep'], ['导入论文…', k('I')], ['新建笔记', k('Alt+N')], ['新建实验…', ''], ['sep'], ['关闭标签页', k('W')], ['关闭窗口', k('Shift+W')]]
+      .map(([l, kk]) => l === 'sep' ? '<div class="sep"></div>' : '<div class="mi ' + (l === '导入论文…' ? 'on' : '') + '">' + l + (kk === '▸' ? '<span class="sub">' + I('chevron-right', 12) + '</span>' : kk ? '<kbd>' + kk + '</kbd>' : '') + '</div>').join('');
+    if (isMac()) {
+      return screen('<div style="position:relative">' + projWin({ module: 'lit', side: libSide(), main: '<div class="mh"><h2>全部论文</h2></div>', h: 560 }) + '<div class="pop menu" style="left:70px;top:-18px;width:250px">' + P(1) + fileMenu + '</div></div>', { menu: '文件' });
+    }
+    const top = '<div class="pop menu" style="left:34px;top:36px;width:200px">' + ['文件', '编辑', '显示', '前往', '帮助'].map((m) => '<div class="mi ' + (m === '文件' ? 'on' : '') + '">' + m + '<span class="sub">' + I('chevron-right', 12) + '</span></div>').join('') + '</div><div class="pop menu" style="left:236px;top:36px;width:250px">' + P(1) + fileMenu + '<div class="sep"></div><div class="mi">设置<kbd>Ctrl+,</kbd></div><div class="mi">退出<kbd>Alt+F4</kbd></div></div>';
+    return screen(projWin({ module: 'lit', side: libSide(), main: '<div class="mh"><h2>全部论文</h2></div>', h: 560, over: top }));
+  },
+  regions: () => [[1, isMac() ? '菜单栏' : '应用菜单', isMac() ? 'Scientify、文件、编辑、显示、前往、窗口、帮助。' : '点击标题栏的 ' + I('menu', 13) + ' 或按 Alt 打开；子菜单和 macOS 菜单栏一致。']],
+  goes: [['帮助 → 重新查看引导', '首次使用引导', 'onboarding'], ['设置…', '设置', 'settings']],
+  states: [],
+  changes: ['新增。现在没有菜单，部分功能只能用快捷键找到。'],
+  extra: () => {
+    const rows = [
+      ...(isMac() ? [['Scientify', '关于 Scientify · 检查更新… · 设置… ' + k(',') + ' · 隐藏 ⌘H · 退出 ' + k('Q')]] : []),
+      ['文件', '新建项目… ' + k('N') + ' · 打开项目… ' + k('O') + ' · 打开最近 · 导入论文… ' + k('I') + ' · 新建笔记 ' + k('Alt+N') + ' · 新建实验… · 关闭标签页 ' + k('W') + ' · 关闭窗口 ' + k('Shift+W') + (isMac() ? '' : ' · 设置 Ctrl+, · 退出 Alt+F4')],
+      ['编辑', '撤销 ' + k('Z') + ' · 重做 ' + k('Shift+Z') + ' · 剪切 · 复制 · 粘贴 · 全选 · 查找 ' + k('F') + ' · 搜索或输入命令 ' + k('K')],
+      ['显示', '边栏 ' + (isMac() ? '⌃⌘S' : 'Ctrl+Shift+B') + ' · AI 助手 ' + k('Shift+L') + ' · 速记 ' + k('Shift+O') + ' · 详情 ' + k('Alt+I') + ' · 底部面板 ' + k('J') + ' · 放大 ' + k('+') + ' · 缩小 ' + k('-') + ' · ' + (isMac() ? '进入全屏 ⌃⌘F' : '全屏 F11')],
+      ['前往', '概览 ' + k('1') + ' · 文献 ' + k('2') + ' · 笔记 ' + k('3') + ' · 实验 ' + k('4') + ' · 写作 ' + k('5') + ' · 项目中心 ' + k('Shift+H') + ' · 后退 ' + k('[') + ' · 前进 ' + k(']')],
+      ...(isMac() ? [['窗口', '最小化 ⌘M · 缩放 · 项目中心 · 前置全部窗口']] : []),
+      ['帮助', '使用说明 · 快捷键 ' + k('/') + ' · 重新查看引导 · 反馈问题…' + (isMac() ? '' : ' · 关于 Scientify')],
+    ];
+    return '<h3>完整菜单</h3><table class="t" style="table-layout:auto;font-size:12.5px;margin-bottom:16px"><tr><th>菜单</th><th>项与快捷键</th></tr>' + rows.map(([m, v]) => '<tr><td><b>' + m + '</b></td><td style="white-space:normal">' + v + '</td></tr>').join('') + '</table>';
+  },
+});
+
+/* ---------- rendering ---------- */
+const STATUS = { have: ['have', '已有'], adjust: ['adjust', '需调整'], todo: ['todo', '待做'] };
+function renderToc(current) {
+  let html = '';
+  let group = '';
+  for (const p of PAGES) {
+    if (p.group !== group) { group = p.group; html += '<h4>' + group + '</h4>'; }
+    const st = p.status ? '<span class="tag ' + STATUS[p.status][0] + '">' + STATUS[p.status][1] + '</span>' : '';
+    html += '<a href="#' + p.id + '" class="' + (p.id === current ? 'on' : '') + '"><span>' + p.title + '</span>' + st + '</a>';
+  }
+  $('#x-toc').innerHTML = html;
+}
+function renderNotes(p) {
+  const v = (x) => (typeof x === 'function' ? x() : x) || [];
+  const regions = v(p.regions).map(([n, t, d]) => '<li><b class="pin">' + n + '</b><div><strong>' + t + '</strong><p>' + d + '</p></div></li>').join('');
+  const goes = v(p.goes).map(([from, to, id]) => '<li><span>' + from + '</span>' + I('arrow-right', 12) + '<a href="#' + id + '">' + to + '</a></li>').join('');
+  const list = (arr) => v(arr).map((s) => '<li>' + s + '</li>').join('');
+  return '<div class="notes"><div><h3>区域与入口</h3><ol>' + regions + '</ol>' + (p.extra ? p.extra() : '') + '</div><div>' +
+    (goes ? '<h3>从这里去</h3><ul class="goes">' + goes + '</ul>' : '') +
+    (v(p.states).length ? '<h3>状态</h3><ul>' + list(p.states) + '</ul>' : '') +
+    (v(p.changes).length ? '<h3>和现在相比</h3><ul>' + list(p.changes) + '</ul>' : '') + '</div></div>';
+}
+function fit() {
+  const stage = $('#x-stage');
+  const s = stage.querySelector(':scope > .scr');
+  if (!s) { stage.style.height = ''; return; }
+  s.style.transform = 'none';
+  const w = s.offsetWidth;
+  const h = s.offsetHeight;
+  const scale = Math.min(1, stage.clientWidth / w);
+  s.style.transform = 'scale(' + scale + ')';
+  stage.style.height = Math.ceil(h * scale) + 'px';
+}
+function fitMinis() {
+  document.querySelectorAll('.mini-box').forEach((box) => {
+    const s = box.querySelector('.scr');
+    if (!s) return;
+    s.style.transformOrigin = '0 0';
+    s.style.transform = 'none';
+    const scale = Math.min(1, box.clientWidth / s.offsetWidth);
+    s.style.transform = 'scale(' + scale + ')';
+    box.style.height = Math.ceil(s.offsetHeight * scale) + 'px';
+  });
+}
+function show() {
+  const id = location.hash.slice(1) || PAGES[0].id;
+  const index = Math.max(0, PAGES.findIndex((p) => p.id === id));
+  const p = PAGES[index];
+  document.querySelectorAll('.plat button').forEach((b) => b.classList.toggle('on', b.dataset.plat === plat));
+  renderToc(p.id);
+  $('#x-crumb').textContent = p.crumb || '';
+  const st = p.status ? ' <span class="tag ' + STATUS[p.status][0] + '">' + STATUS[p.status][1] + '</span>' : '';
+  $('#x-title').innerHTML = p.title + st;
+  $('#x-lead').innerHTML = p.lead || '';
+  if (p.doc) {
+    $('#x-stage').innerHTML = p.doc();
+    $('#x-notes').innerHTML = '';
+  } else {
+    $('#x-stage').innerHTML = p.render();
+    $('#x-notes').innerHTML = renderNotes(p);
+  }
+  const prev = PAGES[index - 1];
+  const next = PAGES[index + 1];
+  $('#x-prev').disabled = !prev;
+  $('#x-next').disabled = !next;
+  $('#x-prev').textContent = prev ? '← ' + prev.title : '';
+  $('#x-next').textContent = next ? next.title + ' →' : '';
+  $('#x-prev').onclick = () => prev && (location.hash = prev.id);
+  $('#x-next').onclick = () => next && (location.hash = next.id);
+  requestAnimationFrame(() => { fit(); fitMinis(); });
+  $('#x-main').scrollTop = 0;
+}
+document.addEventListener('click', (e) => {
+  const go = e.target.closest('[data-go]');
+  if (go && go.closest('.scr')) { e.preventDefault(); location.hash = go.dataset.go; }
+  const pb = e.target.closest('.plat button');
+  if (pb) { plat = pb.dataset.plat; localStorage.setItem('scientify-demo-platform', plat); show(); }
+});
+window.addEventListener('hashchange', show);
+window.addEventListener('resize', () => { fit(); fitMinis(); });
+show();
+</script>
+</body>
+</html>
