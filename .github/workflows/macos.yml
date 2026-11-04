@@ -83,7 +83,7 @@ jobs:
         run: |
           set -o pipefail
           log="$RUNNER_TEMP/cargo-test.log"
-          if ! cargo test --workspace --locked -- --test-threads=1 2>&1 | tee "$log"; then
+          if ! CARGO_TERM_COLOR=never cargo test --workspace --locked -- --test-threads=1 2>&1 | tee "$log"; then
             # Job logs need admin rights; annotations are visible on the run page to everyone.
             escape() { sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk 'BEGIN { ORS = "%0A" } { print }'; }
             summary=$(grep -E '^(error(\[E[0-9]+\])?: |test .+ \.\.\. FAILED$|thread .+ panicked at )' "$log" | head -40 || true)
@@ -97,7 +97,7 @@ jobs:
         run: |
           set -o pipefail
           log="$RUNNER_TEMP/clippy.log"
-          if ! cargo clippy --workspace --all-targets --locked --message-format=short -- -D warnings 2>&1 | tee "$log"; then
+          if ! CARGO_TERM_COLOR=never cargo clippy --workspace --all-targets --locked --message-format=short -- -D warnings 2>&1 | tee "$log"; then
             # One annotation per finding, pointing at the file and line.
             { grep -E '^[^ :]+:[0-9]+:[0-9]+: (error|warning)' "$log" || true; } | head -30 | while IFS= read -r line; do
               file=${line%%:*}; rest=${line#*:}; row=${rest%%:*}; rest=${rest#*:}; col=${rest%%:*}; message=${rest#*: }
