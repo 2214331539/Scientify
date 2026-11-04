@@ -3564,6 +3564,7 @@ name = "scientify"
 version = "0.3.0-alpha.4"
 dependencies = [
  "base64 0.22.1",
+ "block2",
  "bytes",
  "chrono",
  "dirs",
@@ -3572,6 +3573,7 @@ dependencies = [
  "libc",
  "notify",
  "objc2",
+ "objc2-foundation",
  "objc2-web-kit",
  "portable-pty",
  "reqwest 0.12.28",

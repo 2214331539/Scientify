@@ -9,11 +9,27 @@ use std::{
         Arc, Mutex,
     },
 };
+#[cfg(target_os = "macos")]
+use std::{sync::mpsc, time::Duration};
 use tauri::{
     webview::{NewWindowResponse, WebviewBuilder},
     Emitter, Manager, WebviewUrl,
 };
 use tauri_plugin_opener::OpenerExt;
+#[cfg(target_os = "macos")]
+use {
+    block2::Block,
+    objc2::{
+        define_class, ffi, msg_send,
+        rc::Retained,
+        runtime::{AnyObject, NSObject, ProtocolObject, Sel},
+        DefinedClass, MainThreadOnly,
+    },
+    objc2_foundation::{MainThreadMarker, NSHTTPURLResponse, NSObjectProtocol},
+    objc2_web_kit::{
+        WKNavigationDelegate, WKNavigationResponse, WKNavigationResponsePolicy, WKWebView,
+    },
+};
 fn trace(message: impl std::fmt::Display) {
     #[cfg(debug_assertions)]
     if let Some(report) = std::env::var_os("SCIENTIFY_NATIVE_REPORT") {
@@ -67,6 +83,7 @@ pub struct BrowserTab {
     pub loading: bool,
     pub can_back: bool,
     pub can_forward: bool,
+    pub http_status: Option<u16>,
     pub error: Option<String>,
 }
 #[derive(Default)]
@@ -183,6 +200,14 @@ pub fn allowed(url: &tauri::Url) -> bool {
         })
         && !matches!(url.port(), Some(1420 | 1421))
 }
+fn http_status_error(status: u16) -> Option<String> {
+    if status == 429 {
+        return Some(
+            "网站限制了当前访问（HTTP 429）。如页面要求验证，请在下方完成，或稍后重试。".into(),
+        );
+    }
+    (status >= 400).then(|| format!("网站返回 HTTP {status}，详情见下方网页。"))
+}
 fn update(app: &tauri::AppHandle, id: &str, change: impl FnOnce(&mut BrowserTab)) {
     let state = app.state::<BrowserState>();
     let snapshot = {
@@ -241,6 +266,7 @@ pub(crate) fn create_tab(
         loading: false,
         can_back: false,
         can_forward: false,
+        http_status: None,
         error: None,
     };
     tabs.insert(tab.id.clone(), tab.clone());
@@ -254,6 +280,7 @@ pub(crate) fn navigate(
     if let Some(view) = app.get_webview(&tab.id) {
         update(app, &tab.id, |t| {
             t.loading = true;
+            t.http_status = None;
             t.error = None;
         });
         return view.navigate(url).map_err(|e| e.to_string());
@@ -303,6 +330,7 @@ pub(crate) fn navigate(
         update(&a, &id, |t| {
             t.url = url.to_string();
             t.loading = true;
+            t.http_status = None;
             t.error = None;
         });
         true
@@ -397,21 +425,137 @@ pub(crate) fn navigate(
     update(app, &tab.id, |t| {
         t.url = url.to_string();
         t.loading = true;
+        t.http_status = None;
     });
     #[cfg(windows)]
     install_native(&view, protected)?;
     #[cfg(target_os = "macos")]
-    install_macos(&view);
+    install_macos(&view)?;
     view.navigate(url).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[cfg(target_os = "macos")]
-fn install_macos(view: &tauri::Webview) {
+struct HttpNavigationDelegateIvars {
+    original: Retained<ProtocolObject<dyn WKNavigationDelegate>>,
+    app: tauri::AppHandle,
+    id: String,
+}
+
+#[cfg(target_os = "macos")]
+define_class!(
+    #[unsafe(super(NSObject))]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = HttpNavigationDelegateIvars]
+    struct HttpNavigationDelegate;
+
+    unsafe impl NSObjectProtocol for HttpNavigationDelegate {}
+
+    unsafe impl WKNavigationDelegate for HttpNavigationDelegate {
+        #[unsafe(method(webView:decidePolicyForNavigationResponse:decisionHandler:))]
+        fn navigation_response(
+            &self,
+            webview: &WKWebView,
+            response: &WKNavigationResponse,
+            handler: &Block<dyn Fn(WKNavigationResponsePolicy)>,
+        ) {
+            unsafe {
+                if response.isForMainFrame() {
+                    if let Ok(http) = response.response().downcast::<NSHTTPURLResponse>() {
+                        if let Ok(status) = u16::try_from(http.statusCode()) {
+                            update(&self.ivars().app, &self.ivars().id, |tab| {
+                                tab.http_status = Some(status);
+                                tab.error = http_status_error(status);
+                            });
+                        }
+                    }
+                }
+                self.ivars()
+                    .original
+                    .webView_decidePolicyForNavigationResponse_decisionHandler(
+                        webview, response, handler,
+                    );
+            }
+        }
+    }
+
+    impl HttpNavigationDelegate {
+        #[unsafe(method(respondsToSelector:))]
+        fn responds_to_selector(&self, selector: Sel) -> bool {
+            selector
+                == objc2::sel!(webView:decidePolicyForNavigationResponse:decisionHandler:)
+                || self.ivars().original.respondsToSelector(selector)
+        }
+
+        #[unsafe(method(forwardingTargetForSelector:))]
+        fn forwarding_target_for_selector(&self, _selector: Sel) -> *mut AnyObject {
+            Retained::as_ptr(&self.ivars().original).cast_mut().cast()
+        }
+    }
+);
+
+#[cfg(target_os = "macos")]
+impl HttpNavigationDelegate {
+    fn new(
+        mtm: MainThreadMarker,
+        original: Retained<ProtocolObject<dyn WKNavigationDelegate>>,
+        app: tauri::AppHandle,
+        id: String,
+    ) -> Retained<Self> {
+        let delegate =
+            mtm.alloc::<Self>()
+                .set_ivars(HttpNavigationDelegateIvars { original, app, id });
+        unsafe { msg_send![super(delegate), init] }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn capture_http_status(
+    webview: &WKWebView,
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<(), String> {
+    unsafe {
+        let original = webview
+            .navigationDelegate()
+            .ok_or("浏览器导航代理不存在，无法读取 HTTP 状态。")?;
+        let mtm = MainThreadMarker::new().ok_or("浏览器导航代理必须在主线程安装。")?;
+        let delegate = HttpNavigationDelegate::new(mtm, original, app, id);
+        let protocol = ProtocolObject::from_ref(&*delegate);
+        webview.setNavigationDelegate(Some(protocol));
+        static ASSOCIATED_KEY: u8 = 0;
+        ffi::objc_setAssociatedObject(
+            webview as *const WKWebView as *mut AnyObject,
+            (&raw const ASSOCIATED_KEY).cast(),
+            Retained::as_ptr(&delegate) as *mut AnyObject,
+            ffi::OBJC_ASSOCIATION_RETAIN_NONATOMIC,
+        );
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn install_macos(view: &tauri::Webview) -> Result<(), String> {
     let app = view.app_handle().clone();
     let id = view.label().to_owned();
-    // Read WebKit state on its UI thread without replacing Wry's navigation
-    // delegate (which owns permission checks, downloads and popup handling).
+    let capture_app = app.clone();
+    let capture_id = id.clone();
+    let (capture_tx, capture_rx) = mpsc::sync_channel(1);
+    view.with_webview(move |native| unsafe {
+        let webview = &*(native.inner() as *const WKWebView);
+        let result = capture_http_status(webview, capture_app, capture_id);
+        if let Err(error) = &result {
+            trace(format!("HTTP status capture unavailable: {error}"));
+        }
+        let _ = capture_tx.send(result);
+    })
+    .map_err(|error| error.to_string())?;
+    capture_rx
+        .recv_timeout(Duration::from_secs(2))
+        .map_err(|_| "浏览器 HTTP 状态监测安装超时。".to_string())??;
+    // Read WebKit state on its UI thread. The navigation wrapper above forwards
+    // every unhandled selector to Wry's delegate so downloads, permissions and
+    // page lifecycle handling remain intact.
     std::thread::spawn(move || loop {
         let Some(view) = app.get_webview(&id) else {
             break;
@@ -452,6 +596,7 @@ fn install_macos(view: &tauri::Webview) {
         }
         std::thread::sleep(std::time::Duration::from_millis(250));
     });
+    Ok(())
 }
 
 pub(crate) fn perform_action(view: &tauri::Webview, action: &str) -> Result<(), String> {
@@ -619,6 +764,7 @@ fn install_native(view: &tauri::Webview, protected: Arc<AtomicBool>) -> Result<(
                     ));
                     update(&app, &label, |t| {
                         t.loading = false;
+                        t.http_status = u16::try_from(http).ok().filter(|status| *status >= 100);
                         t.error = navigation_error(ok.as_bool(), status, http);
                     });
                 }
@@ -664,13 +810,8 @@ fn navigation_error(
         return None;
     }
     // HTTP errors still carry a useful page, including Google's verification form.
-    if http == 429 {
-        return Some(
-            "网站限制了当前访问（HTTP 429）。如页面要求验证，请在下方完成，或稍后重试。".into(),
-        );
-    }
-    if http >= 400 {
-        return Some(format!("网站返回 HTTP {http}，详情见下方网页。"));
+    if let Some(error) = u16::try_from(http).ok().and_then(http_status_error) {
+        return Some(error);
     }
     if success {
         return None;
@@ -937,6 +1078,15 @@ mod tests {
             assert!(parse_proxy_url(invalid).is_err(), "{invalid}");
         }
     }
+
+    #[test]
+    fn maps_http_failures_without_hiding_the_verification_page() {
+        assert!(http_status_error(429).unwrap().contains("HTTP 429"));
+        assert!(http_status_error(403).unwrap().contains("HTTP 403"));
+        assert!(http_status_error(200).is_none());
+        assert!(http_status_error(399).is_none());
+    }
+
     #[cfg(windows)]
     #[test]
     fn distinguishes_http_verification_from_connection_failure_and_cancellation() {

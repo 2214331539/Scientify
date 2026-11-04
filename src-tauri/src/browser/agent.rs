@@ -104,41 +104,61 @@ pub(crate) fn operate(
         if let Some(error) = current.error {
             return Err(format!("网页加载失败：{error}"));
         }
+        if let Some(error) = current.http_status.and_then(http_status_error) {
+            return Err(format!("网页加载失败：{error}"));
+        }
         if !current.loading && !current.url.is_empty() {
             break;
         }
         std::thread::sleep(Duration::from_millis(100));
     }
     let view = app.get_webview(&tab.id).ok_or("网页已关闭。")?;
-    let (tx, rx) = mpsc::channel();
-    view.eval_with_callback(READ_PAGE, move |value| {
-        let _ = tx.send(value);
-    })
-    .map_err(|e| e.to_string())?;
-    let raw = loop {
+    // Rapid successive navigations can deliver page-load callbacks out of
+    // order. Re-extract until the document and tab URL describe the same page.
+    let page = loop {
         if cancelled() {
             return Err("网页任务已中止。".into());
         }
         if Instant::now() >= deadline {
-            return Err("读取网页超时，请重试。".into());
+            return Err("网页在读取期间持续变化，请等待页面稳定后重试。".into());
         }
-        scoped(app, owner, project, &tab.id)?;
-        match rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(value) => break value,
-            Err(mpsc::RecvTimeoutError::Timeout) => {}
-            Err(error) => return Err(error.to_string()),
+        let (tx, rx) = mpsc::channel();
+        view.eval_with_callback(READ_PAGE, move |value| {
+            let _ = tx.send(value);
+        })
+        .map_err(|e| e.to_string())?;
+        let raw = loop {
+            if cancelled() {
+                return Err("网页任务已中止。".into());
+            }
+            if Instant::now() >= deadline {
+                return Err("读取网页超时，请重试。".into());
+            }
+            scoped(app, owner, project, &tab.id)?;
+            match rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(value) => break value,
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(error) => return Err(error.to_string()),
+            }
+        };
+        if raw.len() > 256 * 1024 {
+            return Err("网页提取结果超过大小限制。".into());
         }
+        let page: Page = serde_json::from_str(&raw)
+            .map_err(|_| "网页正文提取失败，请在浏览器检查登录或验证码。")?;
+        let current = scoped(app, owner, project, &tab.id)?;
+        if let Some(error) = current.error {
+            return Err(format!("网页加载失败：{error}"));
+        }
+        if let Some(error) = current.http_status.and_then(http_status_error) {
+            return Err(format!("网页加载失败：{error}"));
+        }
+        let url = tauri::Url::parse(&page.url).map_err(|e| e.to_string())?;
+        if allowed(&url) && current.url == page.url && !current.loading {
+            break page;
+        }
+        std::thread::sleep(Duration::from_millis(100));
     };
-    if raw.len() > 256 * 1024 {
-        return Err("网页提取结果超过大小限制。".into());
-    }
-    let page: Page =
-        serde_json::from_str(&raw).map_err(|_| "网页正文提取失败，请在浏览器检查登录或验证码。")?;
-    let current = scoped(app, owner, project, &tab.id)?;
-    let url = tauri::Url::parse(&page.url).map_err(|e| e.to_string())?;
-    if !allowed(&url) || current.url != page.url || current.loading {
-        return Err("网页在读取期间发生跳转，请重试。".into());
-    }
     if page.text.trim().is_empty() {
         return Err("页面没有可提取的正文，可能需要登录或尚未加载完成。".into());
     }
