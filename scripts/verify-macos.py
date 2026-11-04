@@ -6,7 +6,9 @@ import os
 import pathlib
 import plistlib
 import subprocess
+import sys
 import time
+import traceback
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--native')
@@ -20,6 +22,17 @@ root.mkdir(parents=True, exist_ok=True)
 def run(*argv, **kwargs):
     return subprocess.run(argv, check=True, text=True, timeout=120, **kwargs)
 
+def annotate(title, text):
+    # Job logs need admin rights; annotations are visible on the run page to everyone.
+    body = text[-4000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+    print(f'::error title={title}::{body}', flush=True)
+
+def report_failure(kind, value, trace):
+    annotate('macOS verification', ''.join(traceback.format_exception(kind, value, trace)))
+    sys.__excepthook__(kind, value, trace)
+
+sys.excepthook = report_failure
+
 if args.native:
     report = root / 'native-report.json'
     env = dict(os.environ, SCIENTIFY_NATIVE_SMOKE='1',
@@ -29,13 +42,16 @@ if args.native:
         with (root / 'native.log').open('w') as log:
             subprocess.run([str(pathlib.Path(args.native).resolve())], env=env,
                            stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        print((root / 'native.log').read_text(errors='replace')[-20000:])
-        if report.exists():
-            print(report.read_text())
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        output = (root / 'native.log').read_text(errors='replace')
+        print(output[-20000:])
+        details = report.read_text() if report.exists() else '(no report)'
+        print(details)
+        annotate('native smoke', f'{error}\n{details}\n--- log tail ---\n{output[-2500:]}')
         raise
     result = json.loads(report.read_text())
     if not result['passed']:
+        annotate('native smoke report', json.dumps(result, ensure_ascii=False, indent=1))
         raise SystemExit(result)
     print(json.dumps(result, ensure_ascii=False))
 
