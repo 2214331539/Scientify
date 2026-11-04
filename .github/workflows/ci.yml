@@ -70,8 +70,8 @@ jobs:
           if ! cargo test --workspace --locked -- --test-threads=1 2>&1 | tee "$log"; then
             # Job logs need admin rights; annotations are visible on the run page to everyone.
             escape() { sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk 'BEGIN { ORS = "%0A" } { print }'; }
-            summary=$(grep -E '^(error(\[E[0-9]+\])?: |test .+ \.\.\. FAILED$|thread .+ panicked at )' "$log" | head -40)
-            details=$(awk '/^---- .* stdout ----$/ { show = 1 } show { print } /^failures:$/ { if (show) exit }' "$log" | head -80)
+            summary=$(grep -E '^(error(\[E[0-9]+\])?: |test .+ \.\.\. FAILED$|thread .+ panicked at )' "$log" | head -40 || true)
+            details=$(awk '/^---- .* stdout ----$/ { show = 1 } show { print } /^failures:$/ { if (show) exit }' "$log" | head -80 || true)
             echo "::error title=cargo test summary::$(printf '%s\n' "$summary" | escape)"
             if [ -n "$details" ]; then echo "::error title=cargo test failures::$(printf '%s\n' "$details" | escape)"; fi
             exit 1
