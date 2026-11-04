@@ -201,7 +201,8 @@ async fn choose_directory(app: tauri::AppHandle) -> Result<Option<String>, Strin
 }
 
 // Generate native application metadata once, shared by production and IPC tests.
-#[cfg(test)]
+// On macOS the macro embeds Info.plist under a fixed symbol, so a second
+// invocation in the same crate fails to link.
 fn app_context<R: tauri::Runtime>() -> tauri::Context<R> {
     tauri::generate_context!()
 }
@@ -212,7 +213,7 @@ pub fn run() {
     let isolated_smoke = std::env::var_os("SCIENTIFY_NATIVE_SMOKE").is_some();
     #[cfg(not(debug_assertions))]
     let isolated_smoke = false;
-    let mut context = tauri::generate_context!();
+    let mut context = app_context::<tauri::Wry>();
     // Resolve and migrate before WebView2 opens any profile in the old directory.
     context.config_mut().app.windows[0].create = false;
     let builder = if isolated_smoke {
