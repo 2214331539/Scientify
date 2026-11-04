@@ -78,7 +78,20 @@ jobs:
           dotnet test vendor/yita/tests/Yita.Native.Mac.Tests -c Release
           dotnet test vendor/yita/tests/Yita.Desktop.Tests -c Release
       - run: cargo fmt --all --check
-      - run: cargo test --workspace --locked -- --test-threads=1
+      - name: Rust tests
+        shell: bash
+        run: |
+          set -o pipefail
+          log="$RUNNER_TEMP/cargo-test.log"
+          if ! cargo test --workspace --locked -- --test-threads=1 2>&1 | tee "$log"; then
+            # Job logs need admin rights; annotations are visible on the run page to everyone.
+            escape() { sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk 'BEGIN { ORS = "%0A" } { print }'; }
+            summary=$(grep -E '^(error(\[E[0-9]+\])?: |test .+ \.\.\. FAILED$|thread .+ panicked at )' "$log" | head -40)
+            details=$(awk '/^---- .* stdout ----$/ { show = 1 } show { print } /^failures:$/ { if (show) exit }' "$log" | head -80)
+            echo "::error title=cargo test summary::$(printf '%s\n' "$summary" | escape)"
+            if [ -n "$details" ]; then echo "::error title=cargo test failures::$(printf '%s\n' "$details" | escape)"; fi
+            exit 1
+          fi
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Build native verification app
         run: node node_modules/@tauri-apps/cli/tauri.js build --debug --no-bundle --ci -- --locked
