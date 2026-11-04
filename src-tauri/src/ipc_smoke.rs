@@ -125,7 +125,10 @@ fn assistant_context_obeys_generated_acl_and_reads_only_the_bound_library_and_no
 fn runtime_window_icon_uses_high_resolution_frame() {
     let context: tauri::Context<MockRuntime> = crate::app_context();
     let icon = context.default_window_icon().expect("application icon");
-    assert_eq!((icon.width(), icon.height()), (256, 256));
+    // Windows takes the first ICO frame (256 px) and macOS a 512 px PNG; a
+    // 16 px frame here would be upscaled into a blurry window icon.
+    assert_eq!(icon.width(), icon.height());
+    assert!(icon.width() >= 256, "window icon is {} px", icon.width());
 }
 
 #[test]
