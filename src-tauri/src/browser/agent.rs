@@ -104,6 +104,9 @@ pub(crate) fn operate(
         if let Some(error) = current.error {
             return Err(format!("网页加载失败：{error}"));
         }
+        if let Some(error) = current.http_status.and_then(http_status_error) {
+            return Err(format!("网页加载失败：{error}"));
+        }
         if !current.loading && !current.url.is_empty() {
             break;
         }

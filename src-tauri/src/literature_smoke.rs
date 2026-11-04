@@ -276,7 +276,8 @@ fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String
         crate::browser::get(app, "main", &tab.id).is_ok_and(|t| {
             t.title == "Verification page"
                 && !t.loading
-                && (!cfg!(windows) || t.error.as_ref().is_some_and(|e| e.contains("429")))
+                && t.http_status == Some(429)
+                && t.error.as_ref().is_some_and(|error| error.contains("429"))
         })
     })?;
     let mut probes = vec![crate::browser::get(app, "main", &tab.id)?];

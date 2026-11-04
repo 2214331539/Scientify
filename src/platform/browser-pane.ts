@@ -9,6 +9,7 @@ export type BrowserTab = {
   loading: boolean;
   canBack: boolean;
   canForward: boolean;
+  httpStatus?: number | null;
   error: string | null;
   background?: boolean;
 };
