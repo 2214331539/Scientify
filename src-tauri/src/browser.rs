@@ -6,10 +6,11 @@ use std::{
     collections::HashMap,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc, Arc, Mutex,
+        Arc, Mutex,
     },
-    time::Duration,
 };
+#[cfg(target_os = "macos")]
+use std::{sync::mpsc, time::Duration};
 use tauri::{
     webview::{NewWindowResponse, WebviewBuilder},
     Emitter, Manager, WebviewUrl,
