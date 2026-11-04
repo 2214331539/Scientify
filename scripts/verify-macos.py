@@ -91,7 +91,7 @@ if args.bundle:
         run('spctl', '--assess', '--type', 'execute', '--verbose=2', str(app))
     # These paths belong to the throwaway runner, never a developer's Mac.
     run(str(binary), '--scientify-migrate-storage')
-    data = pathlib.Path.home() / 'Library/Application Support/com.scientify.desktop'
+    data = pathlib.Path.home() / 'Library/Application Support/Scientify'
     manifest = json.loads((data / 'scientify-storage.json').read_text())
     container = pathlib.Path(manifest['directory'])
     if not container.is_relative_to(data):
