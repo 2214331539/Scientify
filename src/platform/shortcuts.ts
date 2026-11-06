@@ -1,3 +1,5 @@
+import { isMacOS } from './os';
+
 export type ShortcutScope = 'global' | 'editor' | 'assistant';
 
 export type ShortcutCommand =
@@ -159,7 +161,7 @@ export function normalizeShortcut(value: string) {
 export function formatShortcut(value: string) {
   const normalized = normalizeShortcut(value);
   if (!normalized) return '未设置';
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+  const isMac = isMacOS();
   return normalized
     .split('+')
     .map((part) => (part === 'Mod' ? (isMac ? '⌘' : 'Ctrl') : part === 'Alt' && isMac ? '⌥' : part))

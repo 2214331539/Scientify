@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import './layout.css';
+import { platformClass } from '../../platform/os';
 export const WORKSPACE_RAIL_WIDTH = 48;
 
 /** Layout owns geometry; project data, navigation and editors remain in their existing owners. */
@@ -22,7 +23,7 @@ export function AppShell({
 }) {
   return (
     <div
-      className={`app-shell research-shell${variant === 'launcher' ? ' launcher-shell' : ''}`}
+      className={`app-shell research-shell ${platformClass()}${variant === 'launcher' ? ' launcher-shell' : ''}`}
       style={
         {
           '--dock-width': `${rightWidth}px`,

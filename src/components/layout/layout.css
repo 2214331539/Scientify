@@ -9,6 +9,34 @@
   padding: 0 12px;
   background: var(--sf-surface-canvas);
 }
+
+/* macOS uses the native title bar and traffic lights. The web chrome keeps a
+   quieter, slightly taller content header instead of imitating Windows controls. */
+.platform-macos.app-shell.research-shell:not(.launcher-shell) {
+  grid-template-rows: 48px minmax(0, 1fr) 28px;
+}
+
+.platform-macos .app-topbar {
+  min-height: 48px;
+  padding: 0 14px;
+  gap: 14px;
+  background: var(--sf-surface-canvas);
+  border-bottom: 1px solid var(--sf-border-subtle);
+}
+
+.platform-macos .app-topbar .brand {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.platform-macos .window-controls {
+  display: none;
+}
+
+.platform-macos .statusbar {
+  min-height: 28px;
+  padding-inline: 14px;
+}
 .research-shell .native-topbar {
   padding-right: 0;
 }

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { WindowControls } from './WindowControls';
 
 const native = vi.hoisted(() => ({ enabled: true, maximized: false }));
+const platform = vi.hoisted(() => ({ mac: false }));
 const win = vi.hoisted(() => ({
   minimize: vi.fn(async () => {}),
   toggleMaximize: vi.fn(async () => {
@@ -15,12 +16,14 @@ const win = vi.hoisted(() => ({
   onResized: vi.fn(async () => () => {}),
 }));
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => native.enabled }));
+vi.mock('../../platform/os', () => ({ isMacOS: () => platform.mac }));
 vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => win }));
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   native.enabled = true;
   native.maximized = false;
+  platform.mac = false;
 });
 
 it('uses native controls and requests a guarded close rather than destroying the window', async () => {
@@ -39,6 +42,13 @@ it('uses native controls and requests a guarded close rather than destroying the
 
 it('does not show or call desktop window controls in browser preview', () => {
   native.enabled = false;
+  render(<WindowControls />);
+  expect(screen.queryByRole('group', { name: '窗口控制' })).toBeNull();
+  expect(win.isMaximized).not.toHaveBeenCalled();
+});
+
+it('uses native macOS traffic lights instead of Windows-style controls', () => {
+  platform.mac = true;
   render(<WindowControls />);
   expect(screen.queryByRole('group', { name: '窗口控制' })).toBeNull();
   expect(win.isMaximized).not.toHaveBeenCalled();

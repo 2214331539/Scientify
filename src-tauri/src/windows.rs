@@ -72,7 +72,9 @@ pub async fn open_project_window(
             .title("Scientify · Workspace")
             .inner_size(1440.0, 940.0)
             .min_inner_size(1000.0, 680.0)
-            .decorations(false)
+            // Windows uses the shared custom chrome; macOS keeps its native
+            // title bar and traffic lights.
+            .decorations(cfg!(target_os = "macos"))
             .disable_drag_drop_handler()
             .maximized(true)
             .on_page_load(|_, event| trace(format!("page {:?} {}", event.event(), event.url())))

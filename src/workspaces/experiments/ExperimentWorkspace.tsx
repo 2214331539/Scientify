@@ -30,6 +30,7 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import { getFileRuntime, getFileSession } from '../../editor/sessions';
 import { FileResources, FileWorkspace } from '../files/FileWorkspace';
 import { t, translateError } from '../../i18n';
+import { operatingSystem } from '../../platform/os';
 import { GitWorkspace, type GitView } from './GitWorkspace';
 import { CodeSearch, type SearchHit } from './CodeSearch';
 import { clearCodeRoot, codeContext, selectExperiment, useCodeWorkspace } from './code-context';
@@ -332,9 +333,11 @@ export function ExperimentWorkspace({
         owner,
         pythonFile
           ? 'python'
-          : navigator.platform.toLowerCase().includes('win')
-            ? 'powershell'
-            : 'bash',
+          : operatingSystem() === 'macos'
+            ? 'zsh'
+            : operatingSystem() === 'windows'
+              ? 'powershell'
+              : 'bash',
         pythonFile ? currentPath! : undefined,
       );
       if (info && alive.current && currentRoot.current === root) {

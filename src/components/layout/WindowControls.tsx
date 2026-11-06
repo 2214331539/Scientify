@@ -4,14 +4,16 @@ import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Copy, Minus, Square, X } from 'lucide-react';
 import { Button } from '../primitives';
+import { isMacOS } from '../../platform/os';
 
 /** Close requests go through App's existing unsaved-work guard. */
 export function WindowControls() {
   const native = isTauri();
+  const showCustomControls = native && !isMacOS();
   const [maximized, setMaximized] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
-    if (!native) return;
+    if (!showCustomControls) return;
     const win = getCurrentWindow();
     let active = true;
     const sync = () =>
@@ -27,8 +29,8 @@ export function WindowControls() {
       active = false;
       void listener.then((unlisten) => unlisten()).catch(() => {});
     };
-  }, [native]);
-  if (!native) return null;
+  }, [showCustomControls]);
+  if (!showCustomControls) return null;
   const win = getCurrentWindow();
   const run = (action: () => Promise<void>) => {
     setError('');
