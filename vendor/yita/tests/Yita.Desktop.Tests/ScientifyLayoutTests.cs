@@ -20,6 +20,44 @@ namespace Yita.Desktop.Tests;
 public sealed class ScientifyLayoutTests
 {
     [AvaloniaFact]
+    public void PopupStartsCompactAndKeepsItsWidthWhileTranslationStreams()
+    {
+        var popup = new TranslationPopupWindow();
+        try
+        {
+            var settings = (YitaSettings.Default with { UiLanguage = "zh-CN" }).ToOriginal();
+            popup.ApplySettings(settings);
+            ScientifyAppearance.Apply(popup.Resources, settings, false);
+            popup.FindControl<Button>("ScientifyAssistantButton")!.IsVisible = true;
+            popup.Show();
+            popup.BeginTranslation("A short sentence to translate.");
+            popup.UpdateLayout();
+            var loadingHeight = popup.Height;
+            var width = popup.Width;
+            Assert.InRange(loadingHeight, 100, 160);
+            AssertToolbarAboveContent(popup);
+            popup.SetText("一个短句。");
+            popup.CompleteTranslation();
+            popup.UpdateLayout();
+            Assert.Equal(width, popup.Width);
+            Assert.True(popup.Height <= 192); // One line fits without an inner scroll.
+            ReferenceLayoutTests.Capture(popup, "scientify-compact-short");
+            popup.FindControl<TextBox>("InlineQuestionTextBox")!.Text = "不要清除草稿";
+            popup.SetText(string.Concat(Enumerable.Repeat("不断流入的译文应保持宽度稳定，正文可以滚动。\n", 40)));
+            popup.UpdateLayout();
+            Assert.Equal(width, popup.Width);
+            Assert.InRange(popup.Height, popup.MinHeight, popup.MaxHeight);
+            Assert.Equal("不要清除草稿", popup.FindControl<TextBox>("InlineQuestionTextBox")!.Text);
+            ReferenceLayoutTests.Capture(popup, "scientify-compact-long");
+            popup.BeginTranslation("Another short selection.");
+            popup.UpdateLayout();
+            Assert.Equal(loadingHeight, popup.Height);
+            ReferenceLayoutTests.Capture(popup, "scientify-compact-loading");
+        }
+        finally { popup.Close(); }
+    }
+
+    [AvaloniaFact]
     public void TranslationInputSendsOnEnterAndKeepsShiftEnterForNewlines()
     {
         var popup = new TranslationPopupWindow();
@@ -107,6 +145,7 @@ public sealed class ScientifyLayoutTests
                 Assert.True(input.Bounds.Width >= 100, "The compact popup must leave room to type a question.");
                 foreach (var name in new[] { "ActionBarSurface", "InlineQuestionTextBox", "ScientifyAssistantButton", "CloseButton" })
                     AssertFits(popup, popup.FindControl<Control>(name)!);
+                AssertToolbarAboveContent(popup);
                 text.ClearSelection();
                 ReferenceLayoutTests.Capture(popup, $"scientify-{(dark ? "dark" : "light")}-{width}x{height}");
                 text.SelectAll();
@@ -166,6 +205,18 @@ public sealed class ScientifyLayoutTests
             app.RequestedThemeVariant = previousTheme;
             ReferenceTheme.Apply(app.Resources, Yita.Settings.AppSettings.Default);
         }
+    }
+
+    private static void AssertToolbarAboveContent(TranslationPopupWindow window)
+    {
+        var toolbar = window.FindControl<Border>("ActionBarSurface")!;
+        var surface = window.FindControl<Border>("PopupSurface")!;
+        var toolbarTop = toolbar.TranslatePoint(default, window)!.Value.Y;
+        var contentTop = surface.TranslatePoint(default, window)!.Value.Y;
+        Assert.True(toolbarTop + toolbar.Bounds.Height + 4 <= contentTop,
+            "Language and window controls must remain in a separate toolbar above the reading card.");
+        AssertFits(window, toolbar);
+        AssertFits(window, surface);
     }
 
     private static void AssertFits(Window window, Control control)

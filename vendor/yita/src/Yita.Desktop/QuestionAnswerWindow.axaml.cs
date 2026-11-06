@@ -52,6 +52,11 @@ internal sealed partial class QuestionAnswerWindow : Window
         SizePresetBar.PresetSelected += (_, preset) => WindowSizePresetBar.ApplyConversationPreset(this, preset);
         if (chat) { Width = 430; Height = 320; MinWidth = 340; MinHeight = 220; PinButton.IsChecked = true; }
         SizeChanged += (_, _) => UpdateSurfaceClip();
+        // Tables are laid out at the transcript width, so they follow it.
+        TranscriptScroll.SizeChanged += (_, e) =>
+        {
+            if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 1 && _transcript.Contains('|')) RenderTranscript();
+        };
         Opened += (_, _) => { WindowSizePresetBar.Constrain(this); ReferenceMotion.Reveal(Surface); };
         Closed += (_, _) => { _closed = true; _requests.Dispose(); };
         if (ScientifyBridge.IsEmbedded) Opened += (_, _) => StartHostConversation();
@@ -193,10 +198,16 @@ internal sealed partial class QuestionAnswerWindow : Window
                 TranscriptText.Inlines.Add(new Run("\n") { FontSize = 5.5 });
             }
             ReferenceTypography.Append(TranscriptText.Inlines, Role(turn), _settings, FontWeight.Bold);
-            ReferenceTypography.Append(TranscriptText.Inlines, "\n" + turn.Content, _settings);
+            TranscriptText.Inlines.Add(new LineBreak());
+            if (turn.Role == "assistant") TranscriptMarkdown.Append(TranscriptText.Inlines, turn.Content, _settings, TranscriptText.FontSize, TranscriptWidth());
+            else ReferenceTypography.Append(TranscriptText.Inlines, turn.Content, _settings);
         }
         string Role(ConversationTurn turn) => turn.Role == "user" ? (_settings.UiLanguage == "zh-CN" ? "你" : "You") : "AI";
     }
+
+    // Text margin and the vertical scrollbar; before the first layout, estimate from the window.
+    private double TranscriptWidth() => TranscriptScroll.Bounds.Width > 0
+        ? TranscriptScroll.Bounds.Width - 24 : Width - 64;
 
     private async void SendClick(object? sender, RoutedEventArgs e) => await AskAsync(QuestionInputTextBox.Text ?? "");
     private void StopClick(object? sender, RoutedEventArgs e)

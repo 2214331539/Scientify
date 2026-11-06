@@ -24,14 +24,22 @@ public static class PopupPlacementResolver
 
     public static (double X, double Y) ResolveForScale(
         SelectionAnchor anchor, PopupSize logicalSize, WorkArea pixelWorkArea,
-        double scaling, PopupOffset? logicalOffset = null)
+        double scaling, PopupOffset? logicalOffset = null, bool pointerAnchor = true)
     {
         scaling = ValidScale(scaling);
-        var offset = logicalOffset is { IsValid: true } saved
-            ? new PopupOffset(saved.X * scaling, saved.Y * scaling)
-            : (PopupOffset?)null;
-        return Resolve(anchor, new PopupSize(logicalSize.Width * scaling, logicalSize.Height * scaling),
-            pixelWorkArea, offset);
+        var size = new PopupSize(logicalSize.Width * scaling, logicalSize.Height * scaling);
+        if (logicalOffset is { IsValid: true } saved)
+            return Resolve(anchor, size, pixelWorkArea, new PopupOffset(saved.X * scaling, saved.Y * scaling));
+        // A selection range anchor keeps the popup below the selected text.
+        if (!pointerAnchor) return Resolve(anchor, size, pixelWorkArea);
+        // Beside the release pointer, never under it: the window's transparent
+        // shadow and toolbar margin would otherwise swallow the next click or scroll.
+        var offset = new PopupOffset(4 * scaling, -16 * scaling);
+        if (anchor.X + offset.X + size.Width > pixelWorkArea.Right - 8)
+            offset = offset with { X = -size.Width - 4 * scaling };
+        if (anchor.Y + offset.Y + size.Height > pixelWorkArea.Bottom - 8)
+            offset = offset with { Y = -size.Height + 16 * scaling };
+        return Resolve(anchor, size, pixelWorkArea, offset);
     }
 
     private static double ValidScale(double scale) => double.IsFinite(scale) && scale > 0 ? scale : 1;

@@ -27,6 +27,7 @@ public sealed partial class TranslationPopupWindow : Window
     private SelectionIssue? _selectionIssue;
     private bool _userSized;
     private bool _hasAnchor;
+    private bool _pointerAnchor = true;
     private bool _translationComplete;
     private AppSettings _settings = AppSettings.Default;
     private ExplanationAction? _lastExplanation;
@@ -48,7 +49,7 @@ public sealed partial class TranslationPopupWindow : Window
         DesktopFloatingWindowBehavior.Apply(this);
         ReferenceTheme.Apply(Resources, _settings);
         SizeChanged += (_, _) => ConstrainToScreen();
-        Opened += (_, _) => ReferenceMotion.Reveal(PopupRoot, scale: true);
+        Opened += (_, _) => ReferenceMotion.Reveal(PopupRoot);
         Closed += (_, _) => { TranslationRequests.Dispose(); ExplanationRequests.Dispose(); };
         TranslationText.AddHandler(PointerReleasedEvent, ReadingPointerReleased, Avalonia.Interactivity.RoutingStrategies.Bubble, true);
     }
@@ -74,7 +75,7 @@ public sealed partial class TranslationPopupWindow : Window
         TranslationText.FontSize = ExplanationText.FontSize = settings.DefaultTranslationFontSize;
         TranslationText.LineHeight = ExplanationText.LineHeight = Math.Round(settings.DefaultTranslationFontSize * 1.55, 2);
         TranslationText.FontFamily = ExplanationText.FontFamily = ReferenceTypography.CreateFont(settings.EnglishTranslationFontFamily);
-        BubbleTail.IsVisible = PopupVisualStyleCatalog.IsBubble(settings.PopupVisualStyle);
+        BubbleTail.IsVisible = !ScientifyBridge.IsEmbedded && PopupVisualStyleCatalog.IsBubble(settings.PopupVisualStyle);
         var sculpted = PopupVisualStyleCatalog.IsBubbleV2(settings.PopupVisualStyle) || PopupVisualStyleCatalog.IsBubbleV3(settings.PopupVisualStyle);
         PopupSurface.Margin = BubbleTail.IsVisible ? new Thickness(sculpted ? 14 : 12, sculpted ? 4 : 3) : new Thickness(0);
         BubbleTail.Data = Geometry.Parse(sculpted ? "M0,8 C4,5 8,2 16,0 C13,5 13,11 16,16 C8,14 4,11 0,8 Z" : "M0,0 L18,8 L0,16 Z");
@@ -108,12 +109,15 @@ public sealed partial class TranslationPopupWindow : Window
         ToolTip.SetTip(CloseButton, chinese ? "关闭翻译" : "Close");
         ToolTip.SetTip(DragHandle, chinese ? "拖动窗口" : "Drag to move");
         InlineQuestionTextBox.Watermark = chinese ? "对此提问…" : "Ask about this…";
-        AskButton.Content = chinese ? "提问" : "Ask";
+        ToolTip.SetTip(AskButton, chinese ? "发送问题 · Enter" : "Send question · Enter");
+        Avalonia.Automation.AutomationProperties.SetName(AskButton, chinese ? "发送问题" : "Send question");
+        ToolTip.SetTip(DeepSeekChatButton, chinese ? "打开 AI 对话" : "Open AI conversation");
+        Avalonia.Automation.AutomationProperties.SetName(DeepSeekChatButton, chinese ? "打开 AI 对话" : "Open AI conversation");
         ScientifyAssistantButton.IsVisible = ScientifyBridge.IsEmbedded;
         if (ScientifyBridge.IsEmbedded)
         {
             InlineQuestionTextBox.MinWidth = 60;
-            DeepSeekChatButton.MinWidth = 48;
+            DeepSeekChatButton.MinWidth = 0;
         }
         ToolTip.SetTip(ScientifyAssistantButton, chinese ? "在 Scientify 中继续此会话" : "Continue in Scientify");
         Avalonia.Automation.AutomationProperties.SetName(ScientifyAssistantButton, chinese ? "在 Scientify 中继续此会话" : "Continue in Scientify");
@@ -240,19 +244,23 @@ public sealed partial class TranslationPopupWindow : Window
 
     public void PlaceNear(SelectionRequest request, SelectionResult result, PopupOffset? savedOffset = null)
     {
-        var anchor = result.Bounds is { IsValid: true, Width: > 0, Height: > 0 } bounds
-            ? bounds.LowerLeft : request.GestureBounds?.LowerLeft ?? request.Pointer;
+        // A mouse release is the user's stable spatial reference; accessibility bounds may cover
+        // a whole paragraph. A shortcut has no gesture, so a plausible selection range wins there.
+        _pointerAnchor = request.Trigger == SelectionTrigger.MouseGesture
+            || result.Bounds is not { IsValid: true, Width: > 0, Height: > 0 and <= 600 };
+        var anchor = _pointerAnchor ? request.Pointer : result.Bounds!.Value.LowerLeft;
         if (!anchor.IsFinite) return;
         CurrentAnchor = new SelectionAnchor(anchor.X, anchor.Y);
         _hasAnchor = true;
+        _dragging = false;
         _preferredOffset = savedOffset;
         var screen = Screens.ScreenFromPoint(new PixelPoint((int)anchor.X, (int)anchor.Y)) ?? Screens.Primary;
         if (screen is not null)
         {
-            MaxWidth = Math.Min(820, screen.WorkingArea.Width / screen.Scaling - 16);
-            MaxHeight = Math.Min(600, screen.WorkingArea.Height / screen.Scaling - 16);
-            MinWidth = Math.Min(380, MaxWidth);
-            MinHeight = Math.Min(192, MaxHeight);
+            MaxWidth = Math.Min(640, screen.WorkingArea.Width / screen.Scaling - 16);
+            MaxHeight = Math.Min(540, screen.WorkingArea.Height / screen.Scaling - 16);
+            MinWidth = Math.Min(340, MaxWidth);
+            MinHeight = Math.Min(124, MaxHeight);
             Width = Math.Clamp(Width, MinWidth, MaxWidth);
         }
         PlaceAtPreferredOffset();
@@ -268,15 +276,21 @@ public sealed partial class TranslationPopupWindow : Window
         if (_userSized) return;
         var content = ExplanationOverlay.IsVisible ? ExplanationText : TranslationText;
         var glass = !ScientifyBridge.IsEmbedded && PopupVisualStyleCatalog.IsBubbleV3(_settings.PopupVisualStyle);
-        var calculated = PopupAutoSizeCalculator.Calculate(ReferenceTypography.GetText(content), content.FontSize, MaxWidth, MaxHeight,
-            additionalHorizontalPadding: glass ? 24 : 0, additionalVerticalPadding: glass ? 24 : 0);
         var inset = PopupSurface.Margin;
         ActionBarSurface.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var outer = PopupRoot.Margin;
-        Width = Math.Clamp(Math.Max(calculated.Width + inset.Left + inset.Right, ActionBarSurface.DesiredSize.Width) + outer.Left + outer.Right, MinWidth, MaxWidth);
-        content.Measure(new Size(Math.Max(100, Width - 44 - inset.Left - inset.Right - outer.Left - outer.Right - (glass ? 24 : 0)), double.PositiveInfinity));
-        Height = Math.Clamp(Math.Max(calculated.Height, content.DesiredSize.Height + 174 + (glass ? 24 : 0)) + inset.Top + inset.Bottom + outer.Top + outer.Bottom, MinHeight, MaxHeight);
-        ConstrainToScreen();
+        // Choose the width from the source once; incoming tokens only grow the height.
+        var sourceWidth = _sourceText.Length < 100 ? 360 : _sourceText.Length < 400 ? 420 : 480;
+        Width = Math.Clamp(Math.Max(sourceWidth, ActionBarSurface.DesiredSize.Width + inset.Left + inset.Right + outer.Left + outer.Right), MinWidth, MaxWidth);
+        var readingWidth = Math.Max(100, Width - 30 - inset.Left - inset.Right - outer.Left - outer.Right - (glass ? 24 : 0));
+        Control reading = LoadingPanel.IsVisible ? LoadingPanel : content;
+        reading.Measure(new Size(readingWidth, double.PositiveInfinity));
+        QuestionRow.Measure(new Size(readingWidth, double.PositiveInfinity));
+        NoticeText.Measure(new Size(readingWidth, double.PositiveInfinity));
+        // Card chrome: drag row 24, reading gap 4, card padding 14 and its 1-pixel top and bottom borders.
+        var chromeHeight = ActionBarSurface.DesiredSize.Height + 44 + QuestionRow.DesiredSize.Height + NoticeText.DesiredSize.Height;
+        Height = Math.Clamp(reading.DesiredSize.Height + chromeHeight + (glass ? 24 : 0) + inset.Top + inset.Bottom + outer.Top + outer.Bottom, MinHeight, MaxHeight);
+        if (!_dragging) PlaceAtPreferredOffset();
     }
 
     private void PlaceAtPreferredOffset()
@@ -286,7 +300,7 @@ public sealed partial class TranslationPopupWindow : Window
         if (screen is null) return;
         var area = screen.WorkingArea;
         var position = PopupPlacementResolver.ResolveForScale(CurrentAnchor, new PopupSize(Width, Height),
-            new WorkArea(area.X, area.Y, area.Width, area.Height), screen.Scaling, _preferredOffset);
+            new WorkArea(area.X, area.Y, area.Width, area.Height), screen.Scaling, _preferredOffset, _pointerAnchor);
         Position = new PixelPoint((int)Math.Round(position.X), (int)Math.Round(position.Y));
     }
 
@@ -304,8 +318,8 @@ public sealed partial class TranslationPopupWindow : Window
 
     private void HeaderPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.Source is Visual source && (source is Button || source is ToggleButton
-            || source.GetVisualAncestors().Any(visual => visual is Button || visual is ToggleButton))) return;
+        if (e.Source is Visual source && (source is Button or ToggleButton or ComboBox
+            || source.GetVisualAncestors().Any(visual => visual is Button or ToggleButton or ComboBox))) return;
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         _dragging = true;
         _dragStartPoint = this.PointToScreen(e.GetPosition(this));
@@ -338,7 +352,9 @@ public sealed partial class TranslationPopupWindow : Window
         if (!_dragging) return;
         _dragging = false;
         ConstrainToScreen();
-        var screen = Screens.ScreenFromWindow(this);
+        // Offsets are measured in the anchor monitor's logical pixels, even if
+        // the user drags the window onto a monitor with a different scale.
+        var screen = Screens.ScreenFromPoint(new PixelPoint((int)CurrentAnchor.X, (int)CurrentAnchor.Y));
         var offset = PopupPlacementResolver.CaptureLogicalOffset(CurrentAnchor, Position.X, Position.Y,
             screen?.Scaling ?? RenderScaling);
         if (!offset.IsValid) return;
@@ -407,7 +423,8 @@ public sealed partial class TranslationPopupWindow : Window
         return true;
     }
     internal void SetExplanationError(string text) { SetExplanation(text); ExplanationRetryButton.IsVisible = true; }
-    internal void ShowNotice(string text) { NoticeText.Text = text; NoticeText.IsVisible = true; }
+    // The notice sits inside the card, so the card grows instead of hiding the translation.
+    internal void ShowNotice(string text) { NoticeText.Text = text; NoticeText.IsVisible = true; RefreshText(); }
 
     private string SelectedSubject() => string.IsNullOrWhiteSpace(TranslationText.SelectedText)
         ? _showOriginal ? _sourceText : _translatedText : TranslationText.SelectedText;

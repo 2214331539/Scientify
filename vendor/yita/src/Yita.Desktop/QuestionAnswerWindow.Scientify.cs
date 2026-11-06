@@ -65,13 +65,16 @@ internal sealed partial class QuestionAnswerWindow
         var serialized = messages.GetRawText();
         if (serialized != _hostSnapshot)
         {
+            var following = TranscriptScroll.Extent.Height - TranscriptScroll.Viewport.Height - TranscriptScroll.Offset.Y < 40;
+            var scrollOffset = TranscriptScroll.Offset;
             _hostSnapshot = serialized;
             _turns.Clear();
             foreach (var message in messages.EnumerateArray())
                 _turns.Add(new ConversationTurn(message.GetProperty("role").GetString()!, message.GetProperty("text").GetString()!));
             _pendingAnswer = null;
             RenderTranscript();
-            TranscriptScroll.ScrollToEnd();
+            if (following) TranscriptScroll.ScrollToEnd();
+            else TranscriptScroll.Offset = scrollOffset;
         }
         var error = snapshot.TryGetProperty("error", out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
         EmptyStateText.IsVisible = _turns.Count == 0 || error is not null;

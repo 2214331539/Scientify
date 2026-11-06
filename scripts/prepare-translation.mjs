@@ -88,7 +88,9 @@ function collectLicenses(project, dependencyFile, destination) {
           ? 'MicroCom-MIT.txt'
           : name.startsWith('Tmds.DBus.Protocol/')
             ? 'Tmds-DBus-MIT.txt'
-            : null;
+            : name.startsWith('Markdig/')
+              ? 'Markdig-BSD-2-Clause.txt'
+              : null;
       if (!fallback) throw new Error(`Missing license text: ${name}`);
       cpSync(join(source, 'LICENSES', fallback), join(target, fallback));
       files.push(fallback);

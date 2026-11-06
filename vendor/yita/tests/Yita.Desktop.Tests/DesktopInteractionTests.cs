@@ -29,6 +29,37 @@ public static class TestAppBuilder
 public sealed class DesktopInteractionTests
 {
     [AvaloniaFact]
+    public async Task QueuedSelectionsOnlyPresentTheLatestCaptureAndIgnoreSupersededReads()
+    {
+        var handler = new DelayedHandler(delayFirst: false);
+        using var fixture = await Fixture.CreateAsync(handler);
+        fixture.Window.OnSelectionCaptured(null, new(Request(100), Result("previous selection"), TimeSpan.Zero));
+        fixture.Window.OnSelectionCaptured(null, new(Request(200), Result("current selection"), TimeSpan.Zero));
+        await UntilAsync(() => fixture.Window.TranslationPopups.Any(popup => popup.FindControl<Grid>("QuestionRow")!.IsVisible));
+        var popup = Assert.Single(fixture.Window.TranslationPopups);
+        Click(popup.FindControl<Button>("OriginalButton")!);
+        Assert.Equal("current selection", ReferenceTypography.GetText(popup.FindControl<SelectableTextBlock>("TranslationText")!));
+        Assert.Single(handler.RequestBodies);
+        fixture.Window.OnSelectionCaptured(null, new(Request(300), Result("stale after click"), TimeSpan.Zero));
+        fixture.Window.OnExternalPointerPressed(null, new(400, 200));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Single(handler.RequestBodies);
+        Assert.False(popup.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void PopupUsesReleasePointerInsteadOfAccessibilityParagraphBounds()
+    {
+        var popup = new TranslationPopupWindow();
+        try
+        {
+            popup.PlaceNear(new(SelectionTrigger.MouseGesture, new(400, 300), GestureBounds: new(20, 50, 380, 250)),
+                new("current", SelectionSource.Accessibility, new(10, 10, 800, 500)));
+            Assert.Equal(new Yita.Core.Placement.SelectionAnchor(400, 300), popup.CurrentAnchor);
+        }
+        finally { popup.Close(); }
+    }
+    [AvaloniaFact]
     public async Task MotionPreviewCancelAndSaveRespectTheSystemPreference()
     {
         ReferenceMotion.Enabled = true;

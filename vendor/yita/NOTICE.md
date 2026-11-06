@@ -1,5 +1,7 @@
 # 上游与第三方声明
 
+Scientify 的浮窗 Markdown 解析使用 Markdig 0.40.0（BSD-2-Clause）；原版权及完整许可见 LICENSES/Markdig-BSD-2-Clause.txt，随自包含组件分发。
+
 Yita 基于 Frank Lai 的开源项目 InstantTranslate v0.7.3 修改，原项目地址：
 https://github.com/franklai-rise/InstantTranslate
 

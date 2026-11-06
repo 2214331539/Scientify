@@ -55,6 +55,21 @@ Snapshot polling is serialized (150 ms while running, 750 ms idle); unchanged
 transcripts are not rerendered. Large snapshots show recent content with a tooltip;
 full history is retained by Scientify. Retry keeps the existing user turn.
 
+`TranscriptMarkdown.cs` parses assistant messages with Markdig and renders native
+selectable headings, emphasis, lists, quotes, code, tables and web/mail links.
+User text remains literal; copy and records retain the original Markdown. HTML
+is not executed and remote images are not fetched. An existing reader who scrolls
+up is not pulled back to the bottom on each streaming snapshot.
+
+Selection presentation drops superseded queued captures. Cancelling the Windows
+UIA pipe read also stops its worker so its outstanding reply cannot be consumed
+by the next request. Mouse selections place the popup beside the release pointer,
+never under it; shortcut translations keep it below the selection range. The
+drag offset is remembered in logical pixels relative to that anchor; screen-edge
+clamping does not rewrite the saved preference. The embedded popup keeps a
+separate toolbar above the reading card. Deeply nested or malformed answer
+Markdown is shown as plain text rather than failing to render.
+
 Translation and explanation still use the original Yita prompt/runtime. Question
 turns use Scientify's chat prompt with bounded translation material. They retain
 chat semantics in the sidebar, rather than silently gaining filesystem execution.

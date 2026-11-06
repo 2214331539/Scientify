@@ -125,9 +125,12 @@ public sealed class WindowsUiAutomationWorkerClient : IWindowsUiAutomationWorker
 
             return response.ToSelectionResult(request);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
+            // A cancelled ReadLineAsync leaves its reply in this uncorrelated pipe.
+            // Never reuse it: the next selection would consume the previous text.
             StopWorker();
+            cancellationToken.ThrowIfCancellationRequested();
             return SelectionResult.Failed(SelectionFailureKind.Timeout, "uia-worker-timeout");
         }
         catch (Exception exception) when (exception is IOException

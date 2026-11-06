@@ -15,6 +15,9 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (Environment.GetEnvironmentVariable("SCIENTIFY_UIA_FIXTURE_READY") is { Length: > 0 } signal)
+            return RunWorkerFixture(signal);
+        if (args.FirstOrDefault() == "--worker-cancellation") return CheckWorkerCancellation();
         if (args.FirstOrDefault() == "--fixture") return RunFixture();
         using var original = WindowsClipboardSnapshot.TryCapture();
         if (original is null) { Console.Error.WriteLine("Clipboard cannot be preserved; no smoke test performed."); return 2; }
@@ -82,6 +85,42 @@ internal static class Program
                 Thread.Sleep(20);
             }
         }
+    }
+    // A real JSON-lines process catches stream desynchronisation that mocked readers cannot.
+    private static int RunWorkerFixture(string signal)
+    {
+        Console.WriteLine("YITA-UIA-1");
+        while (Console.ReadLine() is { } line)
+        {
+            using var request = JsonDocument.Parse(line);
+            var first = request.RootElement.GetProperty("X").GetDouble() == 1;
+            if (first) { File.WriteAllText(signal, "ready"); Thread.Sleep(500); }
+            Console.WriteLine(JsonSerializer.Serialize(new { Text = first ? "previous selection" : "current selection", Failure = 0 }));
+        }
+        return 0;
+    }
+
+    private static int CheckWorkerCancellation()
+    {
+        var signal = Path.Combine(Path.GetTempPath(), "scientify-uia-" + Guid.NewGuid().ToString("N"));
+        Environment.SetEnvironmentVariable("SCIENTIFY_UIA_FIXTURE_READY", signal);
+        try
+        {
+            using var reader = new WindowsUiAutomationWorkerClient(() => Environment.ProcessPath);
+            using var cancel = new CancellationTokenSource();
+            var old = reader.ReadAsync(new SelectionRequest(SelectionTrigger.MouseGesture, new(1, 1)), cancel.Token);
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while (!File.Exists(signal) && !old.IsCompleted && DateTime.UtcNow < deadline) Thread.Sleep(10);
+            Check(File.Exists(signal), "Worker received the first request");
+            cancel.Cancel();
+            try { old.GetAwaiter().GetResult(); throw new Exception("Expected cancellation."); }
+            catch (OperationCanceledException) { }
+            var current = reader.ReadAsync(new SelectionRequest(SelectionTrigger.MouseGesture, new(2, 2))).GetAwaiter().GetResult();
+            Check(current.Text == "current selection", "A cancelled reply cannot become the next selection");
+            return 0;
+        }
+        catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+        finally { Environment.SetEnvironmentVariable("SCIENTIFY_UIA_FIXTURE_READY", null); File.Delete(signal); }
     }
     private static int RunFixture()
     {

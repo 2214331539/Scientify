@@ -134,8 +134,10 @@
     </Setter>
   </Style>
   <Style Selector="Button.text-action"><Setter Property="Width" Value="NaN" /><Setter Property="Height" Value="28" /><Setter Property="MinWidth" Value="58" /><Setter Property="Margin" Value="0" /><Setter Property="Padding" Value="7,3" /><Setter Property="FontSize" Value="13" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="Button.segment-action"><Setter Property="MinWidth" Value="38" /><Setter Property="FontSize" Value="12" /><Setter Property="FontWeight" Value="Medium" /></Style>
+  <Style Selector="Button.compact-action, ToggleButton.compact-action"><Setter Property="Width" Value="28" /><Setter Property="Height" Value="28" /></Style>
   <Style Selector="ComboBox.popup-language">
-    <Setter Property="Width" Value="108" /><Setter Property="MinHeight" Value="28" /><Setter Property="Height" Value="28" />
+    <Setter Property="Width" Value="96" /><Setter Property="MinHeight" Value="28" /><Setter Property="Height" Value="28" />
     <Setter Property="FontFamily" Value="{DynamicResource InterfaceFont}" /><Setter Property="FontSize" Value="13" /><Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource PopupTextBrush}" /><Setter Property="Background" Value="{DynamicResource PopupBackgroundBrush}" />
     <Setter Property="Padding" Value="10,3,6,3" /><Setter Property="Cursor" Value="Hand" /><Setter Property="MaxDropDownHeight" Value="200" />

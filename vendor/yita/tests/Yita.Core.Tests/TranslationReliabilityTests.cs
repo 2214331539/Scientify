@@ -9,6 +9,35 @@ namespace Yita.Core.Tests;
 
 public sealed class TranslationReliabilityTests
 {
+    [Theory]
+    [InlineData(1)]
+    [InlineData(1.5)]
+    [InlineData(2)]
+    public void DefaultPopupSitsBesideTheReleasePointerAtEveryDpi(double scale)
+    {
+        var location = PopupPlacementResolver.ResolveForScale(new(500, 400),
+            new(380, 200), new(0, 0, 3000, 2000), scale);
+        // The pointer stays outside the window, so the next click or scroll reaches the page.
+        Assert.Equal(500 + 4 * scale, location.X);
+        Assert.Equal(400 - 16 * scale, location.Y);
+    }
+
+    [Fact]
+    public void DefaultPopupFlipsNearScreenEdgesAndSavedOffsetsWin()
+    {
+        var location = PopupPlacementResolver.ResolveForScale(new(1190, 790), new(380, 200), new(0, 0, 1200, 800), 1);
+        Assert.True(location.X + 380 < 1190);
+        Assert.True(location.Y + 200 <= 792);
+        var saved = new PopupOffset(24, 30);
+        Assert.Equal((224d, 230d), PopupPlacementResolver.ResolveForScale(new(200, 200), new(380, 200), new(0, 0, 1200, 800), 1, saved));
+    }
+
+    [Fact]
+    public void ShortcutPopupStaysBelowTheSelectionRange()
+    {
+        Assert.Equal((210d, 412d), PopupPlacementResolver.ResolveForScale(new(200, 400),
+            new(380, 200), new(0, 0, 1200, 800), 1, pointerAnchor: false));
+    }
     [Fact]
     public void NewRequestInvalidatesOldWorkAndDisposingOldWorkPreservesNewRequest()
     {

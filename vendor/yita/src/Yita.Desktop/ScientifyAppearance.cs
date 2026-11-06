@@ -36,10 +36,8 @@ internal static class ScientifyAppearance
         }
         Color("SuccessBrush", "#246B45", "#8BD5A8");
         Color("DangerBrush", "#B03636", "#F19B9B");
-        var glass = PopupVisualStyleCatalog.IsBubbleV3(settings.PopupVisualStyle);
-        // High-opacity reading surfaces avoid desktop text showing through the translation.
-        resources["PopupBackgroundBrush"] = ReferenceMaterial.Gradient(0, 0, 0, 1,
-            (dark ? "#FC292C2B" : "#FCFFFFFF", 0), (dark ? "#FA202222" : "#FAF7F8F7", 1));
+        // A quiet, opaque reading plane: depth comes from its edge and shadow.
+        Color("PopupBackgroundBrush", "#FFFFFF", "#242726");
         Color("PopupButtonBrush", "#FCF7F8F7", "#FC292C2B");
         Color("PopupBorderBrush", "#D4DAD7", "#515956");
         Color("PopupButtonBorderBrush", "#DDE2DF", "#49514E");
@@ -55,7 +53,7 @@ internal static class ScientifyAppearance
         resources["PopupGlassEnabled"] = false; // Replace the thick reflective rim with a single fine edge.
         resources["PopupTextSurfaceBrush"] = Brushes.Transparent;
         resources["PopupTextSurfacePadding"] = new Thickness(0);
-        resources["PopupSurfaceCornerRadius"] = new CornerRadius(glass ? 20 : 16);
+        resources["PopupSurfaceCornerRadius"] = new CornerRadius(12);
         resources["PopupActionBarCornerRadius"] = new CornerRadius(12);
         resources["PopupButtonCornerRadius"] = new CornerRadius(6);
         resources["InputCornerRadius"] = new CornerRadius(9);
@@ -64,7 +62,9 @@ internal static class ScientifyAppearance
         resources["PopupEdgeThickness"] = new Thickness(1);
         resources["PopupRootMargin"] = new Thickness(12);
         resources["ConversationMargin"] = new Thickness(12);
-        resources["PopupSurfaceShadow"] = BoxShadows.Parse(dark ? "0 5 12 0 #55000000" : "0 5 12 0 #180F2119");
+        resources["PopupSurfaceShadow"] = BoxShadows.Parse(dark
+            ? "0 3 8 0 #44000000, 0 9 18 -4 #66000000"
+            : "0 2 5 0 #0D16221C, 0 9 18 -4 #2416221C");
         resources["PopupToolbarShadow"] = BoxShadows.Parse(dark ? "0 2 6 0 #44000000" : "0 2 6 0 #140F2119");
         resources["BrandLogo"] = Logo(dark);
     }

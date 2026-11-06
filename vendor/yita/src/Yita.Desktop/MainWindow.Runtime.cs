@@ -45,19 +45,28 @@ public sealed partial class MainWindow
             _suspendedWindows.Clear();
         }
     }
-    private void OnSelectionCaptured(object? sender, SelectionCapturedEventArgs args) =>
+    private long _selectionPresentationVersion;
+
+    internal void OnSelectionCaptured(object? sender, SelectionCapturedEventArgs args)
+    {
+        var version = Interlocked.Increment(ref _selectionPresentationVersion);
         Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
         {
-            if (_shuttingDown || !_desktopSessionActive || _selectionRuntime is IDesktopSessionRuntime { IsSessionActive: false }) return;
-            try { await ShowSelectionTranslationAsync(args.Request, args.Result, args.ReadDuration); }
+            if (version != Volatile.Read(ref _selectionPresentationVersion) || _shuttingDown || !_desktopSessionActive
+                || _selectionRuntime is IDesktopSessionRuntime { IsSessionActive: false }) return;
+            try { await ShowSelectionTranslationAsync(args.Request, args.Result, args.ReadDuration, version); }
             catch (Exception exception)
             {
                 System.Diagnostics.Trace.TraceError("Selection presentation failed: {0}", exception.GetType().Name);
             }
         });
+    }
 
-    private void OnExternalPointerPressed(object? sender, ScreenPoint point) =>
+    internal void OnExternalPointerPressed(object? sender, ScreenPoint point)
+    {
+        Interlocked.Increment(ref _selectionPresentationVersion);
         Avalonia.Threading.Dispatcher.UIThread.Post(DismissUnpinnedWindows);
+    }
 
     internal async void TranslateClipboardFromTray()
     {
@@ -94,7 +103,8 @@ public sealed partial class MainWindow
     internal SelectionDiagnostics SelectionDiagnostics => _selectionDiagnostics;
     internal IReadOnlyCollection<TranslationPopupWindow> TranslationPopups => _popups;
 
-    internal async Task ShowSelectionTranslationAsync(SelectionRequest request, SelectionResult result, TimeSpan? readDuration = null)
+    internal async Task ShowSelectionTranslationAsync(SelectionRequest request, SelectionResult result, TimeSpan? readDuration = null,
+        long? presentationVersion = null)
     {
         TranslationPopupWindow? popup = null;
         try
@@ -103,6 +113,7 @@ public sealed partial class MainWindow
             var sessionGeneration = _desktopSessionGeneration;
             await InitializeAsync();
             if (_shuttingDown || !_desktopSessionActive || sessionGeneration != _desktopSessionGeneration
+                || (presentationVersion is { } version && version != Volatile.Read(ref _selectionPresentationVersion))
                 || (!_settings.IsEnabled && request.Trigger == SelectionTrigger.MouseGesture)) return;
             var diagnostic = _selectionDiagnostics.Record(request.Trigger, result, readDuration);
             UpdateSelectionStatus();
