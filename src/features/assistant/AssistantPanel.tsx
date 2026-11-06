@@ -240,6 +240,13 @@ export function AssistantPanel({
   const busyRef = useRef(false);
   const [sandboxBusy, setSandboxBusy] = useState(false);
   const agentProject = context.projectId;
+  // One rule picks the mode and the composer shows it: inside a project with an
+  // OpenAI-compatible connection the built-in agent answers; otherwise quick chat.
+  const routesToAgent =
+    (agent !== nativeAgent || isTauri()) &&
+    !!agentProject &&
+    !!domain &&
+    engineSupports(settings.provider);
   const agentConnection: AgentConnection = {
     endpoint: settings.endpoint,
     model: settings.model,
@@ -828,7 +835,9 @@ export function AssistantPanel({
           context.experimentId === conversation.experimentId) &&
         (!context.workspaceRoot || !boundRoot || context.workspaceRoot === boundRoot) &&
         (!domainForWorkspace(context.workspace) ||
-          domainForWorkspace(context.workspace) === domain);
+          domainForWorkspace(context.workspace) === domain ||
+          // Code chats can read papers too, so the open paper stays in their context.
+          (domain === 'code' && context.workspace === 'literature'));
     const visible = matches ? freezeContext(context) : undefined;
     if (!agent.context || !agentProject || (agent === nativeAgent && !isTauri())) return visible;
     const discovered = await agent.context({
@@ -887,14 +896,9 @@ export function AssistantPanel({
     // current page has a project root and the configured provider speaks an
     // OpenAI-shaped protocol. Users should describe the outcome; they should
     // not have to choose a transport mode before every request.
-    const harnessAvailable = agent !== nativeAgent || isTauri();
-    if (
-      !conversation.translationContext &&
-      harnessAvailable &&
-      agentProject &&
-      domain &&
-      engineSupports(settings.provider)
-    ) {
+    // Conversations that began in the translation popup also move to the agent once
+    // they continue inside a project, so they can read whole papers.
+    if (routesToAgent) {
       await sendToAgent();
       return;
     }
@@ -1334,9 +1338,10 @@ export function AssistantPanel({
           {t('此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。')}
         </div>
       ) : null}
-      {activeTask?.session.handle?.paperTools === false && domain === 'literature' ? (
+      {activeTask?.session.handle?.paperTools === false &&
+      (domain === 'literature' || context.workspace === 'literature') ? (
         <div className="sf-agent-sandbox-notice" role="status">
-          {t('此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。')}
+          {t('这个旧对话不能读论文，新建对话后可以读全文。')}
           <Button
             variant="ghost"
             size="sm"
@@ -1344,7 +1349,10 @@ export function AssistantPanel({
             onClick={() =>
               selectConversation('', prompt, {
                 agentDomain: 'literature',
-                agentCwd: conversation.agentCwd ?? activeTask.session.handle?.cwd,
+                // A code chat's directory is not a literature folder; let the new chat bind its own.
+                ...(domain === 'literature'
+                  ? { agentCwd: conversation.agentCwd ?? activeTask.session.handle?.cwd }
+                  : {}),
                 modelSelection: conversation.modelSelection,
               })
             }
@@ -1492,6 +1500,7 @@ export function AssistantPanel({
         onInterrupt={() => void interruptAgent()}
         modelMenuOpen={menu?.kind === 'models'}
         onModelMenu={(event) => openMenu('models', event.currentTarget)}
+        mode={routesToAgent ? 'agent' : 'chat'}
         permission={permission}
         permissionDisabled={permissionDisabled}
         permissionMenuOpen={menu?.kind === 'permissions'}

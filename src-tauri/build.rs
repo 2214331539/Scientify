@@ -36,6 +36,7 @@ fn main() {
             "research_write_file",
             "research_import_pdf",
             "research_read_pdf",
+            "reader_outline",
             "research_git_status",
             "research_git_diff",
             "code_git_inspect",

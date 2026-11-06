@@ -27,6 +27,7 @@
     "allow-research-write-file",
     "allow-research-import-pdf",
     "allow-research-read-pdf",
+    "allow-reader-outline",
     "allow-research-git-status",
     "allow-research-ask-ai",
     "allow-research-list-models",

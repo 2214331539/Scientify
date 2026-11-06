@@ -77,15 +77,17 @@ fn root<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     handle: &ThreadHandle,
 ) -> Result<PathBuf, String> {
-    if handle.domain != "literature" {
-        return Err("论文工具仅在绑定文献目录的会话中可用。".into());
+    if !matches!(handle.domain.as_str(), "literature" | "code") {
+        return Err("论文工具仅在项目会话中可用。".into());
     }
     let current = app
         .state::<crate::library::LibraryState>()
         .service
         .root(&handle.project_id)?
-        .ok_or("文献目录不可用。")?;
-    if current != std::path::Path::new(&handle.cwd) {
+        .ok_or("这个项目还没有关联文献文件夹。")?;
+    // Literature chats stay bound to the folder they started in; code chats read
+    // whichever literature folder the project uses now.
+    if handle.domain == "literature" && current != std::path::Path::new(&handle.cwd) {
         return Err("文献目录已变化，请新建会话。".into());
     }
     Ok(current)
@@ -138,7 +140,7 @@ pub(crate) fn operate<R: tauri::Runtime>(
         return Err("document_changed：PDF 已变化，请重新读取。".into());
     }
     let id = uuid::Uuid::new_v4().to_string();
-    let job = json!({"id":id,"projectId":handle.project_id,"root":handle.cwd,"path":source.path,"version":source.version,"operation":if search {"search"} else {"read"},"page":args.page,"offset":args.offset,"pageCount":page_count,"query":query});
+    let job = json!({"id":id,"projectId":handle.project_id,"root":directory.to_string_lossy(),"path":source.path,"version":source.version,"operation":if search {"search"} else {"read"},"page":args.page,"offset":args.offset,"pageCount":page_count,"query":query});
     let (sender, receiver) = mpsc::channel();
     let deadline = Instant::now() + Duration::from_secs(30);
     {

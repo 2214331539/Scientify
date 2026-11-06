@@ -392,6 +392,20 @@
 .sf-ai-permission-control[data-permission='full'] {
   color: var(--sf-accent);
 }
+/* Which engine answers: the agent can read the project; quick chat sees the current page only. */
+.sf-ai-mode {
+  flex-shrink: 0;
+  padding: 0 7px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--sf-text-muted);
+  background: var(--sf-surface-hover);
+}
+.sf-ai-mode[data-mode='agent'] {
+  color: var(--sf-status-success);
+}
 .sf-ai-permission-note {
   max-width: 310px;
   padding: 8px 10px;

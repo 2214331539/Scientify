@@ -1,4 +1,14 @@
 import type { Workspace, Project } from '../../domain/workspace';
+import { isSyncedProject } from '../../platform/collaboration';
+import { locale, t } from '../../i18n';
+
+/** Local space of projects that are shared with other people. */
+export const COLLABORATION_TEAM_ID = 'scientify-collaboration';
+
+export type CenterPage = 'home' | 'mine' | 'team' | 'inbox';
+export const CENTER_PAGES: CenterPage[] = ['home', 'mine', 'team', 'inbox'];
+export type ProjectFilter = 'all' | 'favorite' | 'synced' | 'archived';
+export type ProjectSort = 'opened' | 'updated' | 'name' | 'created';
 
 /** Removing a project only changes workspace records; referenced disk files remain intact. */
 export function deleteProject(data: Workspace, id: string) {
@@ -20,11 +30,44 @@ export function deleteTeam(data: Workspace, id: string) {
   data.teams = data.teams.filter((team) => team.id !== id);
 }
 
-export const projectCoverColors = ['#435e55', '#496b8d', '#a18a67', '#756b83', '#667775'];
-export function coverColor(project: Project) {
+/** Cloud projects shared with other people live in this local team space. */
+export function ensureCollaborationTeam(data: Workspace) {
+  if (!data.teams.some((team) => team.id === COLLABORATION_TEAM_ID))
+    data.teams.push({
+      id: COLLABORATION_TEAM_ID,
+      name: '团队协作',
+      color: '#56746a',
+      description: 'Scientify collaboration projects',
+    });
+}
+
+/** Team projects are shared with other people; personal projects may still sync to the owner's devices. */
+export function isTeamProject(project: Project) {
+  return isSyncedProject(project) && project.space !== 'personal';
+}
+
+export function personalProjects(data: Workspace) {
+  return data.projects.filter((project) => !isTeamProject(project));
+}
+
+export const projectCoverColors = [
+  '#496b8d',
+  '#3d5a80',
+  '#756b83',
+  '#a18a67',
+  '#b08a3e',
+  '#9a5b4b',
+  '#3f7a7a',
+  '#667775',
+];
+const fallbackColors = ['#435e55', '#496b8d', '#a18a67', '#756b83', '#667775'];
+export function colorForId(id: string) {
+  const seed = Array.from(id).reduce((value, char) => value + char.charCodeAt(0), 0);
+  return fallbackColors[seed % fallbackColors.length];
+}
+export function coverColor(project: Pick<Project, 'id' | 'color'>) {
   if (project.color && /^#[0-9a-f]{6}$/i.test(project.color)) return project.color;
-  const seed = Array.from(project.id).reduce((value, char) => value + char.charCodeAt(0), 0);
-  return projectCoverColors[seed % projectCoverColors.length];
+  return colorForId(project.id);
 }
 export function coverInk(color: string) {
   const channels = [1, 3, 5].map((start) => {
@@ -33,4 +76,77 @@ export function coverInk(color: string) {
   });
   const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
   return luminance > 0.179 ? '#17211d' : '#ffffff';
+}
+
+const openedKey = 'scientify.projects.opened';
+/** When each project was last opened from this window; kept per device. */
+export function readOpened(): Record<string, string> {
+  try {
+    const value = JSON.parse(localStorage.getItem(openedKey) ?? '{}');
+    return value && typeof value === 'object' ? value : {};
+  } catch {
+    return {};
+  }
+}
+export function markOpened(id: string) {
+  const opened = readOpened();
+  opened[id] = new Date().toISOString();
+  try {
+    localStorage.setItem(openedKey, JSON.stringify(opened));
+  } catch {
+    /* Ordering is optional. */
+  }
+}
+
+export function lastActive(project: Project, opened: Record<string, string>) {
+  return opened[project.id] ?? project.updatedAt ?? project.createdAt;
+}
+
+export function filterProjects(projects: Project[], filter: ProjectFilter, query: string) {
+  const term = query.trim().toLocaleLowerCase();
+  return projects.filter(
+    (project) =>
+      (filter === 'archived' ? !!project.archived : !project.archived) &&
+      (filter !== 'favorite' || !!project.favorite) &&
+      (filter !== 'synced' || isSyncedProject(project)) &&
+      [project.name, project.question, project.field ?? '']
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(term),
+  );
+}
+
+export function sortProjects(
+  projects: Project[],
+  sort: ProjectSort,
+  opened: Record<string, string>,
+) {
+  const time = (value?: string) => value ?? '';
+  const order: Record<ProjectSort, (a: Project, b: Project) => number> = {
+    opened: (a, b) => lastActive(b, opened).localeCompare(lastActive(a, opened)),
+    updated: (a, b) =>
+      time(b.updatedAt ?? b.createdAt).localeCompare(time(a.updatedAt ?? a.createdAt)),
+    name: (a, b) => a.name.localeCompare(b.name, locale()),
+    created: (a, b) => time(b.createdAt).localeCompare(time(a.createdAt)),
+  };
+  return [...projects].sort(order[sort]);
+}
+
+/** Short relative time for lists: 刚刚, 5 分钟前, 昨天, 3 天前, then the date. */
+export function relativeTime(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return t('刚刚');
+  if (minutes < 60) return t('{count} 分钟前', { count: minutes });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - day.getTime()) / 86400000);
+  if (days <= 0) return t('{count} 小时前', { count: Math.max(1, Math.floor(minutes / 60)) });
+  if (days === 1) return t('昨天');
+  if (days < 8) return t('{count} 天前', { count: days });
+  return date.toLocaleDateString(locale());
 }

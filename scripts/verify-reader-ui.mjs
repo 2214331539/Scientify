@@ -18,19 +18,35 @@ const objects = [
   '<< /Title (Second page) /Parent 8 0 R /Dest [7 0 R /Fit] >>',
   '<< /Type /Annot /Subtype /Link /Rect [50 600 240 640] /Border [0 0 0] /Dest [7 0 R /Fit] >>',
 ];
-let pdf = '%PDF-1.7\n';
-const offsets = [0];
-objects.forEach((object, index) => {
-  offsets.push(pdf.length);
-  pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
-});
-const xref = pdf.length;
-pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-pdf += offsets
-  .slice(1)
-  .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
-  .join('');
-pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+function pdfBytes(objects) {
+  let value = '%PDF-1.7\n';
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(value.length);
+    value += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = value.length;
+  value += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  value += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+    .join('');
+  return (
+    value + `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+  );
+}
+const pdf = pdfBytes(objects);
+const headingStream =
+  'BT /F1 14 Tf 50 720 Td (1 Introduction) Tj /F1 10 Tf 0 -30 Td (This paragraph contains ordinary research text explaining a method and its experimental results.) Tj 0 -16 Td (Another ordinary paragraph establishes the body text size for reliable local heading detection.) Tj /F1 12 Tf 0 -40 Td (1.1 Motivation) Tj /F1 10 Tf 0 -25 Td (More body text describes the motivation and context of this study.) Tj /F1 14 Tf 0 -40 Td (References) Tj ET';
+const headingPdf = pdfBytes(
+  objects.map((object, index) =>
+    index === 0
+      ? '<< /Type /Catalog /Pages 2 0 R >>'
+      : index === 4
+        ? `<< /Length ${headingStream.length} >>\nstream\n${headingStream}\nendstream`
+        : object,
+  ),
+);
 
 const directory = resolve('.test-artifacts/reader-ui');
 await mkdir(directory, { recursive: true });
@@ -38,18 +54,27 @@ const browser = await launchUiBrowser();
 const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
 page.setDefaultTimeout(15_000);
 const errors = [];
+const consoleMessages = [];
+const failedRequests = [];
 const checks = [];
 const check = (value, label) => {
   assert.ok(value, label);
   checks.push(label);
 };
 page.on('pageerror', (error) => errors.push(error.message));
+page.on('console', (message) => {
+  consoleMessages.push(`${message.type()}: ${message.text()}`);
+  if (process.env.SCIENTIFY_UI_DEBUG) console.log(`[reader] ${message.text()}`);
+});
+page.on('requestfailed', (request) =>
+  failedRequests.push({ url: request.url(), error: request.failure()?.errorText }),
+);
 const fixtureName = `reader-fixture-${process.pid}.html`;
 const fixturePath = join(directory, fixtureName);
 try {
   await writeFile(
     fixturePath,
-    `<!doctype html><html><body><div id="root" style="width:1000px;height:800px;display:flex"></div><script type="module">
+    `<!doctype html><html><body><div id="root" style="width:100%;height:800px;display:flex"></div><script type="module">
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import '/src/styles.css';
@@ -81,11 +106,14 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Fra
 </script></body></html>`,
   );
   const url = process.env.SCIENTIFY_UI_URL || 'http://127.0.0.1:1420';
-  await page.goto(`${url}/.test-artifacts/reader-ui/${fixtureName}`, { waitUntil: 'commit' });
+  await page.goto(`${url}/.test-artifacts/reader-ui/${fixtureName}`, {
+    waitUntil: 'commit',
+    timeout: 60_000,
+  });
   await page
     .locator('.textLayer')
     .filter({ hasText: 'PDF rendering fixture' })
-    .waitFor({ timeout: 60_000 });
+    .waitFor({ timeout: 120_000 });
   check(
     await page.locator('.pdf-page canvas').evaluate((canvas) => {
       const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
@@ -108,12 +136,67 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Fra
     .waitFor();
   check(true, 'Internal links navigate to a rotated page');
   await page.getByRole('button', { name: '上一页', exact: true }).click();
-  await page.getByRole('button', { name: '打开标题目录' }).hover();
+  const outlineTrigger = page.getByRole('button', { name: '打开标题目录' });
+  const outlinePanel = page.getByRole('complementary', { name: 'PDF 标题目录' });
+  for (const fraction of [0.5, 0.85]) {
+    const body = await page.locator('.pdf-reader-body').boundingBox();
+    const rail = await outlineTrigger.boundingBox();
+    check(
+      Math.abs(rail.x - body.x) < 1 && Math.abs(rail.height - body.height) < 1 && rail.width <= 18,
+      'Outline hover rail spans only the reading workspace left edge',
+    );
+    await page.mouse.move(body.x + 6, body.y + body.height * fraction);
+    await outlinePanel.waitFor();
+    check(true, `Outline opens from the left edge at ${fraction * 100}% height`);
+    await outlinePanel.hover();
+    await page.waitForTimeout(300);
+    check(await outlinePanel.isVisible(), 'Moving into the outline card keeps it open');
+    const glass = await outlinePanel.evaluate((panel) => {
+      const style = getComputedStyle(panel);
+      const alpha = style.backgroundColor.match(/\/\s*([\d.]+)\s*\)$/)?.[1];
+      return Number(alpha) > 0.7 && Number(alpha) < 1 && style.backdropFilter.includes('blur');
+    });
+    check(glass, 'Outline uses a translucent blurred reading surface');
+    await page.screenshot({ path: join(directory, `reader-outline-hover-${fraction}.png`) });
+    await page.mouse.move(body.x + body.width - 16, body.y + body.height * 0.8);
+    await outlinePanel.waitFor({ state: 'hidden' });
+    check(true, 'Outline retreats when the pointer leaves the edge and card');
+  }
+  await outlineTrigger.focus();
+  await page.keyboard.press('Enter');
+  await outlinePanel.waitFor();
+  await page.keyboard.press('Escape');
+  await outlinePanel.waitFor({ state: 'hidden' });
+  check(
+    await outlineTrigger.evaluate((button) => button === document.activeElement),
+    'Escape returns keyboard focus to the outline edge',
+  );
+  await outlineTrigger.evaluate((button) => button.blur());
+  await outlineTrigger.hover();
   await page.getByRole('button', { name: 'Second page', exact: true }).click();
   await page.waitForFunction(
     () => document.querySelector('input[aria-label="页码"]').value === '2',
   );
   check(true, 'Outline navigates to its PDF destination');
+  await page.getByRole('button', { name: '打开标题目录' }).hover();
+  await page.getByRole('button', { name: '固定目录', exact: true }).click();
+  check(
+    (await page.locator('.pdf-outline-dock.is-pinned').count()) === 1,
+    'Outline can be pinned beside the PDF',
+  );
+  await page.getByRole('textbox', { name: '搜索标题' }).fill('Second');
+  check(
+    await page.getByRole('button', { name: 'Second page', exact: true }).isVisible(),
+    'Outline search finds a chapter',
+  );
+  await page.getByRole('textbox', { name: '搜索标题' }).fill('unmatched-heading');
+  check(
+    await page.getByText('没有匹配的标题', { exact: true }).isVisible(),
+    'Outline reports an empty search',
+  );
+  await page.getByRole('textbox', { name: '搜索标题' }).fill('');
+  await page.screenshot({ path: join(directory, 'reader-outline-pinned.png') });
+  await page.getByRole('button', { name: '关闭目录', exact: true }).click();
   await page.getByRole('button', { name: '上一页', exact: true }).click();
   for (const width of [280, 355, 480, 820]) {
     await page.locator('#reader').evaluate((node, width) => {
@@ -135,6 +218,22 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Fra
       toolbar.x >= reader.x && toolbar.x + toolbar.width <= reader.x + reader.width + 1,
       `Toolbar stays inside a ${width}px reader`,
     );
+    await outlineTrigger.hover();
+    await outlinePanel.waitFor();
+    // Finish the small entrance slide before checking the final bounds.
+    await page.waitForFunction(
+      () => getComputedStyle(document.querySelector('.pdf-outline-panel')).opacity === '1',
+    );
+    const card = await outlinePanel.boundingBox();
+    const body = await page.locator('.pdf-reader-body').boundingBox();
+    check(
+      card.x >= body.x &&
+        card.y >= body.y &&
+        card.x + card.width <= body.x + body.width + 1 &&
+        card.y + card.height <= body.y + body.height + 1,
+      `Outline glass card fits the ${width}px workspace`,
+    );
+    await page.getByRole('button', { name: '关闭目录', exact: true }).click();
     for (const button of await page.getByLabel('PDF 阅读工具').locator('button').all()) {
       const box = await button.boundingBox();
       check(
@@ -148,6 +247,32 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Fra
     );
     await page.screenshot({ path: join(directory, `reader-${width}.png`) });
   }
+  const railBeforeScroll = await outlineTrigger.boundingBox();
+  await page.locator('.pdf-scroll').evaluate((node) => {
+    node.scrollTop = 100;
+  });
+  await page.waitForFunction(() => document.querySelector('.pdf-scroll').scrollTop > 0);
+  const railAfterScroll = await outlineTrigger.boundingBox();
+  check(
+    Math.abs(railBeforeScroll.y - railAfterScroll.y) < 1 &&
+      Math.abs(railBeforeScroll.height - railAfterScroll.height) < 1,
+    'Outline edge remains fixed while the PDF scrolls',
+  );
+  await page.locator('.pdf-scroll').evaluate((node) => {
+    node.scrollTop = 0;
+  });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.evaluate(() => document.documentElement.classList.add('dark'));
+  await outlineTrigger.hover();
+  await outlinePanel.waitFor();
+  check(
+    await outlinePanel.evaluate((panel) => getComputedStyle(panel).transitionDuration === '0s'),
+    'Reduced motion disables the outline slide',
+  );
+  await page.screenshot({ path: join(directory, 'reader-outline-hover-dark.png') });
+  await page.getByRole('button', { name: '关闭目录', exact: true }).click();
+  await page.evaluate(() => document.documentElement.classList.remove('dark'));
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.locator('.pdf-scroll').hover({ position: { x: 160, y: 180 } });
   // Observe every paint during a wheel burst, not just the final sharp canvas.
   await page.evaluate(() => {
@@ -407,6 +532,41 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Fra
     }
   });
   for (const label of paperChecks) check(true, label);
+  await page.locator('#reader').evaluate((node) => {
+    node.style.width = '820px';
+  });
+  await page.getByRole('button', { name: '打开标题目录' }).hover();
+  await page.getByRole('button', { name: '管理标题 Second page', exact: true }).click();
+  await page.getByRole('menuitem', { name: '重命名标题', exact: true }).click();
+  await page.getByRole('dialog').getByRole('textbox').fill('Methods corrected');
+  await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
+  await page.getByRole('button', { name: 'Methods corrected', exact: true }).waitFor();
+  check(true, 'A heading can be renamed without changing the PDF');
+  await page.reload({ waitUntil: 'commit' });
+  await page.getByRole('button', { name: '打开标题目录' }).hover();
+  await page.getByRole('button', { name: 'Methods corrected', exact: true }).waitFor();
+  check(true, 'Corrected outline survives reopening the document');
+  const detected = await page.evaluate(
+    async (bytes) => {
+      const { loadTextPdf } = await import('/src/reader/pdf-text.ts');
+      const { readPdfOutline } = await import('/src/reader/pdf-outline.ts');
+      const task = await loadTextPdf(new Uint8Array(bytes));
+      try {
+        return await readPdfOutline(await task.promise, new AbortController().signal, () => {});
+      } finally {
+        await task.destroy();
+      }
+    },
+    [...Buffer.from(headingPdf)],
+  );
+  check(
+    detected.source === 'detected' &&
+      detected.entries.some(
+        (entry) => entry.title === '1 Introduction' && entry.page === 1 && entry.level === 0,
+      ) &&
+      detected.entries.some((entry) => entry.title === '1.1 Motivation' && entry.level === 1),
+    'A real PDF without bookmarks produces hierarchical headings from its text',
+  );
   check(errors.length === 0, `No browser runtime errors: ${errors.join('; ')}`);
   await writeFile(
     join(directory, 'report.json'),
@@ -414,9 +574,20 @@ createRoot(document.getElementById('root')).render(React.createElement(React.Fra
   );
   console.log(`Reader and composer UI checks passed: ${checks.length}`);
 } catch (error) {
+  console.error('Reader UI failure:', String(error), consoleMessages, failedRequests);
   await writeFile(
     join(directory, 'failure.json'),
-    JSON.stringify({ error: String(error), errors }, null, 2),
+    JSON.stringify(
+      {
+        error: String(error),
+        errors,
+        consoleMessages,
+        failedRequests,
+        checks,
+      },
+      null,
+      2,
+    ),
   );
   await page.screenshot({ path: join(directory, 'failure.png') });
   throw error;

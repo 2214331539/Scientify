@@ -13,11 +13,11 @@ pub fn instructions(
     text.push_str("回答集中于用户问题；除非用户主动要求引用、来源或页码，不添加读取过程、页码来源列表或工具执行细节。");
     if domain == "literature" {
         text.push_str("阅读、讲解、搜索和比较论文是只读任务，不在文献目录写提取 TXT、临时脚本或页面图片。只有用户要求保存笔记或导出时才创建指定成果。技能里的转换示例不能当作用户要求导出；解析失败如实说明，不通过 shell、Python 或 pdftotext 转换文件兜底。");
-        if paper_tools {
-            text.push_str("先用 scientify_list_papers 查看实际论文；用 scientify_read_paper 按页读取，scientify_search_paper 搜索。未打开的论文也能读取。nextCursor 携带页内偏移，继续时传 expectedVersion；truncated 表示未读完，不得假称读取或检索了全文。");
-        } else {
-            text.push_str("此历史会话没有论文宿主工具；需要读取整篇或其他论文时请用户在同目录新建会话，不调用不存在的工具，不通过 shell 创建提取文件。");
-        }
+    }
+    if paper_tools {
+        text.push_str("论文用宿主工具读取，不通过 shell、Python 或 pdftotext 转换 PDF。<current-material> 里的“论文文件”是当前打开的论文，可直接传给 scientify_read_paper；其他论文先用 scientify_list_papers 查看，未打开的论文也能读取。scientify_read_paper 每次最多 8 页，继续时传返回的 nextCursor 页码、页内偏移和 expectedVersion。用户问整篇论文（总结、方法、实验、结论、贡献、局限等）时，从第 1 页连续读到 truncated 为 false 再回答，不能只根据当前页作答；只问某个细节时可以先用 scientify_search_paper 定位。truncated 表示未读完，不得假称读取或检索了全文。");
+    } else if domain == "literature" || domain == "code" {
+        text.push_str("此历史会话没有论文宿主工具；需要读取整篇或其他论文时请用户新建会话，不调用不存在的工具，不通过 shell 创建提取文件。");
     }
     if domain == "code" && managed_runs {
         text.push_str("Python 任务先读取 scientify_list_runs 返回的 pythonEnvironment；正式运行的 executable=python 使用实验当前选择的解释器。解释器变化只影响新启动的运行，已有进程保持原环境。");
@@ -57,7 +57,7 @@ pub fn specifications_for(domain: &str) -> Value {
     } else {
         vec![]
     };
-    if domain == "literature" {
+    if domain == "literature" || domain == "code" {
         tools.extend(papers::specifications());
     }
     if domain == "literature" || domain == "code" {

@@ -489,3 +489,25 @@ it('saves a result on the current disk revision without losing another window’
   expect(task.saveError).toBeNull();
   expect(store.getState().data!.projects[1].name).toBe('其他窗口的修改');
 });
+
+it('brings the selected text of a translation chat into its first agent turn', async () => {
+  const { store, agent, runtime } = await harness();
+  const chat = {
+    ...newConversation('p1'),
+    translationContext: { source: 'Original passage', translation: '译文段落', explanation: '' },
+  };
+  chat.messages.push({ id: 'q', role: 'user', text: '这句话什么意思', createdAt: '' });
+  await store.getState().update((data) => {
+    data.sessions.push(chat);
+  });
+  const original = agent.startThread;
+  agent.startThread = vi.fn(async (...args: Parameters<AgentBackend['startThread']>) => ({
+    ...(await original(...args)),
+    freshThread: true,
+  }));
+  await runtime.send(chat, 'literature', connection, '读全文后总结');
+  const text = vi.mocked(agent.startTurn).mock.calls[0][0].text;
+  expect(text).toContain('<translation-material>');
+  expect(text).toContain('Original passage');
+  expect(text).toContain('这句话什么意思');
+});

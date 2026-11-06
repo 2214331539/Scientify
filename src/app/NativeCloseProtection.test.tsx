@@ -5,6 +5,7 @@ import { App } from './App';
 import { emptyWorkspace } from '../domain/workspace';
 import { createWorkspaceStore } from '../stores/workspace';
 import { browserResearch } from '../platform/browser';
+import { emitTo, listen } from '@tauri-apps/api/event';
 
 const native = vi.hoisted(() => ({
   request: undefined as undefined | ((event: { preventDefault(): void }) => Promise<void>),
@@ -14,9 +15,11 @@ vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true, invoke: vi.fn(asyn
 vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn(async () => () => {}),
   emit: vi.fn(async () => {}),
+  emitTo: vi.fn(async () => {}),
 }));
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
+    label: 'workspace',
     setTitle: async () => {},
     destroy: native.destroy,
     onCloseRequested: async (callback: typeof native.request) => {
@@ -51,7 +54,7 @@ it('merges repeated native close requests, preserves dirty work on cancel and de
   });
   const user = userEvent.setup();
   render(<App store={store} backend={browserResearch} windowMode="projects" />);
-  await screen.findByText('暂无项目');
+  await screen.findByText('开始使用');
   act(() => store.getState().setDirtySource('test-note', true));
   const event = { preventDefault: vi.fn() };
   let first!: Promise<void>;
@@ -84,4 +87,48 @@ it('merges repeated native close requests, preserves dirty work on cancel and de
   await first;
   await waitFor(() => expect(native.destroy).toHaveBeenCalledOnce());
   expect(event.preventDefault).toHaveBeenCalledTimes(4);
+});
+
+it('tray exit keeps unsaved work on cancel and closes the project window only after approval', async () => {
+  const data = emptyWorkspace();
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test-only', legacyAvailable: false }),
+    save: async (value) => value,
+    restore: async () => data,
+    migrateLegacy: async () => data,
+    importWorkspace: async () => null,
+    exportWorkspace: async () => true,
+    chooseDirectory: async () => null,
+  });
+  const user = userEvent.setup();
+  render(<App store={store} backend={browserResearch} windowMode="workspace" />);
+  await waitFor(() => expect(store.getState().phase).toBe('ready'));
+  const call = vi
+    .mocked(listen)
+    .mock.calls.find(([event]) => event === 'scientify-exit-requested')!;
+  // Exits sent to the other window must not reach this one.
+  expect(call[2]).toEqual({ target: 'workspace' });
+  const exit = call[1];
+  act(() => store.getState().setDirtySource('test-note', true));
+  await act(async () => {
+    exit({} as never);
+  });
+  await user.click(
+    within(await screen.findByRole('dialog', { name: '确认操作' })).getByRole('button', {
+      name: '取消',
+    }),
+  );
+  expect(emitTo).not.toHaveBeenCalled();
+  expect(native.destroy).not.toHaveBeenCalled();
+  expect(store.getState().dirty).toBe(true);
+  await act(async () => {
+    exit({} as never);
+  });
+  await user.click(
+    within(await screen.findByRole('dialog', { name: '确认操作' })).getByRole('button', {
+      name: '确认',
+    }),
+  );
+  await waitFor(() => expect(native.destroy).toHaveBeenCalledOnce());
+  expect(emitTo).toHaveBeenCalledExactlyOnceWith('main', 'scientify-exit-requested');
 });

@@ -154,8 +154,8 @@ function rail() {
 }
 
 async function selectProject(user: ReturnType<typeof userEvent.setup>, name: string) {
-  if (screen.queryByLabelText('项目管理', { selector: 'section' })) {
-    await user.click(screen.getByRole('button', { name }));
+  if (screen.queryByRole('complementary', { name: '项目中心导航' })) {
+    await user.click(screen.getAllByRole('button', { name })[0]);
     return;
   }
   await user.click(screen.getByLabelText('切换项目'));
@@ -203,7 +203,7 @@ it('provides the five primary workspace destinations and starts with AI closed',
   expect(backend.askAI).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Scientify 项目管理' }));
   expect(screen.queryByRole('complementary', { name: '工作区导航' })).toBeNull();
-  const spaces = within(screen.getByRole('complementary', { name: '项目空间' }));
+  const spaces = within(screen.getByRole('complementary', { name: '项目中心导航' }));
   expect(spaces.getByRole('button', { name: '设置' })).toBeTruthy();
   expect(spaces.queryByRole('button', { name: '数据与备份' })).toBeNull();
   await selectProject(user, 'ToolHCL');

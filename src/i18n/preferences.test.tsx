@@ -72,12 +72,22 @@ it('switches both appearance and language immediately without saving or translat
   render(<App store={store} backend={browserResearch} />);
   await screen.findByRole('button', { name: /^Notes/ });
   expect(within(screen.getByRole('banner')).queryByRole('button', { name: '全局搜索' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: '切换为深色' }));
-  expect(document.documentElement.classList.contains('dark')).toBe(true);
   expect(
     within(screen.getByRole('banner')).queryByRole('button', { name: '切换为英文' }),
   ).toBeNull();
   await user.click(screen.getByRole('button', { name: '设置' }));
+  await user.click(
+    within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', {
+      name: '外观',
+    }),
+  );
+  await user.selectOptions(screen.getByRole('combobox', { name: '界面主题' }), 'dark');
+  expect(document.documentElement.classList.contains('dark')).toBe(true);
+  await user.click(
+    within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', {
+      name: '通用',
+    }),
+  );
   await user.selectOptions(screen.getByRole('combobox', { name: '界面语言' }), 'en');
   expect(document.documentElement.lang).toBe('en');
   expect(screen.getByRole('button', { name: 'New project' })).toBeTruthy();

@@ -2,6 +2,7 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
   background: var(--sf-surface-sunken);
   padding: 24px;
@@ -91,74 +92,267 @@
   padding: 3px 8px;
   border-radius: 4px;
 }
-.pdf-outline {
+.pdf-reader-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  container-type: size;
+}
+.pdf-outline-dock {
   position: absolute;
   z-index: 6;
-  inset: 12px auto auto 8px;
-  display: flex;
-  align-items: flex-start;
+  inset: 0 auto 0 0;
+  width: 18px;
 }
 .pdf-outline-trigger {
-  width: 30px;
-  height: 30px;
+  position: relative;
+  width: 18px;
+  min-width: 18px;
+  height: 100%;
+  min-height: 0;
   padding: 0;
-  border: 1px solid var(--sf-border-control);
-  background: color-mix(in srgb, var(--sf-surface-raised) 92%, transparent);
-  box-shadow: var(--sf-shadow-popover);
-  opacity: 0.72;
-  transition:
-    opacity 140ms ease,
-    background-color 140ms ease;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--sf-text-secondary);
 }
-.pdf-outline:hover .pdf-outline-trigger,
-.pdf-outline:focus-within .pdf-outline-trigger,
-.pdf-outline.is-open .pdf-outline-trigger {
+.pdf-outline-trigger::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 3px;
+  height: 48px;
+  transform: translateY(-50%);
+  border-radius: 3px;
+  background: var(--sf-text-muted);
+  opacity: 0.38;
+  transition:
+    opacity 160ms ease,
+    background-color 160ms ease;
+}
+.pdf-outline-trigger svg {
+  opacity: 0;
+}
+.pdf-outline-trigger:hover,
+.pdf-outline-trigger:active {
+  background: transparent;
+}
+.pdf-outline-trigger:hover::after,
+.pdf-outline-dock[data-open='true'] > .pdf-outline-trigger::after {
+  opacity: 0.75;
+}
+.pdf-outline-trigger:focus-visible {
+  outline: none;
+}
+.pdf-outline-trigger:focus-visible::after {
+  box-shadow: 0 0 0 2px var(--sf-focus);
   opacity: 1;
-  background: var(--sf-surface-raised);
 }
 .pdf-outline-panel {
-  width: min(280px, calc(100vw - 80px));
-  max-height: min(68vh, 560px);
-  margin-left: 6px;
-  overflow: auto;
-  border: 1px solid var(--sf-border-control);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--sf-surface-raised) 97%, transparent);
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: min(272px, calc(100cqw - 24px));
+  height: min(640px, calc(100cqh - 24px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--sf-border-control) 78%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--sf-surface-raised) 84%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(110%);
+  backdrop-filter: blur(14px) saturate(110%);
   box-shadow: var(--sf-shadow-popover);
-  backdrop-filter: blur(12px);
+  opacity: 0;
+  transform: translate(-8px, -50%);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--sf-motion-overlay, 220ms) ease,
+    transform var(--sf-motion-overlay, 220ms) cubic-bezier(0.2, 0.7, 0.2, 1),
+    visibility 220ms;
+}
+.pdf-outline-panel[data-open='true'] {
+  opacity: 1;
+  transform: translate(0, -50%);
+  visibility: visible;
+  pointer-events: auto;
+}
+.pdf-outline-dock.is-pinned {
+  position: relative;
+  inset: auto;
+  width: min(260px, 45%);
+  flex-shrink: 0;
+}
+.pdf-outline-dock.is-pinned > .pdf-outline-trigger {
+  display: none;
+}
+.pdf-outline-dock.is-pinned .pdf-outline-panel {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border: 0;
+  border-right: 1px solid var(--sf-border-subtle);
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  background: var(--sf-surface-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .pdf-outline-heading {
-  padding: 9px 11px 7px;
-  border-bottom: 1px solid var(--sf-border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 40px;
+  padding: 4px 6px 4px 12px;
   color: var(--sf-text-secondary);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+}
+.pdf-outline-heading .sf-button-icon {
+  width: 26px;
+  height: 26px;
+}
+.pdf-outline-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px;
+  color: var(--sf-text-muted);
+}
+.pdf-outline-search input {
+  min-width: 0;
+  width: 100%;
+}
+.pdf-outline-items {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 6px 8px;
+}
+.pdf-outline-row {
+  display: flex;
+  align-items: flex-start;
+  border-radius: 4px;
+}
+.pdf-outline-row:hover {
+  background: var(--sf-surface-hover);
+}
+.pdf-outline-row.is-active {
+  background: var(--sf-surface-selected);
+}
+.pdf-outline-fold {
+  display: grid;
+  place-items: center;
+  flex: 0 0 20px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sf-text-secondary);
+  cursor: pointer;
+}
+.pdf-outline-fold svg {
+  transition: transform 160ms ease;
+}
+.pdf-outline-fold:disabled {
+  cursor: default;
 }
 .pdf-outline-link {
-  display: block;
-  width: 100%;
-  padding-block: 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 7px 4px;
   border: 0;
   background: transparent;
   color: var(--sf-text-primary);
   font: inherit;
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1.5;
   text-align: left;
   cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.pdf-outline-link:hover,
-.pdf-outline-link:focus-visible {
-  background: var(--sf-surface-selected);
-  outline: none;
+.pdf-outline-link span {
+  flex: 1;
+  overflow-wrap: anywhere;
 }
-.pdf-outline-empty {
-  padding: 14px 11px;
+.pdf-outline-link small {
+  flex-shrink: 0;
+  color: var(--sf-text-muted);
+  font-size: 10px;
+}
+.pdf-outline-more {
+  opacity: 0;
+  flex-shrink: 0;
+  width: 24px;
+  height: 28px;
+  margin-top: 2px;
+}
+.pdf-outline-row:hover .pdf-outline-more,
+.pdf-outline-row:focus-within .pdf-outline-more {
+  opacity: 1;
+}
+.pdf-outline-row button:focus-visible {
+  outline: 2px solid var(--sf-focus);
+  outline-offset: -2px;
+}
+.pdf-outline-message {
+  padding: 12px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.pdf-outline-footer {
+  padding: 7px 12px;
+  border-top: 1px solid var(--sf-border-subtle);
   color: var(--sf-text-muted);
   font-size: 11px;
+}
+@container (max-width: 760px) {
+  .pdf-outline-dock.is-pinned {
+    position: absolute;
+    inset: 12px auto 12px 8px;
+    width: min(272px, calc(100cqw - 24px));
+  }
+  .pdf-outline-dock.is-pinned .pdf-outline-panel {
+    border: 1px solid var(--sf-border-control);
+    border-radius: 8px;
+    box-shadow: var(--sf-shadow-popover);
+    background: color-mix(in srgb, var(--sf-surface-raised) 84%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(110%);
+    backdrop-filter: blur(14px) saturate(110%);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pdf-outline-panel,
+  .pdf-outline-dock.is-pinned .pdf-outline-panel {
+    background: var(--sf-surface-raised);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .pdf-outline-panel,
+  .pdf-outline-dock.is-pinned .pdf-outline-panel {
+    background: var(--sf-surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdf-outline-panel,
+  .pdf-outline-fold svg,
+  .pdf-outline-trigger::after {
+    transition: none;
+  }
 }
 .pdf-status {
   padding: 3px 12px;

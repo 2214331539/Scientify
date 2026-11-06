@@ -1,9 +1,9 @@
 //! One application tray; Yita's embedded windows do not create a second icon.
 use serde_json::{json, Value};
 use tauri::{
-    menu::{CheckMenuItem, Menu, MenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    Manager, Runtime,
+    Emitter, Manager, Runtime,
 };
 
 struct TranslationToggle<R: Runtime>(CheckMenuItem<R>);
@@ -26,7 +26,14 @@ pub fn install<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
     let clipboard = MenuItem::with_id(app, "clipboard", "翻译剪贴板", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "翻译设置…", true, None::<&str>)?;
     let repair = MenuItem::with_id(app, "repair", "修复划词捕获", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &enabled, &clipboard, &settings, &repair])?;
+    let separator = PredefinedMenuItem::separator(app)?;
+    let quit = MenuItem::with_id(app, "quit", "退出 Scientify", true, None::<&str>)?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &show, &enabled, &clipboard, &settings, &repair, &separator, &quit,
+        ],
+    )?;
     app.manage(TranslationToggle(enabled));
     let mut tray = TrayIconBuilder::with_id("scientify")
         .tooltip("Scientify · 划词翻译")
@@ -36,6 +43,12 @@ pub fn install<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
             let host = app.clone();
             tauri::async_runtime::spawn(async move {
                 let result = async {
+                    if id == "quit" {
+                        let window = host.get_webview_window("workspace").or_else(|| host.get_webview_window("main")).ok_or("主窗口不可用。")?;
+                        window.unminimize().and_then(|_| window.show()).and_then(|_| window.set_focus()).map_err(|e| e.to_string())?;
+                        // Use the frontend's existing dirty-file and running-task guard.
+                        return host.emit_to(tauri::EventTarget::webview(window.label()), "scientify-exit-requested", ()).map_err(|e| e.to_string());
+                    }
                     if id == "show" {
                         let window = host.get_webview_window("workspace").or_else(|| host.get_webview_window("main")).ok_or("主窗口不可用。")?;
                         return window.unminimize().and_then(|_| window.show()).and_then(|_| window.set_focus()).map_err(|e| e.to_string());

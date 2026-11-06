@@ -28,6 +28,7 @@ mod library;
 #[cfg(debug_assertions)]
 mod literature_smoke;
 mod notes;
+mod reader;
 mod research;
 mod windows;
 
@@ -357,6 +358,7 @@ pub fn run() {
             research::research_write_file,
             research::research_import_pdf,
             research::research_read_pdf,
+            reader::reader_outline,
             research::research_git_status,
             research::research_git_diff,
             git::code_git_inspect,

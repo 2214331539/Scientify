@@ -122,6 +122,7 @@ export function contextMaterial(context: ContextSnapshot) {
   return [
     `对象：${context.title}`,
     context.path ? `路径：${context.path}` : '',
+    context.paperPath ? `论文文件：${context.paperPath}` : '',
     context.page ? `页码：${context.page}` : '',
     context.browser
       ? `当前网页标签：${context.browser.tabId}\n网址：${context.browser.url}\n网页正文尚未读取，请通过浏览器工具获取。`

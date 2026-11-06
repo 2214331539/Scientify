@@ -14,7 +14,7 @@ export interface SearchTarget {
   projectId?: string;
   workspace: 'overview' | 'literature' | 'experiments' | 'writing' | 'projects';
   resourceId?: string;
-  tool?: 'notes';
+  tool?: 'notes' | 'assistant';
 }
 type SearchResult = {
   id: string;

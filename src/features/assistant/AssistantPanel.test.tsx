@@ -120,7 +120,7 @@ it('starts a paper-tools upgrade chat in the old literature root after navigatin
   try {
     await user.type(screen.getByLabelText('向 AI 提问'), 'read paper');
     await user.click(screen.getByRole('button', { name: '发送' }));
-    await screen.findByText('此历史会话尚未启用论文读取工具。请在同目录新建会话，原对话仍会保留。');
+    await screen.findByText('这个旧对话不能读论文，新建对话后可以读全文。');
     await waitFor(() =>
       expect((screen.getByRole('button', { name: '新建会话' }) as HTMLButtonElement).disabled).toBe(
         false,
@@ -308,7 +308,21 @@ it('reports service failures explicitly and keeps the saved question available f
   expect(screen.queryByText('这是基于原文的分析。')).toBeNull();
 });
 
-async function actionHarness(model = 'test-model') {
+/** Permission controls belong to the agent; quick chat hides them. */
+const agentStub = (): AgentBackend => ({
+  status: vi.fn(),
+  handshake: vi.fn(),
+  domains: vi.fn(async () => []),
+  context: vi.fn(async () => ({ root: 'C:/papers', materials: [], warnings: [] })),
+  startThread: vi.fn(),
+  startTurn: vi.fn(),
+  events: vi.fn(async () => []),
+  respond: vi.fn(),
+  interrupt: vi.fn(),
+  release: vi.fn(),
+});
+
+async function actionHarness(model = 'test-model', withAgent = false) {
   const data = emptyWorkspace();
   data.settings.model.model = model;
   const store = createWorkspaceStore({
@@ -328,13 +342,19 @@ async function actionHarness(model = 'test-model') {
   const testModel = vi.fn(async () => {});
   const backend = { askAI, listModels, testModel } as unknown as ResearchBackend;
   const view = render(
-    <AssistantPanel store={store} backend={backend} scope="p1" context={context} />,
+    <AssistantPanel
+      store={store}
+      backend={backend}
+      scope="p1"
+      context={context}
+      {...(withAgent ? { agent: agentStub() } : {})}
+    />,
   );
   return { store, backend, askAI, listModels, testModel, view, user: userEvent.setup() };
 }
 
 it('persists permissions per chat, opens the same selector via slash, and defaults a new chat to ask', async () => {
-  const { store, backend, user, view, askAI } = await actionHarness();
+  const { store, backend, user, view, askAI } = await actionHarness('test-model', true);
   const input = screen.getByLabelText('向 AI 提问');
   await user.type(input, '/permission');
   await user.keyboard('{Enter}');
@@ -350,7 +370,15 @@ it('persists permissions per chat, opens the same selector via slash, and defaul
   await user.click(within(history).getAllByRole('menuitemradio')[0]);
   expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全允许');
   view.unmount();
-  render(<AssistantPanel store={store} backend={backend} scope="p1" context={context} />);
+  render(
+    <AssistantPanel
+      store={store}
+      backend={backend}
+      scope="p1"
+      context={context}
+      agent={agentStub()}
+    />,
+  );
   expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全允许');
   expect(
     store.getState().data?.sessions.find((chat) => chat.id === first.id)?.agentPermission,
@@ -368,7 +396,13 @@ it('keeps ask permission when saving full access fails', async () => {
   } as unknown as WorkspaceBackend);
   await store.getState().load();
   render(
-    <AssistantPanel store={store} backend={{} as ResearchBackend} scope="p1" context={context} />,
+    <AssistantPanel
+      store={store}
+      backend={{} as ResearchBackend}
+      scope="p1"
+      context={context}
+      agent={agentStub()}
+    />,
   );
   const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: '执行权限' }));
@@ -1305,4 +1339,70 @@ it('creates parallel chats, keeps the first binding after navigation, and saves 
   } finally {
     runtime.dispose();
   }
+});
+
+it('continues a translation chat with the agent inside a project and shows the mode', async () => {
+  const data = emptyWorkspace();
+  data.projects.push({ id: 'p1', name: 'project', question: '', createdAt: '', space: 'personal' });
+  data.settings.model.model = 'fixture';
+  data.sessions.push({
+    ...newConversation('p1'),
+    id: 'translation-session',
+    title: '翻译问答',
+    translationContext: { source: 'Original', translation: 'Translated', explanation: '' },
+    messages: [{ id: 'q', role: 'user', text: 'Earlier question', createdAt: '' }],
+  });
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+  } as unknown as WorkspaceBackend);
+  await store.getState().load();
+  const agent: AgentBackend = {
+    ...agentStub(),
+    startThread: vi.fn(async (projectId, domain, connection, options) => ({
+      threadId: options.conversationId,
+      conversationId: options.conversationId,
+      projectId,
+      domain,
+      cwd: 'C:/papers',
+      model: connection.model,
+      modelProvider: 'scientify',
+      instructionSources: [],
+      paperTools: true,
+    })),
+    startTurn: vi.fn(async () => ({ turnId: 'turn1', status: 'completed', events: [] })),
+  };
+  const runtime = getAgentRuntime(store, agent);
+  const askAI = vi.fn(async () => '不应走快速问答');
+  const backend = { askAI } as unknown as ResearchBackend;
+  const view = render(
+    <AssistantPanel store={store} backend={backend} agent={agent} scope="p1" context={context} />,
+  );
+  try {
+    expect(screen.getByText('Agent')).toBeTruthy();
+    act(() =>
+      window.dispatchEvent(
+        new CustomEvent('scientify-assistant-open-session', {
+          detail: { scope: 'p1', id: 'translation-session', draft: '总结全文', accept: vi.fn() },
+        }),
+      ),
+    );
+    await userEvent.setup().click(screen.getByRole('button', { name: '发送' }));
+    await waitFor(() => expect(agent.startThread).toHaveBeenCalled());
+    expect(askAI).not.toHaveBeenCalled();
+  } finally {
+    view.unmount();
+    await act(async () => runtime.dispose());
+  }
+  // Outside a project the same panel answers with quick chat and says so.
+  render(
+    <AssistantPanel
+      store={store}
+      backend={backend}
+      scope="__inbox__"
+      context={{ workspace: 'projects', title: '收集箱' }}
+    />,
+  );
+  expect(screen.getByText('快速问答')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: '执行权限' })).toBeNull();
 });

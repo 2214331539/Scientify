@@ -38,6 +38,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   const baseline = useRef('');
   const inFlight = useRef<Promise<boolean> | null>(null);
   const openNote = useRef<(id: string) => void>(() => {});
+  const newNote = useRef<() => void>(() => {});
   const sourceKey = `notes:${scope}`;
   const images = useMemo(() => noteImages(scope), [scope]);
   const imagePending = useRef(false);
@@ -111,6 +112,14 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     window.addEventListener('scientify-open-note', handle);
     return () => window.removeEventListener('scientify-open-note', handle);
   }, [scope]);
+  // The project center's inbox page asks the panel that owns the drafts to start a note.
+  useEffect(() => {
+    function handle(event: Event) {
+      if ((event as CustomEvent<{ scope?: string }>).detail?.scope === scope) newNote.current();
+    }
+    window.addEventListener('scientify-new-note', handle);
+    return () => window.removeEventListener('scientify-new-note', handle);
+  }, [scope]);
 
   function edit(value: Note) {
     latest.current = value;
@@ -135,6 +144,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     markDirty(isNew);
   }
 
+  newNote.current = () => void switchNote(createNote(scope), true);
   openNote.current = (id: string) => {
     const note = store
       .getState()

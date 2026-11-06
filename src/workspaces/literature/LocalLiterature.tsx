@@ -1052,8 +1052,10 @@ export function LocalLiterature({
                     backend={reader}
                     compact
                     onContext={(value) => {
-                      setSelection(value);
-                      changed.current(value);
+                      // Name the open PDF so the agent can read the whole paper, not just this page.
+                      const next = { ...value, paperPath: paper.path };
+                      setSelection(next);
+                      changed.current(next);
                     }}
                     onTool={() =>
                       setSession((s) => ({

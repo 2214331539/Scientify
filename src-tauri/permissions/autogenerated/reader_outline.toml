@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reader-outline"
+description = "Enables the reader_outline command without any pre-configured scope."
+commands.allow = ["reader_outline"]
+
+[[permission]]
+identifier = "deny-reader-outline"
+description = "Denies the reader_outline command without any pre-configured scope."
+commands.deny = ["reader_outline"]

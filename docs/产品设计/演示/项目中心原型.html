@@ -1,0 +1,1384 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scientify 项目中心 · 交互原型</title>
+<style>
+:root{--ink:#242727;--ink2:#555b5b;--muted:#6b7170;--faint:#9aa2a8;--line:#e5e7e6;--line2:#d1d6d4;--hover:#f2f3f2;--accent:#3d4643;--accent2:#282f2c;--ok:#246b45;--warn:#865a16;--bad:#b03636;--info:#2e65a4;
+--ui:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;--mac:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei UI",sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;overflow:hidden;background:#e9ecee;font:13px/1.55 var(--ui);color:var(--ink)}
+button{font:inherit;color:inherit}
+.ic{flex:none;display:block}
+
+/* ---------- 评审框架 ---------- */
+.rv{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;padding:8px 16px;background:#fff;border-bottom:1px solid var(--line);position:relative;z-index:2}
+.rv-t{display:flex;align-items:center;gap:9px;margin-right:4px}
+.rv-t img{width:22px;height:22px}
+.rv-t b{font-size:14px}
+.rv-t span{color:var(--muted);font-size:12.5px}
+.rv-g{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.seg{display:inline-flex;background:#eef0ef;border-radius:7px;padding:2px;gap:1px}
+.seg button{border:0;background:transparent;padding:3px 10px;border-radius:5px;font-size:12.5px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.rv-sp{flex:1}
+.rv-tog{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:#fff;border-radius:6px;padding:3px 10px;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.rv-tog.on{background:#eef0ef;color:var(--ink);font-weight:600}
+.main{flex:1;display:flex;min-height:0}
+.stage{flex:1;min-width:0;overflow:auto;padding:22px;display:flex;justify-content:center;align-items:flex-start}
+.deskbox{position:relative;flex:none}
+.desk{position:absolute;left:0;top:0;transform-origin:0 0;padding:28px;border-radius:14px;background:linear-gradient(150deg,#dde4ea 0%,#eceff1 55%,#e4e8ec 100%)}
+.desk.mac{padding-top:52px}
+.mbar{display:none}
+.desk.mac .mbar{display:flex;position:absolute;left:0;right:0;top:0;height:26px;align-items:center;padding:0 12px;gap:2px;background:rgba(255,255,255,.7);border-bottom:1px solid rgba(0,0,0,.06);border-radius:14px 14px 0 0;font:13px/1 var(--mac);color:#1d1d1f;z-index:30}
+.mbar>span{padding:4px 9px;border-radius:5px;cursor:default;position:relative;white-space:nowrap}
+.mbar>span.app{font-weight:700}
+.mbar>span:hover,.mbar>span.on{background:rgba(0,0,0,.09)}
+.mbar>span.clk{margin-left:auto;font-size:12.5px;background:transparent}
+.mbar .menu{top:25px;left:0;line-height:1.5}
+
+/* ---------- 设计说明 ---------- */
+.notes{width:376px;flex:none;background:#fff;border-left:1px solid var(--line);overflow:auto}
+.notes[hidden]{display:none}
+.nt-tabs{position:sticky;top:0;background:#fff;display:flex;gap:2px;padding:10px 16px 0;border-bottom:1px solid var(--line);z-index:1}
+.nt-tabs button{border:0;background:transparent;padding:7px 10px 9px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.nt-tabs button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
+.nt{padding:16px 20px 36px}
+.nt h2{font-size:17px;margin:0 0 4px}
+.nt .pp{margin:0 0 6px;color:var(--ink2)}
+.nt h3{font-size:12.5px;font-weight:600;margin:16px 0 6px}
+.nt ul{margin:0;padding:0;list-style:none}
+.nt li{position:relative;padding:3px 0 3px 14px;color:var(--ink2);font-size:12.5px;line-height:1.65}
+.nt ul li::before{content:"";position:absolute;left:3px;top:11px;width:4px;height:4px;border-radius:50%;background:#b8bfbc}
+.nt ol{margin:0;padding-left:18px;color:var(--ink2);font-size:12.5px}
+.nt ol li{padding:3px 0 3px 2px}
+.nt b{color:var(--ink)}
+.tg{display:inline-block;font-size:10.5px;line-height:16px;padding:0 5px;border-radius:4px;border:1px solid;vertical-align:1px;font-weight:500;white-space:nowrap;margin-right:5px}
+.tg.n{color:var(--info);border-color:#c5d6ec;background:#f2f6fc}
+.tg.c{color:var(--warn);border-color:#e8d6b3;background:#fcf7ee}
+.tg.h{color:var(--ok);border-color:#bfdccb;background:#f2f8f4}
+.tg.t{color:var(--muted);border-color:var(--line2);background:#f7f7f7}
+.legend{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:var(--muted);margin:10px 0 2px}
+.tries{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tries button{border:1px solid var(--line2);background:#fff;border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--ink2)}
+.tries button:hover{border-color:var(--ink2);color:var(--ink)}
+
+/* ---------- 窗口 ---------- */
+#win{position:relative;display:grid;grid-template-columns:var(--sbw) minmax(0,1fr);background:#fff;overflow:hidden;color:var(--ink);font-size:13px;line-height:1.5}
+#win.p-win{border-radius:8px;font-family:var(--ui);box-shadow:0 0 0 1px rgba(0,0,0,.14),0 22px 56px -14px rgba(20,30,40,.38)}
+#win.p-mac{border-radius:11px;font-family:var(--mac);box-shadow:0 0 0 .5px rgba(0,0,0,.28),0 26px 64px -12px rgba(20,30,40,.42)}
+#win.sz-md{--sbw:224px;--bw:132px;--hb:112px}
+#win.sz-lg{--sbw:240px;--bw:140px;--hb:120px}
+#win.sz-sm{--sbw:196px;--bw:112px;--hb:104px}
+
+.sb{display:flex;flex-direction:column;min-height:0;background:#f7f7f7;border-right:1px solid var(--line)}
+.p-mac .sb{background:linear-gradient(180deg,#f0f0ef,#ebebea);border-right-color:#dcdcdb}
+.sb-top{height:48px;flex:none;display:flex;align-items:center;gap:9px;padding:0 18px}
+.p-mac .sb-top{height:52px;padding:0 16px}
+.sb-top img{width:20px;height:20px}
+.sb-top b{font-size:14px}
+.lights{display:flex;gap:8px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)}
+.lights i:nth-child(2){background:#febc2e}
+.lights i:nth-child(3){background:#28c840}
+.sb-s{margin:2px 10px 10px;height:30px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;font-size:12.5px}
+.p-mac .sb-s{height:28px;background:rgba(0,0,0,.05);border-color:transparent;border-radius:7px}
+.sb-s:hover{border-color:#b9c0bd}
+.kb{margin-left:auto;font-size:11px;color:var(--faint);white-space:nowrap}
+.sb-n{padding:0 8px;display:flex;flex-direction:column;gap:1px}
+.nv{height:32px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:6px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.p-mac .nv{height:28px;gap:8px;padding:0 8px}
+.nv:hover{background:rgba(0,0,0,.045)}
+.nv.on{background:rgba(0,0,0,.08);color:var(--ink);font-weight:600}
+.nv .c{margin-left:auto;font-size:12px;color:var(--faint);font-weight:400}
+.nv .dt{width:7px;height:7px;border-radius:50%;background:var(--info);margin-left:auto}
+.nv .dt+.c{margin-left:7px}
+.sb-h{display:flex;align-items:center;gap:4px;margin:16px 18px 4px;font-size:11.5px;font-weight:600;color:var(--faint);cursor:pointer;user-select:none}
+.p-mac .sb-h{margin-left:16px}
+.sb-h .ic{transition:transform .15s}
+.sb-h.closed .ic{transform:rotate(-90deg)}
+.fv{height:28px;display:flex;align-items:center;gap:9px;padding:0 10px;border-radius:6px;color:var(--ink2);cursor:pointer;font-size:12.5px;white-space:nowrap;min-width:0}
+.p-mac .fv{height:26px;padding:0 8px}
+.fv:hover{background:rgba(0,0,0,.045)}
+.fv span{overflow:hidden;text-overflow:ellipsis}
+.fv .ic{color:var(--faint);margin-left:auto}
+.mb{width:10px;height:13px;flex:none;border-radius:1px 2px 2px 1px;background:var(--c);box-shadow:inset 2px 0 0 rgba(0,0,0,.2)}
+.sb-f{margin-top:auto;padding:8px;border-top:1px solid var(--line);display:flex;align-items:center;gap:2px}
+.p-mac .sb-f{border-top-color:#dcdcdb}
+.ac{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:5px 6px;border-radius:7px;cursor:pointer}
+.ac:hover{background:rgba(0,0,0,.05)}
+.ac>div{min-width:0}
+.ac b{display:block;font-size:12.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac small{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);line-height:1.35;white-space:nowrap;min-width:0}
+.ac small span{overflow:hidden;text-overflow:ellipsis}
+.av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none;background:#dfe5e2;color:#3d4643;font-size:12px;font-weight:600}
+.av.g{background:#e6e8e8;color:var(--muted)}
+.sd{width:6px;height:6px;border-radius:50%;background:#3c9a62;flex:none}
+.sd.off{background:#aab1ae}
+.ib{width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--ink2);cursor:pointer;flex:none;padding:0}
+.ib:hover{background:rgba(0,0,0,.06);color:var(--ink)}
+.ib.sm{width:22px;height:22px}
+
+.mn{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+.tb{height:48px;flex:none;display:flex;align-items:center;gap:8px;padding-left:24px}
+.p-mac .tb{height:52px;padding-right:16px}
+.tb h1{margin:0;font-size:16px;font-weight:600;display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.p-mac .tb h1{font-size:15px;font-weight:700}
+.tb h1 .c{font-size:12.5px;font-weight:400;color:var(--faint)}
+.tb-a{margin-left:auto;display:flex;align-items:center;gap:8px}
+.caps{display:flex;align-self:stretch;margin-left:12px}
+.caps span{width:46px;display:grid;place-items:center;color:var(--ink2)}
+.caps span:hover{background:rgba(0,0,0,.06)}
+.caps span.x:hover{background:#c42b1c;color:#fff}
+.ct{flex:1;min-height:0;overflow:auto;padding:4px 24px 28px}
+
+.bt{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--ink);font-size:13px;cursor:pointer;white-space:nowrap;line-height:1}
+.p-mac .bt{height:28px;padding:0 11px}
+.bt:hover{background:#f6f7f6;border-color:#bfc6c3}
+.bt:disabled{opacity:.45;cursor:default;pointer-events:none}
+.bt.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.bt.pri:hover{background:var(--accent2);border-color:var(--accent2)}
+.bt.dng{background:var(--bad);border-color:var(--bad);color:#fff}
+.bt.dng:hover{background:#962c2c}
+.bt.gh{border-color:transparent;background:transparent;color:var(--ink2)}
+.bt.gh:hover{background:var(--hover);color:var(--ink)}
+.bt.sm,.p-mac .bt.sm{height:26px;padding:0 9px;font-size:12px;gap:5px}
+.bt.lk{border:0;background:transparent;padding:0 2px;height:auto;color:var(--info);font-size:12.5px;gap:3px}
+.bt.lk:hover{text-decoration:underline;background:transparent}
+.bt.lk.mu{color:var(--muted)}
+.sz-sm .bt .lbl{display:none}
+.spl{display:inline-flex}
+.spl .bt:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
+.spl .bt:last-child{border-top-left-radius:0;border-bottom-left-radius:0;padding:0 7px;border-left-color:rgba(255,255,255,.24)}
+
+.sx{height:30px;width:236px;display:flex;align-items:center;gap:7px;padding:0 6px 0 9px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--faint);cursor:text}
+.p-mac .sx{height:28px;background:rgba(0,0,0,.045);border-color:transparent;border-radius:7px}
+.sx:focus-within{border-color:#8c9592;box-shadow:0 0 0 3px rgba(61,70,67,.1);background:#fff}
+.sx input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:12.5px;color:var(--ink)}
+.sx input::placeholder{color:var(--faint)}
+.sz-sm .sx{width:150px}
+.sz-lg .sx{width:280px}
+
+.fr{display:flex;align-items:center;gap:4px;margin:2px 0 18px;min-height:30px}
+.chp{height:28px;display:inline-flex;align-items:center;gap:6px;padding:0 11px;border:0;border-radius:14px;background:transparent;color:var(--ink2);font-size:12.5px;cursor:pointer;white-space:nowrap}
+.chp:hover{background:var(--hover);color:var(--ink)}
+.chp.on{background:#e9ebea;color:var(--ink);font-weight:600}
+.chp .c{color:var(--faint);font-weight:400}
+.fr .sp{flex:1}
+.vt{display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;margin-left:4px}
+.vt button{width:30px;height:26px;display:grid;place-items:center;border:0;background:#fff;color:var(--muted);cursor:pointer;padding:0}
+.vt button+button{border-left:1px solid var(--line2)}
+.vt button.on{background:#eceeed;color:var(--ink)}
+
+/* 书本封面 */
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,var(--bw));gap:26px 28px;align-items:start}
+.bi{width:var(--bw);min-width:0}
+.hshelf{display:flex;gap:24px}
+.hshelf .bi{width:var(--hb)}
+.bk{position:relative;width:100%;aspect-ratio:3/4;border-radius:2px 6px 6px 2px;background:var(--c);cursor:pointer;overflow:hidden;box-shadow:inset 7px 0 0 rgba(0,0,0,.16),inset 8px 0 0 rgba(255,255,255,.1),0 1px 2px rgba(0,0,0,.12),0 8px 18px -8px rgba(15,25,35,.45);transition:transform .18s ease,box-shadow .18s ease}
+.bk::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(255,255,255,0) 6%,rgba(255,255,255,.13) 14%,rgba(255,255,255,0) 32%,rgba(0,0,0,.06) 100%);pointer-events:none}
+.bk:hover{transform:translateY(-3px);box-shadow:inset 7px 0 0 rgba(0,0,0,.16),inset 8px 0 0 rgba(255,255,255,.1),0 2px 4px rgba(0,0,0,.12),0 16px 26px -10px rgba(15,25,35,.5)}
+.bk.static{cursor:default}
+.bk.static:hover{transform:none}
+.bk-f{position:absolute;left:18px;right:28px;top:13px;font-size:10.5px;letter-spacing:.03em;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk-n{position:absolute;left:18px;right:12px;bottom:32px;font-size:15px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;text-wrap:balance}
+.hshelf .bk-n,.np-p .bk-n{font-size:13.5px;bottom:30px}
+.sz-sm .bk-n{font-size:13.5px}
+.bk-b{position:absolute;left:18px;bottom:11px;display:flex;gap:7px;opacity:.85}
+.rib{position:absolute;top:0;right:12px;width:11px;height:22px;background:#e3a33c;clip-path:polygon(0 0,100% 0,100% 100%,50% 76%,0 100%)}
+.bk-m{position:absolute;bottom:7px;right:7px;width:24px;height:24px;border-radius:6px;border:0;display:grid;place-items:center;background:rgba(255,255,255,.9);color:var(--ink);opacity:0;cursor:pointer;transition:opacity .12s;padding:0}
+.bk:hover .bk-m,.bk-m.on{opacity:1}
+.bk.arch{filter:saturate(.25) brightness(1.06);opacity:.8}
+.bk.remote{opacity:.6}
+.bk.remote:hover{opacity:.85}
+.bk-meta{margin-top:9px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden}
+.bk-meta .ic{color:var(--faint)}
+.bk.new{background:transparent;box-shadow:none;border:1.5px dashed #c8cfcc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted)}
+.bk.new::before{display:none}
+.bk.new:hover{background:#fafbfa;border-color:#a9b2ae;color:var(--ink);transform:none;box-shadow:none}
+.mbk{display:inline-block;width:22px;height:29px;flex:none;border-radius:1px 3px 3px 1px;background:var(--c);box-shadow:inset 3px 0 0 rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.15)}
+
+/* 首页 */
+.sec{margin-top:26px}
+.sec:first-child{margin-top:8px}
+.sh{display:flex;align-items:center;gap:8px;margin-bottom:12px;min-height:22px}
+.sh h2{margin:0;font-size:13.5px;font-weight:600}
+.sh .c{font-size:12px;color:var(--faint)}
+.sh .r{margin-left:auto}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:36px}
+.sz-sm .cols{grid-template-columns:1fr;gap:0}
+.sz-sm .cols>section:last-child{order:-1;margin-bottom:18px}
+.rc{display:flex;align-items:center;gap:12px;padding:8px 10px;margin:0 -10px;border-radius:8px;cursor:pointer}
+.rc:hover{background:#f5f6f5}
+.ti{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex:none}
+.ti.paper{background:#edf2fa;color:#2e65a4}
+.ti.note{background:#fbf3e4;color:#8a5d14}
+.ti.run{background:#ecf5ef;color:#246b45}
+.ti.draft{background:#f3eff8;color:#6b5a8a}
+.ti.chat{background:#eef0f0;color:#4c5453}
+.rc-m{min-width:0;flex:1}
+.rc-m b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-m small{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.pj{display:inline-flex;align-items:center;gap:5px;color:var(--ink2)}
+.pj i{width:8px;height:10px;border-radius:1px 2px 2px 1px;background:var(--c);flex:none}
+.rc .w{font-size:12px;color:var(--faint);white-space:nowrap}
+.pd{display:flex;gap:11px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px}
+.pd-i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none}
+.pd-i.info{background:#edf2fa;color:var(--info)}
+.pd-i.warn{background:#fbf3e4;color:var(--warn)}
+.pd-i.bad{background:#fbeded;color:var(--bad)}
+.pd-m{min-width:0;flex:1}
+.pd-m b{display:block;font-weight:500;font-size:12.5px;line-height:1.45}
+.pd-m small{display:block;font-size:12px;color:var(--muted);line-height:1.45;margin-top:1px}
+.pd-a{display:flex;gap:6px;margin-top:8px}
+.none{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;padding:8px 0}
+.qs{display:grid;grid-template-columns:repeat(3,minmax(0,230px));gap:14px}
+.sz-sm .qs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tile{border:1px solid var(--line);border-radius:10px;padding:16px 16px 18px;cursor:pointer;background:#fff;transition:border-color .12s,box-shadow .12s}
+.tile:hover{border-color:#c3cac7;box-shadow:0 3px 12px -4px rgba(0,0,0,.12)}
+.tile .ti{margin-bottom:14px;width:34px;height:34px}
+.tile b{display:block;font-size:13.5px}
+.tile p{margin:4px 0 0;font-size:12.5px;color:var(--muted);line-height:1.5}
+.dataloc{margin-top:20px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+code{font-family:var(--ui);font-size:12px;color:var(--ink2);background:#f3f4f3;padding:1px 6px;border-radius:4px}
+
+/* 表格 */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.tbl th{height:32px;font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:0 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:#fff;z-index:1}
+.tbl th.s{cursor:pointer}
+.tbl th.s:hover{color:var(--ink)}
+.tbl th .ic{display:inline-block;vertical-align:-2px}
+.tbl td{padding:9px 10px;border-bottom:1px solid #f0f1f0;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbl tr.r{cursor:pointer}
+.tbl tr.r:hover td{background:#f8f9f8}
+.tbl tr.r.sel td{background:#eef0ef}
+.nm{display:flex;align-items:center;gap:11px;min-width:0}
+.nm>div{min-width:0}
+.nm b{display:flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap;overflow:hidden}
+.nm small{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mu{color:var(--muted)}
+.fa{color:var(--faint)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
+.pill.ok{color:var(--ok)}
+.pill.warn{color:var(--warn)}
+.pill.bad{color:var(--bad)}
+.pill.info{color:var(--info)}
+.pill.mu{color:var(--muted)}
+.spin{animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{display:inline-block;font-size:11px;line-height:17px;padding:0 6px;border-radius:9px;background:#eceeed;color:var(--ink2);font-weight:500;white-space:nowrap}
+.tag.new{background:#e6effa;color:var(--info)}
+.avs{display:flex;align-items:center}
+.avs .av{width:22px;height:22px;font-size:10.5px;box-shadow:0 0 0 2px #fff;margin-left:-5px}
+.avs .av:first-child{margin-left:0}
+.avs .more{font-size:12px;color:var(--muted);margin-left:6px}
+.tbl td.ra{text-align:right;padding-left:4px;padding-right:6px;text-overflow:clip}
+.ra .bt,.ra .ib{opacity:0;display:inline-flex}
+.nm b>span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nm b .tag,.nm b .fa{flex:none}
+tr.r:hover .ra .bt,tr.r.sel .ra .bt,tr.r:hover .ra .ib{opacity:1}
+
+/* 团队项目 */
+.tm{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 304px}
+.sz-sm .tm{grid-template-columns:minmax(0,1fr) 240px}
+.sz-lg .tm{grid-template-columns:minmax(0,1fr) 340px}
+.tm-l{min-width:0;overflow:auto;padding:4px 24px 24px}
+.cs{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin:0 0 10px;flex-wrap:wrap}
+.cs.off{color:var(--warn)}
+.tm-d{border-left:1px solid var(--line);overflow:auto;background:#fbfbfb;padding:18px 18px 24px;min-width:0}
+.dh-p{display:flex;gap:12px;align-items:flex-start}
+.dh-p .mbk{width:34px;height:45px}
+.dh-p b{font-size:15px;display:block;line-height:1.35}
+.dh-p small{font-size:12px;color:var(--muted)}
+.dact{display:flex;gap:8px;margin:14px 0 4px}
+.dact .bt.pri{flex:1;justify-content:center}
+.dsec{margin-top:20px}
+.dsec h4{display:flex;align-items:center;margin:0 0 8px;font-size:12px;font-weight:600;color:var(--muted)}
+.dsec h4 .r{margin-left:auto}
+.dsec>p{margin:0;font-size:12.5px;color:var(--ink2)}
+.mem{display:flex;align-items:center;gap:9px;padding:5px 6px;margin:0 -6px;border-radius:6px}
+.mem:hover{background:#f1f2f1}
+.mem .av{width:26px;height:26px;font-size:11px}
+.mem-n{min-width:0;flex:1}
+.mem-n b{display:flex;align-items:center;gap:5px;font-weight:500;font-size:12.5px;white-space:nowrap;overflow:hidden}
+.mem-n small{display:block;font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.role{font-size:12px;color:var(--ink2);display:inline-flex;align-items:center;gap:2px;padding:2px 4px 2px 6px;border-radius:5px;white-space:nowrap;border:0;background:transparent}
+button.role{cursor:pointer}
+button.role:hover{background:#e7e9e8}
+.mem .x{opacity:0}
+.mem:hover .x{opacity:1}
+.kv{display:grid;grid-template-columns:70px minmax(0,1fr);gap:6px 10px;font-size:12.5px;margin:0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;color:var(--ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kv dd .bt.lk{max-width:100%;overflow:hidden;text-overflow:ellipsis;display:inline-block;white-space:nowrap;text-align:left}
+.dnote{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:6px;align-items:flex-start;line-height:1.5}
+.dnote .ic{margin-top:2px}
+.dfoot{margin-top:22px;padding-top:12px;border-top:1px solid var(--line)}
+.dl{border:0;background:transparent;color:var(--bad);font-size:12.5px;cursor:pointer;padding:0}
+.dl:hover{text-decoration:underline}
+.dl:disabled{opacity:.45;pointer-events:none}
+.gst{max-width:430px;margin:84px auto 0;text-align:center;display:flex;flex-direction:column;align-items:center}
+.gst>.ic{color:#aab2af;margin-bottom:14px}
+.gst b{font-size:15px;margin-bottom:6px}
+.gst p{margin:0 0 18px;color:var(--muted);font-size:12.5px}
+.gst .row{display:flex;gap:12px;align-items:center}
+.emp{display:flex;flex-direction:column;align-items:center;text-align:center;padding:60px 20px;color:var(--muted)}
+.emp>.ic{color:#b4bbb8;margin-bottom:12px}
+.emp b{font-size:14.5px;color:var(--ink);margin-bottom:4px}
+.emp p{margin:0 0 16px;font-size:12.5px;max-width:390px}
+.emp .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+/* 收集箱 */
+.ibx-tabs{display:flex;gap:4px;padding:2px 24px 12px}
+.ibw{flex:1;min-height:0;display:grid;grid-template-columns:268px minmax(0,1fr);border-top:1px solid var(--line)}
+.sz-sm .ibw{grid-template-columns:200px minmax(0,1fr)}
+.ib-l{border-right:1px solid var(--line);overflow:auto;padding:8px}
+.ni{padding:9px 10px;border-radius:7px;cursor:pointer}
+.ni:hover{background:#f5f6f5}
+.ni.on{background:#eceeed}
+.ni b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ni p{margin:2px 0 0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ni small{font-size:11.5px;color:var(--faint)}
+.ib-r{display:flex;flex-direction:column;min-width:0;min-height:0}
+.ib-bar{height:44px;flex:none;display:flex;align-items:center;gap:7px;padding:0 16px 0 22px;border-bottom:1px solid #f0f1f0;font-size:12px;color:var(--muted)}
+.ib-bar .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.ib-doc{flex:1;overflow:auto;padding:22px 32px}
+.ib-doc h2{margin:0 0 12px;font-size:20px}
+.ib-doc .bd{white-space:pre-wrap;color:var(--ink2);font-size:13.5px;line-height:1.8}
+.cv{flex:1;overflow:auto;padding:18px 28px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:78%;font-size:13px;line-height:1.75;white-space:pre-wrap}
+.msg.u{align-self:flex-end;background:#eff1f0;padding:8px 12px;border-radius:10px}
+.msg.a{align-self:flex-start}
+.cbox{margin:0 20px 16px;border:1px solid var(--line2);border-radius:10px;padding:8px 8px 8px 12px;display:flex;align-items:flex-end;gap:8px}
+.cbox textarea{flex:1;border:0;outline:0;resize:none;font:inherit;height:38px;background:transparent}
+
+/* 菜单 */
+.menu{position:absolute;z-index:50;min-width:210px;padding:4px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:8px;box-shadow:0 10px 30px -6px rgba(0,0,0,.22);font-size:13px;color:var(--ink)}
+.p-mac .menu,.mbar .menu{padding:5px;border-radius:7px;background:rgba(246,246,246,.86);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border-color:rgba(0,0,0,.14);box-shadow:0 10px 32px -6px rgba(0,0,0,.28);min-width:226px;font-family:var(--mac)}
+.mi{display:flex;align-items:center;gap:10px;height:30px;padding:0 10px;border-radius:5px;cursor:pointer;white-space:nowrap;color:var(--ink)}
+.p-mac .mi,.mbar .mi{height:23px;padding:0 9px;gap:7px;border-radius:4px;font-size:13px}
+.mi:hover{background:var(--hover)}
+.p-mac .mi:hover,.mbar .mi:hover{background:#3478f6;color:#fff}
+.p-mac .mi:hover .k,.mbar .mi:hover .k,.p-mac .mi:hover .ic,.p-mac .mi:hover .fa{color:#fff}
+.mi>.ic{color:var(--muted)}
+.p-mac .mi>.ic{display:none}
+.mi .k{margin-left:auto;padding-left:20px;color:var(--faint);font-size:12px}
+.mi.dis{color:var(--faint);pointer-events:none}
+.mi.dis>.ic{color:#c4cac7}
+.mi.dng,.mi.dng>.ic{color:var(--bad)}
+.mi .ck{width:16px;display:grid;place-items:center;flex:none}
+.ms{height:1px;background:var(--line);margin:4px 6px}
+.p-mac .ms,.mbar .ms{margin:4px 9px;background:rgba(0,0,0,.1)}
+.mh{padding:7px 10px 5px;display:flex;gap:10px;align-items:center}
+.mh small{display:block;font-size:11.5px;color:var(--muted)}
+.mh b{display:block;font-size:13px}
+.mseg{display:flex;margin-left:auto;background:#eceeed;border-radius:6px;padding:2px}
+.mseg span{padding:1px 7px;border-radius:4px;font-size:12px;color:var(--ink2)}
+.mseg span.on{background:#fff;color:var(--ink);box-shadow:0 1px 1px rgba(0,0,0,.1)}
+.p-mac .mi:hover .mseg span{color:var(--ink2)}
+
+/* 对话框 */
+.ov{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(24,28,27,.3);animation:fade .15s ease}
+.p-mac .ov{align-items:flex-start;background:rgba(24,28,27,.14)}
+.dlg{max-width:calc(100% - 40px);max-height:calc(100% - 40px);display:flex;flex-direction:column;background:#fff;border-radius:10px;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 28px 70px -10px rgba(0,0,0,.35);animation:pop .16s ease}
+.p-mac .dlg{margin-top:52px;border-radius:12px;animation:sheet .2s ease;max-height:calc(100% - 68px)}
+.dh{display:flex;align-items:flex-start;gap:10px;padding:16px 14px 2px 22px}
+.dh>div{flex:1;min-width:0}
+.dh b{display:block;font-size:15px;font-weight:600}
+.dh small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.p-mac .dh{padding:18px 22px 2px}
+.p-mac .dh b{font-size:13.5px;font-weight:700}
+.db{padding:14px 22px 8px;overflow:auto;min-height:0}
+.df{display:flex;align-items:center;gap:8px;padding:14px 16px 14px 22px;margin-top:8px;background:#f7f7f7;border-top:1px solid var(--line);border-radius:0 0 10px 10px}
+.p-mac .df{background:transparent;border-top:0;padding:8px 20px 18px;margin-top:0}
+.df .l{display:flex;gap:8px;align-items:center}
+.df .r{margin-left:auto;display:flex;gap:8px}
+.df .r .bt{min-width:76px;justify-content:center}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:scale(.97)}}
+@keyframes sheet{from{opacity:0;transform:translateY(-14px)}}
+.fd{margin-bottom:14px}
+.fd>label{display:flex;align-items:baseline;gap:6px;font-size:12.5px;font-weight:600;margin-bottom:6px}
+.fd>label small{font-weight:400;color:var(--faint);font-size:12px}
+.fd .h{font-size:12px;color:var(--muted);margin-top:5px}
+.fd .h.w{color:var(--warn)}
+.in{width:100%;height:32px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:#fff;font:inherit;font-size:13px;color:var(--ink);outline:0}
+.p-mac .in{height:28px}
+.in:focus{border-color:#7f8986;box-shadow:0 0 0 3px rgba(61,70,67,.1)}
+textarea.in,.p-mac textarea.in{height:62px;padding:7px 10px;resize:none;line-height:1.5}
+.sws{display:flex;gap:9px;flex-wrap:wrap;padding:3px}
+.sw{width:22px;height:22px;border-radius:50%;background:var(--c);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.sw.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--c)}
+.np{display:grid;grid-template-columns:128px minmax(0,1fr);gap:24px}
+.np-p{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:2px}
+.np-p .bi{width:120px}
+.np-p small{font-size:11.5px;color:var(--faint)}
+.rds{display:flex;flex-direction:column;gap:1px}
+.rd{display:flex;align-items:flex-start;gap:9px;padding:6px 8px;margin:0 -8px;border-radius:6px;cursor:pointer}
+.rd:hover{background:#f5f6f5}
+.rd>i{width:16px;height:16px;border-radius:50%;border:1.5px solid #aeb6b3;flex:none;margin-top:1px;background:#fff}
+.rd.on>i{border:5px solid var(--accent)}
+.rd b{font-weight:500;font-size:12.5px;display:block}
+.rd small{display:block;font-size:12px;color:var(--muted);word-break:break-all}
+.rd .mbk{width:16px;height:21px;margin-top:0}
+.cb{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.cb>i{width:16px;height:16px;border-radius:4px;border:1.5px solid #aeb6b3;flex:none;margin-top:1px;display:grid;place-items:center;color:#fff;background:#fff}
+.cb.on{border-color:#aeb6b3}
+.cb.on>i{background:var(--accent);border-color:var(--accent)}
+.cb.dis{cursor:default;background:#fafafa}
+.cb.dis>i{background:#f0f0f0}
+.cb b{font-weight:500;font-size:12.5px;display:block}
+.cb small{display:block;font-size:12px;color:var(--muted)}
+.tip{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;background:#f5f6f5;border-radius:8px;font-size:12px;color:var(--ink2);line-height:1.6}
+.tip .ic{color:var(--muted);margin-top:2px}
+.paths{list-style:none;margin:6px 0 12px;padding:0}
+.paths li{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px;color:var(--ink2);min-width:0}
+.paths li>span{flex:none;width:64px}
+.paths code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph{display:flex;gap:6px}
+.ph>span{height:32px;display:grid;place-items:center;padding:0 10px;border:1px solid var(--line2);border-radius:6px;color:var(--ink2);background:#f7f7f7;font-size:12.5px}
+.p-mac .ph>span{height:28px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips>span{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:#eceeed;border-radius:12px;padding:1px 3px 1px 10px}
+.pick{display:flex;align-items:center;gap:8px}
+.pick .path{flex:1;min-width:0;height:32px;display:flex;align-items:center;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:#f9f9f9;font-size:12.5px;color:var(--ink2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.p-mac .pick .path{height:28px}
+.scan{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:14px;font-size:12.5px;color:var(--ink2)}
+.scan>div{display:flex;gap:8px;align-items:flex-start}
+.scan .ic{margin-top:2px}
+.scan .ok{color:var(--ok)}
+.selp{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.selp b{display:block;font-weight:500;font-size:12.5px}
+.selp small{display:block;font-size:12px;color:var(--muted)}
+.lst{display:flex;flex-direction:column;gap:1px;max-height:176px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px}
+.lst .rd{align-items:center}
+.lst .rd>i{margin-top:0}
+.cf{display:flex;flex-direction:column;gap:10px}
+.cfi{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.cfi b{font-weight:500;font-size:12.5px;display:flex;align-items:center;gap:6px}
+.cfi .vs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.cfi .vs div{background:#f6f7f6;border-radius:6px;padding:6px 9px;font-size:12px;color:var(--ink2)}
+.cfi .vs small{display:block;color:var(--muted);font-size:11.5px}
+.cfi .a{display:flex;gap:6px;flex-wrap:wrap}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.two h5{margin:0 0 6px;font-size:12.5px;display:flex;gap:6px;align-items:center}
+.two h5 .ic{color:var(--muted)}
+.two ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--ink2);line-height:1.75}
+
+/* 提示与搜索 */
+.toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:14px;padding:8px 14px;border-radius:8px;background:#2c312f;color:#fff;font-size:12.5px;box-shadow:0 10px 26px -6px rgba(0,0,0,.35);white-space:nowrap;animation:fade .15s;max-width:calc(100% - 40px)}
+.toast span{overflow:hidden;text-overflow:ellipsis}
+.toast button{border:0;background:transparent;color:#a9d1ff;cursor:pointer;padding:0;font-size:12.5px}
+.cmdk{position:absolute;inset:0;z-index:45;background:rgba(24,28,27,.18)}
+.cmdk-b{position:absolute;left:50%;top:64px;transform:translateX(-50%);width:min(580px,calc(100% - 40px));background:#fff;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 24px 60px -10px rgba(0,0,0,.35);overflow:hidden}
+.cmdk-i{display:flex;align-items:center;gap:10px;height:48px;padding:0 16px;border-bottom:1px solid var(--line);color:var(--muted)}
+.cmdk-i input{flex:1;border:0;outline:0;font:inherit;font-size:14px;color:var(--ink);background:transparent}
+.cmdk-r{max-height:330px;overflow:auto;padding:6px}
+.cmdk-r h6{margin:8px 10px 4px;font-size:11.5px;font-weight:600;color:var(--faint)}
+.co{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.co.on{background:#eceeed}
+.co .ic{color:var(--muted)}
+.co span{overflow:hidden;text-overflow:ellipsis}
+.co small{color:var(--faint);font-size:12px;margin-left:auto;padding-left:12px}
+.cmdk-f{display:flex;gap:16px;padding:8px 16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="rv" id="rv"></div>
+<div class="main">
+  <div class="stage" id="stage"><div class="deskbox" id="deskbox"><div class="desk" id="desk"><div class="mbar" id="mbar"></div><div id="win"></div></div></div></div>
+  <aside class="notes" id="notes"></aside>
+</div>
+<script>
+const ICONS = {"house":[["path",{"d":"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"}],["path",{"d":"M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}]],"folder":[["path",{"d":"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"}]],"folder-open":[["path",{"d":"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"}]],"folder-plus":[["path",{"d":"M12 10v6"}],["path",{"d":"M9 13h6"}],["path",{"d":"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"}]],"folder-input":[["path",{"d":"M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"}],["path",{"d":"M2 13h10"}],["path",{"d":"m9 16 3-3-3-3"}]],"users":[["path",{"d":"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}],["path",{"d":"M16 3.128a4 4 0 0 1 0 7.744"}],["path",{"d":"M22 21v-2a4 4 0 0 0-3-3.87"}],["circle",{"cx":"9","cy":"7","r":"4"}]],"user":[["path",{"d":"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"}],["circle",{"cx":"12","cy":"7","r":"4"}]],"user-plus":[["path",{"d":"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}],["circle",{"cx":"9","cy":"7","r":"4"}],["line",{"x1":"19","x2":"19","y1":"8","y2":"14"}],["line",{"x1":"22","x2":"16","y1":"11","y2":"11"}]],"user-minus":[["path",{"d":"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}],["circle",{"cx":"9","cy":"7","r":"4"}],["line",{"x1":"22","x2":"16","y1":"11","y2":"11"}]],"inbox":[["polyline",{"points":"22 12 16 12 14 15 10 15 8 12 2 12"}],["path",{"d":"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"}]],"search":[["path",{"d":"m21 21-4.34-4.34"}],["circle",{"cx":"11","cy":"11","r":"8"}]],"settings":[["path",{"d":"M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"}],["circle",{"cx":"12","cy":"12","r":"3"}]],"circle-help":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"}],["path",{"d":"M12 17h.01"}]],"plus":[["path",{"d":"M5 12h14"}],["path",{"d":"M12 5v14"}]],"chevron-down":[["path",{"d":"m6 9 6 6 6-6"}]],"chevron-right":[["path",{"d":"m9 18 6-6-6-6"}]],"chevron-left":[["path",{"d":"m15 18-6-6 6-6"}]],"ellipsis":[["circle",{"cx":"12","cy":"12","r":"1"}],["circle",{"cx":"19","cy":"12","r":"1"}],["circle",{"cx":"5","cy":"12","r":"1"}]],"star":[["path",{"d":"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"}]],"archive":[["rect",{"width":"20","height":"5","x":"2","y":"3","rx":"1"}],["path",{"d":"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"}],["path",{"d":"M10 12h4"}]],"archive-restore":[["rect",{"width":"20","height":"5","x":"2","y":"3","rx":"1"}],["path",{"d":"M4 8v11a2 2 0 0 0 2 2h2"}],["path",{"d":"M20 8v11a2 2 0 0 1-2 2h-2"}],["path",{"d":"m9 15 3-3 3 3"}],["path",{"d":"M12 12v9"}]],"trash-2":[["path",{"d":"M10 11v6"}],["path",{"d":"M14 11v6"}],["path",{"d":"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"}],["path",{"d":"M3 6h18"}],["path",{"d":"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"}]],"pencil":[["path",{"d":"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"}],["path",{"d":"m15 5 4 4"}]],"cloud":[["path",{"d":"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"}]],"cloud-check":[["path",{"d":"m17 15-5.5 5.5L9 18"}],["path",{"d":"M5.516 16.07A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 3.501 7.327"}]],"cloud-off":[["path",{"d":"M10.94 5.274A7 7 0 0 1 15.71 10h1.79a4.5 4.5 0 0 1 4.222 6.057"}],["path",{"d":"M18.796 18.81A4.5 4.5 0 0 1 17.5 19H9A7 7 0 0 1 5.79 5.78"}],["path",{"d":"m2 2 20 20"}]],"cloud-download":[["path",{"d":"M12 13v8l-4-4"}],["path",{"d":"m12 21 4-4"}],["path",{"d":"M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284"}]],"refresh-cw":[["path",{"d":"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"}],["path",{"d":"M21 3v5h-5"}],["path",{"d":"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"}],["path",{"d":"M8 16H3v5"}]],"check":[["path",{"d":"M20 6 9 17l-5-5"}]],"x":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"circle-alert":[["circle",{"cx":"12","cy":"12","r":"10"}],["line",{"x1":"12","x2":"12","y1":"8","y2":"12"}],["line",{"x1":"12","x2":"12.01","y1":"16","y2":"16"}]],"triangle-alert":[["path",{"d":"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"}],["path",{"d":"M12 9v4"}],["path",{"d":"M12 17h.01"}]],"circle-x":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m15 9-6 6"}],["path",{"d":"m9 9 6 6"}]],"circle-check":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m16 9-5.5 5.5L8 12"}]],"layout-grid":[["rect",{"width":"7","height":"7","x":"3","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"14","rx":"1"}],["rect",{"width":"7","height":"7","x":"3","y":"14","rx":"1"}]],"list":[["path",{"d":"M3 5h.01"}],["path",{"d":"M3 12h.01"}],["path",{"d":"M3 19h.01"}],["path",{"d":"M8 5h13"}],["path",{"d":"M8 12h13"}],["path",{"d":"M8 19h13"}]],"arrow-up-down":[["path",{"d":"m21 16-4 4-4-4"}],["path",{"d":"M17 20V4"}],["path",{"d":"m3 8 4-4 4 4"}],["path",{"d":"M7 4v16"}]],"file-text":[["path",{"d":"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{"d":"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{"d":"M10 9H8"}],["path",{"d":"M16 13H8"}],["path",{"d":"M16 17H8"}]],"notebook-pen":[["path",{"d":"M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"}],["path",{"d":"M2 6h4"}],["path",{"d":"M2 10h4"}],["path",{"d":"M2 14h4"}],["path",{"d":"M2 18h4"}],["path",{"d":"M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"}]],"flask-conical":[["path",{"d":"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"}],["path",{"d":"M6.453 15h11.094"}],["path",{"d":"M8.5 2h7"}]],"play":[["path",{"d":"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"}]],"pen-line":[["path",{"d":"M13 21h8"}],["path",{"d":"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"}]],"message-square":[["path",{"d":"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"}]],"sparkles":[["path",{"d":"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"}],["path",{"d":"M20 2v4"}],["path",{"d":"M22 4h-4"}],["circle",{"cx":"4","cy":"20","r":"2"}]],"book-open":[["path",{"d":"M12 5v16"}],["path",{"d":"M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"}]],"external-link":[["path",{"d":"M15 3h6v6"}],["path",{"d":"M10 14 21 3"}],["path",{"d":"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"}]],"log-out":[["path",{"d":"m16 17 5-5-5-5"}],["path",{"d":"M21 12H9"}],["path",{"d":"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"}]],"log-in":[["path",{"d":"m10 17 5-5-5-5"}],["path",{"d":"M15 12H3"}],["path",{"d":"M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"}]],"share-2":[["circle",{"cx":"18","cy":"5","r":"3"}],["circle",{"cx":"6","cy":"12","r":"3"}],["circle",{"cx":"18","cy":"19","r":"3"}],["line",{"x1":"8.59","x2":"15.42","y1":"13.51","y2":"17.49"}],["line",{"x1":"15.41","x2":"8.59","y1":"6.51","y2":"10.49"}]],"upload":[["path",{"d":"M12 3v12"}],["path",{"d":"m17 8-5-5-5 5"}],["path",{"d":"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}]],"download":[["path",{"d":"M12 15V3"}],["path",{"d":"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}],["path",{"d":"m7 10 5 5 5-5"}]],"arrow-right":[["path",{"d":"M5 12h14"}],["path",{"d":"m12 5 7 7-7 7"}]],"arrow-up-right":[["path",{"d":"M7 7h10v10"}],["path",{"d":"M7 17 17 7"}]],"info":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 16v-4"}],["path",{"d":"M12 8h.01"}]],"clock":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 6v6l4 2"}]],"history":[["path",{"d":"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"}],["path",{"d":"M3 3v5h5"}],["path",{"d":"M12 7v5l4 2"}]],"keyboard":[["path",{"d":"M10 8h.01"}],["path",{"d":"M12 12h.01"}],["path",{"d":"M14 8h.01"}],["path",{"d":"M16 12h.01"}],["path",{"d":"M18 8h.01"}],["path",{"d":"M6 8h.01"}],["path",{"d":"M7 16h10"}],["path",{"d":"M8 12h.01"}],["rect",{"width":"20","height":"16","x":"2","y":"4","rx":"2"}]],"minus":[["path",{"d":"M5 12h14"}]],"square":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}]],"copy":[["rect",{"width":"14","height":"14","x":"8","y":"8","rx":"2","ry":"2"}],["path",{"d":"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"}]],"monitor":[["rect",{"width":"20","height":"14","x":"2","y":"3","rx":"2"}],["line",{"x1":"8","x2":"16","y1":"21","y2":"21"}],["line",{"x1":"12","x2":"12","y1":"17","y2":"21"}]],"laptop":[["path",{"d":"M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z"}],["path",{"d":"M20.054 15.987H3.946"}]],"smartphone":[["rect",{"width":"14","height":"20","x":"5","y":"2","rx":"2","ry":"2"}],["path",{"d":"M12 18h.01"}]],"server":[["rect",{"width":"20","height":"8","x":"2","y":"2","rx":"2","ry":"2"}],["rect",{"width":"20","height":"8","x":"2","y":"14","rx":"2","ry":"2"}],["line",{"x1":"6","x2":"6.01","y1":"6","y2":"6"}],["line",{"x1":"6","x2":"6.01","y1":"18","y2":"18"}]],"bookmark":[["path",{"d":"M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"}]],"lock":[["rect",{"width":"18","height":"11","x":"3","y":"11","rx":"2","ry":"2"}],["path",{"d":"M7 11V7a5 5 0 0 1 10 0v4"}]],"shield-check":[["path",{"d":"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"}],["path",{"d":"m9 12 2 2 4-4"}]],"send":[["path",{"d":"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"}],["path",{"d":"m21.854 2.147-10.94 10.939"}]],"loader-circle":[["path",{"d":"M21 12a9 9 0 1 1-6.219-8.56"}]],"command":[["path",{"d":"M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"}]],"git-compare":[["circle",{"cx":"18","cy":"18","r":"3"}],["circle",{"cx":"6","cy":"6","r":"3"}],["path",{"d":"M13 6h3a2 2 0 0 1 2 2v7"}],["path",{"d":"M11 18H8a2 2 0 0 1-2-2V9"}]],"file-down":[["path",{"d":"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{"d":"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{"d":"M12 18v-6"}],["path",{"d":"m9 15 3 3 3-3"}]],"crown":[["path",{"d":"M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"}],["path",{"d":"M5 21h14"}]],"sun":[["circle",{"cx":"12","cy":"12","r":"4"}],["path",{"d":"M12 2v2"}],["path",{"d":"M12 20v2"}],["path",{"d":"m4.93 4.93 1.41 1.41"}],["path",{"d":"m17.66 17.66 1.41 1.41"}],["path",{"d":"M2 12h2"}],["path",{"d":"M20 12h2"}],["path",{"d":"m6.34 17.66-1.41 1.41"}],["path",{"d":"m19.07 4.93-1.41 1.41"}]],"moon":[["path",{"d":"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"}]],"pin":[["path",{"d":"M12 17v5"}],["path",{"d":"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"}]]};
+const LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAIqElEQVR4nOyde4xcVR3Hf7+7j5nZ3dmZO92dp1RTkpqAfwi1aLqAqLERlaRSU9s08VFjFE0wQTAGYtiaUvFBY4VEgyX+YUCiYowBjZYIBlPFKFWE2oZsrM3O4w7bmdnZXWYWdu6P32+2W0ph6d2Ze+ecC/eT7M49957H75zvOfece849MwYEKMWAAKUEAigmEEAxgQCKCQRQTD/4kLGxsSiEINMiTIq7D6kMi1CcmZmZA5+B4CMSmeR2MnAr2LCFLX/Xqy4SPMPt+Qja9MdKsfwQ+ARfCLAunb6CDPoSAXzOiX/O1E/Rxh+fLpX+DprTB5pj5tIf48Kf5MNtawh2GRmwMRKLlpv1+edAY7QWIJ7JXM21+bt8+D5YO+8AwkvCI9H/Nufn/w+aoq0A5gYzhi1jkg8/DJ2TQaRwZHzw0Wa1uQgaou0wFJuDn+SPXdA9uziu7aApegqwCQa4w/0EuATHdb3ECRqi5Sgonh2/DMF4ClyEwL68Vnj+KGiGli0AufMEl/EiTjfQUgACHAeX8SJON9CzBSC6fr/2Ik430LMTJrsObuNFnC6gpQAGwhS4jBdxuoGefQAOHOePY+Aex87EqR3aCGCaZmzluJLPT7MMj4Br0CPLcb42LdUoF2B8fHwknk3eDpHQ/nPPG4bxK/54GrqF4D9n4noFTkvSlLRBMUrnguK59GcJ8RCPUD7Fzosj0aEjzbkXTsm1Rn0+H46ODPKT4rXQBYSwv5q3fr3iNrPjV/KY6A4EvNY28LpwLNpozs3/CxShRIBYLvXBoejI3Vy4t/CzeOrM6QjX+0UujLO3nrGY+fSSbfMQHiZg7a21hQT7h/sGDtbr9aWVk5Ho6Df44+q2g9NmG7ZFoiObQ6MjpcW5hf9Bj+mpALGLkhcPjQzv49p3Dzs3vo6XS8Ojw9PNuYV/i0MKrjG/8FgkGm2w83L+G3KWEpzm0v1WtWjtO7fw47nkp7nAb+PD858JNvL5z0Siw8lQfPjEYn2hCj2iVwL0m9n0LQbBIS6Ya97A3wAXxNuHosMnG3MLZ4eN3CqO8Lmj3BQW+foGPhVeJfwsT7zdbwDtrRasn517IZFNboV24eP61ZPHzQbhznA02sdpPsknbPAYzxflzWxqJ9+HbwKizeTAP7cOmyduXrO4XimUD/PHYTOVOgj9dCUsz+2s3L4sDnMMlvAvNct6ZpWI53g+yL6QDXydF/rpzngutZ1vYQdYyAfBQzybDeUat8XmgudMO5yLpyrX8MlawfoheEg8m7oRQZY40XTin5Ae4pZ7gCvAEfAA129B6962Lhcajk2ytIe4NjuagUSEg3Z/+PrZ6cKfwWO4f3kyZK6716CW3MYuuNS5nAf8PC9tjg7HQ8826g1XX31xtQXEM6mvotxuANY7DPKwTcbkbLH4T1BALJPZZKA9yYcfdxjkFHFrqBWtg+ASrgjADzXbeAGFC56uchjkGI/991bypV+ABiRy6R1EdDsfOlwzwCd4gedArVD+DXRJVwIk0ulLyKBb+XC3wyBN/pMRyp2gITxgkGeESf4LOQxyP9q4v1IqdTxv1bEAZwpfavClDoP8xDCW9p6ePp0HjZE+zLb7pTV8wWGQZ1mEHZ2K0HEnHB4dupn1W8vC+SYiYwOHO8HTDSXQkHhu/N1AffIektMWLSR5CLzAnfuj0AGdT8YRXgFrZxuScTSeSd/VfsFWE8QWsUlsg7W9gbdMZ2XRRslsKCLd1Brsm+Kn46+AYsQGsUVsAgWonI7mRXK6x8yk/mam013NeHaCpClpiw3LtqhB/YIMwnvBoN/xCOSBsdzYRvAYSUPSkjTbaStGpyXJXS3qO8G1ch94M0fVL3FLGuDOK4+uoN+aMMJtXEOnEtnUHnAJiUvilLhBM3R9OXc9z0rexzX2sXg6/X7oEAkrcUhc4Hx6pKfovUkP4Ro06HGewbwvkc1e5DSY+JUwElbiAI3xxS5JflzfQ9Ca4tp864X8ih/xK2HAB/hpm+oAK3GHmU0el0We8y/KObkmfgD0fBX99fDhNlV8J//7ucnruwa2d9CATTylTPL2hK82fbbx5T5hgey+G1pnXX03INonwYf4VgAINWZrJ2s1OUwkEqMU9s1d51UEX1WgmEAAxQQCKCYQQDGBAIoJBFBMIIBiAgEUEwigmEAAxQQCKCYQQDGBAIoJBFBMIIBiAgEU0/mCDEIRApbpoiy6aQG/hYAVOi6LjgWQ7ZsEtBfe4tDynuSOt7J21QfUCuVJG+FDgPR7eKvBeZa8SxlAF3TdCc/mrT9V8+WPIrW39Gj5nTwuc1zyKnmWvEOXuDYKqhStQy1jYII7pG+z80V48/Gi5E3yKHkFl/DkTaZYJvMeA+2v8eFO8AgaXDTPey1lFrzjQZuMu2aLxX+Ay3jyHCCGcse0CxF3EIH2XyG/GmK75EHy4kXhC54+iFXypV/WitYENzTZfzsD/mFGbBbbJQ/gIb14El6qFkrfaRm2/OrFvaA7bKPYKjazawk8pmdTEfXp55+r5q0vItFHCOAwaIbYJLaJjWIr9IiezwVViuU/1ArWVh5Hf5mdOnyX55TYIjaJbdBjlE3G8Tj6RwNLxP0DfQ/aFbDnkKQtNogtoAils6HlctmqFspfR6QJQuzZLx9JWpKmpC02gEK0mI6u5Mt/reVL8osZu7kX9PA7/ttx75a0JE3QAK3WA3i8/UBsMLyFEL7Jzhq4R03ilLglDdAIbff0yNfhgEE3r/bbYU6fhOU3xcDG73fznT5eou2KmBRYpWDt4RK8jrvLx2GtSBgOK3HoWviC9kuSPC5/uFq0PsAt4UZ2nnIQ5JT4lTASFjTHN2vCPE6/G/GlCUT4wWp+5Jr4Eb/gE/y3rxNkM3bmqkHbfsqyrAVxZ7PZoQbRpmqx+AT4DF8K8GYieC1FMYEAigkEUEwggGICARQTCKCYQADFBAIoJhBAMYEAinkZAAD///Qv4UoAAAAGSURBVAMAtEv8NbYHuhAAAAAASUVORK5CYII=';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+function ic(n, z = 16, w = 1.75, cls = '') {
+  const d = ICONS[n];
+  if (!d) return '';
+  const inner = d.map(([t, a]) => '<' + t + Object.entries(a).map(([k, v]) => ' ' + k + '="' + v + '"').join('') + '/>').join('');
+  return '<svg class="ic ' + cls + '" width="' + z + '" height="' + z + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+}
+
+const SIZES = { md: [1100, 740], lg: [1440, 900], sm: [800, 560] };
+const COLORS = ['#496b8d', '#3d5a80', '#756b83', '#a18a67', '#b08a3e', '#9a5b4b', '#3f7a7a', '#667775'];
+const ROLES = { owner: '所有者', editor: '编辑者', reviewer: '审阅者', viewer: '查看者' };
+const ROLE_DESC = { owner: '修改全部内容，管理成员', editor: '可以修改全部内容', reviewer: '只能修改项目笔记', viewer: '只接收，不能修改' };
+const SORTS = { opened: '最近打开', updated: '最近更新', name: '名称', created: '创建时间' };
+const TICON = { paper: 'file-text', note: 'notebook-pen', run: 'flask-conical', draft: 'pen-line', chat: 'message-square' };
+const TNAME = { paper: '论文', note: '笔记', run: '运行详情', draft: '稿件', chat: 'AI 对话' };
+const AVC = [['#e3eaf4', '#2e5486'], ['#ece5f3', '#5b4a7a'], ['#f3e9dc', '#7a5420'], ['#dfeee6', '#245c3e'], ['#f2e3e3', '#8a3434'], ['#e4ebeb', '#3d5555']];
+function ink(c) {
+  const ch = [1, 3, 5].map((i) => { const v = parseInt(c.slice(i, i + 2), 16) / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return ch[0] * 0.2126 + ch[1] * 0.7152 + ch[2] * 0.0722 > 0.179 ? '#17211d' : '#ffffff';
+}
+function av(m) {
+  if (m.me) return '<span class="av" style="background:#e3eaf4;color:#2e5486">' + ic('user', 14) + '</span>';
+  if (m.pending) return '<span class="av g">' + ic('user', 13) + '</span>';
+  let h = 0;
+  for (const ch of m.n) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const [bg, fg] = AVC[h % AVC.length];
+  return `<span class="av" style="background:${bg};color:${fg}">${esc(m.n.slice(0, 1))}</span>`;
+}
+const validPhone = (s) => /^1\d{10}$/.test(String(s).trim());
+const mask = (s) => s.slice(0, 3) + '****' + s.slice(7);
+
+/* ---------- 示例数据 ---------- */
+const ME = { n: '我', ph: '138****5678', me: true };
+function seed() {
+  return {
+    projects: [
+      { id: 'p1', name: '多模态幻觉评测', field: '多模态 · 幻觉', q: '视觉 token 剪枝会不会加剧多模态大模型的物体幻觉？', color: '#496b8d', fav: true, sync: 'on', opened: '40 分钟前', o: 1, u: 2, created: '2026-09-02', papers: 23, notes: 15, runs: 41, dir: '幻觉评测' },
+      { id: 'p3', name: 'RAG 评测基准调研', field: '检索增强 · 评测', q: '现有 RAG 基准能否区分检索错误和生成错误？', color: '#756b83', sync: 'on', opened: '昨天', o: 3, u: 3, created: '2026-10-09', papers: 18, notes: 9, runs: 6, dir: 'RAG基准' },
+      { id: 'p2', name: '毕业论文', field: '学位论文', q: '面向多模态大模型的高效推理方法研究', color: '#a18a67', fav: true, opened: '3 天前', o: 4, u: 4, created: '2026-03-01', papers: 56, notes: 32, runs: 0, dir: '毕业论文' },
+      { id: 'p4', name: '长上下文 KV Cache 压缩', field: '长上下文', q: 'KV Cache 压缩对长文档问答的准确率有多大影响？', color: '#b08a3e', opened: '10 月 28 日', o: 6, u: 6, created: '2026-08-20', papers: 12, notes: 4, runs: 9, dir: 'KV压缩' },
+      { id: 'p8', name: '开题报告', field: '学位论文', q: '开题报告与文献综述', color: '#3d5a80', sync: 'on', remote: true, device: 'MacBook Air', opened: '未下载', o: 7, u: 1, created: '2026-10-30', papers: 9, notes: 3, runs: 0, dir: '开题报告' },
+      { id: 'p5', name: '小样本表征泛化', field: '小样本学习', q: '预训练表征在小样本迁移中的泛化边界在哪里？', color: '#667775', opened: '10 月 21 日', o: 8, u: 7, created: '2026-05-11', papers: 31, notes: 12, runs: 17, dir: '小样本' },
+      { id: 'p6', name: '文献精读周报', field: '阅读', q: '每周精读两篇顶会论文并记录要点', color: '#3f7a7a', opened: '10 月 18 日', o: 9, u: 8, created: '2026-02-20', papers: 40, notes: 38, runs: 0, dir: '周报' },
+      { id: 'p7', name: '强化学习课程作业', field: '强化学习', q: 'PPO 在稀疏奖励环境下如何探索？', color: '#9a5b4b', archived: true, opened: '6 月 30 日', o: 20, u: 20, created: '2026-03-15', papers: 7, notes: 5, runs: 22, dir: 'RL作业' },
+    ],
+    team: [
+      { id: 't1', team: true, name: 'VLM Token 剪枝', field: '多模态 · 剪枝', q: '在不损失精度的前提下，LLaVA 能剪掉多少视觉 token？', color: '#3d5a80', fav: true, owner: '李老师', role: 'editor', local: 'synced', last: '2 分钟前', by: '李老师', when: '20 分钟前', opened: '昨天', o: 2,
+        members: [{ n: '李老师', ph: '139****8821', role: 'owner' }, { ...ME, role: 'editor' }, { n: '王一凡', ph: '136****1907', role: 'editor' }, { n: '陈思', ph: '158****3346', role: 'reviewer' }, { ph: '137****0456', role: 'viewer', pending: true }] },
+      { id: 't2', team: true, name: '实验室文献共读', field: '读书会', q: '每周共读一篇论文，轮流主讲并整理讨论记录', color: '#3f7a7a', owner: '我', role: 'owner', local: 'conflict', conflicts: 2, last: '2 小时前', by: '陈思', when: '2 小时前', opened: '2 天前', o: 5,
+        members: [{ ...ME, role: 'owner' }, { n: '陈思', ph: '158****3346', role: 'editor' }, { n: '王一凡', ph: '136****1907', role: 'editor' }, { n: '赵磊', ph: '135****2280', role: 'editor' }, { n: '孙悦', ph: '187****6612', role: 'reviewer' }, { n: '周宁', ph: '150****7734', role: 'viewer' }, { n: '吴桐', ph: '133****9015', role: 'viewer' }] },
+      { id: 't3', team: true, name: 'NeurIPS 2026 投稿', field: '投稿', q: '剪枝位置与幻觉率之间的关系', color: '#9a5b4b', owner: '我', role: 'owner', local: 'syncing', last: '正在同步', by: '我', when: '刚刚', opened: '10 月 30 日', o: 9,
+        members: [{ ...ME, role: 'owner' }, { n: '李老师', ph: '139****8821', role: 'editor' }, { n: '王一凡', ph: '136****1907', role: 'editor' }, { n: '陈思', ph: '158****3346', role: 'reviewer' }] },
+      { id: 't4', team: true, name: '具身智能综述', field: '具身智能', q: '梳理 2023 年以来具身智能的数据集与评测方法', color: '#756b83', owner: '张博', role: 'reviewer', local: 'none', by: '张博', when: '昨天', opened: '', o: 30,
+        members: [{ n: '张博', ph: '130****4410', role: 'owner' }, { ...ME, role: 'reviewer' }, { n: '刘洋', ph: '139****6672', role: 'editor' }] },
+      { id: 't5', team: true, name: '医学影像分割基准', field: '医学影像', q: '比较 SAM 系列模型在医学影像分割上的零样本表现', color: '#b08a3e', owner: '王老师', role: 'viewer', local: 'none', isNew: true, by: '王老师', when: '今天 09:12', opened: '', o: 31,
+        members: [{ n: '王老师', ph: '186****3021', role: 'owner' }, { ...ME, role: 'viewer' }, { n: '黄婷', ph: '177****5520', role: 'editor' }, { n: '马骁', ph: '131****8846', role: 'editor' }, { n: '林琳', ph: '152****0937', role: 'reviewer' }, { n: '郑凯', ph: '189****2264', role: 'viewer' }] },
+    ],
+    recents: [
+      { t: 'paper', title: 'FastV: An Image is Worth 1/2 Tokens After Layer 2', p: 'p1', pos: '读到第 12 页', when: '40 分钟前' },
+      { t: 'run', title: 'ablation · r=0.5 · 第 14 次运行', p: 'p1', pos: '已完成，用时 42 分钟', when: '今天 14:20' },
+      { t: 'note', title: 'POPE 与 CHAIR 指标的差异', p: 'p3', pos: '项目笔记', when: '昨天 21:03' },
+      { t: 'paper', title: 'SparseVLM: Visual Token Sparsification for Efficient VLM Inference', p: 't1', pos: '读到第 3 页', when: '昨天 16:40' },
+      { t: 'draft', title: '第 3 章 实验设计', p: 'p2', pos: '稿件 · 3.2 节', when: '3 天前' },
+      { t: 'chat', title: '比较 FastV 与 SparseVLM 的剪枝位置', p: 'p1', pos: 'AI 对话', when: '11 月 1 日' },
+    ],
+    pending: [
+      { id: 'd1', k: 'joined', tone: 'info', icon: 'user-plus', title: '你已加入「医学影像分割基准」', sub: '王老师邀请 · 查看者 · 今天 09:12', acts: [['下载并打开', 'pri', 'open:t5'], ['知道了', '', 'dismiss:d1']], net: true },
+      { id: 'd2', k: 'conflict', tone: 'warn', icon: 'triangle-alert', title: '「实验室文献共读」有 2 处同步冲突', sub: '两台设备同时改了同一份笔记', acts: [['处理', '', 'dlg:conflict:t2']], net: true },
+      { id: 'd3', k: 'run', tone: 'bad', icon: 'circle-x', title: '运行失败：ablation · r=0.25 · 第 13 次', sub: '多模态幻觉评测 · CUDA out of memory · 今天 13:05', acts: [['查看日志', '', 'open:p1:run']] },
+    ],
+    inbox: [
+      { id: 'n1', title: '组会要问的问题', body: '1. 剪枝比例和幻觉率是不是单调关系？\n2. POPE 的 adversarial 设置要不要单独报告？\n3. 下周前跑完 r=0.25 的消融。', when: '今天 10:24' },
+      { id: 'n2', title: '想读的论文', body: 'LLaVA-PruMerge\nVisionZip\nPyramidDrop\nSparseVLM（团队项目里已有）', when: '昨天 22:15' },
+      { id: 'n3', title: '时间安排', body: '开题答辩 11 月 20 日。\n组会改到周四下午。', when: '10 月 29 日' },
+      { id: 'n4', title: '服务器环境', body: 'conda 环境 vlm；CUDA 12.1；torch 2.3。\n跑长任务前先看显存。', when: '10 月 20 日' },
+    ],
+    chats: [
+      { id: 'c1', title: 'POPE 的三种采样方式有什么区别', when: '今天 11:02', msgs: [['u', 'POPE 的 random、popular、adversarial 三种采样有什么区别？'], ['a', '三种设置的区别在于负样本（图里不存在的物体）怎么选：\n· random：从全部物体类别里随机选；\n· popular：选数据集中出现次数最多的物体；\n· adversarial：选经常和图中物体一起出现的物体。\n从 random 到 adversarial，模型越来越容易把常见搭配误认为存在，所以 adversarial 下的准确率通常最低。']] },
+      { id: 'c2', title: '摘要改写成中文', when: '10 月 31 日', msgs: [['u', '把这段摘要改写成学术中文：We study how visual token pruning affects object hallucination …'], ['a', '本文研究视觉 token 剪枝对物体幻觉的影响……']] },
+    ],
+  };
+}
+
+/* ---------- 状态 ---------- */
+const Q = new URLSearchParams(location.search);
+const S = {
+  plat: Q.get('plat') || (/Mac/.test(navigator.platform) ? 'mac' : 'win'),
+  scen: 'normal', size: Q.get('size') || 'md', page: Q.get('page') || 'home',
+  notes: Q.get('notes') !== '0', ntab: Q.get('ntab') || 'page',
+  filter: 'all', sort: 'opened', view: Q.get('view') || 'grid', q: '',
+  tfilter: 'all', tq: '', tsel: 't1', itab: Q.get('itab') || 'notes', iq: '', isel: 'n1', csel: 'c1',
+  favOpen: true, menu: null, dlg: null, prev: null, cmd: null, toast: null, mb: null, theme: 'system',
+  logged: true, online: true, scale: 1, autofocus: null,
+};
+let D;
+function applyScen(s) {
+  S.scen = s;
+  D = seed();
+  S.logged = s === 'normal' || s === 'offline';
+  S.online = s !== 'offline';
+  if (s === 'guest' || s === 'new') {
+    D.projects = D.projects.filter((p) => !p.remote).map((p) => ({ ...p, sync: undefined }));
+    D.recents = D.recents.filter((r) => !r.p.startsWith('t'));
+    D.pending = D.pending.filter((x) => x.k === 'run');
+  }
+  if (s === 'new') { D.projects = []; D.recents = []; D.pending = []; D.inbox = []; D.chats = []; }
+  S.tsel = D.team[0] && D.team[0].id; S.isel = D.inbox[0] && D.inbox[0].id; S.csel = D.chats[0] && D.chats[0].id;
+  S.menu = S.dlg = S.prev = S.cmd = S.mb = null;
+  S.filter = 'all'; S.q = S.tq = S.iq = ''; S.tfilter = 'all';
+}
+const proj = (id) => D.projects.find((p) => p.id === id) || D.team.find((t) => t.id === id);
+const key = (k) => (S.plat === 'mac' ? '⌘' + k : 'Ctrl+' + k);
+const reveal = () => (S.plat === 'mac' ? '在 Finder 中显示' : '在资源管理器中显示');
+function pth(kind, p) {
+  const mac = S.plat === 'mac';
+  if (p.team) return mac ? `~/Documents/Scientify/${p.name}` : `文档\\Scientify\\${p.name}`;
+  const base = mac ? `~/Research/${p.dir}` : `D:\\Research\\${p.dir}`;
+  return base + (mac ? '/' : '\\') + (kind === 'lit' ? '文献' : 'code');
+}
+function counts() {
+  const ps = D.projects;
+  return { all: ps.filter((p) => !p.archived).length, fav: ps.filter((p) => p.fav && !p.archived).length, sync: ps.filter((p) => p.sync === 'on' && !p.archived).length, arch: ps.filter((p) => p.archived).length };
+}
+function mineList() {
+  let ps = D.projects.filter((p) => (S.filter === 'arch' ? p.archived : !p.archived));
+  if (S.filter === 'fav') ps = ps.filter((p) => p.fav);
+  if (S.filter === 'sync') ps = ps.filter((p) => p.sync === 'on');
+  const q = S.q.trim().toLowerCase();
+  if (q) ps = ps.filter((p) => (p.name + ' ' + p.q + ' ' + p.field).toLowerCase().includes(q));
+  const by = { opened: (a, b) => a.o - b.o, updated: (a, b) => a.u - b.u, name: (a, b) => a.name.localeCompare(b.name, 'zh-CN'), created: (a, b) => b.created.localeCompare(a.created) }[S.sort];
+  return ps.sort(by);
+}
+function teamList() {
+  let ts = D.team.slice();
+  if (S.tfilter === 'own') ts = ts.filter((t) => t.role === 'owner');
+  if (S.tfilter === 'shared') ts = ts.filter((t) => t.role !== 'owner');
+  const q = S.tq.trim().toLowerCase();
+  if (q) ts = ts.filter((t) => (t.name + t.q).toLowerCase().includes(q));
+  return ts;
+}
+const localProjects = () => [...D.projects.filter((p) => !p.archived && !p.remote), ...(S.logged ? D.team.filter((t) => t.local !== 'none') : [])];
+
+/* ---------- 侧栏 ---------- */
+function sidebar() {
+  const c = counts();
+  const nTeam = S.logged ? D.team.length : 0;
+  const alert = S.logged && D.team.some((t) => t.isNew || t.local === 'conflict');
+  const favs = [...D.projects.filter((p) => p.fav && !p.archived), ...(S.logged ? D.team.filter((t) => t.fav) : [])];
+  const nav = (id, icon, label, n, extra = '') => `<div class="nv ${S.page === id ? 'on' : ''}" data-a="nav:${id}" title="${label}（${key(['home', 'mine', 'team', 'inbox'].indexOf(id) + 1)}）">${ic(icon, 16)}<span>${label}</span>${extra}${n ? `<span class="c">${n}</span>` : ''}</div>`;
+  const top = S.plat === 'mac' ? '<div class="sb-top"><div class="lights"><i></i><i></i><i></i></div></div>' : `<div class="sb-top"><img src="${LOGO}" alt=""><b>Scientify</b></div>`;
+  const search = `<div class="sb-s" data-a="cmd">${ic('search', 15)}<span>搜索</span><span class="kb">${S.plat === 'mac' ? '⌘K' : 'Ctrl K'}</span></div>`;
+  const navs = nav('home', 'house', '首页', 0) + nav('mine', 'folder', '我的项目', c.all) + nav('team', 'users', '团队项目', nTeam, alert ? '<span class="dt" title="有新加入的项目或同步冲突"></span>' : '') + nav('inbox', 'inbox', '收集箱', D.inbox.length);
+  const fav = favs.length ? `<div class="sb-h ${S.favOpen ? '' : 'closed'}" data-a="favtoggle">${ic('chevron-down', 13, 2)}收藏</div>` + (S.favOpen ? `<div class="sb-n">${favs.map((p) => `<div class="fv" data-a="open:${p.id}" data-ctx="${p.id}" title="打开「${esc(p.name)}」"><i class="mb" style="--c:${p.color}"></i><span>${esc(p.name)}</span>${p.team ? ic('users', 13) : ''}</div>`).join('')}</div>` : '') : '';
+  const acct = S.logged
+    ? `<div class="ac" data-a="menu:account" title="账号">${av(ME)}<div><b>138****5678</b><small><i class="sd ${S.online ? '' : 'off'}"></i><span>${S.online ? '已同步 · 1 分钟前' : '离线 · 修改先存本机'}</span></small></div></div>`
+    : `<div class="ac" data-a="dlg:login" title="登录">${av({ pending: true })}<div><b>登录</b><small><span>本机使用，不同步</span></small></div></div>`;
+  return `<aside class="sb">${top}${search}<nav class="sb-n">${navs}</nav>${fav}<div class="sb-f">${acct}<button class="ib" data-a="menu:help" title="帮助">${ic('circle-help', 17)}</button><button class="ib" data-a="settings" title="设置（${key(',')}）">${ic('settings', 17)}</button></div></aside>`;
+}
+
+/* ---------- 通用 ---------- */
+function tb(title, count, actions) {
+  const caps = S.plat === 'win' ? `<div class="caps"><span title="最小化">${ic('minus', 15, 1.5)}</span><span title="最大化">${ic('square', 12, 1.5)}</span><span class="x" title="关闭">${ic('x', 16, 1.5)}</span></div>` : '';
+  return `<header class="tb"><h1>${title}${count ? `<span class="c">${count}</span>` : ''}</h1><div class="tb-a">${actions || ''}</div>${caps}</header>`;
+}
+const newBtn = () => `<span class="spl"><button class="bt pri" data-a="dlg:new" title="新建项目（${key('N')}）">${ic('plus', 15, 2)}新建项目</button><button class="bt pri" data-a="menu:new" title="更多新建方式">${ic('chevron-down', 14, 2)}</button></span>`;
+const chip = (k, v, l, n) => `<button class="chp ${S[k] === v ? 'on' : ''}" data-a="${k}:${v}">${l}${n != null ? `<span class="c">${n}</span>` : ''}</button>`;
+const empty = (icon, title, desc, btns = '') => `<div class="emp">${ic(icon, 34, 1.4)}<b>${title}</b><p>${desc}</p><div class="row">${btns}</div></div>`;
+const search = (k, ph) => `<label class="sx">${ic('search', 15)}<input data-in="${k}" data-fk="${k}" placeholder="${ph}" value="${esc(S[k])}">${S[k] ? `<button class="ib sm" data-a="clr:${k}" title="清除">${ic('x', 13)}</button>` : ''}</label>`;
+
+function bookItem(p, o = {}) {
+  const badges = [];
+  if (p.team) badges.push(ic('users', 13));
+  else if (p.sync === 'on') badges.push(ic(S.online ? 'cloud' : 'cloud-off', 13));
+  if (p.remote) badges.push(ic('download', 13));
+  const cls = ['bk', p.archived ? 'arch' : '', p.remote ? 'remote' : '', o.static ? 'static' : ''].join(' ');
+  const attrs = o.static ? '' : `data-a="open:${p.id}" data-ctx="${p.id}" title="${esc(p.q)}"`;
+  const menu = o.static ? '' : `<button class="bk-m ${S.menu && S.menu.id === p.id ? 'on' : ''}" data-a="menu:${p.team ? 'team' : 'project'}:${p.id}" title="项目操作">${ic('ellipsis', 15)}</button>`;
+  return `<div class="bi"><div class="${cls}" style="--c:${p.color};color:${ink(p.color)}" ${attrs}>${p.fav ? '<i class="rib"></i>' : ''}<div class="bk-f">${esc(p.archived ? '已归档' : p.field)}</div><div class="bk-n">${esc(p.name)}</div><div class="bk-b">${badges.join('')}</div>${menu}</div>${o.meta ? `<div class="bk-meta">${o.meta}</div>` : ''}</div>`;
+}
+function metaLine(p) {
+  if (p.remote) return `${ic('cloud-download', 13)}未下载 · 在 ${esc(p.device)} 上创建`;
+  if (p.archived) return `归档于 ${esc(p.opened)}`;
+  if (S.sort === 'created') return `创建于 ${esc(p.created)}`;
+  return `${esc(p.opened)}打开`;
+}
+
+/* ---------- 首页 ---------- */
+function homePage() {
+  if (!D.projects.length) return tb('首页', 0, '') + `<div class="ct">${firstRun()}</div>`;
+  const acts = `<button class="bt" data-a="dlg:folder" title="打开文件夹作为项目（${key('O')}）">${ic('folder-open', 15)}<span class="lbl">打开文件夹</span></button>${newBtn()}`;
+  const n = { sm: 4, md: 5, lg: 7 }[S.size];
+  const recent = localProjects().sort((a, b) => a.o - b.o).slice(0, n);
+  const links = `<span class="r" style="display:flex;gap:14px"><button class="bt lk" data-a="nav:mine">我的项目 ${counts().all}${ic('chevron-right', 13)}</button>${S.logged ? `<button class="bt lk" data-a="nav:team">团队项目 ${D.team.length}${ic('chevron-right', 13)}</button>` : ''}</span>`;
+  const shelf = `<section class="sec"><div class="sh"><h2>最近项目</h2>${links}</div><div class="hshelf">${recent.map((p) => bookItem(p, { meta: esc(p.opened) })).join('')}</div></section>`;
+  const recs = D.recents.filter((r) => proj(r.p));
+  const rec = recs.length ? recs.map(recentRow).join('') : `<div class="none">${ic('clock', 15)}还没有最近打开的内容</div>`;
+  const pend = D.pending.length ? D.pending.map(pendRow).join('') : `<div class="none">${ic('circle-check', 15)}没有需要处理的事项</div>`;
+  return tb('首页', 0, acts) + `<div class="ct">${shelf}<div class="cols sec"><section><div class="sh"><h2>继续工作</h2>${recs.length ? '<button class="bt lk mu r" data-a="clear-recents">清空</button>' : ''}</div>${rec}</section><section><div class="sh"><h2>待处理</h2>${D.pending.length ? `<span class="c">${D.pending.length}</span>` : ''}</div>${pend}</section></div></div>`;
+}
+function recentRow(r) {
+  const p = proj(r.p);
+  return `<div class="rc" data-a="open:${r.p}:${r.t}" title="打开项目并定位到这里"><span class="ti ${r.t}">${ic(TICON[r.t], 16)}</span><div class="rc-m"><b>${esc(r.title)}</b><small><span class="pj"><i style="--c:${p.color}"></i>${esc(p.name)}</span><span>·</span><span>${esc(r.pos)}</span></small></div><span class="w">${esc(r.when)}</span></div>`;
+}
+function pendRow(x) {
+  const wait = x.net && !S.online;
+  const acts = wait ? '<button class="bt sm" disabled>联网后处理</button>' : x.acts.map(([l, cls, a]) => `<button class="bt sm ${cls}" data-a="${a}">${l}</button>`).join('');
+  return `<div class="pd"><span class="pd-i ${x.tone}">${ic(x.icon, 15)}</span><div class="pd-m"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small><div class="pd-a">${acts}</div></div></div>`;
+}
+function firstRun() {
+  const loc = S.plat === 'mac' ? '~/Library/Application Support/Scientify/ScientifyData' : 'D:\\Scientify\\ScientifyData';
+  const tile = (a, tone, icon, title, desc) => `<div class="tile" data-a="${a}"><span class="ti ${tone}">${ic(icon, 17)}</span><b>${title}</b><p>${desc}</p></div>`;
+  return `<section class="sec"><div class="sh"><h2>开始使用</h2></div><div class="qs">${tile('dlg:new', 'paper', 'plus', '新建项目', '从空白项目开始，之后再关联文献和代码文件夹。')}${tile('dlg:folder', 'run', 'folder-input', '打开文件夹作为项目', '选择已有的论文或代码文件夹，文件留在原位置。')}${tile('sample', 'draft', 'book-open', '打开示例项目', '两篇论文、一篇笔记和一个可以直接运行的实验。')}</div>
+  <div class="dataloc">${ic('info', 14)}项目数据保存在 <code>${esc(loc)}</code>，可以在设置里更改。</div></section>
+  ${S.logged ? '' : `<section class="sec"><div class="sh"><h2>团队项目</h2></div><div class="none" style="padding-top:0">${ic('users', 15)}别人共享给你的项目，登录后在“团队项目”里下载。<button class="bt lk" data-a="dlg:login">登录</button></div></section>`}`;
+}
+
+/* ---------- 我的项目 ---------- */
+function minePage() {
+  if (!D.projects.length) return tb('我的项目', 0, newBtn()) + `<div class="ct">${empty('folder', '还没有项目', '新建一个项目，或者把已有的论文和代码文件夹打开为项目。', `<button class="bt pri" data-a="dlg:new">${ic('plus', 15, 2)}新建项目</button><button class="bt" data-a="dlg:folder">${ic('folder-input', 15)}打开文件夹作为项目</button><button class="bt" data-a="sample">${ic('book-open', 15)}打开示例项目</button>`)}</div>`;
+  const c = counts();
+  const list = mineList();
+  const fr = `<div class="fr">${chip('filter', 'all', '全部', c.all)}${chip('filter', 'fav', '收藏', c.fav)}${S.logged || c.sync ? chip('filter', 'sync', '多设备同步', c.sync) : ''}${chip('filter', 'arch', '已归档', c.arch)}<span class="sp"></span><button class="bt gh sm" data-a="menu:sort">${ic('arrow-up-down', 14)}${SORTS[S.sort]}${ic('chevron-down', 13)}</button><span class="vt"><button class="${S.view === 'grid' ? 'on' : ''}" data-a="view:grid" title="书架">${ic('layout-grid', 15)}</button><button class="${S.view === 'list' ? 'on' : ''}" data-a="view:list" title="列表">${ic('list', 15)}</button></span></div>`;
+  let body;
+  if (!list.length) body = S.filter === 'arch' && !S.q ? empty('archive', '没有已归档的项目', '归档的项目放在这里，可以随时恢复。') : empty('search', '没有符合条件的项目', '换个关键词，或者清除筛选。', '<button class="bt" data-a="clear-filter">清除筛选</button>');
+  else if (S.view === 'grid') body = `<div class="shelf">${list.map((p) => bookItem(p, { meta: metaLine(p) })).join('')}${S.filter === 'all' && !S.q ? `<div class="bi"><div class="bk new" data-a="dlg:new">${ic('plus', 22, 1.5)}<span>新建项目</span></div></div>` : ''}</div>`;
+  else body = mineTable(list);
+  return tb('我的项目', c.all, search('q', '搜索项目名称或研究问题') + newBtn()) + `<div class="ct">${fr}${body}</div>`;
+}
+function syncCell(p) {
+  if (p.remote) return `<span class="pill mu">${ic('cloud-download', 14)}未下载</span>`;
+  if (p.sync === 'on') return S.online ? `<span class="pill ok">${ic('cloud-check', 14)}已同步</span>` : `<span class="pill mu">${ic('cloud-off', 14)}离线</span>`;
+  return '<span class="fa">仅本机</span>';
+}
+function mineTable(list) {
+  const ar = (k) => (S.sort === k ? ic('chevron-down', 12, 2) : '');
+  const narrow = S.size === 'sm';
+  return `<table class="tbl"><colgroup><col>${narrow ? '' : '<col style="width:15%"><col style="width:21%">'}<col style="width:${narrow ? 84 : 96}px"><col style="width:${narrow ? 92 : 108}px"><col style="width:44px"></colgroup>
+  <thead><tr><th class="s" data-a="sort:name">名称 ${ar('name')}</th>${narrow ? '' : '<th>研究方向</th><th>内容</th>'}<th>同步</th><th class="s" data-a="sort:opened">最近打开 ${ar('opened')}</th><th></th></tr></thead>
+  <tbody>${list.map((p) => `<tr class="r" data-a="open:${p.id}" data-ctx="${p.id}"><td><div class="nm"><i class="mbk" style="--c:${p.color}"></i><div><b><span>${esc(p.name)}</span>${p.fav ? `<span class="fa" title="已收藏">${ic('star', 12)}</span>` : ''}${p.archived ? '<span class="tag">已归档</span>' : ''}</b><small>${esc(p.q)}</small></div></div></td>${narrow ? '' : `<td class="mu">${esc(p.field)}</td><td class="mu">论文 ${p.papers} · 笔记 ${p.notes} · 运行 ${p.runs}</td>`}<td>${syncCell(p)}</td><td class="mu">${p.remote ? '—' : esc(p.opened)}</td><td class="ra"><button class="ib" data-a="menu:project:${p.id}" title="项目操作">${ic('ellipsis', 16)}</button></td></tr>`).join('')}</tbody></table>`;
+}
+
+/* ---------- 团队项目 ---------- */
+function teamPage() {
+  if (!S.logged) return tb('团队项目', 0, '') + `<div class="ct"><div class="gst">${ic('users', 36, 1.4)}<b>登录后查看团队项目</b><p>团队项目通过协作服务在成员之间同步文献、笔记和代码。不登录也可以照常使用本机项目。</p><div class="row"><button class="bt pri" data-a="dlg:login">${ic('log-in', 15)}登录</button><button class="bt lk" data-a="dlg:login:self">使用自托管服务</button></div></div></div>`;
+  const off = !S.online;
+  const acts = search('tq', '搜索团队项目') + `<button class="bt" data-a="dlg:share" ${off ? 'disabled' : ''} title="把我的项目共享给团队">${ic('upload', 15)}<span class="lbl">共享本机项目</span></button><button class="bt pri" data-a="dlg:new:team" ${off ? 'disabled' : ''}>${ic('plus', 15, 2)}新建团队项目</button>`;
+  if (!D.team.length) return tb('团队项目', 0, acts) + `<div class="ct">${empty('users', '还没有团队项目', '新建一个团队项目，或者把我的项目共享给团队。别人邀请你之后，项目也会出现在这里。', `<button class="bt pri" data-a="dlg:new:team">${ic('plus', 15, 2)}新建团队项目</button><button class="bt" data-a="dlg:share">${ic('upload', 15)}共享本机项目</button>`)}</div>`;
+  const list = teamList();
+  const sel = list.find((t) => t.id === S.tsel) || list[0];
+  const cs = off
+    ? `<div class="cs off">${ic('cloud-off', 14)}离线：显示的是今天 21:12 的列表，恢复连接后自动刷新。<button class="bt lk" data-a="toast:正在重新连接协作服务…">重试</button></div>`
+    : `<div class="cs"><i class="sd"></i>已连接协作服务 · 上次同步 1 分钟前<button class="bt lk" data-a="syncall">${ic('refresh-cw', 12)}立即同步</button></div>`;
+  const own = D.team.filter((x) => x.role === 'owner').length;
+  const fr = `<div class="fr" style="margin-bottom:8px">${chip('tfilter', 'all', '全部', D.team.length)}${chip('tfilter', 'own', '我创建的', own)}${chip('tfilter', 'shared', '共享给我的', D.team.length - own)}</div>`;
+  const rows = list.length ? teamTable(list, sel) : empty('search', '没有符合条件的团队项目', '', '<button class="bt" data-a="clear-tfilter">清除筛选</button>');
+  return tb('团队项目', D.team.length, acts) + `<div class="tm"><div class="tm-l">${cs}${fr}${rows}</div><aside class="tm-d">${sel ? teamDetail(sel) : ''}</aside></div>`;
+}
+function localPill(t) {
+  if (!S.online && (t.local === 'synced' || t.local === 'syncing')) return `<span class="pill mu">${ic('cloud-off', 14)}离线</span>`;
+  return {
+    synced: `<span class="pill ok">${ic('cloud-check', 14)}已同步</span>`,
+    syncing: `<span class="pill info">${ic('refresh-cw', 13, 2, 'spin')}同步中</span>`,
+    conflict: `<span class="pill warn">${ic('triangle-alert', 14)}${t.conflicts} 处冲突</span>`,
+    none: `<span class="pill mu">${ic('cloud-download', 14)}未下载</span>`,
+  }[t.local];
+}
+function avStack(ms) {
+  const real = ms.filter((m) => !m.pending);
+  return `<div class="avs">${real.slice(0, 3).map(av).join('')}${real.length > 3 ? `<span class="more">+${real.length - 3}</span>` : ''}</div>`;
+}
+function teamTable(list, sel) {
+  const narrow = S.size === 'sm';
+  return `<table class="tbl"><colgroup><col>${narrow ? '' : '<col style="width:74px"><col style="width:96px">'}<col style="width:100px">${narrow ? '' : '<col style="width:70px">'}</colgroup>
+  <thead><tr><th>项目</th>${narrow ? '' : '<th>我的角色</th><th>成员</th>'}<th>本机</th>${narrow ? '' : '<th></th>'}</tr></thead>
+  <tbody>${list.map((t) => `<tr class="r ${sel && sel.id === t.id ? 'sel' : ''}" data-a="tsel:${t.id}" data-dbl="${t.id}" data-ctx="${t.id}"><td><div class="nm"><i class="mbk" style="--c:${t.color}"></i><div><b><span>${esc(t.name)}</span>${t.isNew ? '<span class="tag new">新加入</span>' : ''}</b><small>${esc(t.by)} · ${esc(t.when)}更新</small></div></div></td>${narrow ? '' : `<td class="mu">${ROLES[t.role]}</td><td>${avStack(t.members)}</td>`}<td>${localPill(t)}</td>${narrow ? '' : `<td class="ra"><button class="bt sm" data-a="open:${t.id}" ${t.local === 'none' && !S.online ? 'disabled' : ''}>${t.local === 'none' ? '下载' : '打开'}</button></td>`}</tr>`).join('')}</tbody></table>`;
+}
+function teamDetail(t) {
+  const owner = t.role === 'owner';
+  const off = !S.online;
+  const can = owner && !off;
+  const head = `<div class="dh-p"><i class="mbk" style="--c:${t.color}"></i><div style="min-width:0"><b>${esc(t.name)}</b><small>${owner ? '你是所有者' : `所有者 ${esc(t.owner)} · 你是${ROLES[t.role]}`}</small></div></div>`;
+  const primary = t.local === 'none'
+    ? `<button class="bt pri" data-a="open:${t.id}" ${off ? 'disabled' : ''}>${ic('cloud-download', 15)}下载并打开</button>`
+    : `<button class="bt pri" data-a="open:${t.id}">${ic('arrow-up-right', 15)}打开项目</button>`;
+  const act = `<div class="dact">${primary}<button class="bt" data-a="menu:team:${t.id}" title="更多操作">${ic('ellipsis', 15)}</button></div>`;
+  const dl = t.local === 'none' ? `<div class="dnote">${ic('info', 13)}<span>第一次打开会下载整个项目，文献放到“${esc(pth('lit', t))}”。</span></div>` : '';
+  const q = `<div class="dsec"><h4>研究问题</h4><p>${esc(t.q)}</p></div>`;
+  const nReal = t.members.filter((m) => !m.pending).length;
+  const mem = `<div class="dsec"><h4>成员 ${nReal}${can ? `<button class="bt lk r" data-a="dlg:invite:${t.id}">${ic('user-plus', 13)}邀请</button>` : ''}</h4>${t.members.map((m, i) => memberRow(t, m, i, can)).join('')}${owner ? (off ? `<div class="dnote">${ic('cloud-off', 13)}<span>离线时不能管理成员。</span></div>` : '') : `<div class="dnote">${ic('lock', 13)}<span>只有所有者可以管理成员。你是${ROLES[t.role]}，${ROLE_DESC[t.role]}。</span></div>`}</div>`;
+  const sync = t.local === 'none'
+    ? `<div class="dsec"><h4>同步</h4><p class="mu">还没有下载到这台电脑。</p></div>`
+    : `<div class="dsec"><h4>同步</h4><dl class="kv"><dt>本机文件夹</dt><dd><button class="bt lk" data-a="reveal:${t.id}" title="${reveal()}">${esc(pth('lit', t))}</button></dd><dt>上次同步</dt><dd>${off ? '今天 21:12（离线）' : esc(t.last)}</dd><dt>冲突</dt><dd>${t.local === 'conflict' ? `<span class="pill warn">${t.conflicts} 处</span> <button class="bt lk" data-a="dlg:conflict:${t.id}" ${off ? 'disabled' : ''}>处理</button>` : '无'}</dd></dl><div style="margin-top:10px"><button class="bt sm" data-a="syncone:${t.id}" ${off ? 'disabled' : ''}>${ic('refresh-cw', 13)}立即同步</button></div></div>`;
+  const foot = `<div class="dfoot">${owner ? `<button class="dl" data-a="dlg:delcloud:${t.id}" ${off ? 'disabled' : ''}>删除云端项目…</button>` : `<button class="dl" data-a="dlg:leave:${t.id}" ${off ? 'disabled' : ''}>退出项目…</button>`}</div>`;
+  return head + act + dl + q + mem + sync + foot;
+}
+function memberRow(t, m, i, can) {
+  const name = m.pending ? esc(m.ph) : esc(m.n);
+  const sub = m.pending ? '待注册，对方登录后自动加入' : esc(m.ph);
+  const editable = can && m.role !== 'owner' && !m.me;
+  const label = (m.pending ? '待注册 · ' : '') + ROLES[m.role];
+  const role = editable ? `<button class="role" data-a="menu:role:${t.id}|${i}">${label}${ic('chevron-down', 12)}</button>` : `<span class="role">${label}</span>`;
+  const rm = editable ? `<button class="ib sm x" data-a="dlg:rmm:${t.id}|${i}" title="${m.pending ? '撤销邀请' : '移除成员'}">${ic('x', 13)}</button>` : '';
+  return `<div class="mem">${av(m)}<div class="mem-n"><b>${name}</b><small>${sub}</small></div>${role}${rm}</div>`;
+}
+
+/* ---------- 收集箱 ---------- */
+function inboxPage() {
+  const notesTab = S.itab === 'notes';
+  const acts = search('iq', '搜索收集箱') + `<button class="bt pri" data-a="${notesTab ? 'newnote' : 'newchat'}">${ic('plus', 15, 2)}${notesTab ? '新建笔记' : '新建问答'}</button>`;
+  const tabs = `<div class="ibx-tabs">${chip('itab', 'notes', '随手笔记', D.inbox.length)}${chip('itab', 'chats', '快速问答', D.chats.length)}</div>`;
+  const q = S.iq.trim();
+  let body;
+  if (notesTab) {
+    const list = D.inbox.filter((x) => !q || (x.title + x.body).includes(q));
+    const n = list.find((x) => x.id === S.isel) || list[0];
+    if (!D.inbox.length) body = `<div class="ct">${empty('notebook-pen', '收集箱是空的', '记下还不属于任何项目的想法，之后可以移到项目里。', `<button class="bt pri" data-a="newnote">${ic('plus', 15, 2)}新建笔记</button>`)}</div>`;
+    else if (!n) body = `<div class="ct">${empty('search', '没有符合条件的笔记', '', '<button class="bt" data-a="clr:iq">清除搜索</button>')}</div>`;
+    else body = `<div class="ibw"><div class="ib-l">${list.map((x) => `<div class="ni ${x.id === n.id ? 'on' : ''}" data-a="isel:${x.id}"><b>${esc(x.title)}</b><p>${esc(x.body.split('\n')[0])}</p><small>${esc(x.when)}</small></div>`).join('')}</div><div class="ib-r"><div class="ib-bar">${ic('inbox', 14)}<span>不属于任何项目 · ${esc(n.when)}保存</span><div class="r"><button class="bt sm" data-a="menu:move:${n.id}">${ic('folder-input', 14)}移到项目${ic('chevron-down', 12)}</button><button class="ib" data-a="delnote:${n.id}" title="删除">${ic('trash-2', 15)}</button></div></div><div class="ib-doc"><h2>${esc(n.title)}</h2><div class="bd">${esc(n.body)}</div></div></div></div>`;
+  } else {
+    const c = D.chats.find((x) => x.id === S.csel) || D.chats[0];
+    if (!c) body = `<div class="ct">${empty('message-square', '还没有快速问答', '不属于任何项目的问题可以在这里问 AI。', `<button class="bt pri" data-a="newchat">${ic('plus', 15, 2)}新建问答</button>`)}</div>`;
+    else body = `<div class="ibw"><div class="ib-l">${D.chats.map((x) => `<div class="ni ${x.id === c.id ? 'on' : ''}" data-a="csel:${x.id}"><b>${esc(x.title)}</b><p>${esc(x.msgs[x.msgs.length - 1][1].split('\n')[0])}</p><small>${esc(x.when)}</small></div>`).join('')}</div><div class="ib-r"><div class="ib-bar">${ic('info', 14)}<span>快速问答只能对话，不读写文件。移到项目后可以读项目里的论文。</span><div class="r"><button class="bt sm" data-a="menu:move:${c.id}">${ic('folder-input', 14)}移到项目${ic('chevron-down', 12)}</button></div></div><div class="cv">${c.msgs.map(([r, t]) => `<div class="msg ${r}">${esc(t)}</div>`).join('')}</div><div class="cbox"><textarea placeholder="问 AI（${key('Enter')} 发送）"></textarea><button class="bt pri sm" data-a="toast:原型不调用模型">${ic('send', 13)}发送</button></div></div></div>`;
+  }
+  return tb('收集箱', 0, acts) + tabs + body;
+}
+
+/* ---------- 菜单 ---------- */
+function projectMenu(p) {
+  if (p.team) return teamMenu(p);
+  const login = S.logged, off = !S.online;
+  const it = [];
+  if (p.remote) it.push({ a: `open:${p.id}`, l: '下载并打开', i: 'cloud-download', dis: off });
+  else it.push({ a: `open:${p.id}`, l: '打开', i: 'arrow-up-right' });
+  it.push({ a: `dlg:edit:${p.id}`, l: '编辑信息…', i: 'pencil', dis: p.remote }, { a: `fav:${p.id}`, l: p.fav ? '取消收藏' : '收藏', i: 'star' }, '-');
+  if (p.sync === 'on') it.push({ a: `syncone:${p.id}`, l: '立即同步', i: 'refresh-cw', dis: off || p.remote }, { a: `dlg:unsync:${p.id}`, l: '关闭多设备同步…', i: 'cloud-off', dis: off });
+  else it.push({ a: `dlg:sync:${p.id}`, l: '在多台设备上同步…', i: 'cloud', dis: !login || off || p.archived, k: login ? '' : '需要登录' });
+  it.push({ a: `dlg:share:${p.id}`, l: '共享给团队…', i: 'users', dis: !login || off || p.remote || p.archived, k: login ? '' : '需要登录' });
+  it.push({ a: `reveal:${p.id}`, l: reveal(), i: 'folder-open', dis: p.remote }, '-');
+  it.push({ a: `arch:${p.id}`, l: p.archived ? '恢复' : '归档', i: p.archived ? 'archive-restore' : 'archive' }, { a: `dlg:del:${p.id}`, l: '删除项目…', i: 'trash-2', dng: true });
+  return it;
+}
+function teamMenu(t) {
+  const owner = t.role === 'owner', off = !S.online;
+  return [
+    t.local === 'none' ? { a: `open:${t.id}`, l: '下载并打开', i: 'cloud-download', dis: off } : { a: `open:${t.id}`, l: '打开', i: 'arrow-up-right' },
+    { a: `fav:${t.id}`, l: t.fav ? '取消收藏' : '收藏', i: 'star' },
+    '-',
+    { a: `syncone:${t.id}`, l: '立即同步', i: 'refresh-cw', dis: off || t.local === 'none' },
+    { a: `reveal:${t.id}`, l: reveal(), i: 'folder-open', dis: t.local === 'none' },
+    owner ? { a: `dlg:invite:${t.id}`, l: '邀请成员…', i: 'user-plus', dis: off } : null,
+    '-',
+    owner ? { a: `dlg:delcloud:${t.id}`, l: '删除云端项目…', i: 'trash-2', dng: true, dis: off } : { a: `dlg:leave:${t.id}`, l: '退出项目…', i: 'log-out', dng: true, dis: off },
+  ].filter(Boolean);
+}
+function menuItems(m) {
+  switch (m.type) {
+    case 'project': return projectMenu(proj(m.id));
+    case 'team': return teamMenu(proj(m.id));
+    case 'new': return [{ a: 'dlg:new', l: '新建项目…', i: 'plus', k: key('N') }, { a: 'dlg:folder', l: '打开文件夹作为项目…', i: 'folder-input', k: key('O') }, { a: 'sample', l: '打开示例项目', i: 'book-open' }];
+    case 'sort': return [{ html: '<div class="mh"><small>排序方式</small></div>' }, ...Object.entries(SORTS).map(([k, l]) => ({ a: `sort:${k}`, l, ck: S.sort === k }))];
+    case 'help': return [{ a: 'toast:打开使用说明', l: '使用说明', i: 'book-open' }, { a: 'toast:打开快捷键速查', l: '快捷键速查', i: 'keyboard', k: key('/') }, { a: 'toast:重新开始首次使用引导', l: '重新查看引导', i: 'history' }, { a: 'toast:打开问题反馈：附带版本和系统信息，不附带研究内容', l: '反馈问题', i: 'send' }, '-', { a: 'toast:已是最新版本', l: '版本 0.3.0-alpha.4 · 检查更新', i: 'info' }];
+    case 'account': return [
+      { html: `<div class="mh">${av(ME)}<div><b>138****5678</b><small>${S.online ? '协作服务：官方服务' : '离线'}</small></div></div>` }, '-',
+      { a: 'nav:team', l: '团队项目', i: 'users' },
+      { a: 'toast:打开设置窗口的“协作”分区', l: '同步与协作设置…', i: 'refresh-cw' },
+      { html: `<div class="mi" data-a="noop">${ic('sun', 15)}<span>外观</span><span class="mseg">${[['system', '跟随系统'], ['light', '浅色'], ['dark', '深色']].map(([k, l]) => `<span class="${S.theme === k ? 'on' : ''}" data-a="theme:${k}">${l}</span>`).join('')}</span></div>` }, '-',
+      { a: 'dlg:logout', l: '退出登录…', i: 'log-out' },
+    ];
+    case 'role': {
+      const [tid, idx] = m.id.split('|');
+      const mem = proj(tid).members[+idx];
+      return [{ html: `<div class="mh"><small>${esc(mem.n || mem.ph)} 的角色</small></div>` }, ...['editor', 'reviewer', 'viewer'].map((r) => ({ a: `setrole:${tid}|${idx}|${r}`, l: `${ROLES[r]}<span class="fa" style="margin-left:10px;font-size:12px">${ROLE_DESC[r]}</span>`, ck: mem.role === r })), '-', { a: 'noop', l: '转让所有者…', dis: true, k: '待做' }];
+    }
+    case 'move': {
+      const ps = localProjects().sort((a, b) => a.o - b.o).slice(0, 8);
+      return [{ html: '<div class="mh"><small>移到项目</small></div>' }, ...ps.map((p) => ({ a: `move:${m.id}|${p.id}`, l: `<i class="mb" style="--c:${p.color}"></i>${esc(p.name)}` }))];
+    }
+  }
+  return [];
+}
+function menuHtml(items) {
+  return items.map((it) => {
+    if (it === '-') return '<div class="ms"></div>';
+    if (it.html) return it.html;
+    const lead = it.ck !== undefined ? `<span class="ck">${it.ck ? ic('check', 14, 2) : ''}</span>` : it.i ? ic(it.i, 15) : '';
+    return `<div class="mi ${it.dis ? 'dis' : ''} ${it.dng ? 'dng' : ''}" data-a="${it.a}">${lead}<span style="display:flex;align-items:center;gap:7px">${it.l}</span>${it.k ? `<span class="k">${it.k}</span>` : ''}</div>`;
+  }).join('');
+}
+function openMenu(type, id, el, ev) {
+  const win = $('#win');
+  const wr = win.getBoundingClientRect();
+  const s = S.scale;
+  if (ev && ev.type === 'contextmenu') { S.menu = { type, id, x: (ev.clientX - wr.left) / s, y: (ev.clientY - wr.top) / s }; render(); return; }
+  const r = el.getBoundingClientRect();
+  if (type === 'account' || type === 'help') { S.menu = { type, id, x: (r.left - wr.left) / s, bottom: (wr.bottom - r.top) / s + 6 }; render(); return; }
+  S.menu = { type, id, x: (r.left - wr.left) / s, y: (r.bottom - wr.top) / s + 4, right: (r.right - wr.left) / s };
+  render();
+}
+function placeMenu() {
+  const m = $('#win > .menu');
+  if (!m || !S.menu) return;
+  const win = $('#win');
+  const W = win.offsetWidth, H = win.offsetHeight, mw = m.offsetWidth, mh = m.offsetHeight;
+  let x = S.menu.x;
+  if (x + mw > W - 8) x = Math.max(8, (S.menu.right != null ? S.menu.right : W - 8) - mw);
+  m.style.left = x + 'px';
+  if (S.menu.y != null) { let y = S.menu.y; if (y + mh > H - 8) y = Math.max(8, H - mh - 8); m.style.top = y + 'px'; }
+}
+
+/* ---------- macOS 菜单栏 ---------- */
+const MB = {
+  app: ['Scientify', [['关于 Scientify', 'toast:Scientify 0.3.0-alpha.4'], '-', ['设置…', 'settings', '⌘,'], '-', ['隐藏 Scientify', 'noop', '⌘H'], ['退出 Scientify', 'toast:退出前检查未保存的内容和后台任务', '⌘Q']]],
+  file: ['文件', [['新建项目…', 'dlg:new', '⌘N'], ['打开文件夹作为项目…', 'dlg:folder', '⌘O'], ['打开示例项目', 'sample'], '-', ['新建随手笔记', 'newnote'], '-', ['关闭窗口', 'noop', '⌘W']]],
+  edit: ['编辑', [['撤销', 'noop', '⌘Z'], ['重做', 'noop', '⇧⌘Z'], '-', ['剪切', 'noop', '⌘X'], ['拷贝', 'noop', '⌘C'], ['粘贴', 'noop', '⌘V'], ['全选', 'noop', '⌘A'], '-', ['查找…', 'cmd', '⌘F']]],
+  view: ['显示', [['首页', 'nav:home', '⌘1'], ['我的项目', 'nav:mine', '⌘2'], ['团队项目', 'nav:team', '⌘3'], ['收集箱', 'nav:inbox', '⌘4'], '-', ['书架', 'view:grid'], ['列表', 'view:list'], '-', ['已归档的项目', 'filter:arch']]],
+  win: ['窗口', [['最小化', 'noop', '⌘M'], ['缩放', 'noop'], '-', ['项目中心', 'nav:home']]],
+  help: ['帮助', [['搜索', 'cmd', '⌘K'], ['使用说明', 'toast:打开使用说明'], ['快捷键速查', 'toast:打开快捷键速查', '⌘/'], ['反馈问题', 'toast:打开问题反馈']]],
+};
+function menubar() {
+  return Object.entries(MB).map(([k, [l, items]]) => `<span class="${k === 'app' ? 'app' : ''} ${S.mb === k ? 'on' : ''}" data-a="mb:${k}">${l}${S.mb === k ? `<div class="menu" data-stop="1">${items.map((it) => (it === '-' ? '<div class="ms"></div>' : `<div class="mi" data-a="${it[1]}"><span>${it[0]}</span>${it[2] ? `<span class="k">${it[2]}</span>` : ''}</div>`)).join('')}</div>` : ''}</span>`).join('') + '<span class="clk">11月4日 周三 21:52</span>';
+}
+
+/* ---------- 对话框 ---------- */
+function frame(title, sub, body, foot, w = 520) {
+  const close = S.plat === 'mac' ? '' : `<button class="ib" data-a="close" title="关闭">${ic('x', 16)}</button>`;
+  return `<div class="ov"><div class="dlg" style="width:${w}px"><div class="dh"><div><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</div>${close}</div><div class="db">${body}</div><div class="df">${foot}</div></div></div>`;
+}
+function footer(primary, opts = {}) {
+  const [l, a, cls = 'pri', dis] = primary;
+  const p = `<button class="bt ${cls}" data-a="${a}" ${dis ? 'disabled' : ''}>${l}</button>`;
+  const c = `<button class="bt" data-a="close">${opts.cancel || '取消'}</button>`;
+  return `<div class="l">${opts.left || ''}</div><div class="r">${S.plat === 'mac' ? c + p : p + c}</div>`;
+}
+const fd = (label, ctl, after = '', opt = '') => `<div class="fd"><label>${label}${opt ? `<small>${opt}</small>` : ''}</label>${ctl}${after}</div>`;
+const radios = (k, opts) => `<div class="rds">${opts.map(([v, l, s]) => `<div class="rd ${S.dlg[k] === v ? 'on' : ''}" data-a="dset:${k}:${v}"><i></i><div><b>${l}</b>${s ? `<small>${esc(s)}</small>` : ''}</div></div>`).join('')}</div>`;
+const swatches = (cur) => `<div class="sws">${COLORS.map((c) => `<span class="sw ${c === cur ? 'on' : ''}" style="--c:${c}" data-a="dset:color:${c}"></span>`).join('')}</div>`;
+function inviteBlock(d) {
+  const chips = d.invites.length ? `<div class="chips">${d.invites.map((v, i) => `<span>${esc(mask(v.ph))} · ${ROLES[v.role]}<button class="ib sm" data-a="rminv:${i}" title="移除">${ic('x', 12)}</button></span>`).join('')}</div>` : '';
+  return fd('邀请成员', `<div class="ph"><span>+86</span><input class="in" data-in="dlg.phone" data-fk="d-phone" placeholder="手机号" value="${esc(d.phone)}" style="flex:1"><button class="bt" data-a="cyclerole" title="切换角色">${ROLES[d.role]}${ic('chevron-down', 12)}</button><button class="bt" data-a="addinv" ${validPhone(d.phone) ? '' : 'disabled'}>添加</button></div>${chips}`, '<div class="h">可以稍后在团队项目里邀请。号码还没注册时，对方第一次登录后自动加入。</div>', '可选');
+}
+function syncBlock(d) {
+  if (!S.logged) return `<div class="cb dis"><i></i><div><b>在多台设备上同步</b><small>登录后可用。<button class="bt lk" data-a="dlg:login">登录</button></small></div></div>`;
+  return `<div class="cb ${d.sync ? 'on' : ''}" data-a="dtoggle:sync"><i>${d.sync ? ic('check', 12, 3) : ''}</i><div><b>在多台设备上同步</b><small>文献、笔记、代码和运行记录同步到登录同一账号的其他设备。</small></div></div>`;
+}
+const DLG = {
+  new(d) {
+    const team = d.mode === 'team';
+    const title = team ? '新建团队项目' : '新建项目';
+    const sub = `第 ${d.step} 步，共 2 步：${d.step === 1 ? '基本信息' : team ? '文件夹与成员' : '文件夹与同步'}`;
+    if (d.step === 1) {
+      const dup = D.projects.concat(D.team).some((p) => p.name === d.name.trim());
+      const prev = { id: 'pv', name: d.name.trim() || '项目名称', field: d.field.trim() || '研究方向', color: d.color, team, sync: d.sync ? 'on' : undefined };
+      const body = `<div class="np"><div class="np-p">${bookItem(prev, { static: true })}<small>封面预览</small></div><div>
+        ${fd('项目名称', `<input class="in" data-in="dlg.name" data-fk="d-name" placeholder="例如：小样本学习中的表征泛化" value="${esc(d.name)}">`, dup ? '<div class="h w">已有同名项目，仍然可以创建。</div>' : '')}
+        ${fd('研究问题', `<textarea class="in" data-in="dlg.q" data-fk="d-q" placeholder="这个项目希望回答什么问题？">${esc(d.q)}</textarea>`, '', '可选')}
+        ${fd('研究方向', `<input class="in" data-in="dlg.field" data-fk="d-field" placeholder="例如：多模态、幻觉" value="${esc(d.field)}">`, '<div class="h">显示在封面上。</div>', '可选')}
+        ${fd('封面颜色', swatches(d.color))}</div></div>`;
+      return frame(title, sub, body, footer(['下一步', 'dstep:2', 'pri', !d.name.trim()]), 600);
+    }
+    const mac = S.plat === 'mac';
+    const base = (mac ? '~/Research/' : 'D:\\Research\\') + d.name.trim();
+    const sep = mac ? '/' : '\\';
+    const body = fd('文献文件夹', radios('lit', [['new', '新建文件夹', base + sep + '文献'], ['pick', '选择已有文件夹…', 'PDF 和论文笔记留在原位置'], ['later', '稍后关联', '可以在文献页里关联']]))
+      + fd('代码目录', radios('code', [['later', '稍后关联', '需要跑实验时再选'], ['pick', '选择已有目录…', '例如本机的 Git 仓库'], ['new', '新建空目录', base + sep + 'code']]))
+      + (team ? inviteBlock(d) : syncBlock(d));
+    return frame(title, sub, body, footer([team ? '创建团队项目' : '创建项目', 'create'], { left: `<button class="bt gh" data-a="dstep:1">${ic('chevron-left', 14)}上一步</button>` }), 600);
+  },
+  edit(d) {
+    const p = proj(d.arg);
+    const prev = { ...p, name: d.name.trim() || '项目名称', field: d.field.trim() || '研究方向', color: d.color };
+    const body = `<div class="np"><div class="np-p">${bookItem(prev, { static: true })}</div><div>
+      ${fd('项目名称', `<input class="in" data-in="dlg.name" data-fk="d-name" value="${esc(d.name)}">`)}
+      ${fd('研究问题', `<textarea class="in" data-in="dlg.q" data-fk="d-q">${esc(d.q)}</textarea>`)}
+      ${fd('研究方向', `<input class="in" data-in="dlg.field" data-fk="d-field" value="${esc(d.field)}">`)}
+      ${fd('封面颜色', swatches(d.color))}
+      ${fd('文件夹', `<ul class="paths"><li><span>文献文件夹</span><code>${esc(pth('lit', p))}</code><button class="bt sm" data-a="pickdir">更改…</button></li><li><span>代码目录</span><code>${esc(pth('code', p))}</code><button class="bt sm" data-a="pickdir">更改…</button></li></ul>`)}</div></div>`;
+    return frame('编辑项目信息', esc(p.name), body, footer(['保存', 'saveedit', 'pri', !d.name.trim()]), 620);
+  },
+  folder(d) {
+    const path = S.plat === 'mac' ? '~/Research/token-pruning' : 'D:\\Research\\token-pruning';
+    const body = fd('文件夹', `<div class="pick"><span class="path">${esc(path)}</span><button class="bt" data-a="pickdir">选择…</button></div>`)
+      + `<div class="scan"><div><span class="ok">${ic('circle-check', 15)}</span><span>找到 18 个 PDF（papers、refs）：作为文献文件夹</span></div><div><span class="ok">${ic('circle-check', 15)}</span><span>找到 Git 仓库（code）：作为代码目录</span></div><div><span class="fa">${ic('info', 15)}</span><span>notes 里的 6 个 Markdown 文件不会自动导入，可以在项目里打开。</span></div></div>`
+      + fd('项目名称', `<input class="in" data-in="dlg.name" data-fk="d-name" value="${esc(d.name)}">`, '<div class="h">默认用文件夹名。</div>')
+      + fd('研究问题', `<textarea class="in" data-in="dlg.q" data-fk="d-q" placeholder="这个项目希望回答什么问题？">${esc(d.q)}</textarea>`, '', '可选')
+      + `<div class="tip">${ic('info', 14)}<span>文件留在原位置，Scientify 只记录路径。</span></div>`;
+    return frame('打开文件夹作为项目', '', body, footer(['创建项目', 'createfolder', 'pri', !d.name.trim()]), 540);
+  },
+  del(d) {
+    const p = proj(d.arg);
+    const body = `<p style="margin:0 0 10px">会从 Scientify 删除这个项目的记录：项目笔记 ${p.notes} 条、运行记录 ${p.runs} 条，以及 AI 对话。</p><p class="mu" style="margin:0">磁盘上的文件不会删除：</p><ul class="paths"><li><span>文献文件夹</span><code>${esc(pth('lit', p))}</code></li><li><span>代码目录</span><code>${esc(pth('code', p))}</code></li></ul>${p.archived ? '' : `<div class="tip">${ic('archive', 14)}<span>只是暂时不用的话，可以改为归档：项目从列表里隐藏，记录全部保留。</span></div>`}`;
+    return frame(`删除「${esc(p.name)}」？`, '', body, footer(['删除项目', `delete:${p.id}`, 'dng'], { left: p.archived ? '' : `<button class="bt gh" data-a="arch:${p.id}">${ic('archive', 14)}改为归档</button>` }), 500);
+  },
+  share(d) {
+    const pre = d.arg ? proj(d.arg) : null;
+    const cands = D.projects.filter((p) => !p.archived && !p.remote);
+    const note = (p) => (p.sync === 'on' ? '已开启多设备同步' : '只在这台电脑上');
+    const pick = pre
+      ? `<div class="selp"><span class="mbk" style="--c:${pre.color}"></span><div><b>${esc(pre.name)}</b><small>${note(pre)}</small></div></div>`
+      : `<div class="lst">${cands.map((p) => `<div class="rd ${d.pid === p.id ? 'on' : ''}" data-a="dset:pid:${p.id}"><i></i><span class="mbk" style="--c:${p.color}"></span><div><b>${esc(p.name)}</b><small>${note(p)}</small></div></div>`).join('')}</div>`;
+    const body = fd(pre ? '项目' : '选择项目', pick) + inviteBlock(d) + `<div class="tip">${ic('info', 14)}<span>共享后，项目上传到协作服务，你是所有者；项目从“我的项目”移到“团队项目”，本机文件夹和项目 ID 不变。AI 对话、模型密钥和 Python 环境不上传。</span></div>`;
+    return frame('共享到团队', '', body, footer(['共享', 'doshare', 'pri', !d.pid]), 540);
+  },
+  invite(d) {
+    const t = proj(d.arg);
+    const body = fd('手机号', `<div class="ph"><span>+86</span><input class="in" data-in="dlg.phone" data-fk="d-phone" placeholder="对方的手机号" value="${esc(d.phone)}" style="flex:1"></div>`)
+      + fd('角色', `<div class="rds">${['editor', 'reviewer', 'viewer'].map((r) => `<div class="rd ${d.role === r ? 'on' : ''}" data-a="dset:role:${r}"><i></i><div><b>${ROLES[r]}</b><small>${ROLE_DESC[r]}</small></div></div>`).join('')}</div>`)
+      + `<div class="tip">${ic('info', 14)}<span>号码还没注册时，邀请会保留，对方第一次登录后自动加入。</span></div>`;
+    return frame('邀请成员', esc(t.name), body, footer(['发送邀请', 'doinvite', 'pri', !validPhone(d.phone)]), 460);
+  },
+  conflict(d) {
+    const t = proj(d.arg);
+    const C = [{ f: 'notes/第 9 周讨论记录.md', a: '今天 14:02 · 这台电脑', b: '今天 14:05 · 陈思' }, { f: 'papers/ViT 综述.notes.md', a: '今天 11:40 · 这台电脑', b: '今天 11:52 · 王一凡' }];
+    const rows = d.left.map((i) => `<div class="cfi"><b>${ic('file-text', 14)}${esc(C[i].f)}</b><div class="vs"><div><small>本机</small>${esc(C[i].a)}</div><div><small>远端</small>${esc(C[i].b)}</div></div><div class="a"><button class="bt sm" data-a="toast:对比视图待做">${ic('git-compare', 13)}对比</button><button class="bt sm" data-a="resolve:${i}">保留本机</button><button class="bt sm" data-a="resolve:${i}">保留远端</button><button class="bt sm" data-a="resolve:${i}">都保留</button></div></div>`).join('');
+    const body = d.left.length ? `<div class="cf">${rows}</div><div class="tip" style="margin-top:12px">${ic('info', 14)}<span>处理前两份都在。“都保留”会把本机那份另存为冲突副本。</span></div>` : `<div class="none">${ic('circle-check', 15)}冲突都处理完了。</div>`;
+    return frame('处理同步冲突', esc(t.name), body, footer(['完成', 'close'], { cancel: '稍后处理' }), 560);
+  },
+  login(d) {
+    const body = fd('手机号', `<div class="ph"><span>+86</span><input class="in" data-in="dlg.phone" data-fk="d-phone" placeholder="手机号" value="${esc(d.phone)}" style="flex:1"></div>`)
+      + fd('验证码', `<div class="ph"><input class="in" data-in="dlg.code" data-fk="d-code" placeholder="短信验证码" value="${esc(d.code)}" style="flex:1"><button class="bt" data-a="sendcode" ${validPhone(d.phone) && !d.sent ? '' : 'disabled'}>${d.sent ? '60 秒后重发' : '获取验证码'}</button></div>`)
+      + `<div class="cb ${d.self ? 'on' : ''}" data-a="dtoggle:self"><i>${d.self ? ic('check', 12, 3) : ''}</i><div><b>使用自托管协作服务</b><small>团队自己部署的协作服务</small></div></div>`
+      + (d.self ? `<div class="fd" style="margin-top:10px">${'<label>服务器地址</label>'}<input class="in" data-in="dlg.server" data-fk="d-server" placeholder="https://" value="${esc(d.server)}"></div>` : '')
+      + '<p class="mu" style="font-size:12px;margin:12px 0 0">登录后可以在多台设备上同步项目，并加入团队项目。本机项目不受影响。</p>';
+    return frame('登录', '', body, footer(['登录', 'dologin', 'pri', !(validPhone(d.phone) && d.code.trim().length >= 4)]), 420);
+  },
+  sync(d) {
+    const p = proj(d.arg);
+    const body = `<div class="two"><div><h5>${ic('circle-check', 14)}会同步</h5><ul><li>文献 PDF 和论文笔记</li><li>项目笔记和项目信息</li><li>代码目录（跳过 .git、虚拟环境和超过 200 MB 的文件）</li><li>运行记录</li></ul></div><div><h5>${ic('circle-x', 14)}不会同步</h5><ul><li>AI 对话</li><li>模型密钥</li><li>终端和 Python 环境</li></ul></div></div><div class="tip" style="margin-top:14px">${ic('info', 14)}<span>登录同一账号的其他设备，会在“我的项目”里看到这个项目，点击下载。项目仍然只有你能看到。</span></div>`;
+    return frame('在多台设备上同步', esc(p.name), body, footer(['开始同步', `dosync:${p.id}`]), 520);
+  },
+  unsync(d) { const p = proj(d.arg); return confirmDlg('关闭多设备同步？', p.name, '这台电脑上的项目照常使用；其他设备不再收到更新，已经下载的副本保留。', '关闭同步', `dounsync:${p.id}`); },
+  rmm(d) {
+    const [tid, idx] = d.arg.split('|');
+    const t = proj(tid), m = t.members[+idx];
+    return m.pending ? confirmDlg('撤销邀请？', t.name, `${esc(m.ph)} 不会再自动加入这个项目。`, '撤销邀请', `dormm:${d.arg}`) : confirmDlg(`移除${esc(m.n)}？`, t.name, `${esc(m.n)} 不再同步这个项目，对方电脑上已有的文件保留。`, '移除', `dormm:${d.arg}`);
+  },
+  leave(d) { const t = proj(d.arg); return confirmDlg(`退出「${esc(t.name)}」？`, '', '退出后不再同步。这台电脑上的副本保留，转为个人项目，出现在“我的项目”里。', '退出项目', `doleave:${t.id}`); },
+  delcloud(d) { const t = proj(d.arg); return confirmDlg(`删除云端项目「${esc(t.name)}」？`, '', '所有成员停止同步，每个人电脑上的副本保留。删除后不能恢复。<br><span class="tg t" style="margin-top:8px">待做</span><span class="mu" style="font-size:12px">服务端还没有删除接口。</span>', '删除云端项目', 'dodelcloud'); },
+  logout() { return confirmDlg('退出登录？', '', '这台电脑上的数据保留；云端项目在重新登录前不同步。', '退出登录', 'dologout', 420, 'pri'); },
+};
+function confirmDlg(title, sub, text, btn, a, w = 440, cls = 'dng') { return frame(title, esc(sub), `<p style="margin:0;color:var(--ink2);line-height:1.7">${text}</p>`, footer([btn, a, cls]), w); }
+function openDlg(type, arg) {
+  const d = { type, arg };
+  if (type === 'new') { Object.assign(d, { step: 1, mode: arg === 'team' ? 'team' : 'personal', name: '', q: '', field: '', color: COLORS[(D.projects.length + D.team.length) % COLORS.length], lit: 'new', code: 'later', sync: false, phone: '', role: 'editor', invites: [] }); S.autofocus = 'd-name'; }
+  if (type === 'edit') { const p = proj(arg); Object.assign(d, { name: p.name, q: p.q, field: p.field, color: p.color }); }
+  if (type === 'folder') Object.assign(d, { name: 'token-pruning', q: '' });
+  if (type === 'share') { const first = D.projects.find((p) => !p.archived && !p.remote); Object.assign(d, { pid: arg || (first && first.id), phone: '', role: 'editor', invites: [] }); }
+  if (type === 'invite') { Object.assign(d, { phone: '', role: 'editor' }); S.autofocus = 'd-phone'; }
+  if (type === 'conflict') Object.assign(d, { left: [0, 1] });
+  if (type === 'login') { Object.assign(d, { phone: '', code: '', self: arg === 'self', server: '', sent: false }); S.autofocus = 'd-phone'; }
+  if (S.dlg && type === 'login') S.prev = S.dlg;
+  S.dlg = d;
+}
+function closeDlg() { S.dlg = S.prev || null; S.prev = null; }
+
+/* ---------- 搜索面板 ---------- */
+function cmdk() {
+  const q = S.cmd.q.trim();
+  const cmdMode = q.startsWith('>');
+  const qq = (cmdMode ? q.slice(1) : q).trim().toLowerCase();
+  const CMDS = [['新建项目', 'plus', 'dlg:new', key('N')], ['打开文件夹作为项目', 'folder-input', 'dlg:folder', key('O')], ['打开示例项目', 'book-open', 'sample', ''], ['前往首页', 'house', 'nav:home', key('1')], ['前往我的项目', 'folder', 'nav:mine', key('2')], ['前往团队项目', 'users', 'nav:team', key('3')], ['前往收集箱', 'inbox', 'nav:inbox', key('4')], ['新建随手笔记', 'notebook-pen', 'newnote', ''], ['打开设置', 'settings', 'settings', key(',')]].map(([l, i, a, k]) => ({ l, i, a, k }));
+  const groups = [];
+  if (cmdMode) groups.push(['命令', CMDS.filter((c) => !qq || c.l.toLowerCase().includes(qq))]);
+  else if (!qq) {
+    groups.push(['最近打开', D.recents.filter((r) => proj(r.p)).slice(0, 4).map((r) => ({ l: r.title, i: TICON[r.t], a: `open:${r.p}:${r.t}`, k: proj(r.p).name }))]);
+    groups.push(['命令', CMDS.slice(0, 3)]);
+  } else {
+    groups.push(['项目', [...D.projects, ...(S.logged ? D.team : [])].filter((p) => (p.name + p.q).toLowerCase().includes(qq)).map((p) => ({ l: p.name, i: p.team ? 'users' : 'folder', a: `open:${p.id}`, k: p.team ? '团队项目' : p.archived ? '已归档' : '我的项目' }))]);
+    groups.push(['论文、笔记和运行', D.recents.filter((r) => proj(r.p) && r.title.toLowerCase().includes(qq)).map((r) => ({ l: r.title, i: TICON[r.t], a: `open:${r.p}:${r.t}`, k: proj(r.p).name }))]);
+    groups.push(['收集箱', D.inbox.filter((n) => (n.title + n.body).toLowerCase().includes(qq)).map((n) => ({ l: n.title, i: 'notebook-pen', a: `goinbox:${n.id}`, k: '随手笔记' }))]);
+  }
+  const live = groups.filter((g) => g[1].length);
+  S.cmdFlat = live.flatMap((g) => g[1]);
+  const idx = Math.min(S.cmd.i, S.cmdFlat.length - 1);
+  let n = 0;
+  const res = live.map(([h, items]) => `<h6>${h}</h6>` + items.map((it) => `<div class="co ${n++ === idx ? 'on' : ''}" data-a="${it.a}">${ic(it.i, 15)}<span>${esc(it.l)}</span>${it.k ? `<small>${esc(it.k)}</small>` : ''}</div>`).join('')).join('') || `<div class="none" style="padding:12px 10px">${ic('search', 15)}没有结果。输入 &gt; 查看全部命令。</div>`;
+  return `<div class="cmdk" data-a="cmdclose"><div class="cmdk-b" data-stop="1"><div class="cmdk-i">${ic('search', 17)}<input data-in="cmdq" data-fk="cmdq" placeholder="搜索项目、论文和笔记，输入 > 执行命令" value="${esc(S.cmd.q)}"><span class="kb">Esc</span></div><div class="cmdk-r">${res}</div><div class="cmdk-f"><span>↑↓ 选择</span><span>Enter 打开</span><span>&gt; 命令</span><span>Esc 关闭</span></div></div></div>`;
+}
+
+/* ---------- 设计说明 ---------- */
+const NOTES = {
+  home: { title: '首页', purpose: '打开应用后的第一页：一步回到上次的工作，看到需要处理的事。', sec: [
+    ['布局', ['+标题栏：右侧“打开文件夹”和“新建项目”；新建的下拉里还有“打开文件夹作为项目”和“打开示例项目”。', '+最近项目：最近打开的 5 个项目，个人和团队混排，用书本封面，点击直接打开；右上角是“我的项目”“团队项目”两个入口。', '+继续工作：最近打开的论文、运行、笔记、稿件和 AI 对话，写明所属项目和上次的位置；点击打开项目并定位到这个对象。', '+待处理：新加入的团队项目、同步冲突、失败的运行；每条带一个直接操作，处理完自动消失。']],
+    ['状态', ['没有项目（顶部切到“新用户”）：只显示三个开始入口和数据保存位置。', '没有待处理的事：显示一行“没有需要处理的事项”。', '离线：需要联网的事项，按钮变为“联网后处理”。']],
+    ['不放', ['问候语、欢迎横幅、统计卡片和使用技巧。']],
+    ['数据', ['!继续工作要新增“最近打开的对象”记录：现在工作区里的 recent 字段没有写入。', '待处理用已有数据汇总：同步冲突、团队项目列表的变化、运行状态。AI 等待审批要等后台任务接入后再加。']],
+  ], tries: [['新用户首页', 'set:scen:new'], ['离线', 'set:scen:offline'], ['打开搜索', 'cmd'], ['处理冲突', 'dlg:conflict:t2']] },
+  mine: { title: '我的项目', purpose: '个人项目：只在这台电脑上的，和开启了多设备同步的。', sec: [
+    ['布局', ['~标题栏：标题和数量、搜索框、新建项目。搜索框从通栏缩到右侧，只筛选这一页的项目。', '+工具行：筛选（全部、收藏、多设备同步、已归档）、排序（最近打开、最近更新、名称、创建时间）、书架和列表切换。', '~书架：封面显示研究方向和名称，去掉重复的“研究项目”字样；书签角标表示收藏，云朵表示多设备同步；在别的设备上创建、还没下载的项目半透明显示。', '~列表：名称和研究问题、研究方向、论文/笔记/运行数量、同步状态、最近打开。', '~背景改为纯白，去掉点阵。']],
+    ['项目菜单（右键或“…”）', ['=打开、编辑信息、收藏、归档、删除。', '+在多台设备上同步、共享给团队、在资源管理器（macOS 为 Finder）中显示。', '未登录时，同步和共享两项置灰，并写明“需要登录”。']],
+    ['规则', ['+已归档的项目默认不显示，在“已归档”里查看和恢复。', '+共享给团队后，项目移到团队项目；项目 ID 和本机文件夹不变。', '+删除前列出会删除的记录和会保留的文件，并提供“改为归档”。', '~编辑信息去掉“所属空间”，避免改完后项目从两个页面同时消失。']],
+  ], tries: [['打开项目菜单', 'demo-ctx'], ['列表视图', 'view:list'], ['已归档', 'filter:arch'], ['删除确认', 'dlg:del:p5'], ['多设备同步', 'dlg:sync:p2']] },
+  team: { title: '团队项目', purpose: '和别人共享的项目：成员、角色和这台电脑上的同步状态。', sec: [
+    ['布局', ['~标题栏：搜索、共享本机项目、新建团队项目。', '+连接状态：已连接或离线、上次同步时间、立即同步。', '+筛选：全部、我创建的、共享给我的。', '~表格：项目（带最近更新人和时间）、我的角色、成员、本机状态（已同步、同步中、有冲突、未下载）。单击选中，双击打开。', '+右侧详情：打开或下载、研究问题、成员、同步。']],
+    ['成员', ['=所有者邀请成员；号码还没注册时显示“待注册”，对方第一次登录后自动加入。', '+所有者可以改角色、移除成员、撤销邀请（接口已有，界面待做）。', '+其他角色只读，写明“只有所有者可以管理成员”和自己能做什么；可以退出项目。', '!删除云端项目、转让所有者：服务端还没有。']],
+    ['状态', ['未登录：一句说明和“登录”按钮（顶部切到“未登录”）。', '离线：显示上次的列表；新建、共享、邀请、同步都不可用。', '没有团队项目：引导新建或共享本机项目。']],
+    ['去掉', ['~宣传卡片和标语，例如“本地优先协作”“让研究资料和团队进度自然流转”。']],
+    ['数据', ['成员显示名称要先有账号资料（昵称）；没有时显示部分隐藏的手机号。', '最近更新人需要服务端在项目列表里返回。', '退出项目后，本机副本保留并转为个人项目，不再同步。']],
+  ], tries: [['邀请成员', 'dlg:invite:t2'], ['处理冲突', 'dlg:conflict:t2'], ['审阅者视角', 'tsel:t4'], ['共享本机项目', 'dlg:share'], ['未登录', 'set:scen:guest']] },
+  inbox: { title: '收集箱', purpose: '还没归到任何项目的随手笔记和快速问答。', sec: [
+    ['布局', ['+侧栏入口：现在只能用快捷键或搜索进入。', '+顶部切换“随手笔记”和“快速问答”；左侧列表，右侧内容。']],
+    ['操作', ['=新建、搜索、删除笔记；不绑定项目的 AI 快速问答。', '+移到项目：笔记移进项目笔记；对话移入后改用 Agent，可以读这个项目的论文。']],
+    ['规则', ['快速问答不读写文件，页面上写明。', '划词翻译转来的对话，不在项目里时也放在这里。']],
+  ], tries: [['快速问答', 'itab:chats'], ['新建笔记', 'newnote']] },
+  'dlg-new': { title: '新建项目（两步）', purpose: '两步建好一个可以直接开工的项目；新建团队项目用同一个向导。', sec: [
+    ['第一步：基本信息', ['=项目名称（必填）、研究问题、研究方向、封面颜色。', '+左侧实时预览封面；名称和已有项目重复时提示，但允许继续。', '~去掉“所属空间”：放进团队改由“共享给团队”完成。', '~封面颜色从 5 种增加到 8 种。']],
+    ['第二步：文件夹与同步', ['+文献文件夹：新建、选择已有或稍后关联。', '~代码目录：就是现在的“项目目录”，可以稍后再选。', '+登录后可以直接勾选“在多台设备上同步”；新建团队项目时这里换成邀请成员。']],
+    ['完成', ['创建后直接打开项目窗口，进入概览。', '所选目录不能写入时，在对应选项下说明原因。']],
+  ] },
+  'dlg-edit': { title: '编辑项目信息', purpose: '修改名称、研究问题、研究方向、封面颜色和关联的文件夹。', sec: [['变化', ['~去掉“所属空间”。', '=更换文件夹前检查是否有正在运行的实验或 Agent 任务。']]] },
+  'dlg-folder': { title: '打开文件夹作为项目', purpose: '把已有的研究目录直接变成一个项目。', sec: [['规则', ['+识别文件夹里的 PDF 和 Git 仓库，分别作为文献文件夹和代码目录。', '+项目名称默认用文件夹名。', '文件留在原位置，Scientify 只记录路径。']]] },
+  'dlg-del': { title: '删除项目', purpose: '删除前让人知道会失去什么。', sec: [['内容', ['~列出会删除的记录和数量，以及会保留的文件夹路径。', '+提供“改为归档”。', '=有未保存的内容、实验正在运行或 Agent 任务没结束时不能删除，并说明原因。']]] },
+  'dlg-share': { title: '共享到团队', purpose: '把个人项目变成团队项目，并邀请成员。', sec: [['规则', ['=项目 ID 不变，原文件夹继续使用。', '+共享后项目从“我的项目”移到“团队项目”。', '+可以在同一步邀请成员，也可以之后再邀请。', '写明哪些内容不上传：AI 对话、模型密钥、Python 环境。']]] },
+  'dlg-invite': { title: '邀请成员', purpose: '所有者按手机号邀请成员并选择角色。', sec: [['规则', ['=手机号加角色；号码还没注册时保留邀请，对方第一次登录后自动加入。', '+每个角色写明能做什么。', '+之后可以在成员列表里改角色、移除或撤销邀请。']]] },
+  'dlg-conflict': { title: '处理同步冲突', purpose: '两台设备同时改了同一个文件时，选择保留哪一份。', sec: [['设计', ['+列出冲突的文件、两份各自的修改时间和设备。', '+每条可以对比，并选择保留本机、保留远端或都保留。', '=现在冲突副本会自动生成；这个对话框和对比视图待做。']]] },
+  'dlg-login': { title: '登录', purpose: '原型里用弹窗演示登录前后的变化。', sec: [['说明', ['=手机号和验证码登录、自托管地址，功能已有。', '建议把现在的全窗口登录页改成弹窗（macOS 为 sheet），去掉左侧的产品介绍；可以放到后面单独做。']]] },
+  'dlg-sync': { title: '在多台设备上同步', purpose: '开启前说明会同步什么、不会同步什么。', sec: [['规则', ['=同步范围和现在的实现一致。', '+开启后封面显示云朵；其他设备在“我的项目”里看到这个项目，点击下载。', '项目仍然只有自己能看到；要和别人合作，用“共享给团队”。']]] },
+};
+const NOTES_ALL = { title: '整体结构', purpose: '项目中心是启动后的第一个窗口：选项目、管团队、记随手笔记。', sec: [
+  ['左侧导航', ['+顶部是全局搜索（Ctrl K / ⌘K），和页面里的筛选框分开。', '~页面：首页、我的项目、团队项目、收集箱。“个人空间”“团队协作空间”改名为“我的项目”“团队项目”。', '+收藏：收藏的项目（个人和团队）直接列在侧栏，点击打开。', '~底部：账号、帮助、设置。主题切换移到账号菜单和设置里。']],
+  ['主区', ['~页面标题和主要操作在同一行；下面是筛选和视图，再下面是内容。', '~去掉点阵背景、通栏搜索框和宣传文案。']],
+  ['两种项目', ['我的项目：个人项目，只在这台电脑上，或者开启了多设备同步。', '团队项目：和别人共享的项目。', '个人项目通过“共享给团队”变成团队项目；退出团队项目后，本机副本转为个人项目。']],
+  ['Windows', ['自绘标题栏，窗口按钮和页面标题在同一行。', '对话框居中，带关闭按钮，主按钮在左。', '文案写“资源管理器”，快捷键写 Ctrl。']],
+  ['macOS', ['系统红绿灯在侧栏顶部，标题栏和工具栏合为一行。', '对话框以 sheet 从窗口顶部出现，主按钮在右；菜单用系统样式，不带图标。', '系统菜单栏提供新建项目、打开文件夹、页面切换和书架/列表；设置用 ⌘,。', '文案写“Finder”，快捷键写 ⌘。']],
+  ['快捷键', ['Ctrl/⌘+1 到 4 切换首页、我的项目、团队项目、收集箱。', 'Ctrl/⌘+N 新建项目，Ctrl/⌘+O 打开文件夹作为项目，Ctrl/⌘+K 搜索。']],
+  ['文案', ['标题用名词，按钮用“动词＋对象”，说明只写事实。', '不写口号和宣传语。']],
+] };
+const PLAN = `<h2>实现范围（建议）</h2><p class="pp">验收后分两批实现。每一项对应功能结构图“项目中心”里的条目，完成后同步更新状态。</p>
+<h3>第一批：这次做</h3><ol>
+<li><b>窗口框架</b>：侧栏（搜索入口、四个页面、收藏、账号区），Windows 标题栏和 macOS 工具栏。</li>
+<li><b>我的项目</b>：新封面、筛选、排序、项目菜单（含同步、共享、在文件夹中显示）、删除说明和改为归档；编辑信息去掉“所属空间”。</li>
+<li><b>团队项目</b>：表格加详情；成员管理（邀请、改角色、移除、撤销、退出）接已有接口；未登录、离线、空列表三种状态；去掉宣传内容。</li>
+<li><b>新建项目</b>：两步向导；新建团队项目复用同一个向导。</li>
+<li><b>首页</b>：最近项目、待处理（同步冲突、新加入的团队项目、失败的运行）、继续工作（新增“最近打开的对象”记录）。</li>
+<li><b>收集箱</b>：侧栏入口和整页布局，复用现有的随手笔记和快速问答。</li></ol>
+<h3>第二批：之后做</h3><ul><li>打开文件夹作为项目、示例项目；</li><li>冲突处理对话框和对比视图；</li><li>搜索面板的命令模式；</li><li>macOS 系统菜单栏的完整菜单；</li><li>登录改为弹窗。</li></ul>
+<h3>需要服务端配合</h3><ul><li>成员显示名称（账号资料）；</li><li>项目列表返回最近更新人；</li><li>区分“个人同步”和“团队”项目；</li><li>删除云端项目、转让所有者；</li><li>一个账号加入多个团队。</li></ul>
+<h3>注意</h3><ul><li>新文案同时补中英文词条。</li><li>原型里的项目、成员和手机号都是虚构的示例数据。</li></ul>`;
+function noteBody(N) {
+  const tag = { '+': '<span class="tg n">新增</span>', '~': '<span class="tg c">调整</span>', '=': '<span class="tg h">已有</span>', '!': '<span class="tg t">待做</span>' };
+  const li = (s) => `<li>${tag[s[0]] ? tag[s[0]] + s.slice(1) : s}</li>`;
+  return `<h2>${N.title}</h2><p class="pp">${N.purpose}</p><div class="legend"><span><span class="tg n">新增</span>现在没有</span><span><span class="tg c">调整</span>现在有，要改</span><span><span class="tg h">已有</span>保持</span></div>${N.sec.map(([h, items]) => `<h3>${h}</h3><ul>${items.map(li).join('')}</ul>`).join('')}${N.tries ? `<h3>可以试试</h3><div class="tries">${N.tries.map(([l, a]) => `<button data-a="${a}">${l}</button>`).join('')}</div>` : ''}`;
+}
+function renderNotes() {
+  const el = $('#notes');
+  el.hidden = !S.notes;
+  if (!S.notes) return;
+  const N = (S.dlg && NOTES['dlg-' + S.dlg.type]) || NOTES[S.page];
+  const tabs = `<div class="nt-tabs">${[['page', S.dlg && NOTES['dlg-' + S.dlg.type] ? '当前对话框' : '本页'], ['all', '整体'], ['plan', '实现范围']].map(([k, l]) => `<button class="${S.ntab === k ? 'on' : ''}" data-a="ntab:${k}">${l}</button>`).join('')}</div>`;
+  el.innerHTML = tabs + `<div class="nt">${S.ntab === 'page' ? noteBody(N) : S.ntab === 'all' ? noteBody(NOTES_ALL) : PLAN}</div>`;
+}
+
+/* ---------- 渲染 ---------- */
+function renderBar() {
+  const seg = (k, opts) => `<span class="seg">${opts.map(([v, l]) => `<button class="${S[k] === v ? 'on' : ''}" data-a="set:${k}:${v}">${l}</button>`).join('')}</span>`;
+  $('#rv').innerHTML = `<div class="rv-t"><img src="${LOGO}" alt=""><b>项目中心</b><span>交互原型 · 待验收</span></div><div class="rv-g">平台${seg('plat', [['win', 'Windows'], ['mac', 'macOS']])}</div><div class="rv-g">场景${seg('scen', [['normal', '日常使用'], ['new', '新用户'], ['guest', '未登录'], ['offline', '离线']])}</div><div class="rv-g">窗口${seg('size', [['md', '1100×740'], ['lg', '1440×900'], ['sm', '800×560']])}</div><span class="rv-sp"></span><button class="rv-tog ${S.notes ? 'on' : ''}" data-a="toggle-notes">${ic('info', 14)}设计说明</button>`;
+}
+function overlays() {
+  let h = '';
+  if (S.menu) {
+    const st = S.menu.y != null ? `left:${S.menu.x}px;top:${S.menu.y}px` : `left:${S.menu.x}px;bottom:${S.menu.bottom}px`;
+    h += `<div class="menu" style="${st}" data-stop="1">${menuHtml(menuItems(S.menu))}</div>`;
+  }
+  if (S.cmd) h += cmdk();
+  if (S.dlg && DLG[S.dlg.type]) h += DLG[S.dlg.type](S.dlg);
+  if (S.toast) h += `<div class="toast"><span>${esc(S.toast.m)}</span>${S.toast.undo ? '<button data-a="undo">撤销</button>' : ''}</div>`;
+  return h;
+}
+function fit() {
+  const desk = $('#desk'), box = $('#deskbox'), stage = $('#stage');
+  desk.style.transform = 'none';
+  const W = desk.offsetWidth, H = desk.offsetHeight;
+  const s = Math.min(1, (stage.clientWidth - 44) / W, (stage.clientHeight - 44) / H);
+  S.scale = s;
+  desk.style.transform = `scale(${s})`;
+  box.style.width = Math.round(W * s) + 'px';
+  box.style.height = Math.round(H * s) + 'px';
+}
+function render() {
+  const a = document.activeElement;
+  const fk = a && a.dataset && a.dataset.fk;
+  const sel = fk && typeof a.selectionStart === 'number' ? [a.selectionStart, a.selectionEnd] : null;
+  renderBar();
+  const [w, h] = SIZES[S.size];
+  const win = $('#win');
+  win.className = `p-${S.plat} sz-${S.size}`;
+  win.style.width = w + 'px';
+  win.style.height = h + 'px';
+  const page = { home: homePage, mine: minePage, team: teamPage, inbox: inboxPage }[S.page] || homePage;
+  win.innerHTML = sidebar() + `<div class="mn">${page()}</div>` + overlays();
+  $('#desk').className = 'desk ' + S.plat;
+  $('#mbar').innerHTML = S.plat === 'mac' ? menubar() : '';
+  renderNotes();
+  fit();
+  placeMenu();
+  const target = S.autofocus || fk;
+  S.autofocus = null;
+  if (target) {
+    const el = document.querySelector(`[data-fk="${target}"]`);
+    if (el) { el.focus(); if (target === fk && sel) { try { el.setSelectionRange(sel[0], sel[1]); } catch (e) {} } }
+  }
+}
+
+/* ---------- 交互 ---------- */
+let toastTimer;
+function toast(m, undo) {
+  S.toast = { m, undo };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { S.toast = null; render(); }, undo ? 5000 : 2800);
+}
+function openProject(id, t) {
+  const p = proj(id);
+  if (!p) return;
+  if (p.remote || p.local === 'none') {
+    if (!S.online) { toast('离线时不能下载项目'); return; }
+    if (p.remote) { p.remote = false; p.opened = '刚刚'; p.o = 0; } else { p.local = 'synced'; p.last = '刚刚'; p.isNew = false; p.o = 0; }
+    D.pending = D.pending.filter((x) => !(x.k === 'joined' && id === 't5'));
+    toast(`已下载「${p.name}」，正在打开项目窗口`);
+    return;
+  }
+  toast(`打开项目窗口：${p.name}${t ? ' → ' + TNAME[t] : ''}`);
+}
+function act(a, el, ev) {
+  const i = a.indexOf(':');
+  const k = i < 0 ? a : a.slice(0, i);
+  const rest = i < 0 ? '' : a.slice(i + 1);
+  const [x, y] = rest.split(':');
+  if (k !== 'menu') S.menu = null;
+  if (k !== 'mb') S.mb = null;
+  const d = S.dlg;
+  switch (k) {
+    case 'set': if (x === 'scen') applyScen(y); else S[x] = y; break;
+    case 'toggle-notes': S.notes = !S.notes; break;
+    case 'ntab': S.ntab = x; break;
+    case 'nav': S.page = x; S.cmd = null; S.dlg = null; break;
+    case 'menu': if (S.menu && S.menu.type === x && S.menu.id === y) { S.menu = null; break; } openMenu(x, y, el, ev); return;
+    case 'mb': S.mb = S.mb === x ? null : x; break;
+    case 'filter': S.filter = x; S.page = 'mine'; break;
+    case 'tfilter': S.tfilter = x; break;
+    case 'itab': S.itab = x; S.page = 'inbox'; break;
+    case 'view': S.view = x; S.page = 'mine'; break;
+    case 'sort': S.sort = x; break;
+    case 'clr': S[x] = ''; S.autofocus = x; break;
+    case 'clear-filter': S.q = ''; S.filter = 'all'; break;
+    case 'clear-tfilter': S.tq = ''; S.tfilter = 'all'; break;
+    case 'favtoggle': S.favOpen = !S.favOpen; break;
+    case 'open': S.cmd = null; openProject(x, y); break;
+    case 'tsel': S.tsel = x; S.page = 'team'; break;
+    case 'isel': S.isel = x; break;
+    case 'csel': S.csel = x; break;
+    case 'goinbox': S.cmd = null; S.page = 'inbox'; S.itab = 'notes'; S.isel = x; break;
+    case 'fav': { const p = proj(x); p.fav = !p.fav; toast(p.fav ? `已收藏「${p.name}」` : `已取消收藏「${p.name}」`); break; }
+    case 'arch': { const p = proj(x); p.archived = !p.archived; S.dlg = S.prev = null; toast(p.archived ? `已归档「${p.name}」` : `已恢复「${p.name}」`, () => { p.archived = !p.archived; }); break; }
+    case 'reveal': { const p = proj(x); toast(`${reveal()}：${pth('code', p)}`); break; }
+    case 'dlg': S.cmd = null; openDlg(x, y); break;
+    case 'close': closeDlg(); break;
+    case 'dstep': d.step = +x; if (d.step === 1) S.autofocus = 'd-name'; break;
+    case 'dset': d[x] = rest.slice(x.length + 1); break;
+    case 'dtoggle': d[x] = !d[x]; break;
+    case 'cyclerole': d.role = { editor: 'reviewer', reviewer: 'viewer', viewer: 'editor' }[d.role]; break;
+    case 'addinv': if (validPhone(d.phone)) { d.invites.push({ ph: d.phone.trim(), role: d.role }); d.phone = ''; S.autofocus = 'd-phone'; } break;
+    case 'rminv': d.invites.splice(+x, 1); break;
+    case 'create': {
+      const id = 'n' + Date.now();
+      const base = { id, name: d.name.trim(), field: d.field.trim() || '未分类', q: d.q.trim() || '还没有填写研究问题', color: d.color, opened: '刚刚', o: 0, u: 0, created: '2026-11-04', papers: 0, notes: 0, runs: 0, dir: d.name.trim() };
+      if (d.mode === 'team') { D.team.unshift({ ...base, team: true, owner: '我', role: 'owner', local: 'synced', last: '刚刚', by: '我', when: '刚刚', members: [{ ...ME, role: 'owner' }, ...d.invites.map((v) => ({ ph: mask(v.ph), role: v.role, pending: true }))] }); S.page = 'team'; S.tsel = id; }
+      else { D.projects.unshift({ ...base, sync: d.sync ? 'on' : undefined }); S.page = 'mine'; S.filter = 'all'; }
+      S.dlg = null; toast(`已创建「${base.name}」，正在打开项目窗口`); break;
+    }
+    case 'createfolder': D.projects.unshift({ id: 'n' + Date.now(), name: d.name.trim(), field: '未分类', q: d.q.trim() || '还没有填写研究问题', color: '#3f7a7a', opened: '刚刚', o: 0, u: 0, created: '2026-11-04', papers: 18, notes: 0, runs: 0, dir: 'token-pruning' }); S.dlg = null; S.page = 'mine'; toast(`已创建「${d.name.trim()}」，正在打开项目窗口`); break;
+    case 'saveedit': { const p = proj(d.arg); Object.assign(p, { name: d.name.trim(), q: d.q.trim(), field: d.field.trim(), color: d.color }); S.dlg = null; toast('已保存'); break; }
+    case 'delete': { const p = proj(x); D.projects = D.projects.filter((q) => q.id !== x); D.recents = D.recents.filter((r) => r.p !== x); S.dlg = null; toast(`已删除「${p.name}」`); break; }
+    case 'doshare': {
+      const p = proj(d.pid);
+      D.projects = D.projects.filter((q) => q.id !== p.id);
+      D.team.unshift({ ...p, team: true, sync: undefined, owner: '我', role: 'owner', local: 'synced', last: '刚刚', by: '我', when: '刚刚', o: 0, members: [{ ...ME, role: 'owner' }, ...d.invites.map((v) => ({ ph: mask(v.ph), role: v.role, pending: true }))] });
+      S.dlg = null; S.page = 'team'; S.tsel = p.id; S.tfilter = 'all'; toast(`已共享「${p.name}」，现在在团队项目里`); break;
+    }
+    case 'doinvite': { const t = proj(d.arg); t.members.push({ ph: mask(d.phone.trim()), role: d.role, pending: true }); S.dlg = null; toast(`已邀请 ${mask(d.phone.trim())}（${ROLES[d.role]}）`); break; }
+    case 'setrole': { const [tid, idx, r] = x.split('|'); const m = proj(tid).members[+idx]; m.role = r; toast(`已把 ${m.n || m.ph} 的角色改为${ROLES[r]}`); break; }
+    case 'dormm': { const [tid, idx] = x.split('|'); const t = proj(tid); const m = t.members[+idx]; t.members.splice(+idx, 1); S.dlg = null; toast(m.pending ? '已撤销邀请' : `已移除${m.n}`); break; }
+    case 'doleave': { const t = proj(x); D.team = D.team.filter((q) => q.id !== x); D.projects.unshift({ ...t, team: false, id: t.id, dir: t.name, papers: 12, notes: 6, runs: 3, created: '2026-09-15', u: 0 }); S.dlg = null; S.tsel = D.team[0] && D.team[0].id; toast(`已退出「${t.name}」，本机副本在我的项目里`); break; }
+    case 'dodelcloud': S.dlg = null; toast('待做：服务端还没有删除云端项目的接口'); break;
+    case 'resolve': d.left = d.left.filter((n) => n !== +x); if (!d.left.length) { const t = proj(d.arg); t.local = 'synced'; t.conflicts = 0; D.pending = D.pending.filter((p) => p.k !== 'conflict'); } break;
+    case 'sendcode': d.sent = true; S.autofocus = 'd-code'; break;
+    case 'dologin': S.logged = true; S.online = true; closeDlg(); toast('已登录'); break;
+    case 'dologout': S.logged = false; S.dlg = null; toast('已退出登录，本机数据保留'); break;
+    case 'dosync': { const p = proj(x); p.sync = 'on'; S.dlg = null; toast(`已开启「${p.name}」的多设备同步`); break; }
+    case 'dounsync': { const p = proj(x); p.sync = undefined; S.dlg = null; toast(`已关闭「${p.name}」的多设备同步`); break; }
+    case 'syncall': toast('正在同步全部团队项目…'); break;
+    case 'syncone': toast(`正在同步「${proj(x).name}」…`); break;
+    case 'clear-recents': { const old = D.recents; D.recents = []; toast('已清空最近记录', () => { D.recents = old; }); break; }
+    case 'dismiss': D.pending = D.pending.filter((p) => p.id !== x); break;
+    case 'sample': if (!D.projects.some((p) => p.id === 's1')) D.projects.unshift({ id: 's1', name: '示例：视觉 Token 剪枝', field: '示例项目', q: '用两篇论文和一个小实验，走一遍读文献、记笔记、跑实验', color: '#3f7a7a', opened: '刚刚', o: 0, u: 0, created: '2026-11-04', papers: 2, notes: 1, runs: 1, dir: '示例项目' }); S.dlg = null; toast('已打开示例项目'); break;
+    case 'newnote': { const id = 'n' + Date.now(); D.inbox.unshift({ id, title: '无标题笔记', body: '', when: '刚刚' }); S.page = 'inbox'; S.itab = 'notes'; S.isel = id; S.cmd = null; break; }
+    case 'newchat': { const id = 'c' + Date.now(); D.chats.unshift({ id, title: '新的问答', when: '刚刚', msgs: [['a', '有什么想问的？快速问答不读写文件。']] }); S.csel = id; break; }
+    case 'delnote': { const n = D.inbox.find((q) => q.id === x); const at = D.inbox.indexOf(n); D.inbox = D.inbox.filter((q) => q.id !== x); S.isel = D.inbox[0] && D.inbox[0].id; toast(`已删除「${n.title}」`, () => { D.inbox.splice(at, 0, n); }); break; }
+    case 'move': { const [nid, pid] = x.split('|'); const p = proj(pid); const isChat = nid.startsWith('c'); if (isChat) { D.chats = D.chats.filter((c) => c.id !== nid); S.csel = D.chats[0] && D.chats[0].id; } else { D.inbox = D.inbox.filter((n) => n.id !== nid); S.isel = D.inbox[0] && D.inbox[0].id; } toast(isChat ? `已移到「${p.name}」，之后用 Agent 回答，可以读这个项目的论文` : `已移到「${p.name}」的项目笔记`); break; }
+    case 'cmd': S.cmd = { q: '', i: 0 }; S.autofocus = 'cmdq'; break;
+    case 'cmdclose': S.cmd = null; break;
+    case 'settings': toast(`打开设置窗口（${key(',')}）`); break;
+    case 'theme': S.theme = x; toast('原型只演示浅色'); break;
+    case 'pickdir': toast('打开系统的选择文件夹对话框'); break;
+    case 'toast': toast(rest); break;
+    case 'undo': if (S.toast && S.toast.undo) S.toast.undo(); S.toast = null; break;
+    case 'demo-ctx': {
+      S.page = 'mine'; S.view = 'grid'; S.filter = 'all'; render();
+      const btn = $('#win .shelf .bk-m');
+      if (btn) openMenu('project', btn.dataset.a.split(':')[2], btn);
+      return;
+    }
+    default: break;
+  }
+  render();
+}
+function findAct(t) {
+  for (let n = t; n && n !== document.body; n = n.parentElement) {
+    if (n.dataset && n.dataset.a !== undefined) return n;
+    if (n.dataset && n.dataset.stop) return null;
+  }
+  return null;
+}
+document.addEventListener('click', (e) => {
+  const t = findAct(e.target);
+  if (!t) {
+    if ((S.menu && !e.target.closest('.menu')) || (S.mb && !e.target.closest('.mbar'))) { S.menu = null; S.mb = null; render(); }
+    return;
+  }
+  if (t.disabled || t.classList.contains('dis')) return;
+  e.preventDefault();
+  act(t.dataset.a, t, e);
+});
+document.addEventListener('dblclick', (e) => {
+  const r = e.target.closest('#win [data-dbl]');
+  if (r) { openProject(r.dataset.dbl); render(); }
+});
+document.addEventListener('contextmenu', (e) => {
+  const t = e.target.closest('#win [data-ctx]');
+  if (!t) return;
+  const p = proj(t.dataset.ctx);
+  if (!p) return;
+  e.preventDefault();
+  if (p.team && S.page === 'team') S.tsel = p.id;
+  openMenu(p.team ? 'team' : 'project', p.id, t, e);
+});
+document.addEventListener('input', (e) => {
+  const k = e.target.dataset && e.target.dataset.in;
+  if (!k) return;
+  if (k.startsWith('dlg.')) S.dlg[k.slice(4)] = e.target.value;
+  else if (k === 'cmdq') { S.cmd.q = e.target.value; S.cmd.i = 0; }
+  else S[k] = e.target.value;
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  const m = e.metaKey || e.ctrlKey;
+  const k = e.key.toLowerCase();
+  if (m && k === 'k') { e.preventDefault(); S.cmd = S.cmd ? null : { q: '', i: 0 }; S.autofocus = 'cmdq'; S.menu = null; render(); return; }
+  if (e.key === 'Escape') { if (S.menu || S.mb) { S.menu = null; S.mb = null; } else if (S.cmd) S.cmd = null; else if (S.dlg) closeDlg(); render(); return; }
+  if (S.cmd) {
+    const n = (S.cmdFlat || []).length;
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && n) { e.preventDefault(); S.cmd.i = (Math.min(S.cmd.i, n - 1) + (e.key === 'ArrowDown' ? 1 : n - 1)) % n; render(); }
+    else if (e.key === 'Enter') { e.preventDefault(); const it = S.cmdFlat[Math.min(S.cmd.i, n - 1)]; S.cmd = null; if (it) act(it.a); else render(); }
+    return;
+  }
+  if (S.dlg) return;
+  if (m && /^[1-4]$/.test(e.key)) { e.preventDefault(); S.page = ['home', 'mine', 'team', 'inbox'][+e.key - 1]; render(); }
+  else if (m && k === 'n') { e.preventDefault(); openDlg('new'); render(); }
+  else if (m && k === 'o') { e.preventDefault(); openDlg('folder'); render(); }
+});
+window.addEventListener('resize', () => { fit(); placeMenu(); });
+
+/* ---------- 启动 ---------- */
+applyScen(Q.get('scen') || 'normal');
+if (Q.get('filter')) S.filter = Q.get('filter');
+if (Q.get('tsel')) S.tsel = Q.get('tsel');
+if (Q.get('dlg')) { const [t, a] = Q.get('dlg').split(':'); openDlg(t, a); if (Q.get('step')) S.dlg.step = +Q.get('step'); if (Q.get('name')) S.dlg.name = Q.get('name'); }
+if (Q.get('cmd') !== null) S.cmd = { q: Q.get('cmd') || '', i: 0 };
+render();
+if (Q.get('menu')) {
+  const [ty, id] = Q.get('menu').split(':');
+  const el = document.querySelector(`#win [data-a="menu:${ty}${id ? ':' + id : ''}"]`);
+  if (el) openMenu(ty, id, el);
+}
+if (Q.get('mb')) { S.mb = Q.get('mb'); render(); }
+</script>
+</body>
+</html>

@@ -85,15 +85,16 @@ it('locks form fields while persistence is pending so late input cannot be lost'
   const store = createWorkspaceStore(adapter);
   const user = userEvent.setup();
   render(<App store={store} />);
-  await screen.findByText('暂无项目');
+  await screen.findByText('开始使用');
   await user.click(screen.getAllByRole('button', { name: /新建项目/ })[0]);
   await user.type(screen.getByLabelText('项目名称'), '延迟保存');
   await user.keyboard('{Control>}k{/Control}');
-  expect(screen.getByRole('dialog', { name: '新建科研项目' })).toBeTruthy();
+  expect(screen.getByRole('dialog', { name: '新建项目' })).toBeTruthy();
   expect((screen.getByLabelText('项目名称') as HTMLInputElement).value).toBe('延迟保存');
-  await user.click(screen.getByRole('button', { name: '保存项目' }));
-  expect((screen.getByLabelText('项目名称') as HTMLInputElement).disabled).toBe(true);
-  expect((screen.getByLabelText('研究问题') as HTMLTextAreaElement).disabled).toBe(true);
+  await user.click(screen.getByRole('button', { name: '下一步' }));
+  await user.click(screen.getByRole('button', { name: '创建项目' }));
+  expect((screen.getByLabelText('代码目录') as HTMLInputElement).disabled).toBe(true);
+  expect((screen.getByRole('button', { name: '上一步' }) as HTMLButtonElement).disabled).toBe(true);
   expect((screen.getByRole('button', { name: '关闭弹窗' }) as HTMLButtonElement).disabled).toBe(
     true,
   );
@@ -125,25 +126,40 @@ it('creates a project, retains failed form edits, and retries into the real stor
   const store = createWorkspaceStore(adapter);
   const user = userEvent.setup();
   render(<App store={store} />);
-  await screen.findByText('暂无项目');
+  await screen.findByText('开始使用');
   await user.click(screen.getAllByRole('button', { name: /新建项目/ })[0]);
   await user.type(screen.getByLabelText('项目名称'), '迁移验证项目');
   await user.type(screen.getByLabelText('研究问题'), '数据是否完整？');
-  await user.click(screen.getByRole('button', { name: '保存项目' }));
+  await user.click(screen.getByRole('button', { name: '下一步' }));
+  await user.click(screen.getByRole('button', { name: '创建项目' }));
   await screen.findByText('测试写入失败');
+  await user.click(screen.getByRole('button', { name: '上一步' }));
   expect((screen.getByLabelText('项目名称') as HTMLInputElement).value).toBe('迁移验证项目');
   expect(store.getState().data?.projects).toHaveLength(0);
   expect(store.getState().dirty).toBe(true);
-  await user.click(screen.getByRole('button', { name: '保存项目' }));
+  await user.click(screen.getByRole('button', { name: '下一步' }));
+  await user.click(screen.getByRole('button', { name: '创建项目' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(store.getState().data?.projects[0].question).toBe('数据是否完整？');
   expect(store.getState().dirty).toBe(false);
+  // Creating opens the project; go back to the project center.
+  await user.click(await screen.findByRole('button', { name: 'Scientify 项目管理' }));
+  await user.click(
+    within(screen.getByRole('complementary', { name: '项目中心导航' })).getByRole('button', {
+      name: /我的项目/,
+    }),
+  );
   await user.click(screen.getByRole('button', { name: '项目操作 迁移验证项目' }));
   await user.click(screen.getByRole('menuitem', { name: '收藏' }));
   await waitFor(() => expect(store.getState().data?.projects[0].favorite).toBe(true));
   await user.click(screen.getByRole('button', { name: '项目操作 迁移验证项目' }));
   await user.click(screen.getByRole('menuitem', { name: '归档' }));
   await waitFor(() => expect(store.getState().data?.projects[0].archived).toBe(true));
+  // Archived projects leave the default list and stay reachable under 已归档.
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: '项目操作 迁移验证项目' })).toBeNull(),
+  );
+  await user.click(screen.getByRole('button', { name: /已归档/ }));
   await user.click(await screen.findByRole('button', { name: '项目操作 迁移验证项目' }));
   await screen.findByRole('menuitem', { name: '恢复' });
 });

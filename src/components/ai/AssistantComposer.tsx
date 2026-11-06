@@ -39,6 +39,8 @@ interface Props {
   attachments?: ChatAttachment[];
   onAttach?: (files: File[]) => void;
   onRemoveAttachment?: (index: number) => void;
+  /** Which engine answers the next message; quick chat only sees the current page. */
+  mode?: 'agent' | 'chat';
   permission?: PermissionMode;
   permissionDisabled?: boolean;
   permissionMenuOpen?: boolean;
@@ -75,6 +77,7 @@ export function AssistantComposer({
   attachments = [],
   onAttach,
   onRemoveAttachment,
+  mode = 'agent',
   permission = 'ask',
   permissionDisabled = false,
   permissionMenuOpen = false,
@@ -386,30 +389,41 @@ export function AssistantComposer({
           <span>{model || t('Select model')}</span>
           <ChevronUp size={12} />
         </Button>
-        <Button
-          ref={permissionButton}
-          variant="ghost"
-          size="sm"
-          type="button"
-          className="sf-ai-model-control sf-ai-permission-control"
-          aria-label={t('执行权限')}
-          aria-haspopup="menu"
-          aria-expanded={permissionMenuOpen}
-          disabled={permissionDisabled}
-          title={
-            permissionDisabled ? t('当前任务或保存结束后可切换权限') : t('设置当前会话的执行权限')
-          }
-          data-permission={permission}
-          onClick={(event) => onPermissionMenu?.(event.currentTarget)}
-        >
-          <Shield size={12} />
-          <span>
-            <span className="sf-ai-permission-prefix">{t('Permission')} · </span>
-            {permission === 'full' ? t('完全允许') : t('询问')}
-          </span>
-          <ChevronUp size={12} />
-        </Button>
+        {mode === 'agent' ? (
+          <Button
+            ref={permissionButton}
+            variant="ghost"
+            size="sm"
+            type="button"
+            className="sf-ai-model-control sf-ai-permission-control"
+            aria-label={t('执行权限')}
+            aria-haspopup="menu"
+            aria-expanded={permissionMenuOpen}
+            disabled={permissionDisabled}
+            title={
+              permissionDisabled ? t('当前任务或保存结束后可切换权限') : t('设置当前会话的执行权限')
+            }
+            data-permission={permission}
+            onClick={(event) => onPermissionMenu?.(event.currentTarget)}
+          >
+            <Shield size={12} />
+            <span>
+              <span className="sf-ai-permission-prefix">{t('Permission')} · </span>
+              {permission === 'full' ? t('完全允许') : t('询问')}
+            </span>
+            <ChevronUp size={12} />
+          </Button>
+        ) : null}
         <span className="sf-spacer" />
+        <span
+          className="sf-ai-mode"
+          data-mode={mode}
+          title={
+            mode === 'agent' ? t('可以读项目里的论文和文件') : t('只能看到当前页、选中的文字和附件')
+          }
+        >
+          {mode === 'agent' ? 'Agent' : t('快速问答')}
+        </span>
         {isBusy && prompt.trim() && canSteer ? (
           <Button
             variant="ghost"

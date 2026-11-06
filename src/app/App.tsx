@@ -3,7 +3,7 @@ import { Button } from '../components/primitives';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { emitTo, listen } from '@tauri-apps/api/event';
 import { openProjectWindow } from '../platform/windows';
 import { applyAppearance, migrateTheme, usePreferences } from '../i18n/preferences';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -18,7 +18,28 @@ import { FeaturePlaceholder } from '../components/workspace/FeaturePlaceholder';
 import { ProjectForm } from '../features/projects/ProjectForm';
 import { confirmAction } from '../components/prompts';
 import { ProjectLibrary } from '../features/projects/ProjectLibrary';
-import { ProjectSidebar } from '../features/projects/ProjectSidebar';
+import { ProjectSidebar, type SettingsSection } from '../features/projects/ProjectSidebar';
+import { ProjectHome } from '../features/projects/ProjectHome';
+import { TeamProjects } from '../features/projects/TeamProjects';
+import { InboxPage } from '../features/projects/InboxPage';
+import { NewProjectWizard, type NewProjectMode } from '../features/projects/NewProjectWizard';
+import {
+  CENTER_PAGES,
+  COLLABORATION_TEAM_ID,
+  coverColor,
+  ensureCollaborationTeam,
+  isTeamProject,
+  markOpened,
+  personalProjects,
+  type CenterPage,
+} from '../features/projects/model';
+import {
+  classifyCloud,
+  isNewCloudProject,
+  refreshCloud,
+  useCloud,
+} from '../features/projects/cloud';
+import { PERSONAL_SCOPE } from '../features/notes/model';
 import { WindowControls } from '../components/layout/WindowControls';
 import { SettingsDialog } from '../features/settings/Settings';
 import { SearchDialog, type SearchTarget } from '../features/search/SearchDialog';
@@ -58,17 +79,16 @@ import {
 } from '../platform/collaboration';
 import { SignInPage } from '../features/account/SignInPage';
 
-const COLLABORATION_TEAM_ID = 'scientify-collaboration';
-
 type Dialog =
-  | { kind: 'project'; project?: Project }
-  | { kind: 'data' | 'profile' | 'search' | 'about' | 'collaboration' }
+  | { kind: 'project'; project?: Project; mode?: NewProjectMode }
+  | { kind: 'data' | 'profile' | 'search' | 'about' | 'collaboration' | 'shortcuts' }
   | null;
 const settingsSection = {
   profile: 'general',
   data: 'data',
   about: 'about',
   collaboration: 'collaboration',
+  shortcuts: 'shortcuts',
 } as const;
 type Location = {
   workspace: WorkspaceId;
@@ -83,6 +103,7 @@ type UISession = {
   version: 2;
   projectId: string | null;
   space: string;
+  page: CenterPage;
   locations: Record<string, Location>;
   dock: 'assistant' | 'notes';
   dockOpen: boolean;
@@ -93,6 +114,7 @@ const defaults: UISession = {
   version: 2,
   projectId: null,
   space: 'personal',
+  page: 'home',
   locations: {},
   dock: 'assistant',
   dockOpen: false,
@@ -130,6 +152,7 @@ function readSession(storageKey = 'scientify.ui.v2'): UISession {
               ];
             }),
         ),
+        page: CENTER_PAGES.includes(value.page) ? value.page : 'home',
         dock: value.dock === 'notes' ? 'notes' : 'assistant',
         dockOpen: value.dock === 'notes' && value.dockOpen === true,
         leftWidth: Math.max(180, Math.min(300, Number(value.leftWidth) || 240)),
@@ -198,48 +221,67 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
     window.addEventListener('beforeunload', beforeUnload);
     let disposed = false;
     let closing = false;
-    let cleanup: (() => void) | undefined;
-    if (isTauri())
-      void getCurrentWindow()
-        .onCloseRequested(async (event) => {
-          event.preventDefault();
-          if (closing) return;
-          const { busy } = store.getState();
-          if (busy || hasPendingFileOperations(backend)) return;
-          if (Object.keys(store.getState().agentTasks).length) {
-            store.setState({
-              error: t(
-                '后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。',
-              ),
-            });
+    const cleanups: (() => void)[] = [];
+    if (isTauri()) {
+      const requestClose = async (quit = false) => {
+        if (closing) return;
+        const { busy } = store.getState();
+        if (busy || hasPendingFileOperations(backend)) return;
+        if (Object.keys(store.getState().agentTasks).length) {
+          store.setState({
+            error: t(
+              '后台任务仍在运行或有结果未保存。请在实验任务入口或 AI 助手中停止任务、保存结果后再关闭窗口。',
+            ),
+          });
+          return;
+        }
+        closing = true;
+        try {
+          if (!(await flushPaperNotes())) {
+            store.setState({ error: t('论文笔记尚未保存，请重试或处理冲突后退出。') });
             return;
           }
-          closing = true;
-          try {
-            if (!(await flushPaperNotes())) {
-              store.setState({ error: t('论文笔记尚未保存，请重试或处理冲突后退出。') });
-              return;
-            }
-            if (
-              !store.getState().dirty ||
-              (await confirmAction(
-                returning
-                  ? t('仍有未保存的内容。确认放弃这些修改并返回项目管理？')
-                  : t('仍有未保存的内容。确认放弃这些修改并退出？'),
-              ))
-            )
-              await getCurrentWindow().destroy();
-          } finally {
-            closing = false;
+          if (
+            !store.getState().dirty ||
+            (await confirmAction(
+              returning && !quit
+                ? t('仍有未保存的内容。确认放弃这些修改并返回项目管理？')
+                : t('仍有未保存的内容。确认放弃这些修改并退出？'),
+            ))
+          ) {
+            // Closing the hidden project window also runs its own save guard.
+            if (quit && returning) await emitTo('main', 'scientify-exit-requested');
+            await getCurrentWindow().destroy();
           }
-        })
-        .then((unlisten) => {
-          if (disposed) unlisten();
-          else cleanup = unlisten;
-        });
+        } catch (error) {
+          store.setState({ error: translateError(String(error)) });
+        } finally {
+          closing = false;
+        }
+      };
+      const register = (ready: Promise<() => void>) =>
+        void ready
+          .then((unlisten) => {
+            if (disposed) unlisten();
+            else cleanups.push(unlisten);
+          })
+          .catch((error) => store.setState({ error: translateError(String(error)) }));
+      register(
+        getCurrentWindow().onCloseRequested(async (event) => {
+          event.preventDefault();
+          await requestClose();
+        }),
+      );
+      // Only exits addressed to this window: a plain listen also hears ones sent to the other window.
+      register(
+        listen('scientify-exit-requested', () => void requestClose(true), {
+          target: getCurrentWindow().label,
+        }),
+      );
+    }
     return () => {
       disposed = true;
-      cleanup?.();
+      cleanups.forEach((unlisten) => unlisten());
       window.removeEventListener('beforeunload', beforeUnload);
     };
   }, [store, backend, returning]);
@@ -375,6 +417,30 @@ export function App({
       void subscription.then((stop) => stop());
     };
   }, [windowMode, store]);
+  // The project center keeps the cloud list fresh: on open, after sign-in changes,
+  // when the window comes back into focus, and every two minutes.
+  const cloud = useCloud();
+  const cloudWatched = windowMode !== 'workspace' && phase === 'ready';
+  useEffect(() => {
+    if (!cloudWatched) return;
+    let last = 0;
+    const refresh = (force = false) => {
+      if (!force && Date.now() - last < 20_000) return;
+      last = Date.now();
+      void refreshCloud(store.getState().data?.projects ?? []);
+    };
+    const forced = () => refresh(true);
+    const focused = () => refresh();
+    refresh(true);
+    window.addEventListener(collaborationStateEvent, forced);
+    window.addEventListener('focus', focused);
+    const timer = window.setInterval(forced, 120_000);
+    return () => {
+      window.removeEventListener(collaborationStateEvent, forced);
+      window.removeEventListener('focus', focused);
+      window.clearInterval(timer);
+    };
+  }, [cloudWatched, store]);
   useEffect(() => {
     if (windowMode !== 'workspace' || !['ready', 'error'].includes(phase)) return;
     void invoke('workspace_window_ready').catch((error: unknown) =>
@@ -527,33 +593,29 @@ export function App({
     return () => window.removeEventListener('keydown', onShortcut);
   }, [data?.settings.shortcuts, navigate, openTool, patchLocation, workspace]);
   function openProject(id: string) {
+    markOpened(id);
     if (windowMode === 'projects') {
       void launchWorkspace(id);
       return;
     }
-    const p = data?.projects.find((p) => p.id === id);
+    // A project created a moment ago may not be in this render's data yet.
+    const p = store.getState().data?.projects.find((p) => p.id === id);
     if (p) {
       setUI((s) => ({ ...s, projectId: id, space: p.space }));
       setSidebarExpanded(true);
     }
   }
 
-  async function openRemoteProject(remote: CollaborationProject) {
+  /** Bind a cloud project to this device; team projects go to the team space, my own stay personal. */
+  async function openRemoteProject(remote: CollaborationProject, team = true) {
     const timestamp = new Date().toISOString();
+    const space = team ? COLLABORATION_TEAM_ID : 'personal';
     const saved = await store.getState().update((workspaceData) => {
-      if (!workspaceData.teams.some((team) => team.id === COLLABORATION_TEAM_ID)) {
-        workspaceData.teams.push({
-          id: COLLABORATION_TEAM_ID,
-          name: '团队协作',
-          color: '#56746a',
-          description: 'Scientify collaboration projects',
-        });
-      }
+      if (team) ensureCollaborationTeam(workspaceData);
       const local = workspaceData.projects.find((project) => project.id === remote.id);
       if (local) {
         Object.assign(local, {
           name: remote.name,
-          space: COLLABORATION_TEAM_ID,
           updatedAt: remote.updatedAt ?? timestamp,
           collaborationRole: remote.role,
         });
@@ -564,13 +626,14 @@ export function App({
           question: '',
           createdAt: remote.createdAt ?? timestamp,
           updatedAt: remote.updatedAt ?? timestamp,
-          space: COLLABORATION_TEAM_ID,
+          space,
           color: '#56746a',
           collaborationRole: remote.role,
         });
       }
     });
     if (!saved) throw new Error(store.getState().error ?? t('协作项目无法载入，请重试。'));
+    markOpened(remote.id);
     if (windowMode === 'projects') {
       await launchWorkspace(remote.id);
       return;
@@ -578,13 +641,32 @@ export function App({
     setUI((current) => ({
       ...current,
       projectId: remote.id,
-      space: COLLABORATION_TEAM_ID,
+      space: store.getState().data?.projects.find((p) => p.id === remote.id)?.space ?? space,
       locations: {
         ...current.locations,
         [remote.id]: current.locations[remote.id] ?? locationDefault,
       },
     }));
     setSidebarExpanded(true);
+  }
+  function openTarget(id: string, target: SearchTarget | { source: WorkContext }) {
+    markOpened(id);
+    if (windowMode === 'projects') {
+      void launchWorkspace(id, target);
+      return;
+    }
+    if ('source' in target)
+      window.dispatchEvent(new CustomEvent('scientify-open-source', { detail: target.source }));
+    else goToTarget(target);
+  }
+  function openInbox(tool: 'notes' | 'assistant', detail?: { event: string; id?: string }) {
+    setUI((s) => ({ ...s, dock: tool, dockOpen: true }));
+    if (detail)
+      requestAnimationFrame(() =>
+        window.dispatchEvent(
+          new CustomEvent(detail.event, { detail: { scope: PERSONAL_SCOPE, id: detail.id } }),
+        ),
+      );
   }
   async function launchWorkspace(id: string, target?: SearchTarget | { source: WorkContext }) {
     if (launching) return;
@@ -837,6 +919,26 @@ export function App({
     else setDialog(next);
   }
   const ready = phase === 'ready' && data;
+  function showPage(page: CenterPage) {
+    setUI((s) => ({ ...s, page }));
+  }
+  const signedIn = !!cloud.state?.authenticated;
+  const centerTeam = data && signedIn ? classifyCloud(cloud, data.projects).team : [];
+  const centerCounts = {
+    mine: data ? personalProjects(data).filter((p) => !p.archived).length : 0,
+    team: centerTeam.length,
+    inbox: data
+      ? data.records.filter((r) => r.project === PERSONAL_SCOPE && r.type === 'note').length
+      : 0,
+  };
+  const teamAlert = centerTeam.some(
+    (entry) =>
+      (!entry.local && entry.remote.role !== 'owner' && isNewCloudProject(entry.remote.id)) ||
+      !!entry.sync?.conflicts.length,
+  );
+  const favorites = (data?.projects ?? [])
+    .filter((p) => p.favorite && !p.archived)
+    .map((p) => ({ id: p.id, name: p.name, color: coverColor(p), team: isTeamProject(p) }));
   const notesWorkspace = !!ready && !!project && workspace === 'notes';
   if (notesWorkspace && !notesPlacement) setNotesPlacement(true);
   const hasResourceSidebar = workspace === 'experiments' && view !== 'runs';
@@ -875,14 +977,40 @@ export function App({
       )}
     </div>
   ) : !project ? (
-    <ProjectLibrary
-      store={store}
-      space={ui.space}
-      onOpen={openProject}
-      onNew={() => openDialog({ kind: 'project' })}
-      onEdit={(p) => openDialog({ kind: 'project', project: p })}
-      onOpenRemote={openRemoteProject}
-    />
+    ui.page === 'mine' ? (
+      <ProjectLibrary
+        store={store}
+        onOpen={openProject}
+        onNew={() => openDialog({ kind: 'project' })}
+        onEdit={(p) => openDialog({ kind: 'project', project: p })}
+        onOpenRemote={openRemoteProject}
+        onShared={() => showPage('team')}
+      />
+    ) : ui.page === 'team' ? (
+      <TeamProjects
+        store={store}
+        onOpenRemote={openRemoteProject}
+        onNewTeamProject={() => openDialog({ kind: 'project', mode: 'team' })}
+        onCollaborationSettings={() => openDialog({ kind: 'collaboration' })}
+      />
+    ) : ui.page === 'inbox' ? (
+      <InboxPage
+        store={store}
+        onOpenNote={(id) => openInbox('notes', { event: 'scientify-open-note', id })}
+        onNewNote={() => openInbox('notes', { event: 'scientify-new-note' })}
+        onAsk={() => openInbox('assistant')}
+      />
+    ) : (
+      <ProjectHome
+        store={store}
+        onOpen={openProject}
+        onOpenTarget={openTarget}
+        onOpenRemote={openRemoteProject}
+        onNew={() => openDialog({ kind: 'project' })}
+        onPage={showPage}
+        onSettings={(section) => openDialog({ kind: section })}
+      />
+    )
   ) : workspace === 'overview' ? (
     <FeaturePlaceholder feature="overview" />
   ) : workspace === 'literature' ? (
@@ -981,7 +1109,7 @@ export function App({
       <div className="workspace-content" data-workspace={workspace} data-view={view}>
         <ViewTransition
           key={`${epoch}:${project?.id ?? 'launcher'}:${phase}`}
-          viewKey={project ? workspace : ui.space}
+          viewKey={project ? workspace : ui.page}
           external={project ? { key: 'notes', ref: notesLayerRef } : undefined}
           onSettled={() => {
             if (!notesWorkspace) setNotesPlacement(false);
@@ -1054,12 +1182,18 @@ export function App({
               <p className="form-grid">{t('正在准备工作区…')}</p>
             </Modal>
           )}
-          {dialog?.kind === 'project' ? (
-            <ProjectForm
+          {dialog?.kind === 'project' && dialog.project ? (
+            <ProjectForm store={store} project={dialog.project} onClose={() => setDialog(null)} />
+          ) : null}
+          {dialog?.kind === 'project' && !dialog.project ? (
+            <NewProjectWizard
               store={store}
-              space={ui.space === '__teams__' ? 'personal' : ui.space}
-              project={dialog.project}
+              mode={dialog.mode ?? 'personal'}
               onClose={() => setDialog(null)}
+              onCreated={(id) => {
+                setDialog(null);
+                openProject(id);
+              }}
             />
           ) : null}
           {dialog && dialog.kind in settingsSection ? (
@@ -1078,11 +1212,20 @@ export function App({
     >
       {!project && (
         <ProjectSidebar
-          space={ui.space}
+          page={ui.page}
           ready={!!ready}
-          onSpace={(space) => setUI((s) => ({ ...s, space }))}
-          onSettings={() => openDialog({ kind: 'profile' })}
-          onCollaborationSettings={() => openDialog({ kind: 'collaboration' })}
+          counts={centerCounts}
+          teamAlert={teamAlert}
+          favorites={favorites}
+          onPage={showPage}
+          onOpen={(id) => {
+            const target = data?.projects.find((item) => item.id === id);
+            if (target) openProject(target.id);
+          }}
+          onSearch={() => openDialog({ kind: 'search' })}
+          onSettings={(section: SettingsSection) =>
+            openDialog({ kind: section === 'general' ? 'profile' : section })
+          }
         />
       )}
       {(!ready || !project) && central}

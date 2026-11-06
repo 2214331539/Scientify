@@ -8,6 +8,7 @@ const links = vi.hoisted(() => ({
   annotations: new Map<number, Record<string, unknown>[]>(),
   getDestination: vi.fn(async () => [{ num: 3, gen: 0 }, { name: 'XYZ' }, 120, 300, null]),
   getPageIndex: vi.fn(async () => 1),
+  getOutline: vi.fn<() => Promise<unknown[] | null>>(async () => null),
   render: vi.fn(() => ({ promise: Promise.resolve(), cancel: vi.fn() })),
   textLayerError: null as Error | null,
 }));
@@ -34,7 +35,7 @@ vi.mock('pdfjs-dist', async (importOriginal) => {
         numPages: 2,
         pagesMapper: { pagesNumber: 2 },
         getDestination: links.getDestination,
-        getOutline: async () => null,
+        getOutline: links.getOutline,
         getPageIndex: links.getPageIndex,
         cachedPageNumber: () => null,
         getPage: async (page: number) => ({
@@ -60,6 +61,7 @@ beforeEach(() => {
   links.textLayerError = null;
   links.getDestination.mockClear();
   links.getPageIndex.mockClear();
+  links.getOutline.mockReset().mockResolvedValue(null);
   links.render
     .mockReset()
     .mockImplementation(() => ({ promise: Promise.resolve(), cancel: vi.fn() }));
@@ -354,4 +356,34 @@ it('zooms with Ctrl + wheel, preserves the reading anchor and leaves ordinary sc
     for (let i = 0; i < 20; i++) fireEvent.wheel(scroll, { ctrlKey: true, deltaY: 100 });
   });
   await waitFor(() => expect(screen.getByText('50%')).toBeTruthy());
+});
+
+it('opens a persistent directory, searches collapsed sections and navigates while pinned', async () => {
+  links.getOutline.mockResolvedValue([
+    {
+      title: 'Introduction',
+      dest: [0, { name: 'FitH' }, 800],
+      items: [{ title: 'Motivation', dest: [0, { name: 'FitH' }, 650], items: [] }],
+    },
+    { title: 'Methods', dest: [1, { name: 'FitH' }, 700], items: [] },
+  ]);
+  const { reader, context } = setup();
+  const host = render(reader);
+  await waitFor(() => expect(context.mock.lastCall?.[0].text).toBe('Research text'));
+  fireEvent.click(screen.getByRole('button', { name: '打开标题目录' }));
+  await screen.findByRole('button', { name: 'Motivation' });
+  fireEvent.click(screen.getByRole('button', { name: '展开或收起 Introduction' }));
+  expect(screen.queryByRole('button', { name: 'Motivation' })).toBeNull();
+  fireEvent.change(screen.getByRole('textbox', { name: '搜索标题' }), {
+    target: { value: 'motivation' },
+  });
+  expect(screen.getByRole('button', { name: 'Motivation' })).toBeTruthy();
+  fireEvent.change(screen.getByRole('textbox', { name: '搜索标题' }), { target: { value: '' } });
+  fireEvent.click(screen.getByRole('button', { name: '固定目录' }));
+  expect(host.container.querySelector('.pdf-outline-dock.is-pinned')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Methods' }));
+  await waitFor(() => expect(context.mock.lastCall?.[0].page).toBe(2));
+  expect(screen.getByRole('complementary', { name: 'PDF 标题目录' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: '关闭目录' }));
+  expect(host.container.querySelector('.pdf-outline-dock.is-pinned')).toBeNull();
 });

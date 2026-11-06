@@ -11,7 +11,6 @@ import {
   ZoomOut,
   Rows3,
   PanelTop,
-  ListTree,
 } from 'lucide-react';
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -22,12 +21,12 @@ import { PdfPageSurface } from './PdfPageSurface';
 import { destinationOffset, ReaderLinkService, type PdfLinkTarget } from './pdf-links';
 import { errorMessage } from '../domain/errors';
 import './reader.css';
+import { PdfOutlinePanel } from './PdfOutlinePanel';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 type ReadingMode = 'paged' | 'continuous';
 // top is the offset inside the current page, not the whole continuous document.
 type ReadingPosition = { page: number; zoom: number; top: number; left: number; mode: ReadingMode };
-type PdfOutlineItem = { title: string; dest?: unknown; items?: PdfOutlineItem[] };
 const readingPositions = new WeakMap<PdfBackend, Map<string, ReadingPosition>>();
 export default function PdfReader({
   assetId,
@@ -75,15 +74,14 @@ export default function PdfReader({
     };
   });
   const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
-  const [outline, setOutline] = useState<PdfOutlineItem[]>([]);
-  const [outlineOpen, setOutlineOpen] = useState(false);
   const [page, setPage] = useState(initial.page),
     [mode, setMode] = useState(initial.mode);
   const [width, setWidth] = useState(600),
     [zoom, setZoom] = useState(initial.zoom);
   const [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
-    [selection, setSelection] = useState('');
+    [selection, setSelection] = useState(''),
+    [selectionPage, setSelectionPage] = useState(initial.page);
   const [visible, setVisible] = useState<Set<number>>(new Set([initial.page]));
   const [pageText, setPageText] = useState('');
   const texts = useRef(new Map<number, string>());
@@ -110,6 +108,7 @@ export default function PdfReader({
     },
     [pageOffset],
   );
+  const readingTop = useCallback(() => position.current.top, []);
   useLayoutEffect(() => {
     // Apply the zoom anchor with the preview geometry, without waiting for
     // PDF.js to finish rasterizing the new resolution.
@@ -144,25 +143,6 @@ export default function PdfReader({
       requestAnimationFrame(() => restore(texts.current.has(pageNumber)));
     } catch (reason) {
       if (ticket === navigationTicket.current) setError(errorMessage(reason));
-    }
-  }
-  async function followOutline(item: PdfOutlineItem) {
-    if (!document || item.dest == null) return;
-    try {
-      const destination =
-        typeof item.dest === 'string' ? await document.getDestination(item.dest) : item.dest;
-      if (!Array.isArray(destination) || destination.length === 0) return;
-      const pageIndex =
-        typeof destination[0] === 'number'
-          ? destination[0]
-          : await document.getPageIndex(destination[0] as never);
-      await followLink({
-        pageNumber: pageIndex + 1,
-        destArray: destination as never,
-      });
-      setOutlineOpen(false);
-    } catch (reason) {
-      setError(errorMessage(reason));
     }
   }
   const linkCallbacks = useRef({ followLink });
@@ -292,14 +272,6 @@ export default function PdfReader({
         const firstPage = Math.min(position.current.page, pdf.numPages);
         if (pendingScroll.current) pendingScroll.current.page = firstPage;
         setDocument(pdf);
-        void pdf
-          .getOutline()
-          .then((items) => {
-            if (!stale) setOutline((items ?? []) as PdfOutlineItem[]);
-          })
-          .catch(() => {
-            if (!stale) setOutline([]);
-          });
         setPage(firstPage);
         setLoading(false);
       })
@@ -313,7 +285,6 @@ export default function PdfReader({
       stale = true;
       ++navigationTicket.current;
       void task?.destroy();
-      setOutline([]);
     };
   }, [assetId, backend]);
   useEffect(() => {
@@ -468,103 +439,83 @@ export default function PdfReader({
           {translateError(error)}
         </div>
       )}
-      <div
-        className={`pdf-scroll${mode === 'continuous' ? ' pdf-continuous' : ''}`}
-        ref={scroll}
-        aria-label={t('PDF 阅读区域')}
-        onScroll={(event) => {
-          if (pendingScroll.current) return;
-          const host = event.currentTarget;
-          let number = current.current.page;
-          if (current.current.mode === 'continuous') {
-            const line = host.scrollTop + Math.min(host.clientHeight * 0.3, 180);
-            for (const node of host.querySelectorAll<HTMLElement>('[data-pdf-page]')) {
-              if (node.offsetTop > line) break;
-              number = Number(node.dataset.pdfPage);
-            }
-            setPage(number);
-          }
-          position.current = {
-            ...position.current,
-            page: number,
-            top: Math.max(0, host.scrollTop - pageOffset(number)),
-            left: host.scrollLeft,
-          };
-        }}
-      >
+      <div className="pdf-reader-body">
         {document ? (
-          <div
-            className={`pdf-outline${outlineOpen ? ' is-open' : ''}`}
-            onMouseEnter={() => setOutlineOpen(true)}
-            onMouseLeave={() => setOutlineOpen(false)}
-          >
-            <Button
-              variant="ghost"
-              iconOnly
-              className="pdf-outline-trigger"
-              aria-label={t('打开标题目录')}
-              aria-expanded={outlineOpen}
-              onFocus={() => setOutlineOpen(true)}
-              onClick={() => setOutlineOpen((open) => !open)}
-            >
-              <ListTree size={16} />
-            </Button>
-            {outlineOpen ? (
-              <nav className="pdf-outline-panel" aria-label={t('PDF 标题目录')}>
-                <div className="pdf-outline-heading">{t('标题目录')}</div>
-                {outline.length ? (
-                  <div className="pdf-outline-items">
-                    {outline.map((item, index) => (
-                      <OutlineItem
-                        key={`${item.title}-${index}`}
-                        item={item}
-                        level={0}
-                        onNavigate={(entry) => void followOutline(entry)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="pdf-outline-empty">{t('此 PDF 没有可用的标题目录')}</div>
-                )}
-              </nav>
-            ) : null}
-          </div>
+          <PdfOutlinePanel
+            pdf={document}
+            page={page}
+            scroll={scroll}
+            scrollTop={readingTop}
+            width={width}
+            zoom={zoom}
+            selection={selection}
+            selectionPage={selectionPage}
+            onNavigate={(entry) =>
+              void followLink({ pageNumber: entry.page, destArray: entry.destination })
+            }
+          />
         ) : null}
-        {loading && (
-          <div className="pdf-loading" role="status">
-            {t('正在读取 PDF…')}
-          </div>
-        )}
-        {document &&
-          (mode === 'paged'
-            ? [page]
-            : Array.from({ length: document.numPages }, (_, i) => i + 1)
-          ).map((number) => (
-            <PdfPageSurface
-              key={number}
-              document={document}
-              page={number}
-              width={width}
-              zoom={zoom}
-              title={title}
-              linkService={linkService!}
-              visible={mode === 'paged' || visible.has(number) || number === page}
-              onReady={ready}
-              onError={setError}
-              onSelection={(page, text, value) => {
-                setSelection(value);
-                onContextRef.current({
-                  projectId,
-                  workspace: 'literature',
-                  title,
-                  resourceId: paperId,
-                  page,
-                  text,
-                  selection: value || undefined,
-                });
-              }}
-            />
-          ))}
+        <div
+          className={`pdf-scroll${mode === 'continuous' ? ' pdf-continuous' : ''}`}
+          ref={scroll}
+          aria-label={t('PDF 阅读区域')}
+          onScroll={(event) => {
+            if (pendingScroll.current) return;
+            const host = event.currentTarget;
+            let number = current.current.page;
+            if (current.current.mode === 'continuous') {
+              const line = host.scrollTop + Math.min(host.clientHeight * 0.3, 180);
+              for (const node of host.querySelectorAll<HTMLElement>('[data-pdf-page]')) {
+                if (node.offsetTop > line) break;
+                number = Number(node.dataset.pdfPage);
+              }
+              setPage(number);
+            }
+            position.current = {
+              ...position.current,
+              page: number,
+              top: Math.max(0, host.scrollTop - pageOffset(number)),
+              left: host.scrollLeft,
+            };
+          }}
+        >
+          {loading && (
+            <div className="pdf-loading" role="status">
+              {t('正在读取 PDF…')}
+            </div>
+          )}
+          {document &&
+            (mode === 'paged'
+              ? [page]
+              : Array.from({ length: document.numPages }, (_, i) => i + 1)
+            ).map((number) => (
+              <PdfPageSurface
+                key={number}
+                document={document}
+                page={number}
+                width={width}
+                zoom={zoom}
+                title={title}
+                linkService={linkService!}
+                visible={mode === 'paged' || visible.has(number) || number === page}
+                onReady={ready}
+                onError={setError}
+                onSelection={(page, text, value) => {
+                  setSelection(value);
+                  setSelectionPage(page);
+                  onContextRef.current({
+                    projectId,
+                    workspace: 'literature',
+                    title,
+                    resourceId: paperId,
+                    page,
+                    text,
+                    selection: value || undefined,
+                  });
+                }}
+              />
+            ))}
+        </div>
       </div>
       {controls}
       <div className="pdf-status">
@@ -576,38 +527,6 @@ export default function PdfReader({
               ? t('选择原文可提问或记笔记')
               : t('本页没有可提取文本，可能为扫描页。')}
       </div>
-    </div>
-  );
-}
-
-function OutlineItem({
-  item,
-  level,
-  onNavigate,
-}: {
-  item: PdfOutlineItem;
-  level: number;
-  onNavigate: (item: PdfOutlineItem) => void;
-}) {
-  return (
-    <div className="pdf-outline-entry">
-      <button
-        type="button"
-        className="pdf-outline-link"
-        style={{ paddingInlineStart: `${10 + level * 14}px` }}
-        onClick={() => onNavigate(item)}
-        title={item.title}
-      >
-        {item.title}
-      </button>
-      {item.items?.map((child, index) => (
-        <OutlineItem
-          key={`${child.title}-${index}`}
-          item={child}
-          level={level + 1}
-          onNavigate={onNavigate}
-        />
-      ))}
     </div>
   );
 }

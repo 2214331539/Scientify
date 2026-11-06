@@ -1,35 +1,33 @@
 import { t, translateError } from '../../i18n';
-import { Button, Input, Textarea, Dropdown } from '../../components/primitives';
+import { Button, Input, Textarea } from '../../components/primitives';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useStore } from 'zustand';
 import { Modal } from '../../components/Modal';
 import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
-import { projectCoverColors } from './model';
+import { ProjectCoverArt } from './ProjectCover';
+import { coverColor, projectCoverColors } from './model';
 
+/** Edits a project's name, question, cover and code directory. Creating a project uses the wizard. */
 export function ProjectForm({
   project,
-  space,
   store,
   onClose,
 }: {
-  project?: Project;
-  space: string;
+  project: Project;
   store: WorkspaceStore;
   onClose(): void;
 }) {
-  const data = useStore(store, (s) => s.data)!;
   const busy = useStore(store, (s) => s.busy);
   const fileEditsPending = useStore(store, (s) => !!s.dirtySources.files);
   const error = useStore(store, (s) => s.error);
   const [draft, setDraft] = useState(() => ({
-    name: project?.name ?? '',
-    question: project?.question ?? '',
-    field: project?.field ?? '',
-    space: project?.space ?? space,
-    path: project?.path || project?.repo || '',
-    repo: project?.repo ?? '',
-    color: project?.color ?? projectCoverColors[data.projects.length % projectCoverColors.length],
+    name: project.name,
+    question: project.question ?? '',
+    field: project.field ?? '',
+    path: project.path || project.repo || '',
+    repo: project.repo ?? '',
+    color: coverColor(project),
   }));
   const [dirty, setDirty] = useState(false);
   useEffect(() => {
@@ -44,128 +42,129 @@ export function ProjectForm({
     event.preventDefault();
     if (!draft.name.trim()) return;
     const saved = await store.getState().update((workspace) => {
-      const timestamp = new Date().toISOString();
-      if (project) {
-        const target = workspace.projects.find((p) => p.id === project.id);
-        if (!target) throw new Error(t('项目不存在，请重新载入。'));
-        if (
-          store.getState().dirtySources.files &&
-          ((target.path ?? '') !== draft.path || (target.repo ?? '') !== draft.repo)
-        ) {
-          throw new Error(t('请先保存或丢弃所有文件修改，并等待文件写入完成，再更改项目目录。'));
-        }
-        Object.assign(target, draft, { name: draft.name.trim(), updatedAt: timestamp });
-      } else {
-        workspace.projects.push({
-          ...draft,
-          name: draft.name.trim(),
-          id: crypto.randomUUID(),
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
+      const target = workspace.projects.find((p) => p.id === project.id);
+      if (!target) throw new Error(t('项目不存在，请重新载入。'));
+      if (
+        store.getState().dirtySources.files &&
+        ((target.path ?? '') !== draft.path || (target.repo ?? '') !== draft.repo)
+      ) {
+        throw new Error(t('请先保存或丢弃所有文件修改，并等待文件写入完成，再更改项目目录。'));
       }
+      Object.assign(target, draft, {
+        name: draft.name.trim(),
+        updatedAt: new Date().toISOString(),
+      });
     });
     if (saved) onClose();
   }
   return (
     <Modal
-      title={project ? t('编辑项目') : t('新建科研项目')}
+      title={t('编辑项目信息')}
       onClose={onClose}
       busy={busy}
       dirty={dirty}
+      className="wizard-dialog"
     >
-      <form onSubmit={submit} className="form-grid">
-        <label>
-          {t('项目名称')}
-          <Input
-            disabled={busy}
-            autoFocus
-            required
-            maxLength={160}
-            value={draft.name}
-            onChange={(e) => field('name', e.target.value)}
-            placeholder={t('例如：小样本学习中的表征泛化')}
-          />
-        </label>
-        <label>
-          {t('研究问题')}
-          <Textarea
-            disabled={busy}
-            rows={3}
-            value={draft.question}
-            onChange={(e) => field('question', e.target.value)}
-            placeholder={t('这个项目希望回答什么问题？')}
-          />
-        </label>
-        <div className="form-pair">
-          <label>
-            {t('所属空间')}
-            <Dropdown
-              disabled={busy}
-              value={draft.space}
-              onChange={(e) => field('space', e.target.value)}
-            >
-              <option value="personal">{t('我的工作空间')}</option>
-              {data.teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Dropdown>
-          </label>
-          <label>
-            {t('研究方向')}
-            <Input
-              disabled={busy}
-              value={draft.field}
-              onChange={(e) => field('field', e.target.value)}
-              placeholder={t('研究领域或关键词')}
+      <form onSubmit={submit} className="form-grid wizard">
+        <div className="wizard-body">
+          <div className="wizard-preview" aria-hidden="true">
+            <ProjectCoverArt
+              name={draft.name.trim() || t('项目名称')}
+              field={draft.field.trim() || t('研究方向')}
+              color={draft.color}
+              favorite={project.favorite}
             />
-          </label>
-        </div>
-        <label>
-          {t('项目目录')}
-          <div className="input-action">
-            <Input
-              disabled={busy}
-              readOnly
-              value={draft.path}
-              placeholder={t('尚未关联本地目录')}
-            />
-            <Button
-              type="button"
-              disabled={busy || fileEditsPending}
-              onClick={async () => {
-                const path = await store.getState().chooseDirectory();
-                if (path) field('path', path);
-              }}
-            >
-              {t('选择目录')}
-            </Button>
-            <Button
-              type="button"
-              disabled={busy || fileEditsPending || !draft.path}
-              onClick={() => {
-                setDraft((value) => ({ ...value, path: '', repo: '' }));
-                setDirty(true);
-              }}
-            >
-              {t('清除')}
-            </Button>
           </div>
-        </label>
-        {fileEditsPending ? (
-          <p className="muted">{t('存在未保存文件或文件正在写入，暂时不能更改目录。')}</p>
-        ) : null}
-        <label className="color-label">
-          {t('项目颜色')}
-          <Input
-            disabled={busy}
-            type="color"
-            value={draft.color}
-            onChange={(e) => field('color', e.target.value)}
-          />
-        </label>
+          <div className="wizard-fields">
+            <label>
+              {t('项目名称')}
+              <Input
+                disabled={busy}
+                autoFocus
+                required
+                maxLength={160}
+                value={draft.name}
+                onChange={(e) => field('name', e.target.value)}
+                placeholder={t('例如：小样本学习中的表征泛化')}
+              />
+            </label>
+            <label>
+              {t('研究问题')}
+              <Textarea
+                disabled={busy}
+                rows={3}
+                value={draft.question}
+                onChange={(e) => field('question', e.target.value)}
+                placeholder={t('这个项目希望回答什么问题？')}
+              />
+            </label>
+            <label>
+              {t('研究方向')}
+              <Input
+                disabled={busy}
+                value={draft.field}
+                onChange={(e) => field('field', e.target.value)}
+                placeholder={t('例如：多模态、幻觉')}
+              />
+            </label>
+            <fieldset className="wizard-colors" disabled={busy}>
+              <legend>{t('封面颜色')}</legend>
+              {projectCoverColors.map((color) => (
+                <label key={color} className="wizard-swatch" style={{ background: color }}>
+                  <input
+                    type="radio"
+                    name="cover-color"
+                    aria-label={color}
+                    checked={draft.color === color}
+                    onChange={() => field('color', color)}
+                  />
+                </label>
+              ))}
+              <label className="wizard-swatch custom" title={t('自定义颜色')}>
+                <input
+                  type="color"
+                  aria-label={t('自定义颜色')}
+                  value={draft.color}
+                  onChange={(e) => field('color', e.target.value)}
+                />
+              </label>
+            </fieldset>
+            <label>
+              {t('项目目录')}
+              <div className="input-action">
+                <Input
+                  disabled={busy}
+                  readOnly
+                  value={draft.path}
+                  placeholder={t('尚未关联本地目录')}
+                />
+                <Button
+                  type="button"
+                  disabled={busy || fileEditsPending}
+                  onClick={async () => {
+                    const path = await store.getState().chooseDirectory();
+                    if (path) field('path', path);
+                  }}
+                >
+                  {t('选择目录')}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={busy || fileEditsPending || !draft.path}
+                  onClick={() => {
+                    setDraft((value) => ({ ...value, path: '', repo: '' }));
+                    setDirty(true);
+                  }}
+                >
+                  {t('清除')}
+                </Button>
+              </div>
+            </label>
+            {fileEditsPending ? (
+              <p className="muted">{t('存在未保存文件或文件正在写入，暂时不能更改目录。')}</p>
+            ) : null}
+          </div>
+        </div>
         {error ? (
           <p role="alert" className="error-text">
             {translateError(error)}

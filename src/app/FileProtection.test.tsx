@@ -19,6 +19,11 @@ const nativeWindow = vi.hoisted(() => ({
   destroy: vi.fn(),
   root: 'F:/old',
 }));
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: vi.fn(async () => () => {}),
+  emit: vi.fn(async () => {}),
+  emitTo: vi.fn(async () => {}),
+}));
 vi.mock('@tauri-apps/api/core', () => ({
   isTauri: () => true,
   invoke: vi.fn(async (command: string) => {
