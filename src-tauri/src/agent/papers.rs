@@ -18,6 +18,8 @@ struct Pending {
     owner: String,
     handle: ThreadHandle,
     source: PaperSource,
+    /// A file attached to the chat, read directly instead of through the library.
+    attachment: Option<PathBuf>,
     job: Value,
     sender: mpsc::Sender<Result<Value, String>>,
     deadline: Instant,
@@ -68,7 +70,7 @@ pub fn specifications() -> Vec<Value> {
     search["query"] = json!({"type":"string","minLength":1,"maxLength":200});
     [
         ("scientify_list_papers", "List actual PDFs in this conversation's literature directory without opening papers, creating bindings, notes, or text files. Up to 100 per response. Continue with the returned cursor. Omit directory to list the root.", json!({"directory":{"type":"string"},"cursor":{"type":"string"}}), json!([])),
-        ("scientify_read_paper", "Read PDF text directly, without intermediate files. Reads up to 8 pages/24000 characters. Pages are 1-based; offsets are JavaScript string indices. Continue with nextCursor page/offset and expectedVersion. Report failures honestly; do not fall back to shell conversions. Answer the question without adding page/source lists unless requested.", read, json!(["path"])),
+        ("scientify_read_paper", "Read PDF text directly, without intermediate files. path is relative to the literature folder, or the full path of a PDF attached to this chat. Reads up to 8 pages/24000 characters. Pages are 1-based; offsets are JavaScript string indices. Continue with nextCursor page/offset and expectedVersion. Prefer this to shell conversions. Answer the question without adding page/source lists unless requested.", read, json!(["path"])),
         ("scientify_search_paper", "Search PDF text, case-insensitive literal matching, without files. Up to 20 pages and 20 bounded matches per call. Continue using nextCursor and expectedVersion. searchedPages is the actual scope; no matches in a partial scope is not a whole-document absence. emptyPages may be scanned pages without extractable text.", search, json!(["path","query"])),
     ].into_iter().map(|(name, description, properties, required)| json!({"type":"function","name":name,"description":description,"inputSchema":{"type":"object","properties":properties,"required":required,"additionalProperties":false}})).collect()
 }
@@ -78,7 +80,7 @@ fn root<R: tauri::Runtime>(
     handle: &ThreadHandle,
 ) -> Result<PathBuf, String> {
     if !matches!(handle.domain.as_str(), "literature" | "code") {
-        return Err("论文工具仅在项目会话中可用。".into());
+        return Err("收集箱没有文献库；只能读这个对话的附件，path 填附件的完整路径。".into());
     }
     let current = app
         .state::<crate::library::LibraryState>()
@@ -93,6 +95,58 @@ fn root<R: tauri::Runtime>(
     Ok(current)
 }
 
+/// A PDF attached to this chat, given by its full path; anything else is a library path.
+fn attached_file<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    handle: &ThreadHandle,
+    path: &str,
+) -> Result<Option<PathBuf>, String> {
+    if !std::path::Path::new(path).is_absolute() {
+        return Ok(None);
+    }
+    let folder = super::attachment_dir(
+        app.state::<AppState>().storage.directory(),
+        &handle.project_id,
+        &handle.conversation_id,
+    );
+    let outside = || "只能读取这个对话的附件，或文献库里的论文（用相对路径）。".to_string();
+    let folder = folder.canonicalize().map_err(|_| outside())?;
+    let file = std::path::Path::new(path)
+        .canonicalize()
+        .map_err(|_| outside())?;
+    if file.parent() != Some(folder.as_path()) {
+        return Err(outside());
+    }
+    Ok(Some(file))
+}
+
+fn attachment_source(file: &std::path::Path) -> Result<PaperSource, String> {
+    if !file
+        .to_string_lossy()
+        .to_ascii_lowercase()
+        .ends_with(".pdf")
+    {
+        return Err("请选择 PDF 文件。".into());
+    }
+    let bytes = std::fs::read(file).map_err(|e| e.to_string())?;
+    if bytes.len() as u64 > 50 * 1024 * 1024 {
+        return Err("AI 论文读取支持不超过 50 MiB 的 PDF。".into());
+    }
+    Ok(PaperSource {
+        path: file
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        version: digest(&bytes),
+        size: bytes.len() as u64,
+    })
+}
+
+fn digest(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    format!("{:x}", Sha256::digest(bytes))
+}
+
 pub(crate) fn operate<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     owner: &str,
@@ -100,13 +154,13 @@ pub(crate) fn operate<R: tauri::Runtime>(
     params: &Value,
     cancelled: impl Fn() -> bool,
 ) -> Result<Value, String> {
-    let directory = root(app, handle)?;
     if cancelled() {
         return Err("论文任务已中止。".into());
     }
     let tool = params["tool"].as_str().ok_or("论文工具名称缺失。")?;
     let state = app.state::<PaperState>();
     if tool == "scientify_list_papers" {
+        let directory = root(app, handle)?;
         let args: ListArgs =
             serde_json::from_value(params["arguments"].clone()).map_err(|e| e.to_string())?;
         return list(app, &state, handle, &directory, args);
@@ -128,10 +182,21 @@ pub(crate) fn operate<R: tauri::Runtime>(
     {
         return Err("论文页段或搜索参数无效。".into());
     }
-    let source = app
-        .state::<crate::library::LibraryState>()
-        .service
-        .paper_source(&handle.project_id, &directory, &args.path)?;
+    let attachment = attached_file(app, handle, &args.path)?;
+    let (directory, source) = match &attachment {
+        Some(file) => (
+            file.parent().map(PathBuf::from).unwrap_or_default(),
+            attachment_source(file)?,
+        ),
+        None => {
+            let directory = root(app, handle)?;
+            let source = app
+                .state::<crate::library::LibraryState>()
+                .service
+                .paper_source(&handle.project_id, &directory, &args.path)?;
+            (directory, source)
+        }
+    };
     if args
         .expected_version
         .as_ref()
@@ -157,6 +222,7 @@ pub(crate) fn operate<R: tauri::Runtime>(
                 owner: owner.into(),
                 handle: handle.clone(),
                 source,
+                attachment,
                 job: job.clone(),
                 sender,
                 deadline,
@@ -300,20 +366,33 @@ pub async fn agent_paper_source<R: tauri::Runtime>(
     let owner = view.window().label().to_string();
     blocking(move || {
         let state = app.state::<PaperState>();
-        let (handle, source) = {
+        let (handle, source, attachment) = {
             let inner = state.inner.lock().map_err(|e| e.to_string())?;
             let pending = authorized(&inner, &owner, &request_id)?;
-            (pending.handle.clone(), pending.source.clone())
+            (
+                pending.handle.clone(),
+                pending.source.clone(),
+                pending.attachment.clone(),
+            )
         };
-        let bytes = app
-            .state::<crate::library::LibraryState>()
-            .service
-            .paper_bytes(
-                &handle.project_id,
-                &root(&app, &handle)?,
-                &source.path,
-                &source.version,
-            )?;
+        let bytes = match attachment {
+            Some(file) => {
+                let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
+                if digest(&bytes) != source.version {
+                    return Err("document_changed：PDF 已变化，请重新读取。".into());
+                }
+                bytes
+            }
+            None => app
+                .state::<crate::library::LibraryState>()
+                .service
+                .paper_bytes(
+                    &handle.project_id,
+                    &root(&app, &handle)?,
+                    &source.path,
+                    &source.version,
+                )?,
+        };
         {
             let inner = state.inner.lock().map_err(|e| e.to_string())?;
             authorized(&inner, &owner, &request_id)?;

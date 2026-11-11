@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { isTrashed } from '../notes/model';
 import { useStore } from 'zustand';
 import {
   ChevronRight,
@@ -71,7 +72,7 @@ export function recentWork(data: Workspace, limit = 6): Recent[] {
   const items: Recent[] = [];
   for (const record of data.records) {
     const project = projects.get(record.project);
-    if (!project || record.type !== 'note' || !record.updatedAt) continue;
+    if (!project || record.type !== 'note' || isTrashed(record) || !record.updatedAt) continue;
     items.push({
       key: `note:${record.id}`,
       kind: 'note',

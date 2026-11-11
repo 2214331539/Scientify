@@ -6,6 +6,7 @@ import { Markdown } from '../../features/notes/Markdown';
 import { Button } from '../primitives';
 import type { AgentSkillRef } from '../../platform/agent';
 import {
+  attachmentNote,
   contextMaterial,
   type ChatAttachment,
   type ContextSnapshot,
@@ -84,11 +85,15 @@ export const ChatMessageView = memo(function ChatMessageView({
                 src={`data:${attachment.mimeType};base64,${attachment.data}`}
                 alt={attachment.name}
               />
+            ) : attachment.path ? (
+              <span key={attachment.name} className="sf-chat-message-file" title={attachment.path}>
+                {attachment.name}
+              </span>
             ) : (
               <details key={attachment.name}>
                 <summary>
                   {attachment.name}
-                  {attachment.truncated ? ` · ${t('已截短')}` : ''}
+                  {attachmentNote(attachment) ? ` · ${attachmentNote(attachment)}` : ''}
                 </summary>
                 <pre>{attachment.text}</pre>
               </details>

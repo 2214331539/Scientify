@@ -1,11 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emptyWorkspace, type Workspace } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
 import type { WorkspaceBackend } from '../../platform/desktop';
 import { createWorkspaceStore } from '../../stores/workspace';
-import { createNote } from './model';
+import { createNote, expiredNotes, purgeExpiredNotes, selectNotes, TRASH_DAYS } from './model';
 import { NotesPanel } from './NotesPanel';
 
 afterEach(cleanup);
@@ -137,4 +137,50 @@ it('opens a requested note only in its scope and only after saving the current d
     expect((screen.getByLabelText('笔记标题') as HTMLInputElement).value).toBe('搜索目标笔记'),
   );
   expect(store.getState().data?.records[0].body).toBe('已有正文新想法');
+});
+
+it('moves a note to the recycle bin, undoes it, restores and deletes it for good', async () => {
+  const { store } = await fixture();
+  const user = userEvent.setup();
+  vi.spyOn(await import('../../components/prompts'), 'confirmAction').mockResolvedValue(true);
+  render(<NotesPanel store={store} scope="p1" context={context} />);
+  await user.click(screen.getByRole('button', { name: /项目一笔记/ }));
+  await user.click(screen.getByRole('button', { name: '删除笔记' }));
+  await screen.findByText('已移到回收站');
+  expect(screen.queryByRole('button', { name: /项目一笔记/ })).toBeNull();
+  expect(selectNotes(store.getState().data, 'p1')).toHaveLength(0);
+
+  await user.click(screen.getByRole('button', { name: '撤销' }));
+  await screen.findByRole('button', { name: /项目一笔记/ });
+
+  await user.click(screen.getByRole('button', { name: /项目一笔记/ }));
+  await user.click(screen.getByRole('button', { name: '删除笔记' }));
+  await user.click(await screen.findByRole('button', { name: '回收站' }));
+  const bin = screen.getByRole('list', { name: '回收站' });
+  await user.click(within(bin).getByRole('button', { name: '恢复“项目一笔记”' }));
+  await waitFor(() => expect(selectNotes(store.getState().data, 'p1')).toHaveLength(1));
+
+  await user.click(screen.getByRole('button', { name: '返回笔记列表' }));
+  await user.click(screen.getByRole('button', { name: /项目一笔记/ }));
+  await user.click(screen.getByRole('button', { name: '删除笔记' }));
+  await user.click(await screen.findByRole('button', { name: '回收站' }));
+  await user.click(screen.getByRole('button', { name: '彻底删除“项目一笔记”' }));
+  await waitFor(() =>
+    expect(store.getState().data?.records.some((note) => note.title === '项目一笔记')).toBe(false),
+  );
+});
+
+it('removes notes that stayed in the recycle bin longer than the limit', async () => {
+  const { store } = await fixture();
+  const old = new Date(Date.now() - (TRASH_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
+  await store.getState().update((data) => {
+    data.records[0] = { ...data.records[0], deletedAt: old };
+    data.records[1] = { ...data.records[1], deletedAt: new Date().toISOString() };
+  });
+  expect(expiredNotes(store.getState().data)).toHaveLength(1);
+  expect(await purgeExpiredNotes(store)).toBe(true);
+  expect(store.getState().data?.records.map((note) => note.title)).toEqual([
+    '项目二私有笔记',
+    '个人收集箱',
+  ]);
 });

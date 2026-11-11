@@ -1406,3 +1406,37 @@ it('continues a translation chat with the agent inside a project and shows the m
   expect(screen.getByText('快速问答')).toBeTruthy();
   expect(screen.queryByRole('button', { name: '执行权限' })).toBeNull();
 });
+
+it('runs the agent in the inbox and gives it attached files by path', async () => {
+  const data = emptyWorkspace();
+  data.settings.model.model = 'fixture';
+  data.settings.model.provider = 'openai';
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+  } as unknown as WorkspaceBackend);
+  await store.getState().load();
+  const saveAttachment = vi.fn(async (_project: string, _conversation: string, file: File) => ({
+    path: `C:/data/agent/attachments/__inbox__/c1/${file.name}`,
+    name: file.name,
+  }));
+  const agent: AgentBackend = { ...agentStub(), saveAttachment };
+  render(
+    <AssistantPanel
+      store={store}
+      backend={{ askAI: vi.fn() } as unknown as ResearchBackend}
+      agent={agent}
+      scope="__inbox__"
+      context={{ workspace: 'projects', title: '收集箱' }}
+    />,
+  );
+  expect(screen.getByText('Agent')).toBeTruthy();
+  const input = screen.getByLabelText('向 AI 提问');
+  fireEvent.drop(input, {
+    dataTransfer: { files: [new File(['%PDF-1.7'], 'paper.pdf', { type: 'application/pdf' })] },
+  });
+  await waitFor(() =>
+    expect(saveAttachment).toHaveBeenCalledWith('__inbox__', expect.any(String), expect.any(File)),
+  );
+  expect(await screen.findByText('paper.pdf')).toBeTruthy();
+});

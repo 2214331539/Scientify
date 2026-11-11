@@ -8,6 +8,7 @@ import type {
 } from '../../platform/agent';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { t } from '../../i18n';
+import { PERSONAL_SCOPE } from '../notes/model';
 import {
   AgentSession,
   hasPendingWork,
@@ -253,7 +254,10 @@ export class AgentRuntime {
       ...(skills.length ? { skills: structuredClone(skills) } : {}),
     };
     const saved = await this.store.getState().update((data) => {
-      if (!data.projects.some((project) => project.id === seed.project))
+      if (
+        seed.project !== PERSONAL_SCOPE &&
+        !data.projects.some((project) => project.id === seed.project)
+      )
         throw new Error(t('项目不存在。'));
       let entry = data.sessions.find(
         (item) => item.id === seed.id && item.project === seed.project,

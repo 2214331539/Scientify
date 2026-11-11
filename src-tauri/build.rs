@@ -70,6 +70,7 @@ fn main() {
             "agent_paper_complete",
             "agent_start_thread",
             "agent_windows_sandbox_setup",
+            "agent_attachment_save",
             "agent_start_turn",
             "agent_steer",
             "agent_interrupt",

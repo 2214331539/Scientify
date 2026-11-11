@@ -5,7 +5,8 @@ import { WindowControls } from './WindowControls';
 import { BrandMark } from './BrandMark';
 import { AppearanceControls } from '../../features/settings/Appearance';
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, FolderOpen, Plus } from 'lucide-react';
+import { Check, ChevronDown, FolderOpen, Plus, Search } from 'lucide-react';
+import { isMacOS } from '../../platform/os';
 import type { Project } from '../../domain/workspace';
 import { browserLayout } from '../../platform/browser-pane';
 
@@ -17,6 +18,7 @@ export function TopBar({
   onProjects,
   onNewProject,
   onProjectSettings,
+  onSearch,
 }: {
   project?: Project;
   projects: Project[];
@@ -25,6 +27,7 @@ export function TopBar({
   onProjects: () => void;
   onNewProject: () => void;
   onProjectSettings: () => void;
+  onSearch?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -140,6 +143,14 @@ export function TopBar({
           </div>
         )}
       </div>
+      <span className="spacer topbar-drag-region" data-tauri-drag-region />
+      {onSearch ? (
+        <Button variant="ghost" className="topbar-search" disabled={!ready} onClick={onSearch}>
+          <Search />
+          <span>{t('搜索')}</span>
+          <kbd>{isMacOS() ? '⌘K' : 'Ctrl K'}</kbd>
+        </Button>
+      ) : null}
       <span className="spacer topbar-drag-region" data-tauri-drag-region />
       <div className="topbar-tools">
         <AppearanceControls />

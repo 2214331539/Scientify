@@ -15,6 +15,8 @@ type ApprovalParams = {
   cwd?: string | null;
   reason?: string | null;
   grantRoot?: string | null;
+  /** Note approvals: a new note or a change to an existing one. */
+  action?: string | null;
 };
 
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : '');
@@ -37,7 +39,7 @@ function describe(event: ApprovalRequest): {
   if (event.method === 'scientify/notes/requestApproval') {
     return {
       icon: FileWarning,
-      title: t('请求修改笔记'),
+      title: params.action === 'create' ? t('请求新建笔记') : t('请求修改笔记'),
       detail: text(params.reason),
       target: text(params.command),
     };

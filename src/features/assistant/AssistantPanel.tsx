@@ -13,6 +13,7 @@ import { AssistantTranscript } from './AssistantTranscript';
 import { getFileRuntime, reloadDirectorySessions } from '../../editor/sessions';
 import { codeContext } from '../../workspaces/experiments/code-context';
 import { Menu } from '../../components/primitives/Menu';
+import { PERSONAL_SCOPE } from '../notes/model';
 import { Modal } from '../../components/Modal';
 import { Panel } from '../../components/layout/Panel';
 import { confirmAction, requestText } from '../../components/prompts';
@@ -38,11 +39,17 @@ import {
 } from '../../platform/credentials';
 import { collaboration } from '../../platform/collaboration';
 import type { WorkspaceStore } from '../../stores/workspace';
-import type { AIProtocol, ModelProfile } from '../../domain/workspace';
+import type { AIProtocol } from '../../domain/workspace';
 import { hasPendingWork, initialAgentSession } from './agent-session';
 import { getAgentRuntime } from './agent-runtime';
 import { getChatRuntime } from './chat-runtime';
 import { readAttachment } from './attachments';
+import {
+  applyConnection,
+  connectionProfile,
+  removeConnection,
+  storeConnectionKey,
+} from './connections';
 import {
   asConversation,
   freezeContext,
@@ -50,6 +57,7 @@ import {
   persistConversation,
   requestMessages,
   type AISettings,
+  type ChatAttachment,
   type ChatMessage,
   type Conversation,
 } from './model';
@@ -161,7 +169,9 @@ export function AssistantPanel({
   const agentPending = !!activeTask && (activeTask.starting || hasPendingWork(agentState));
   const [newDomain, setNewDomain] = useState<AgentDomain | null>(null);
   const domain =
-    conversation.agentDomain ?? newDomain ?? domainForWorkspace(context.workspace) ?? 'code';
+    conversation.agentDomain ??
+    newDomain ??
+    (scope === PERSONAL_SCOPE ? 'inbox' : (domainForWorkspace(context.workspace) ?? 'code'));
   const [prompt, updatePrompt] = useState('');
   const [attachments, updateAttachments] = useState<NonNullable<ChatMessage['attachments']>>([]);
   const [selectedSkills, setSelectedSkills] = useState<AgentSkillRef[]>([]);
@@ -209,7 +219,24 @@ export function AssistantPanel({
     setError('');
     pendingAttachments.current += files.length;
     setAttachmentReads((count) => count + 1);
-    void Promise.all(files.map(readAttachment))
+    // The agent gets attachments as files and reads all of them itself; quick chat gets their text.
+    const read = async (file: File): Promise<ChatAttachment> => {
+      if (
+        !routesToAgent ||
+        !agentProject ||
+        !agent.saveAttachment ||
+        file.type.startsWith('image/')
+      )
+        return readAttachment(file);
+      const saved = await agent.saveAttachment(agentProject, conversationId, file);
+      return {
+        name: saved.name,
+        mimeType: file.type || 'application/octet-stream',
+        data: '',
+        path: saved.path,
+      };
+    };
+    void Promise.all(files.map(read))
       .then((next) => {
         if (ticket !== attachmentTicket.current || conversationId !== activeConversationId.current)
           return;
@@ -239,7 +266,8 @@ export function AssistantPanel({
   const retry = chatTask?.error && !chatTask.saveError && !chatPending ? chatTask.seed : null;
   const busyRef = useRef(false);
   const [sandboxBusy, setSandboxBusy] = useState(false);
-  const agentProject = context.projectId;
+  // Inbox chats run the agent too, in the inbox folder.
+  const agentProject = context.projectId ?? (scope === PERSONAL_SCOPE ? PERSONAL_SCOPE : undefined);
   // One rule picks the mode and the composer shows it: inside a project with an
   // OpenAI-compatible connection the built-in agent answers; otherwise quick chat.
   const routesToAgent =
@@ -482,61 +510,16 @@ export function AssistantPanel({
       return;
     }
     setSettingsBusy(true);
-    const profile: ModelProfile = {
-      ...value,
-      id: editingProfileId,
-      name: (profileName.trim() || value.serviceId || value.model).slice(0, 80),
-    };
-    // Put the key in the existing machine-only slot before persisting the selection.
+    const profile = connectionProfile(value, editingProfileId, profileName);
     try {
-      if (value.serviceId === 'scientify') {
-        // The server access token is short-lived and stays in memory; never
-        // persist it in the provider credential store.
-        await collaboration.accessToken();
-      } else if (keyValue.trim())
-        await credentials.save(
-          { provider: value.provider, endpoint: value.endpoint },
-          keyValue.trim(),
-        );
-      else if (value.provider !== 'ollama') throw new Error(t('请填写 API 密钥。'));
-      else await credentials.clear({ provider: value.provider, endpoint: value.endpoint });
+      await storeConnectionKey(value, keyValue, credentials);
     } catch (reason) {
-      if (credentials !== nativeCredentials || isTauri()) {
-        setSettingsBusy(false);
-        setSettingsError(safeError(reason));
-        return;
-      }
+      setSettingsBusy(false);
+      setSettingsError(safeError(reason));
+      return;
     }
     const result = await store.getState().update((workspace) => {
-      const previous = workspace.settings.model;
-      const previousSelection = {
-        profileId: workspace.settings.defaultModelProfileId ?? 'legacy',
-        settings: { ...previous, provider: previous.provider ?? 'ollama' },
-      };
-      for (const chat of workspace.sessions)
-        chat.modelSelection ??= structuredClone(previousSelection);
-      const sameService =
-        previous.endpoint === value.endpoint && (previous.provider ?? 'ollama') === value.provider;
-      const remembered = sameService
-        ? [
-            previous.model,
-            ...(Array.isArray(previous.recentModels)
-              ? previous.recentModels.filter((m) => typeof m === 'string')
-              : []),
-          ]
-        : [];
-      workspace.settings.model = {
-        ...previous,
-        ...value,
-        recentModels: [...new Set([value.model.trim(), ...remembered])]
-          .filter(Boolean)
-          .slice(0, 12),
-      };
-      workspace.settings.modelProfiles ??= [];
-      const index = workspace.settings.modelProfiles.findIndex((item) => item.id === profile.id);
-      if (index < 0) workspace.settings.modelProfiles.push(profile);
-      else workspace.settings.modelProfiles[index] = profile;
-      workspace.settings.defaultModelProfileId = profile.id;
+      applyConnection(workspace, value, profile);
       const chat = workspace.sessions.find(
         (item) => item.id === conversation.id && item.project === scope,
       );
@@ -635,13 +618,7 @@ export function AssistantPanel({
 
   async function deleteProfile(id: string) {
     if (!(await confirmAction(t('删除此连接配置？已有会话保留原配置。')))) return;
-    const saved = await store.getState().update((workspace) => {
-      workspace.settings.modelProfiles = (workspace.settings.modelProfiles ?? []).filter(
-        (profile) => profile.id !== id,
-      );
-      if (workspace.settings.defaultModelProfileId === id)
-        delete workspace.settings.defaultModelProfileId;
-    });
+    const saved = await store.getState().update((workspace) => removeConnection(workspace, id));
     if (!saved) setSettingsError(store.getState().error ?? t('模型配置保存失败'));
   }
 
@@ -850,7 +827,8 @@ export function AssistantPanel({
     return {
       ...(visible ??
         freezeContext({
-          workspace: domain === 'code' ? 'experiments' : 'literature',
+          workspace:
+            domain === 'code' ? 'experiments' : domain === 'inbox' ? 'projects' : 'literature',
           title: t('当前会话工作区'),
           projectId: scope,
         })),
@@ -1120,9 +1098,7 @@ export function AssistantPanel({
       >
         {menu?.kind === 'permissions' ? (
           <>
-            <div className="sf-ai-permission-note">
-              {t('仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。')}
-            </div>
+            <div className="sf-ai-permission-note">{t('只影响这个对话，从下一个任务起生效。')}</div>
             {(['ask', 'full'] as const).map((value) => (
               <Button
                 key={value}
@@ -1136,8 +1112,8 @@ export function AssistantPanel({
                 <strong>{value === 'ask' ? t('询问') : t('完全允许')}</strong>
                 <span>
                   {value === 'ask'
-                    ? t('在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。')
-                    : t('取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。')}
+                    ? t('在沙箱里运行；越权和 Git 操作前询问。')
+                    : t('不用沙箱，可以联网和访问工作区外的文件，不再询问。')}
                 </span>
               </Button>
             ))}
@@ -1194,7 +1170,7 @@ export function AssistantPanel({
           </>
         ) : (
           <>
-            {agentProject
+            {agentProject && agentProject !== PERSONAL_SCOPE
               ? (['literature', 'code'] as const).map((option) => (
                   <Button
                     key={option}
@@ -1318,7 +1294,7 @@ export function AssistantPanel({
       />
       {needsReconnect ? (
         <div className="sf-agent-sandbox-notice" role="status">
-          <span>{t('上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。')}</span>
+          <span>{t('上次任务没有正常结束。恢复后读取已有结果，不会重发。')}</span>
           <Button
             variant="secondary"
             size="sm"
@@ -1335,7 +1311,7 @@ export function AssistantPanel({
       ) : null}
       {activeTask?.session.handle?.browserTools === false ? (
         <div className="sf-agent-sandbox-notice" role="status">
-          {t('此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。')}
+          {t('这个旧对话不能用浏览器，新建对话后可以。')}
         </div>
       ) : null}
       {activeTask?.session.handle?.paperTools === false &&
@@ -1365,8 +1341,8 @@ export function AssistantPanel({
         <div className="sf-agent-sandbox-notice sf-agent-verification-notice" role="status">
           <span>
             {engineSupports(settings.provider)
-              ? t('Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。')
-              : t('此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。')}
+              ? t('Agent 验证未通过，发送时仍会尝试 Agent。')
+              : t('这个连接不支持 Agent，请换用 OpenAI 兼容的连接。')}
             {verification.agentError && <small>{translateError(verification.agentError)}</small>}
           </span>
           {backend.verifyModel && (

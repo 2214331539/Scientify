@@ -6,7 +6,8 @@ import type { AIProtocol } from '../domain/workspace';
  * Operation domains. A domain is a permission boundary defined by a root
  * directory, so it deliberately does not match navigation entries: Experiments and Paper share the project root.
  */
-export type AgentDomain = 'literature' | 'code';
+/** The inbox domain belongs to chats outside any project. */
+export type AgentDomain = 'literature' | 'code' | 'inbox';
 export type PermissionMode = 'ask' | 'full';
 export interface AgentSkillRef {
   name: string;
@@ -220,6 +221,12 @@ export interface AgentBackend {
     threadId: string,
   ): Promise<AgentEvent[]>;
   release?(projectId: string, domain: AgentDomain, conversationId: string): Promise<void>;
+  /** Keep an attached file in the chat's folder; the agent reads it from the returned path. */
+  saveAttachment?(
+    projectId: string,
+    conversationId: string,
+    file: File,
+  ): Promise<{ path: string; name: string }>;
   respond(request: {
     projectId: string;
     domain: AgentDomain;
@@ -269,4 +276,16 @@ export const nativeAgent: AgentBackend = {
     command('agent_release', { projectId, domain, conversationId }),
   respond: ({ projectId, domain, conversationId, id, result }) =>
     command('agent_respond', { projectId, domain, conversationId, id, result }),
+  saveAttachment: async (projectId, conversationId, file) => {
+    if (file.size > 100 * 1024 * 1024) throw new Error('附件不能超过 100 MiB。');
+    if (!isTauri()) return command('agent_attachment_save');
+    // ASCII JSON escapes keep Chinese file names valid in HTTP headers.
+    const metadata = JSON.stringify({ projectId, conversationId, name: file.name }).replace(
+      /[\u007f-\uffff]/g,
+      (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`,
+    );
+    return invoke('agent_attachment_save', await file.arrayBuffer(), {
+      headers: { 'x-scientify-file': metadata },
+    });
+  },
 };

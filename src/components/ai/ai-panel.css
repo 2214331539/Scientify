@@ -302,6 +302,16 @@
   overflow: auto;
   white-space: pre-wrap;
 }
+.sf-chat-message-file {
+  font-size: 11px;
+  color: var(--sf-text-muted);
+  overflow-wrap: anywhere;
+}
+.sf-ai-attachment-note {
+  flex-shrink: 0;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
 .sf-ai-attachments {
   display: flex;
   flex-wrap: wrap;

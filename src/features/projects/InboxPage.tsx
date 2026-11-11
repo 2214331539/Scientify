@@ -3,7 +3,7 @@ import { Bot, MessageSquare, NotebookPen, Plus } from 'lucide-react';
 import { Button } from '../../components/primitives';
 import { t } from '../../i18n';
 import type { WorkspaceStore } from '../../stores/workspace';
-import { PERSONAL_SCOPE } from '../notes/model';
+import { isTrashed, PERSONAL_SCOPE } from '../notes/model';
 import { CenterEmpty, CenterHeader } from './ProjectCover';
 import { relativeTime } from './model';
 
@@ -27,7 +27,9 @@ export function InboxPage({
 }) {
   const data = useStore(store, (s) => s.data)!;
   const notes = data.records
-    .filter((record) => record.project === PERSONAL_SCOPE && record.type === 'note')
+    .filter(
+      (record) => record.project === PERSONAL_SCOPE && record.type === 'note' && !isTrashed(record),
+    )
     .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
   const chats = data.sessions
     .filter((session) => session.project === PERSONAL_SCOPE)
@@ -37,7 +39,7 @@ export function InboxPage({
       <CenterHeader title={t('收集箱')} count={notes.length}>
         <Button onClick={onAsk}>
           <Bot />
-          {t('快速问答')}
+          {t('AI 对话')}
         </Button>
         <Button variant="primary" onClick={onNewNote}>
           <Plus />
@@ -79,9 +81,9 @@ export function InboxPage({
               />
             )}
           </section>
-          <section aria-label={t('快速问答')}>
+          <section aria-label={t('AI 对话')}>
             <h2 className="home-heading">
-              {t('快速问答')}
+              {t('AI 对话')}
               {chats.length ? <span className="center-count">{chats.length}</span> : null}
             </h2>
             {chats.length ? (

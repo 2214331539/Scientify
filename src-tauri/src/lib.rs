@@ -392,6 +392,7 @@ pub fn run() {
             agent::papers::agent_paper_complete,
             agent::agent_start_thread,
             agent::agent_windows_sandbox_setup,
+            agent::agent_attachment_save,
             agent::agent_start_turn,
             agent::agent_steer,
             agent::agent_interrupt,

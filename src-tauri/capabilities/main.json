@@ -46,6 +46,7 @@
     "allow-agent-paper-complete",
     "allow-agent-start-thread",
     "allow-agent-windows-sandbox-setup",
+    "allow-agent-attachment-save",
     "allow-agent-start-turn",
     "allow-agent-steer",
     "allow-agent-interrupt",

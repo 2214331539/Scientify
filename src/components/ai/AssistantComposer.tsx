@@ -2,7 +2,7 @@ import { t } from '../../i18n';
 import { ArrowUp, ChevronUp, CornerDownLeft, LoaderCircle, Shield, Square } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type Ref, type MouseEvent } from 'react';
 import { Button, Textarea } from '../primitives';
-import type { ChatAttachment } from '../../features/assistant/model';
+import { attachmentNote, type ChatAttachment } from '../../features/assistant/model';
 import type { AgentSkill, AgentSkillRef, PermissionMode } from '../../platform/agent';
 import {
   bindingFor,
@@ -221,7 +221,7 @@ export function AssistantComposer({
             ) : null}
           </div>
           {skillMode && !skillsAvailable ? (
-            <p role="status">{t('请在项目中使用支持 Agent 的连接以选择技能。')}</p>
+            <p role="status">{t('技能需要在项目里用 Agent。')}</p>
           ) : null}
           {skillMode && skillsLoading ? <p role="status">{t('正在读取技能…')}</p> : null}
           {skillMode
@@ -358,6 +358,9 @@ export function AssistantComposer({
                 </span>
               )}
               <span>{attachment.name}</span>
+              {attachmentNote(attachment) ? (
+                <small className="sf-ai-attachment-note">{attachmentNote(attachment)}</small>
+              ) : null}
               <Button
                 variant="ghost"
                 size="sm"
@@ -424,6 +427,7 @@ export function AssistantComposer({
         >
           {mode === 'agent' ? 'Agent' : t('快速问答')}
         </span>
+
         {isBusy && prompt.trim() && canSteer ? (
           <Button
             variant="ghost"

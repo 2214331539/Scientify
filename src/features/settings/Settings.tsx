@@ -9,9 +9,20 @@ import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { StorageLocation } from '../../platform/desktop';
-import { CircleHelp, Cloud, Database, Keyboard, Languages, Palette, Settings } from 'lucide-react';
+import {
+  Bot,
+  CircleHelp,
+  Cloud,
+  Database,
+  Keyboard,
+  Languages,
+  Palette,
+  Settings,
+} from 'lucide-react';
 import { ShortcutsSettings } from './ShortcutsSettings';
 import { CollaborationPreferences } from './CollaborationPreferences';
+import { ModelPreferences } from './ModelPreferences';
+import type { ResearchBackend } from '../../platform/research';
 import './settings.css';
 
 function TranslationPreferences() {
@@ -169,13 +180,22 @@ function DataPreferences({ store }: { store: WorkspaceStore }) {
 
 export function SettingsDialog({
   store,
+  backend,
   onClose,
   initialSection = 'general',
 }: {
   store: WorkspaceStore;
+  backend?: ResearchBackend;
   onClose(): void;
   initialSection?:
-    'general' | 'appearance' | 'shortcuts' | 'translation' | 'collaboration' | 'data' | 'about';
+    | 'general'
+    | 'appearance'
+    | 'models'
+    | 'shortcuts'
+    | 'translation'
+    | 'collaboration'
+    | 'data'
+    | 'about';
 }) {
   const data = useStore(store, (s) => s.data);
   const [section, setSection] = useState(initialSection);
@@ -205,6 +225,7 @@ export function SettingsDialog({
   const sections = [
     { id: 'general', label: t('通用'), icon: Settings },
     { id: 'appearance', label: t('外观'), icon: Palette },
+    { id: 'models', label: t('AI 模型'), icon: Bot },
     { id: 'shortcuts', label: t('快捷键'), icon: Keyboard },
     { id: 'translation', label: t('翻译'), icon: Languages },
     { id: 'collaboration', label: t('协作'), icon: Cloud },
@@ -295,6 +316,9 @@ export function SettingsDialog({
           </div>
           <p className="settings-note">{t('顶栏按钮可直接切换亮暗。')}</p>
         </section>
+        <section hidden={section !== 'models'} aria-label={t('AI 模型')}>
+          <ModelPreferences store={store} {...(backend ? { backend } : {})} />
+        </section>
         <section hidden={section !== 'shortcuts'} aria-label={t('快捷键')}>
           <ShortcutsSettings store={store} onDirtyChange={setShortcutsDirty} />
         </section>
@@ -316,7 +340,7 @@ export function SettingsDialog({
                 '已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。',
               )}
             </p>
-            <p>{t('后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。')}</p>
+            <p>{t('后续接入：LaTeX 编译、PDF 批注与更多文献工具。')}</p>
             <p>
               {t(
                 'JSON 导出包含元数据，不包含 PDF 和源码；备份请保留完整数据目录及关联项目文件夹。',

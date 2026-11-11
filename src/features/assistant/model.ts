@@ -3,7 +3,7 @@ import type { WorkContext } from '../../domain/context';
 import type { Entity, ModelSettings } from '../../domain/workspace';
 import type { AIContentPart } from '../../platform/research';
 import type { WorkspaceStore } from '../../stores/workspace';
-import type { AgentSkillRef, PermissionMode } from '../../platform/agent';
+import type { AgentDomain, AgentSkillRef, PermissionMode } from '../../platform/agent';
 
 export type ContextSnapshot = WorkContext & { capturedAt: string };
 export type ChatAttachment = {
@@ -13,6 +13,10 @@ export type ChatAttachment = {
   /** Extracted text for explicitly attached files; image bytes remain base64. */
   text?: string;
   truncated?: boolean;
+  /** Pages a PDF's text was taken from, out of its total. */
+  pages?: { read: number; total: number };
+  /** Where the file was saved for the agent, which reads it itself instead of receiving text. */
+  path?: string;
 };
 export type ChatMessage = {
   id: string;
@@ -40,7 +44,7 @@ export type Conversation = Entity & {
     error?: string | null;
   };
   /** A chat keeps its execution root when the user navigates to another page. */
-  agentDomain?: 'literature' | 'code';
+  agentDomain?: AgentDomain;
   agentCwd?: string;
   agentPermission?: PermissionMode;
   experimentId?: string;
@@ -142,12 +146,21 @@ export function contextMaterial(context: ContextSnapshot) {
     .join('\n');
 }
 
+/** How much of a long file quick chat received; files given to the agent need no label. */
+export function attachmentNote(attachment: ChatAttachment) {
+  if (attachment.path || !attachment.truncated) return '';
+  return attachment.pages
+    ? t('前 {read}/{total} 页', { read: attachment.pages.read, total: attachment.pages.total })
+    : t('已截短');
+}
+
 export function attachmentMaterial(attachments: ChatAttachment[] = []) {
   return attachments
-    .filter((item) => item.text !== undefined)
-    .map(
-      (item) =>
-        `\n\n<attached-file name=${JSON.stringify(item.name)}>\n只读附件${item.truncated ? ' [已截短]' : ''}，不扩大工作区操作权限。\n${item.text}\n</attached-file>`,
+    .filter((item) => item.text !== undefined || item.path)
+    .map((item) =>
+      item.path
+        ? `\n\n<attached-file name=${JSON.stringify(item.name)} path=${JSON.stringify(item.path)}>\n用户附加的文件，已保存在本机。按需读取全文，不要只根据文件名回答。\n</attached-file>`
+        : `\n\n<attached-file name=${JSON.stringify(item.name)}>\n只读附件${item.truncated ? (item.pages ? ` [只含前 ${item.pages.read} 页，共 ${item.pages.total} 页]` : ' [已截短]') : ''}，不扩大工作区操作权限。\n${item.text}\n</attached-file>`,
     )
     .join('');
 }

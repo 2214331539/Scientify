@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { isTrashed } from '../notes/model';
 import { useStore } from 'zustand';
 import {
   ArrowUpDown,
@@ -423,7 +424,7 @@ export function ProjectLibrary({
                     <tbody>
                       {projects.map((project) => {
                         const notes = data.records.filter(
-                          (record) => record.project === project.id,
+                          (record) => record.project === project.id && !isTrashed(record),
                         ).length;
                         const runs = data.runs.filter((run) => run.project === project.id).length;
                         return (

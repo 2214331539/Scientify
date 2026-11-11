@@ -101,10 +101,6 @@
   "可用技能": ["可用技能", "Available skills"],
   "刷新技能": ["刷新技能", "Refresh skills"],
   "正在读取技能…": ["正在读取技能…", "Loading skills…"],
-  "请在项目中使用支持 Agent 的连接以选择技能。": [
-    "请在项目中使用支持 Agent 的连接以选择技能。",
-    "Open a project with an Agent-compatible connection to select skills."
-  ],
   "每条消息最多选择 4 个技能。": [
     "每条消息最多选择 4 个技能。",
     "Select up to 4 skills per message."
@@ -123,18 +119,6 @@
   "当前任务或保存结束后可切换权限": [
     "当前任务或保存结束后可切换权限",
     "Change permissions after the current task and save finish"
-  ],
-  "仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。": [
-    "仅影响当前会话，下次任务生效。纯聊天连接不具备本地执行能力。",
-    "Applies to this chat from the next turn. Chat-only connections cannot execute local actions."
-  ],
-  "在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。": [
-    "在工作区沙箱内执行；需要提升权限及 Git 写操作时询问。",
-    "Run in the workspace sandbox; ask for escalations and Git writes."
-  ],
-  "取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。": [
-    "取消执行沙箱，允许访问工作区外文件和网络，不再询问执行审批。",
-    "Disable the execution sandbox; allow files outside the workspace and network access without execution approvals."
   ],
   "权限保存失败，请重试。": [
     "权限保存失败，请重试。",
@@ -236,10 +220,6 @@
   "已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。": [
     "已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。",
     "Available: local literature and PDF reading, notes, code editing, Git diffs, parallel experiments, logs and results, Markdown preview, and a global AI assistant that operates within workspaces."
-  ],
-  "后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。": [
-    "后续接入：LaTeX 编译、PDF 批注与更多文献工具。模型服务在 AI 助手中配置。",
-    "Planned: LaTeX compilation, PDF annotations and more literature tools. Configure model providers in the AI assistant."
   ],
   "AI 实验": ["AI 实验", "AI experiment"],
   "关联实验运行": ["关联实验运行", "Linked experiment runs"],
@@ -482,11 +462,6 @@
     "打开包含正文或选中文字的材料",
     "Open a document or select some text"
   ],
-  "在 Paper 或 Notes 中打开文字": ["在 Paper 或 Notes 中打开文字", "Open text in Paper or Notes"],
-  "在 Experiments 中打开代码或实验记录": [
-    "在 Experiments 中打开代码或实验记录",
-    "Open code or a run in Experiments"
-  ],
   "先勾选 Attach 附带当前材料": [
     "先勾选 Attach 附带当前材料",
     "Enable Attach to include the current material"
@@ -692,14 +667,6 @@
   "文献": ["文献", "Literature"],
   "搜索工作区": ["搜索工作区", "Search workspace"],
   "搜索项目、文献和笔记": ["搜索项目、文献和笔记", "Search projects, papers and notes"],
-  "项目、文献题名、作者或笔记正文": [
-    "项目、文献题名、作者或笔记正文",
-    "Project, paper title, author or note content"
-  ],
-  "项目、文献与笔记 · 不含 PDF 全文和磁盘文件": [
-    "项目、文献与笔记 · 不含 PDF 全文和磁盘文件",
-    "Projects, papers and notes · Excludes PDF full text and files on disk"
-  ],
   "输入关键词": ["输入关键词", "Enter a search term"],
   "仅显示前 30 项，请缩小关键词范围。": [
     "仅显示前 30 项，请缩小关键词范围。",
@@ -831,11 +798,6 @@
   "提问": ["提问", "Ask"],
   "记笔记": ["记笔记", "Take note"],
   "正在读取 PDF…": ["正在读取 PDF…", "Loading PDF…"],
-  "选择原文可提问或记笔记": ["选择原文可提问或记笔记", "Select text to ask AI or take notes"],
-  "本页没有可提取文本，可能为扫描页。": [
-    "本页没有可提取文本，可能为扫描页。",
-    "No extractable text on this page. It may be a scanned page."
-  ],
   "辅助工具切换": ["辅助工具切换", "Switch assistant tools"],
   "收起辅助栏": ["收起辅助栏", "Close assistant panel"],
   "全局辅助工具": ["全局辅助工具", "Global assistant tools"],
@@ -1126,10 +1088,6 @@
   "{count} 行": ["{count} 行", "{count} lines"],
   "Ctrl+S 保存 ·": ["Ctrl+S 保存 ·", "Ctrl+S to save ·"],
   "已选 {count} 字符": ["已选 {count} 字符", "{count} characters selected"],
-  "已选择 {count} 字，可提问或关联到笔记": [
-    "已选择 {count} 字，可提问或关联到笔记",
-    "{count} characters selected. Ask AI or attach to a note."
-  ],
   "{count} 个变更 · 状态来自项目 Git 仓库": [
     "{count} 个变更 · 状态来自项目 Git 仓库",
     "{count} changes · From the project Git repository"
@@ -1972,10 +1930,6 @@
   "执行记录": ["执行记录", "Execution log"],
   "正在保存结果…": ["正在保存结果…", "Saving results…"],
   "恢复连接": ["恢复连接", "Reconnect"],
-  "上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。": [
-    "上次任务的状态需要确认。恢复连接会读取已有结果，不会重复发送任务。",
-    "Check the previous task by reconnecting. Existing results will be recovered without sending the task again."
-  ],
   "当前输入尚未发送，请在任务结束后重试。": [
     "当前输入尚未发送，请在任务结束后重试。",
     "This input was not sent. Try again after the current task ends."
@@ -2299,10 +2253,6 @@
   "聊天接口不可用": ["聊天接口不可用", "Chat endpoint unavailable"],
   "Agent 工具验证通过": ["Agent 工具验证通过", "Agent tools verified"],
   "仅聊天，Agent 未通过验证": ["仅聊天，Agent 未通过验证", "Chat only; Agent verification failed"],
-  "保存时验证聊天及 Agent 工具回传；只发送测试内容。": [
-    "保存时验证聊天及 Agent 工具回传；只发送测试内容。",
-    "Saving verifies chat and Agent tool results using test content only."
-  ],
   "正在回答…": ["正在回答…", "Responding…"],
   "此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。": [
     "此连接未通过聊天验证，请进入项目使用 Agent 或更换模型。",
@@ -2323,10 +2273,6 @@
     "This chat does not have paper tools. Start a new chat in the same directory; this history will be kept."
   ],
   "Agent 连接验证未通过": ["Agent 连接验证未通过", "Agent connection verification failed"],
-  "Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。": [
-    "Agent 连接验证未通过。发送消息仍会尝试 Agent，不会自动降级为聊天。",
-    "Agent verification failed. Sending a message will still attempt the Agent, without falling back to chat."
-  ],
   "重新验证": ["重新验证", "Verify again"],
   "请输入不含账号密码的 HTTP 或 HTTPS 链接。": [
     "请输入不含账号密码的 HTTP 或 HTTPS 链接。",
@@ -2375,10 +2321,6 @@
   "下移": ["下移", "Move down"],
   "分组": ["分组", "Group"],
   "网址": ["网址", "URL"],
-  "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。": [
-    "此连接协议尚未接入内置 Agent，请配置 OpenAI Responses 兼容连接。",
-    "This protocol is not connected to the built-in Agent. Configure an OpenAI Responses-compatible connection."
-  ],
   "请输入完整的 HTTP 或 HTTPS 链接。": [
     "请输入完整的 HTTP 或 HTTPS 链接。",
     "Enter a complete HTTP or HTTPS URL."
@@ -2609,7 +2551,7 @@
   ],
   "工作区尚未载入。": ["工作区尚未载入。", "The workspace has not loaded yet."],
   "待发送附件": ["待发送附件", "Pending attachment"],
-  "Permission": ["Permission", "Permission"],
+  "Permission": ["权限", "Permission"],
   "已截短": ["已截短", "Truncated"],
   "本轮材料来源": ["本轮材料来源", "Sources for this turn"],
   "工作区上下文": ["工作区上下文", "Workspace context"],
@@ -2656,22 +2598,10 @@
     "The Windows sandbox is not configured. Check system permissions and try again."
   ],
   "中止任务失败，请重试。": ["中止任务失败，请重试。", "Failed to stop the task. Try again."],
-  "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。": [
-    "此历史会话保留原有工具。使用浏览器搜索与网页读取，请新建会话；原对话仍会保留。",
-    "This historical chat keeps its original tools. Start a new chat to use browser search and page reading; the original chat remains available."
-  ],
   "新建会话": ["新建会话", "New chat"],
   "正在准备材料…": ["正在准备材料…", "Preparing materials…"],
   "对话不存在。": ["对话不存在。", "Chat not found."],
-  "保存在本机数据目录，下次自动填入": [
-    "保存在本机数据目录，下次自动填入",
-    "Saved in the local data directory and filled in next time"
-  ],
   "已读取本机保存的密钥。": ["已读取本机保存的密钥。", "Loaded the key saved on this device."],
-  "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。": [
-    "地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。",
-    "The endpoint and model name are saved in workspace settings; the key stays in the local data directory and is not synced with the project."
-  ],
   "快捷键": ["快捷键", "Shortcuts"],
   "存在快捷键冲突，请先修改重复按键。": [
     "存在快捷键冲突，请先修改重复按键。",
@@ -3218,5 +3148,96 @@
   "PDF 目录数据超过大小限制。": [
     "PDF 目录数据超过大小限制。",
     "The PDF outline data exceeds the size limit."
-  ]
+  ],
+  "请求新建笔记": ["请求新建笔记", "Wants to create a note"],
+  "前 {read}/{total} 页": ["前 {read}/{total} 页", "First {read}/{total} pages"],
+  "删除连接“{name}”？已有对话保留原来的设置。": [
+    "删除连接“{name}”？已有对话保留原来的设置。",
+    "Delete connection “{name}”? Existing chats keep their settings."
+  ],
+  "全部连接": ["全部连接", "All connections"],
+  "连接": ["连接", "Connections"],
+  "新建连接": ["新建连接", "New connection"],
+  "未选择模型": ["未选择模型", "No model selected"],
+  "聊天": ["聊天", "Chat"],
+  "设为默认": ["设为默认", "Make default"],
+  "还没有连接模型。": ["还没有连接模型。", "No model connected yet."],
+  "只有你发出的消息和附件会发给模型服务；密钥只保存在这台电脑上。": [
+    "只有你发出的消息和附件会发给模型服务；密钥只保存在这台电脑上。",
+    "Only your messages and attachments go to the model service; keys stay on this computer."
+  ],
+  "AI 模型": ["AI 模型", "AI models"],
+  "后续接入：LaTeX 编译、PDF 批注与更多文献工具。": [
+    "后续接入：LaTeX 编译、PDF 批注与更多文献工具。",
+    "Coming later: LaTeX builds, PDF annotation and more literature tools."
+  ],
+  "上次任务没有正常结束。恢复后读取已有结果，不会重发。": [
+    "上次任务没有正常结束。恢复后读取已有结果，不会重发。",
+    "The last task did not finish normally. Resuming reads its results without sending it again."
+  ],
+  "这个旧对话不能用浏览器，新建对话后可以。": [
+    "这个旧对话不能用浏览器，新建对话后可以。",
+    "This older chat cannot use the browser. Start a new chat to use it."
+  ],
+  "Agent 验证未通过，发送时仍会尝试 Agent。": [
+    "Agent 验证未通过，发送时仍会尝试 Agent。",
+    "Agent verification failed. Messages still try the agent."
+  ],
+  "这个连接不支持 Agent，请换用 OpenAI 兼容的连接。": [
+    "这个连接不支持 Agent，请换用 OpenAI 兼容的连接。",
+    "This connection does not support the agent. Use an OpenAI-compatible connection."
+  ],
+  "只影响这个对话，从下一个任务起生效。": [
+    "只影响这个对话，从下一个任务起生效。",
+    "Applies to this chat from the next task."
+  ],
+  "在沙箱里运行；越权和 Git 操作前询问。": [
+    "在沙箱里运行；越权和 Git 操作前询问。",
+    "Runs in the sandbox; asks before going beyond it or using Git."
+  ],
+  "不用沙箱，可以联网和访问工作区外的文件，不再询问。": [
+    "不用沙箱，可以联网和访问工作区外的文件，不再询问。",
+    "No sandbox: network and files outside the workspace, without asking."
+  ],
+  "已选 {count} 字": ["已选 {count} 字", "{count} characters selected"],
+  "本页没有可提取的文字": ["本页没有可提取的文字", "No extractable text on this page"],
+  "在写作或笔记中打开文字": ["在写作或笔记中打开文字", "Open text in writing or notes"],
+  "在实验页打开代码或运行记录": ["在实验页打开代码或运行记录", "Open code or a run in experiments"],
+  "技能需要在项目里用 Agent。": [
+    "技能需要在项目里用 Agent。",
+    "Skills need the agent in a project."
+  ],
+  "密钥只存在这台电脑上，不随项目同步。": [
+    "密钥只存在这台电脑上，不随项目同步。",
+    "Keys stay on this computer and are not synced with projects."
+  ],
+  "保存时验证聊天和 Agent，只发送测试内容。": [
+    "保存时验证聊天和 Agent，只发送测试内容。",
+    "Saving verifies chat and the agent with test content only."
+  ],
+  "只存在这台电脑上": ["只存在这台电脑上", "Stays on this computer"],
+  "删除失败，请重试。": ["删除失败，请重试。", "Could not delete. Try again."],
+  "彻底删除“{title}”？无法恢复。": [
+    "彻底删除“{title}”？无法恢复。",
+    "Delete “{title}” permanently? This cannot be undone."
+  ],
+  "回收站": ["回收站", "Recycle bin"],
+  "删除笔记": ["删除笔记", "Delete note"],
+  "删除 {days} 天后自动清除。": [
+    "删除 {days} 天后自动清除。",
+    "Removed automatically {days} days after deletion."
+  ],
+  "回收站是空的": ["回收站是空的", "The recycle bin is empty"],
+  "删除于 {date}": ["删除于 {date}", "Deleted {date}"],
+  "恢复“{title}”": ["恢复“{title}”", "Restore “{title}”"],
+  "彻底删除": ["彻底删除", "Delete permanently"],
+  "彻底删除“{title}”": ["彻底删除“{title}”", "Delete “{title}” permanently"],
+  "已移到回收站": ["已移到回收站", "Moved to the recycle bin"],
+  "项目、论文或笔记": ["项目、论文或笔记", "Projects, papers or notes"],
+  "当前项目的论文文件名、全部项目和笔记": [
+    "当前项目的论文文件名、全部项目和笔记",
+    "Paper file names in this project, all projects and notes"
+  ],
+  "项目、论文文件名和笔记": ["项目、论文文件名和笔记", "Projects, paper file names and notes"],
+  "正在搜索…": ["正在搜索…", "Searching…"]
 }

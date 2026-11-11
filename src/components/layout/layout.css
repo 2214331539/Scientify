@@ -715,3 +715,34 @@
   background: var(--sf-border-control);
   box-shadow: none;
 }
+
+/* Search in the project window top bar, like the project center sidebar entry. */
+.topbar-search.sf-button {
+  flex: 0 1 260px;
+  min-width: 120px;
+  height: 28px;
+  min-height: 28px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 9px;
+  border: 1px solid var(--sf-border-control);
+  border-radius: 6px;
+  background: var(--sf-surface-canvas);
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.topbar-search.sf-button:hover:not(:disabled) {
+  border-color: var(--sf-border-hover);
+  background: var(--sf-surface-canvas);
+}
+.topbar-search svg {
+  width: 14px;
+  height: 14px;
+}
+.topbar-search kbd {
+  margin-left: auto;
+  font: inherit;
+  font-size: 11px;
+  color: var(--sf-text-disabled);
+}

@@ -11,13 +11,81 @@ import { errorMessage } from '../../domain/errors';
 import '../settings/settings.css';
 import './model-settings.css';
 
-interface Props {
+interface Props extends FormProps {
   profiles: ModelProfile[];
+  onProfileChange(profile: ModelProfile | null): Promise<void>;
+  onDeleteProfile(id: string): Promise<void>;
+}
+
+/** The assistant's model dialog: saved connections beside the connection form. */
+export function ModelSettingsDialog({
+  profiles,
+  onProfileChange,
+  onDeleteProfile,
+  ...form
+}: Props) {
+  const disabled = form.saving || form.requestBusy;
+  return (
+    <Modal
+      title={t('模型设置')}
+      heading={t('模型配置')}
+      className="settings-dialog sf-model-settings-dialog"
+      busy={form.saving}
+      onClose={form.onClose}
+      sidebar={
+        <nav className="settings-navigation" aria-label={t('模型设置导航')}>
+          <div className="settings-title">{t('模型设置')}</div>
+          <Button type="button" variant="ghost" aria-current="page">
+            <Settings2 size={15} aria-hidden="true" />
+            <span>{t('模型配置')}</span>
+          </Button>
+          <div className="sf-model-profile-list">
+            {profiles.map((profile) => (
+              <Button
+                key={profile.id}
+                type="button"
+                variant="ghost"
+                aria-pressed={form.profileId === profile.id}
+                disabled={disabled}
+                onClick={() => void onProfileChange(profile)}
+              >
+                <span>{profile.name}</span>
+              </Button>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={disabled}
+            onClick={() => void onProfileChange(null)}
+          >
+            <Plus size={15} />
+            <span>{t('新连接')}</span>
+          </Button>
+          {profiles.some((profile) => profile.id === form.profileId) ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={disabled}
+              onClick={() => void onDeleteProfile(form.profileId)}
+            >
+              <Trash2 size={15} />
+              <span>{t('删除连接')}</span>
+            </Button>
+          ) : null}
+          <span className="settings-brand">Scientify</span>
+        </nav>
+      }
+    >
+      <ModelConnectionForm {...form} note={t('保存后返回对话，聊天草稿会保留。')} />
+    </Modal>
+  );
+}
+
+interface FormProps {
   profileId: string;
   profileName: string;
   onNameChange(value: string): void;
-  onProfileChange(profile: ModelProfile | null): Promise<void>;
-  onDeleteProfile(id: string): Promise<void>;
   value: AISettings;
   apiKey: string;
   /** True when `apiKey` came back from this machine rather than from typing. */
@@ -32,15 +100,16 @@ interface Props {
   onSave(value: AISettings, key: string): Promise<void>;
   onClose(): void;
   officialEndpoint?: string;
+  /** Inside another scrolling page (Settings) rather than its own dialog. */
+  embedded?: boolean;
+  note?: string;
 }
 
-export function ModelSettingsDialog({
-  profiles,
+/** Provider, endpoint, key and model of one connection; saving verifies chat and Agent. */
+export function ModelConnectionForm({
   profileId,
   profileName,
   onNameChange,
-  onProfileChange,
-  onDeleteProfile,
   value,
   apiKey,
   keyStored,
@@ -54,7 +123,9 @@ export function ModelSettingsDialog({
   onSave,
   onClose,
   officialEndpoint,
-}: Props) {
+  embedded,
+  note,
+}: FormProps) {
   const service = serviceFor(value);
   const [models, setModels] = useState<AIModel[]>([]);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'verifying'>('idle');
@@ -222,330 +293,266 @@ export function ModelSettingsDialog({
       m.id === value.model || (m.id + ' ' + m.name).toLowerCase().includes(filter.toLowerCase()),
   );
   return (
-    <Modal
-      title={t('模型设置')}
-      heading={t('模型配置')}
-      className="settings-dialog sf-model-settings-dialog"
-      busy={saving || phase === 'verifying'}
-      onClose={onClose}
-      sidebar={
-        <nav className="settings-navigation" aria-label={t('模型设置导航')}>
-          <div className="settings-title">{t('模型设置')}</div>
-          <Button type="button" variant="ghost" aria-current="page">
-            <Settings2 size={15} aria-hidden="true" />
-            <span>{t('模型配置')}</span>
-          </Button>
-          <div className="sf-model-profile-list">
-            {profiles.map((profile) => (
-              <Button
-                key={profile.id}
-                type="button"
-                variant="ghost"
-                aria-pressed={profileId === profile.id}
+    <form
+      className="sf-model-settings-form"
+      aria-busy={phase === 'loading' || phase === 'verifying' || saving}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <div className={embedded ? 'sf-model-settings-body' : 'settings-scroll'}>
+        <section aria-label={t('服务连接')}>
+          <h3 className="settings-section-heading">{t('服务连接')}</h3>
+          <div className="sf-model-settings-fields">
+            <label className="sf-model-settings-row">
+              <span>{t('连接名称')}</span>
+              <Input
+                value={profileName}
                 disabled={disabled}
-                onClick={() => {
-                  keyTicket.current++;
-                  void onProfileChange(profile);
+                maxLength={80}
+                onChange={(event) => onNameChange(event.target.value)}
+              />
+            </label>
+            <label className="sf-model-settings-row">
+              <span>{t('模型提供方')}</span>
+              <Dropdown
+                value={service.id}
+                disabled={disabled}
+                onChange={(event) => {
+                  const item = modelServices.find((entry) => entry.id === event.target.value);
+                  if (!item || item.id === service.id) return;
+                  const next = {
+                    provider: item.provider,
+                    serviceId: item.id,
+                    endpoint:
+                      item.id === 'scientify'
+                        ? officialEndpoint || item.endpoints[0]?.url || ''
+                        : (item.endpoints[0]?.url ?? ''),
+                    model: '',
+                  };
+                  changeConnection(next);
+                  void recallKey(next);
                 }}
               >
-                <span>{profile.name}</span>
-              </Button>
-            ))}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={disabled}
-            onClick={() => {
-              keyTicket.current++;
-              void onProfileChange(null);
-            }}
-          >
-            <Plus size={15} />
-            <span>{t('新连接')}</span>
-          </Button>
-          {profiles.some((profile) => profile.id === profileId) ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={disabled}
-              onClick={() => void onDeleteProfile(profileId)}
-            >
-              <Trash2 size={15} />
-              <span>{t('删除连接')}</span>
-            </Button>
-          ) : null}
-          <span className="settings-brand">Scientify</span>
-        </nav>
-      }
-    >
-      <form
-        className="sf-model-settings-form"
-        aria-busy={phase === 'loading' || phase === 'verifying' || saving}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <div className="settings-scroll">
-          <section aria-label={t('服务连接')}>
-            <h3 className="settings-section-heading">{t('服务连接')}</h3>
-            <div className="sf-model-settings-fields">
+                {modelServices.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {t(item.name)}
+                  </option>
+                ))}
+              </Dropdown>
+            </label>
+            {service.id === 'custom' && (
               <label className="sf-model-settings-row">
-                <span>{t('连接名称')}</span>
-                <Input
-                  value={profileName}
-                  disabled={disabled}
-                  maxLength={80}
-                  onChange={(event) => onNameChange(event.target.value)}
-                />
-              </label>
-              <label className="sf-model-settings-row">
-                <span>{t('模型提供方')}</span>
+                <span>{t('接口协议')}</span>
                 <Dropdown
-                  value={service.id}
+                  value={value.provider}
                   disabled={disabled}
                   onChange={(event) => {
-                    const item = modelServices.find((entry) => entry.id === event.target.value);
-                    if (!item || item.id === service.id) return;
-                    const next = {
-                      provider: item.provider,
-                      serviceId: item.id,
-                      endpoint:
-                        item.id === 'scientify'
-                          ? officialEndpoint || item.endpoints[0]?.url || ''
-                          : (item.endpoints[0]?.url ?? ''),
-                      model: '',
-                    };
+                    const next = { ...value, provider: event.target.value as AIProtocol };
                     changeConnection(next);
                     void recallKey(next);
                   }}
                 >
-                  {modelServices.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {t(item.name)}
+                  <option value="openai">OpenAI Compatible</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="ollama">Ollama</option>
+                </Dropdown>
+              </label>
+            )}
+            {service.endpoints.length > 1 && (
+              <label className="sf-model-settings-row">
+                <span>{t('服务区域')}</span>
+                <Dropdown
+                  value={
+                    service.endpoints.some((e) => e.url === value.endpoint) ? value.endpoint : ''
+                  }
+                  disabled={disabled}
+                  onChange={(event) => {
+                    const next = { ...value, endpoint: event.target.value };
+                    changeConnection(next);
+                    void recallKey(next);
+                  }}
+                >
+                  {!service.endpoints.some((e) => e.url === value.endpoint) && (
+                    <option value="" disabled>
+                      {t('自定义地址')}
+                    </option>
+                  )}
+                  {service.endpoints.map((e) => (
+                    <option key={e.url} value={e.url}>
+                      {t(e.name)}
                     </option>
                   ))}
                 </Dropdown>
               </label>
-              {service.id === 'custom' && (
-                <label className="sf-model-settings-row">
-                  <span>{t('接口协议')}</span>
-                  <Dropdown
-                    value={value.provider}
-                    disabled={disabled}
-                    onChange={(event) => {
-                      const next = { ...value, provider: event.target.value as AIProtocol };
-                      changeConnection(next);
-                      void recallKey(next);
-                    }}
-                  >
-                    <option value="openai">OpenAI Compatible</option>
-                    <option value="anthropic">Anthropic</option>
-                    <option value="gemini">Google Gemini</option>
-                    <option value="ollama">Ollama</option>
-                  </Dropdown>
-                </label>
-              )}
-              {service.endpoints.length > 1 && (
-                <label className="sf-model-settings-row">
-                  <span>{t('服务区域')}</span>
-                  <Dropdown
-                    value={
-                      service.endpoints.some((e) => e.url === value.endpoint) ? value.endpoint : ''
-                    }
-                    disabled={disabled}
-                    onChange={(event) => {
-                      const next = { ...value, endpoint: event.target.value };
-                      changeConnection(next);
-                      void recallKey(next);
-                    }}
-                  >
-                    {!service.endpoints.some((e) => e.url === value.endpoint) && (
-                      <option value="" disabled>
-                        {t('自定义地址')}
-                      </option>
-                    )}
-                    {service.endpoints.map((e) => (
-                      <option key={e.url} value={e.url}>
-                        {t(e.name)}
-                      </option>
-                    ))}
-                  </Dropdown>
-                </label>
-              )}
-              <label className="sf-model-settings-row">
-                <span>{t('服务地址')}</span>
-                <Input
-                  type="url"
-                  required
-                  spellCheck={false}
-                  disabled={disabled}
-                  value={value.endpoint}
-                  placeholder="https://api.example.com/v1"
-                  onChange={(event) => {
-                    onKeyChange('');
-                    changeConnection({ ...value, endpoint: event.target.value });
-                  }}
-                />
-              </label>
-              <label className="sf-model-settings-row">
-                <span>
-                  {t('API 密钥')}
-                  {value.provider === 'ollama' ? ' · ' + t('可选') : ''}
-                </span>
-                <Input
-                  aria-label={t('API 密钥')}
-                  type="password"
-                  autoComplete="off"
-                  disabled={disabled}
-                  value={apiKey}
-                  onChange={(event) => {
-                    setRecalled(false);
-                    invalidate();
-                    onKeyChange(event.target.value);
-                  }}
-                  placeholder={t('保存在本机数据目录，下次自动填入')}
-                />
-                {recalled ? (
-                  <span className="sf-model-key-hint" role="status">
-                    {t('已读取本机保存的密钥。')}
-                  </span>
-                ) : null}
-              </label>
-            </div>
-            <div className="sf-model-discovery-actions">
-              <Button
-                type="button"
-                disabled={disabled || phase === 'loading'}
-                onClick={() => void discover()}
-              >
-                {phase === 'loading' ? (
-                  <LoaderCircle size={14} className="sf-model-spinner" />
-                ) : (
-                  <RefreshCw size={14} />
-                )}
-                {phase === 'loading' ? t('正在获取模型…') : t('测试连接')}
-              </Button>
-              <span role="status" className="sf-model-status">
-                {phase === 'ready' ? (
-                  <>
-                    <Check size={14} />
-                    {t('已获取 {count} 个模型', { count: models.length })}
-                  </>
-                ) : phase === 'verifying' ? (
-                  t('正在验证聊天与 Agent…')
-                ) : null}
-              </span>
-            </div>
-            {capability ? (
-              <div className="sf-model-capabilities" role="status">
-                <span>{capability.chat ? t('聊天验证通过') : t('聊天接口不可用')}</span>
-                <span>
-                  {capability.agent ? t('Agent 工具验证通过') : t('Agent 连接验证未通过')}
-                </span>
-                {!capability.agent && capability.agentError ? (
-                  <p>{translateError(capability.agentError)}</p>
-                ) : null}
-              </div>
-            ) : null}
-            <p className="settings-note">
-              {t('地址和模型名称写入工作区配置；密钥只保存在本机数据目录，不随项目同步。')}
-            </p>
-          </section>
-          <section aria-label={t('聊天模型')}>
-            <h3 className="settings-section-heading">{t('聊天模型')}</h3>
-            <label className="sf-model-manual">
-              <input
-                type="checkbox"
-                checked={manual}
+            )}
+            <label className="sf-model-settings-row">
+              <span>{t('服务地址')}</span>
+              <Input
+                type="url"
+                required
+                spellCheck={false}
                 disabled={disabled}
+                value={value.endpoint}
+                placeholder="https://api.example.com/v1"
                 onChange={(event) => {
-                  setManual(event.target.checked);
-                  setFailure('');
+                  onKeyChange('');
+                  changeConnection({ ...value, endpoint: event.target.value });
                 }}
               />
-              <span>{t('手动填写模型 ID')}</span>
             </label>
-            <div className="sf-model-settings-fields">
-              {models.length > 12 && (
-                <label className="sf-model-settings-row">
-                  <span>{t('筛选模型')}</span>
-                  <Input
-                    type="search"
-                    value={filter}
-                    disabled={disabled}
-                    onChange={(e) => setFilter(e.target.value)}
-                  />
-                </label>
-              )}
-              {manual ? (
-                <label className="sf-model-settings-row">
-                  <span>{t('模型 ID')}</span>
-                  <Input
-                    value={value.model}
-                    required
-                    maxLength={256}
-                    disabled={disabled}
-                    onChange={(event) => {
-                      onChange({ ...value, model: event.target.value, verification: undefined });
-                      setCapability(undefined);
-                    }}
-                  />
-                </label>
-              ) : (
-                <label className="sf-model-settings-row">
-                  <span>{t('选择模型')}</span>
-                  <Dropdown
-                    value={models.length ? value.model : ''}
-                    disabled={disabled || !models.length}
-                    onChange={(event) => {
-                      onChange({ ...value, model: event.target.value });
-                      setFailure('');
-                    }}
-                  >
-                    {!models.length && <option value="">{t('测试连接后选择模型')}</option>}
-                    {filtered.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name === m.id ? m.id : m.name + ' · ' + m.id}
-                      </option>
-                    ))}
-                  </Dropdown>
-                </label>
-              )}
-            </div>
-            <p className="settings-note">
-              {t('保存时验证聊天及 Agent 工具回传；只发送测试内容。')}
-            </p>
-          </section>
-          {(failure || error) && (
-            <p role="alert" className="sf-model-settings-error">
-              {translateError(failure || error)}
-            </p>
-          )}
-        </div>
-        <footer className="settings-actions sf-model-settings-actions">
-          <p className="settings-note">{t('保存后返回对话，聊天草稿会保留。')}</p>
-          <div className="button-row">
-            <Button type="button" disabled={saving || phase === 'verifying'} onClick={onClose}>
-              {t('取消')}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={
-                disabled ||
-                phase === 'loading' ||
-                !value.endpoint.trim() ||
-                !value.model.trim() ||
-                (!manual && phase !== 'ready')
-              }
-            >
-              {saving ? t('正在保存…') : phase === 'verifying' ? t('正在验证…') : t('保存模型配置')}
-            </Button>
+            <label className="sf-model-settings-row">
+              <span>
+                {t('API 密钥')}
+                {value.provider === 'ollama' ? ' · ' + t('可选') : ''}
+              </span>
+              <Input
+                aria-label={t('API 密钥')}
+                type="password"
+                autoComplete="off"
+                disabled={disabled}
+                value={apiKey}
+                onChange={(event) => {
+                  setRecalled(false);
+                  invalidate();
+                  onKeyChange(event.target.value);
+                }}
+                placeholder={t('只存在这台电脑上')}
+              />
+              {recalled ? (
+                <span className="sf-model-key-hint" role="status">
+                  {t('已读取本机保存的密钥。')}
+                </span>
+              ) : null}
+            </label>
           </div>
-        </footer>
-      </form>
-    </Modal>
+          <div className="sf-model-discovery-actions">
+            <Button
+              type="button"
+              disabled={disabled || phase === 'loading'}
+              onClick={() => void discover()}
+            >
+              {phase === 'loading' ? (
+                <LoaderCircle size={14} className="sf-model-spinner" />
+              ) : (
+                <RefreshCw size={14} />
+              )}
+              {phase === 'loading' ? t('正在获取模型…') : t('测试连接')}
+            </Button>
+            <span role="status" className="sf-model-status">
+              {phase === 'ready' ? (
+                <>
+                  <Check size={14} />
+                  {t('已获取 {count} 个模型', { count: models.length })}
+                </>
+              ) : phase === 'verifying' ? (
+                t('正在验证聊天与 Agent…')
+              ) : null}
+            </span>
+          </div>
+          {capability ? (
+            <div className="sf-model-capabilities" role="status">
+              <span>{capability.chat ? t('聊天验证通过') : t('聊天接口不可用')}</span>
+              <span>{capability.agent ? t('Agent 工具验证通过') : t('Agent 连接验证未通过')}</span>
+              {!capability.agent && capability.agentError ? (
+                <p>{translateError(capability.agentError)}</p>
+              ) : null}
+            </div>
+          ) : null}
+          <p className="settings-note">{t('密钥只存在这台电脑上，不随项目同步。')}</p>
+        </section>
+        <section aria-label={t('聊天模型')}>
+          <h3 className="settings-section-heading">{t('聊天模型')}</h3>
+          <label className="sf-model-manual">
+            <input
+              type="checkbox"
+              checked={manual}
+              disabled={disabled}
+              onChange={(event) => {
+                setManual(event.target.checked);
+                setFailure('');
+              }}
+            />
+            <span>{t('手动填写模型 ID')}</span>
+          </label>
+          <div className="sf-model-settings-fields">
+            {models.length > 12 && (
+              <label className="sf-model-settings-row">
+                <span>{t('筛选模型')}</span>
+                <Input
+                  type="search"
+                  value={filter}
+                  disabled={disabled}
+                  onChange={(e) => setFilter(e.target.value)}
+                />
+              </label>
+            )}
+            {manual ? (
+              <label className="sf-model-settings-row">
+                <span>{t('模型 ID')}</span>
+                <Input
+                  value={value.model}
+                  required
+                  maxLength={256}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    onChange({ ...value, model: event.target.value, verification: undefined });
+                    setCapability(undefined);
+                  }}
+                />
+              </label>
+            ) : (
+              <label className="sf-model-settings-row">
+                <span>{t('选择模型')}</span>
+                <Dropdown
+                  value={models.length ? value.model : ''}
+                  disabled={disabled || !models.length}
+                  onChange={(event) => {
+                    onChange({ ...value, model: event.target.value });
+                    setFailure('');
+                  }}
+                >
+                  {!models.length && <option value="">{t('测试连接后选择模型')}</option>}
+                  {filtered.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name === m.id ? m.id : m.name + ' · ' + m.id}
+                    </option>
+                  ))}
+                </Dropdown>
+              </label>
+            )}
+          </div>
+          <p className="settings-note">{t('保存时验证聊天和 Agent，只发送测试内容。')}</p>
+        </section>
+        {(failure || error) && (
+          <p role="alert" className="sf-model-settings-error">
+            {translateError(failure || error)}
+          </p>
+        )}
+      </div>
+      <footer className="settings-actions sf-model-settings-actions">
+        {note ? <p className="settings-note">{note}</p> : <span />}
+        <div className="button-row">
+          <Button type="button" disabled={saving || phase === 'verifying'} onClick={onClose}>
+            {t('取消')}
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={
+              disabled ||
+              phase === 'loading' ||
+              !value.endpoint.trim() ||
+              !value.model.trim() ||
+              (!manual && phase !== 'ready')
+            }
+          >
+            {saving ? t('正在保存…') : phase === 'verifying' ? t('正在验证…') : t('保存模型配置')}
+          </Button>
+        </div>
+      </footer>
+    </form>
   );
 }

@@ -520,12 +520,10 @@ export default function PdfReader({
       {controls}
       <div className="pdf-status">
         {selection
-          ? t('已选择 {count} 字，可提问或关联到笔记', { count: selection.length })
-          : loading
+          ? t('已选 {count} 字', { count: selection.length })
+          : loading || pageText
             ? ''
-            : pageText
-              ? t('选择原文可提问或记笔记')
-              : t('本页没有可提取文本，可能为扫描页。')}
+            : t('本页没有可提取的文字')}
       </div>
     </div>
   );

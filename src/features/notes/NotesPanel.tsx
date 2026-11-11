@@ -3,8 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { noteImages } from '../../platform/note-images';
 import { openBrowserSource } from '../../platform/browser-pane';
 import { useStore } from 'zustand';
-import { ArrowLeft, Check, Link2, Plus, Save, Search } from 'lucide-react';
+import { ArrowLeft, Check, Link2, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
+import { confirmAction } from '../../components/prompts';
 import { ResourceList, ResourceRow } from '../../components/workspace/ResourceList';
 import { Panel } from '../../components/layout/Panel';
 import type { WorkContext } from '../../domain/context';
@@ -12,10 +13,16 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import {
   captureSource,
   createNote,
+  isTrashed,
   noteFingerprint,
   persistNote,
+  purgeNote,
   readNoteSources,
+  restoreNote,
   selectNotes,
+  selectTrash,
+  trashNote,
+  TRASH_DAYS,
   type Note,
 } from './model';
 import { MarkdownLiveEditor } from './MarkdownLiveEditor';
@@ -43,6 +50,13 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   const images = useMemo(() => noteImages(scope), [scope]);
   const imagePending = useRef(false);
   const notes = selectNotes(data, scope, query);
+  const trash = selectTrash(data, scope);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [removed, setRemoved] = useState<{ id: string; title: string } | null>(null);
+  // Viewers of a team project cannot change it; the server would reject the change.
+  const readOnly =
+    (data?.projects.find((project) => project.id === scope) as { collaborationRole?: string })
+      ?.collaborationRole === 'viewer';
   const sources = readNoteSources(draft);
 
   useEffect(() => {
@@ -142,6 +156,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     setError('');
     setStatus(isNew ? 'dirty' : 'saved');
     markDirty(isNew);
+    if (next) setTrashOpen(false);
   }
 
   newNote.current = () => void switchNote(createNote(scope), true);
@@ -149,8 +164,40 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     const note = store
       .getState()
       .data?.records.find((item) => item.project === scope && item.id === id);
-    if (note && latest.current?.id !== note.id) void switchNote(note as Note);
+    if (note && !isTrashed(note) && latest.current?.id !== note.id) void switchNote(note as Note);
   };
+
+  /** Move the open note to the recycle bin; its last edits are saved first. */
+  async function trashCurrent() {
+    const current = latest.current;
+    if (!current || imagePending.current || readOnly) return;
+    if (!(await save())) return;
+    const stored = store
+      .getState()
+      .data?.records.some((record) => record.project === scope && record.id === current.id);
+    // Close the editor before writing, so autosave cannot bring the note back.
+    latest.current = null;
+    baseline.current = '';
+    setDraft(null);
+    setStatus('saved');
+    setError('');
+    markDirty(false);
+    if (!stored) return;
+    if (await trashNote(store, scope, current.id))
+      setRemoved({ id: current.id, title: current.title || t('未命名笔记') });
+    else setError(store.getState().error || t('删除失败，请重试。'));
+  }
+
+  async function purge(note: Note) {
+    if (
+      !(await confirmAction(
+        t('彻底删除“{title}”？无法恢复。', { title: note.title || t('未命名笔记') }),
+      ))
+    )
+      return;
+    if (!(await purgeNote(store, scope, note.id)))
+      setError(store.getState().error || t('删除失败，请重试。'));
+  }
 
   function addSource() {
     if (!draft || (!context.resourceId && !context.path && !context.selection && !context.text))
@@ -162,14 +209,14 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   return (
     <Panel className="sf-notes-panel" role="region" aria-label={t('研究笔记内容')}>
       <div className="sf-aux-toolbar">
-        {draft ? (
+        {draft || trashOpen ? (
           <Button
             variant="ghost"
             size="sm"
             iconOnly
             title={t('返回笔记列表')}
             aria-label={t('返回笔记列表')}
-            onClick={() => void switchNote(null)}
+            onClick={() => (draft ? void switchNote(null) : setTrashOpen(false))}
           >
             <ArrowLeft size={16} />
           </Button>
@@ -178,11 +225,36 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
             {scope === '__inbox__' ? t('个人收集箱') : t('项目笔记')}
           </span>
         )}
+        {trashOpen && !draft ? <span className="sf-muted">{t('回收站')}</span> : null}
         <span className="sf-spacer" />
-        <Button variant="ghost" size="sm" onClick={() => void switchNote(createNote(scope), true)}>
-          <Plus size={14} />
-          {t('新建笔记')}
-        </Button>
+        {!draft && !trashOpen && trash.length ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            title={t('回收站')}
+            aria-label={t('回收站')}
+            onClick={() => {
+              setRemoved(null);
+              setTrashOpen(true);
+            }}
+          >
+            <Trash2 size={14} />
+          </Button>
+        ) : null}
+        {trashOpen && !draft ? null : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setRemoved(null);
+              void switchNote(createNote(scope), true);
+            }}
+          >
+            <Plus size={14} />
+            {t('新建笔记')}
+          </Button>
+        )}
       </div>
       {draft ? (
         <>
@@ -202,6 +274,20 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
                       ? t('保存失败，草稿保留')
                       : t('未保存')}
               </span>
+              <span className="sf-spacer" />
+              {readOnly ? null : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  title={t('删除笔记')}
+                  aria-label={t('删除笔记')}
+                  disabled={status === 'saving'}
+                  onClick={() => void trashCurrent()}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              )}
             </div>
           </div>
           {error ? (
@@ -293,8 +379,79 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
             </Button>
           </div>
         </>
+      ) : trashOpen ? (
+        <>
+          {error ? (
+            <div className="sf-aux-error" role="alert">
+              {translateError(error)}
+            </div>
+          ) : null}
+          <p className="sf-note-trash-hint">
+            {t('删除 {days} 天后自动清除。', { days: TRASH_DAYS })}
+          </p>
+          <ResourceList
+            className="sf-note-list sf-aux-scroll"
+            label={t('回收站')}
+            empty={t('回收站是空的')}
+          >
+            {trash.map((note) => (
+              <li key={note.id} className="sf-resource-item sf-note-trash-row">
+                <span>
+                  <strong>{note.title || t('未命名笔记')}</strong>
+                  <time dateTime={note.deletedAt}>
+                    {t('删除于 {date}', {
+                      date: new Date(note.deletedAt ?? '').toLocaleDateString(locale()),
+                    })}
+                  </time>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  title={t('恢复')}
+                  aria-label={t('恢复“{title}”', { title: note.title || t('未命名笔记') })}
+                  disabled={readOnly}
+                  onClick={() => void restoreNote(store, scope, note.id)}
+                >
+                  <RotateCcw size={14} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  title={t('彻底删除')}
+                  aria-label={t('彻底删除“{title}”', { title: note.title || t('未命名笔记') })}
+                  disabled={readOnly}
+                  onClick={() => void purge(note)}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </li>
+            ))}
+          </ResourceList>
+        </>
       ) : (
         <>
+          {removed ? (
+            <div className="sf-note-removed" role="status">
+              <span>{t('已移到回收站')}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  void restoreNote(store, scope, removed.id);
+                  setRemoved(null);
+                }}
+              >
+                {t('撤销')}
+              </Button>
+            </div>
+          ) : null}
+          {error ? (
+            <div className="sf-aux-error" role="alert">
+              {translateError(error)}
+            </div>
+          ) : null}
           <label className="sf-aux-search">
             <Search size={14} />
             <Input

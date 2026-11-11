@@ -5,6 +5,7 @@ const images = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const textExtensions =
   /\.(?:txt|md|markdown|py|json|toml|ya?ml|ini|cfg|csv|bib|tex|js|ts|tsx|jsx|r|sh)$/i;
 const TEXT_LIMIT = 12000;
+const isPdf = (file: File) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 
 /** Explicit user input only: never resolves a file path or reads sibling files. */
 export async function readAttachment(file: File): Promise<ChatAttachment> {
@@ -18,7 +19,7 @@ export async function readAttachment(file: File): Promise<ChatAttachment> {
     });
     return { name: file.name, mimeType: file.type, data };
   }
-  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+  if (isPdf(file)) {
     if (file.size > 20 * 1024 * 1024) throw new Error('PDF 附件不能超过 20 MiB。');
     const loading = await loadTextPdf(await file.arrayBuffer());
     try {
@@ -36,6 +37,7 @@ export async function readAttachment(file: File): Promise<ChatAttachment> {
         data: '',
         text: text.slice(0, TEXT_LIMIT),
         truncated: pages < pdf.numPages || text.length > TEXT_LIMIT,
+        pages: { read: pages, total: pdf.numPages },
       };
     } finally {
       await loading.destroy();

@@ -80,4 +80,19 @@ describe('ApprovalCard', () => {
     await userEvent.click(screen.getByRole('button', { name: '允许本次权限' }));
     expect(onDecide).toHaveBeenCalledWith('grantPermissions');
   });
+
+  it('tells a new note apart from a change to an existing one', () => {
+    const note = (action: string) =>
+      request('scientify/notes/requestApproval', {
+        action,
+        command: '论文总结',
+        reason: '## 方法',
+      });
+    render(<ApprovalCard event={note('create')} onDecide={vi.fn()} />);
+    expect(screen.getByText('请求新建笔记')).toBeTruthy();
+    expect(screen.getByText('论文总结')).toBeTruthy();
+    cleanup();
+    render(<ApprovalCard event={note('update')} onDecide={vi.fn()} />);
+    expect(screen.getByText('请求修改笔记')).toBeTruthy();
+  });
 });

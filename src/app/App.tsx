@@ -39,7 +39,7 @@ import {
   refreshCloud,
   useCloud,
 } from '../features/projects/cloud';
-import { PERSONAL_SCOPE } from '../features/notes/model';
+import { isTrashed, PERSONAL_SCOPE, purgeExpiredNotes } from '../features/notes/model';
 import { WindowControls } from '../components/layout/WindowControls';
 import { SettingsDialog } from '../features/settings/Settings';
 import { SearchDialog, type SearchTarget } from '../features/search/SearchDialog';
@@ -81,7 +81,7 @@ import { SignInPage } from '../features/account/SignInPage';
 
 type Dialog =
   | { kind: 'project'; project?: Project; mode?: NewProjectMode }
-  | { kind: 'data' | 'profile' | 'search' | 'about' | 'collaboration' | 'shortcuts' }
+  | { kind: 'data' | 'profile' | 'search' | 'about' | 'collaboration' | 'shortcuts' | 'models' }
   | null;
 const settingsSection = {
   profile: 'general',
@@ -89,6 +89,7 @@ const settingsSection = {
   about: 'about',
   collaboration: 'collaboration',
   shortcuts: 'shortcuts',
+  models: 'models',
 } as const;
 type Location = {
   workspace: WorkspaceId;
@@ -301,7 +302,8 @@ export function App({
   const experiments = useExecutions(store, windowMode !== 'projects');
   useDevelopmentRuntime(store, windowMode !== 'projects');
   useEffect(() => {
-    if (windowMode !== 'workspace') return;
+    // Inbox chats in the project center read attached PDFs too.
+    if (windowMode === 'browser') return;
     return installPaperService((reason) => store.setState({ error: String(reason) }));
   }, [windowMode, store]);
   const preferences = usePreferences();
@@ -417,6 +419,18 @@ export function App({
       void subscription.then((stop) => stop());
     };
   }, [windowMode, store]);
+  useEffect(() => {
+    if (!isTauri()) return;
+    // The agent writes notes straight to disk; show them without waiting for the turn to end.
+    const subscription = listen('notes-changed', () => void store.getState().refreshSaved());
+    return () => {
+      void subscription.then((stop) => stop());
+    };
+  }, [store]);
+  // Notes kept in the recycle bin longer than 30 days are removed once data has loaded.
+  useEffect(() => {
+    if (phase === 'ready') void purgeExpiredNotes(store);
+  }, [phase, store]);
   // The project center keeps the cloud list fresh: on open, after sign-in changes,
   // when the window comes back into focus, and every two minutes.
   const cloud = useCloud();
@@ -659,6 +673,22 @@ export function App({
       window.dispatchEvent(new CustomEvent('scientify-open-source', { detail: target.source }));
     else goToTarget(target);
   }
+  // A chat moved out of the inbox offers to open its project at the assistant.
+  const latestOpenTarget = useRef(openTarget);
+  latestOpenTarget.current = openTarget;
+  useEffect(() => {
+    const open = (event: Event) => {
+      const projectId = (event as CustomEvent<{ projectId?: string }>).detail?.projectId;
+      if (projectId)
+        latestOpenTarget.current(projectId, {
+          projectId,
+          workspace: 'literature',
+          tool: 'assistant',
+        });
+    };
+    window.addEventListener('scientify-open-project', open);
+    return () => window.removeEventListener('scientify-open-project', open);
+  }, []);
   function openInbox(tool: 'notes' | 'assistant', detail?: { event: string; id?: string }) {
     setUI((s) => ({ ...s, dock: tool, dockOpen: true }));
     if (detail)
@@ -928,7 +958,9 @@ export function App({
     mine: data ? personalProjects(data).filter((p) => !p.archived).length : 0,
     team: centerTeam.length,
     inbox: data
-      ? data.records.filter((r) => r.project === PERSONAL_SCOPE && r.type === 'note').length
+      ? data.records.filter(
+          (r) => r.project === PERSONAL_SCOPE && r.type === 'note' && !isTrashed(r),
+        ).length
       : 0,
   };
   const teamAlert = centerTeam.some(
@@ -1134,6 +1166,7 @@ export function App({
             onProjects={returnToProjects}
             onNewProject={() => openDialog({ kind: 'project' })}
             onProjectSettings={() => openDialog({ kind: 'project', project })}
+            onSearch={() => openDialog({ kind: 'search' })}
           />
         ) : null
       }
@@ -1199,12 +1232,18 @@ export function App({
           {dialog && dialog.kind in settingsSection ? (
             <SettingsDialog
               store={store}
+              backend={backend}
               initialSection={settingsSection[dialog.kind as keyof typeof settingsSection]}
               onClose={() => setDialog(null)}
             />
           ) : null}
           {dialog?.kind === 'search' && data ? (
-            <SearchDialog store={store} onClose={() => setDialog(null)} onNavigate={goToTarget} />
+            <SearchDialog
+              store={store}
+              onClose={() => setDialog(null)}
+              onNavigate={goToTarget}
+              {...(project ? { projectId: project.id } : {})}
+            />
           ) : null}
           {signingIn ? <SignInPage onClose={() => setSigningIn(false)} /> : null}
         </>

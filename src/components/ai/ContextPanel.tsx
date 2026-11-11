@@ -139,9 +139,9 @@ export function ContextPanel({
             const unavailable = !hasText
               ? t('打开包含正文或选中文字的材料')
               : action.id === 'writing' && !['writing', 'notes'].includes(context.workspace)
-                ? t('在 Paper 或 Notes 中打开文字')
+                ? t('在写作或笔记中打开文字')
                 : action.id === 'experiment' && context.workspace !== 'experiments'
-                  ? t('在 Experiments 中打开代码或实验记录')
+                  ? t('在实验页打开代码或运行记录')
                   : undefined;
             const reason =
               actionDisabledReason ||
