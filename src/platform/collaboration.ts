@@ -54,12 +54,42 @@ export type SyncConflict = {
 };
 
 export type ProjectSyncState = {
+  paused?: boolean;
+  syncing?: boolean;
+  pending?: number | null;
+  skipped?: number;
+  deferred?: number;
   lastSyncAt: string | null;
   lastError: string | null;
   conflicts: SyncConflict[];
   tracked: number;
   libraryRoot: string | null;
 };
+
+export type ConflictVersion = {
+  text: string | null;
+  bytes: number;
+  exists: boolean;
+  truncated: boolean;
+};
+export type ConflictPreview = {
+  token: string;
+  local: ConflictVersion;
+  remote: ConflictVersion;
+  canKeepLocal: boolean;
+  canKeepBoth: boolean;
+};
+export type ConflictChoice = 'local' | 'remote' | 'both';
+
+export function canEditProject(
+  project: { collaborationRole?: unknown } | undefined,
+  domain = 'project',
+): boolean {
+  const role = project?.collaborationRole;
+  return (
+    !role || role === 'owner' || role === 'editor' || (role === 'reviewer' && domain === 'record')
+  );
+}
 
 export const collaborationStateEvent = 'scientify-collaboration-state-changed';
 export const projectSyncRequestEvent = 'scientify-project-sync-request';
@@ -158,6 +188,25 @@ export const collaboration = {
   syncState(projectId: string): Promise<ProjectSyncState> {
     return desktop('项目同步只能在 Scientify 桌面应用中使用。', 'collaboration_sync_state', {
       projectId,
+    });
+  },
+  setProjectSync(projectId: string, enabled: boolean): Promise<void> {
+    return desktop(settingsOnly, 'collaboration_set_project_sync', { projectId, enabled });
+  },
+  conflictPreview(projectId: string, conflict: SyncConflict): Promise<ConflictPreview> {
+    return desktop(settingsOnly, 'collaboration_conflict_preview', { projectId, conflict });
+  },
+  resolveConflict(
+    projectId: string,
+    conflict: SyncConflict,
+    token: string,
+    choice: ConflictChoice,
+  ): Promise<void> {
+    return desktop(settingsOnly, 'collaboration_resolve_conflict', {
+      projectId,
+      conflict,
+      token,
+      choice,
     });
   },
 };

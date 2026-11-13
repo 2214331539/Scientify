@@ -1,3 +1,4 @@
+import { canEditProject } from '../../platform/collaboration';
 import { useState } from 'react';
 import { useStore } from 'zustand';
 import {
@@ -36,6 +37,7 @@ export function ExperimentManager({
   executions: Execution[];
   onOpen(experiment: Experiment): void;
 }) {
+  const readOnly = !canEditProject(project, 'code');
   const data = useStore(store, (state) => state.data);
   const development = useStore(developmentStore);
   const experiments = experimentsFor(data, project.id);
@@ -121,7 +123,7 @@ export function ExperimentManager({
         iconOnly
         tooltip={t('打开实验')}
         aria-label={t('打开实验')}
-        disabled={busy || experiment.archived}
+        disabled={readOnly || busy || experiment.archived}
         onClick={() => onOpen(experiment)}
       >
         <FolderOpen size={15} />
@@ -131,7 +133,7 @@ export function ExperimentManager({
         iconOnly
         tooltip={t('重命名实验')}
         aria-label={t('重命名实验')}
-        disabled={busy}
+        disabled={readOnly || busy}
         onClick={() => void edit(experiment, 'rename')}
       >
         <Pencil size={15} />
@@ -141,7 +143,7 @@ export function ExperimentManager({
         iconOnly
         tooltip={t(experiment.archived ? '恢复实验' : '归档实验')}
         aria-label={t(experiment.archived ? '恢复实验' : '归档实验')}
-        disabled={busy}
+        disabled={readOnly || busy}
         onClick={() => void edit(experiment, 'archive')}
       >
         {experiment.archived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
@@ -151,7 +153,7 @@ export function ExperimentManager({
         iconOnly
         tooltip={t('移除实验')}
         aria-label={t('移除实验')}
-        disabled={busy}
+        disabled={readOnly || busy}
         onClick={() => void edit(experiment, 'remove')}
       >
         <Trash2 size={15} />
@@ -214,7 +216,7 @@ export function ExperimentManager({
         </div>
         <Button
           variant="primary"
-          disabled={busy || !experimentCatalog.available()}
+          disabled={readOnly || busy || !experimentCatalog.available()}
           onClick={() => setCreating(true)}
         >
           <Plus size={15} />

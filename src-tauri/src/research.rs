@@ -76,6 +76,7 @@ pub async fn research_write_file(
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
         let root = crate::git::resolve(&storage, &files, &project_id, workspace_root.as_deref())?;
+        crate::collaboration::permissions::require_write(&storage, &project_id, "code")?;
         let _lease = crate::code::Lease::write(&root)?;
         files.write(&root, &path, &content, expected_version.as_deref())
     })

@@ -2,6 +2,7 @@ import { t } from '../../i18n';
 import type { WorkContext } from '../../domain/context';
 import type { ResearchRecord, Workspace } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
+import { canEditProject, requestProjectSync } from '../../platform/collaboration';
 
 export const PERSONAL_SCOPE = '__inbox__';
 export type NoteSource = WorkContext & { id: string; capturedAt: string; messageId?: string };
@@ -38,9 +39,13 @@ function changeNote(
   id: string,
   change: (data: Workspace, index: number) => void,
 ) {
-  return store.getState().update((data) => {
+  const saved = store.getState().update((data) => {
     const index = data.records.findIndex((record) => record.id === id && record.project === scope);
     if (index >= 0) change(data, index);
+  });
+  return saved.then((success) => {
+    if (success) requestProjectSync(scope);
+    return success;
   });
 }
 
@@ -64,7 +69,13 @@ export const purgeNote = (store: WorkspaceStore, scope: string, id: string) =>
 export function expiredNotes(data: Workspace | null, now = Date.now()) {
   const limit = now - TRASH_DAYS * 24 * 60 * 60 * 1000;
   return (data?.records ?? []).filter(
-    (record) => isTrashed(record) && Date.parse(String(record.deletedAt)) < limit,
+    (record) =>
+      isTrashed(record) &&
+      Date.parse(String(record.deletedAt)) < limit &&
+      canEditProject(
+        data?.projects.find((p) => p.id === record.project),
+        'record',
+      ),
   );
 }
 
@@ -123,7 +134,7 @@ export function readNoteSources(note: Note | null): NoteSource[] {
 
 export async function persistNote(store: WorkspaceStore, note: Note): Promise<boolean> {
   const snapshot = structuredClone(note);
-  return store.getState().update((data) => {
+  const saved = await store.getState().update((data) => {
     const index = data.records.findIndex(
       (record) => record.id === snapshot.id && record.project === snapshot.project,
     );
@@ -135,4 +146,6 @@ export async function persistNote(store: WorkspaceStore, note: Note): Promise<bo
     if (index < 0) data.records.push(value);
     else data.records[index] = { ...data.records[index], ...value };
   });
+  if (saved) requestProjectSync(note.project);
+  return saved;
 }

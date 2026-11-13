@@ -94,6 +94,9 @@ fn main() {
             "collaboration_remove_member",
             "collaboration_sync_project",
             "collaboration_sync_state",
+            "collaboration_set_project_sync",
+            "collaboration_conflict_preview",
+            "collaboration_resolve_conflict",
         ]),
     ))
     .expect("failed to build Tauri manifest");

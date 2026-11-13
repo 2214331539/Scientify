@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
+import { canEditProject } from '../../platform/collaboration';
 import {
   ArrowUpRight,
   Archive,
@@ -81,7 +82,8 @@ export function GitWorkspace({
   const drafts = gitDrafts(store);
   const message = useStore(drafts, (state) => state.messages[binding] ?? '');
   const pending = useStore(drafts, (state) => !!state.pending[binding]);
-  const blocked = pending || !!code.error;
+  const project = useStore(store, (state) => state.data?.projects.find((p) => p.id === projectId));
+  const blocked = pending || !!code.error || !canEditProject(project, 'code');
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
   const [dialog, setDialog] = useState<'branch' | 'stash' | 'worktree' | null>(null);

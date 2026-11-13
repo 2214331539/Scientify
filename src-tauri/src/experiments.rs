@@ -685,6 +685,7 @@ pub async fn experiment_start<R: tauri::Runtime>(
     configuration: Configuration,
     workspace_root: Option<String>,
 ) -> Result<Run, String> {
+    crate::collaboration::permissions::require_write(&state.storage, &project_id, "code")?;
     crate::library::trusted(&view)?;
     let storage = state.storage.clone();
     let files = state.files.clone();

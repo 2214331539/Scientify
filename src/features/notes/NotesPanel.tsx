@@ -1,3 +1,4 @@
+import { canEditProject } from '../../platform/collaboration';
 import { t, translateError, locale } from '../../i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { noteImages } from '../../platform/note-images';
@@ -53,10 +54,10 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   const trash = selectTrash(data, scope);
   const [trashOpen, setTrashOpen] = useState(false);
   const [removed, setRemoved] = useState<{ id: string; title: string } | null>(null);
-  // Viewers of a team project cannot change it; the server would reject the change.
-  const readOnly =
-    (data?.projects.find((project) => project.id === scope) as { collaborationRole?: string })
-      ?.collaborationRole === 'viewer';
+  const readOnly = !canEditProject(
+    data?.projects.find((project) => project.id === scope),
+    'record',
+  );
   const sources = readNoteSources(draft);
 
   useEffect(() => {
@@ -136,6 +137,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   }, [scope]);
 
   function edit(value: Note) {
+    if (readOnly) return;
     latest.current = value;
     setDraft(value);
     setError('');
@@ -242,7 +244,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
             <Trash2 size={14} />
           </Button>
         ) : null}
-        {trashOpen && !draft ? null : (
+        {readOnly || (trashOpen && !draft) ? null : (
           <Button
             variant="ghost"
             size="sm"
@@ -261,6 +263,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
           <div className="sf-note-heading">
             <Input
               aria-label={t('笔记标题')}
+              disabled={readOnly}
               value={draft.title}
               onChange={(event) => edit({ ...draft, title: event.target.value })}
             />
@@ -300,6 +303,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
           ) : null}
           <div className="sf-note-workbench">
             <MarkdownLiveEditor
+              disabled={readOnly}
               key={draft.id}
               images={images}
               onLink={(url) => openBrowserSource(scope, url)}
@@ -357,6 +361,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
               size="sm"
 
               disabled={
+                readOnly ||
                 (!context.resourceId && !context.path && !context.selection && !context.text) ||
                 (context.workspace === 'notes' && context.resourceId === draft.id)
               }
@@ -371,7 +376,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
               variant="ghost"
               size="sm"
 
-              disabled={status === 'saving' || status === 'saved'}
+              disabled={readOnly || status === 'saving' || status === 'saved'}
               onClick={() => void save()}
             >
               {status === 'saved' ? <Check size={14} /> : <Save size={14} />}

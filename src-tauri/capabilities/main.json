@@ -81,7 +81,10 @@
     "allow-collaboration-invite-member",
     "allow-collaboration-remove-member",
     "allow-collaboration-sync-project",
-    "allow-collaboration-sync-state"
+    "allow-collaboration-sync-state",
+    "allow-collaboration-set-project-sync",
+    "allow-collaboration-conflict-preview",
+    "allow-collaboration-resolve-conflict"
   ],
   "webviews": [
     "main",

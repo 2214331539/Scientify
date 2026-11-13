@@ -594,6 +594,11 @@ pub async fn agent_start_thread(
     permission: Option<PermissionMode>,
 ) -> Result<ThreadHandle, String> {
     super::library::trusted(&view)?;
+    crate::collaboration::permissions::require_write(
+        &app.state::<AppState>().storage,
+        &project_id,
+        "code",
+    )?;
     let owner = view.window().label().to_string();
     blocking(move || {
         let permission = permission.unwrap_or_default();
@@ -856,6 +861,11 @@ pub async fn agent_start_turn(
     skills: Option<Vec<skills::SkillRef>>,
 ) -> Result<TurnHandle, String> {
     super::library::trusted(&view)?;
+    crate::collaboration::permissions::require_write(
+        &app.state::<AppState>().storage,
+        &project_id,
+        "code",
+    )?;
     blocking(move || with_entry(&app,&project_id,&domain,&conversation_id,|entry| {
         entry.validate(&thread_id)?;
         let mut input = turn_input(&text, images.unwrap_or_default())?;

@@ -1,7 +1,8 @@
+import { ProjectSyncControl } from '../projects/ProjectSyncControl';
 import { useCallback, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { Button, Input } from '../../components/primitives';
-import { locale, t, translateError } from '../../i18n';
+import { t, translateError } from '../../i18n';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
   collaboration,
@@ -9,7 +10,6 @@ import {
   isSyncedProject,
   requestSignIn,
   type CollaborationState,
-  type ProjectSyncState,
 } from '../../platform/collaboration';
 import { maskPhone } from '../account/account';
 
@@ -17,28 +17,13 @@ function notifyCollaborationStateChanged() {
   window.dispatchEvent(new Event(collaborationStateEvent));
 }
 
-const kinds: Record<string, string> = {
-  library: '文献',
-  code: '代码',
-  asset: '笔记图片',
-  record: '笔记',
-  run: '运行记录',
-  experiment: '实验',
-  project: '项目信息',
-};
-const recordKinds = ['project', 'record', 'experiment', 'run'];
-const when = (value: string) => new Date(value).toLocaleString(locale());
-
 export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
   const data = useStore(store, (s) => s.data);
   const synced = (data?.projects ?? []).filter(isSyncedProject);
-  const syncedIds = synced.map((project) => project.id).join(',');
   const [state, setState] = useState<CollaborationState | null>(null);
   const [endpoint, setEndpoint] = useState('');
   const [enabled, setEnabled] = useState(false);
-  const [syncStates, setSyncStates] = useState<Record<string, ProjectSyncState>>({});
   const [busy, setBusy] = useState(false);
-  const [syncing, setSyncing] = useState<string | null>(null);
   const [error, setError] = useState('');
   const refresh = useCallback(async () => {
     try {
@@ -46,20 +31,11 @@ export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
       setState(next);
       setEndpoint(next.endpoint);
       setEnabled(next.enabled);
-      const ids = syncedIds ? syncedIds.split(',') : [];
-      const entries = await Promise.all(
-        ids.map(async (id) => [id, await collaboration.syncState(id).catch(() => null)] as const),
-      );
-      setSyncStates(
-        Object.fromEntries(
-          entries.filter((entry): entry is readonly [string, ProjectSyncState] => !!entry[1]),
-        ),
-      );
       setError('');
     } catch (reason) {
       setError(translateError(String(reason)));
     }
-  }, [syncedIds]);
+  }, []);
   useEffect(() => {
     void refresh();
     const update = () => void refresh();
@@ -87,30 +63,6 @@ export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
       setState(await collaboration.logout());
       notifyCollaborationStateChanged();
     });
-  const syncNow = async (projectId: string) => {
-    setSyncing(projectId);
-    setError('');
-    try {
-      const outcome = await collaboration.syncProject(projectId);
-      if (outcome.changed.some((kind) => recordKinds.includes(kind)))
-        await store.getState().refreshSaved();
-      if (outcome.errors.length) setError(outcome.errors.map(translateError).join('\n'));
-      notifyCollaborationStateChanged();
-    } catch (reason) {
-      setError(translateError(String(reason)));
-    } finally {
-      setSyncing(null);
-    }
-  };
-  const conflicts = synced
-    .flatMap((project) =>
-      (syncStates[project.id]?.conflicts ?? []).map((conflict) => ({
-        ...conflict,
-        project: project.name,
-      })),
-    )
-    .sort((left, right) => right.at.localeCompare(left.at))
-    .slice(0, 20);
   return (
     <div className="settings-data settings-collaboration">
       <p className="muted">
@@ -164,36 +116,12 @@ export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
             <h3>{t('云端项目同步')}</h3>
           </div>
           {synced.length ? (
-            synced.map((project) => {
-              const info = syncStates[project.id];
-              return (
-                <div className="settings-collaboration-issue" key={project.id}>
-                  <div>
-                    <strong>{project.name}</strong>
-                    <span>
-                      {info?.lastSyncAt
-                        ? t('上次同步：{time}', { time: when(info.lastSyncAt) })
-                        : t('尚未同步')}
-                    </span>
-                    {info?.libraryRoot ? (
-                      <small>{t('文献文件夹：{path}', { path: info.libraryRoot })}</small>
-                    ) : null}
-                    {info?.lastError ? (
-                      <small className="error-text">{translateError(info.lastError)}</small>
-                    ) : null}
-                  </div>
-                  <div className="settings-collaboration-issue-actions">
-                    <Button
-                      variant="ghost"
-                      disabled={busy || syncing !== null}
-                      onClick={() => void syncNow(project.id)}
-                    >
-                      {syncing === project.id ? t('正在同步…') : t('立即同步')}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })
+            synced.map((project) => (
+              <div className="settings-collaboration-issue" key={project.id}>
+                <strong>{project.name}</strong>
+                <ProjectSyncControl project={project} store={store} />
+              </div>
+            ))
           ) : (
             <p className="muted">
               {t('还没有云端项目。在“团队协作空间”中新建项目，或为本机项目开启多设备同步。')}
@@ -211,37 +139,6 @@ export function CollaborationPreferences({ store }: { store: WorkspaceStore }) {
               : t('未启用')}
         </strong>
       </section>
-      {conflicts.length ? (
-        <section className="settings-collaboration-issues" aria-live="polite">
-          <div className="settings-collaboration-projects-heading">
-            <h3>{t('最近的同步冲突')}</h3>
-          </div>
-          <p className="muted">
-            {t('两台设备改了同一内容时两份都会保留：远端版本沿用原名，本机版本另存为冲突副本。')}
-          </p>
-          {conflicts.map((conflict) => (
-            <div
-              className="settings-collaboration-issue"
-              key={`${conflict.project}-${conflict.domain}-${conflict.path}-${conflict.at}`}
-            >
-              <div>
-                <strong>
-                  {conflict.project} · {t(kinds[conflict.domain] ?? conflict.domain)}
-                </strong>
-                <span>{conflict.path}</span>
-                <small>
-                  {conflict.copy
-                    ? t('本机版本另存为：{copy}', { copy: conflict.copy })
-                    : t('已采用远端版本')}
-                </small>
-              </div>
-              <div className="settings-collaboration-issue-actions">
-                <small className="muted">{when(conflict.at)}</small>
-              </div>
-            </div>
-          ))}
-        </section>
-      ) : null}
       {error ? (
         <p role="alert" className="error-text">
           {error}

@@ -73,6 +73,17 @@ async fn workspace_save<R: tauri::Runtime>(
     tauri::async_runtime::spawn_blocking(move || {
         let workspace = scientify_core::workspace::validate(workspace)?;
         let current = storage.load()?;
+        // A stale window must hear "reload", not a permission error about changes it never made.
+        let revision = current
+            .as_ref()
+            .and_then(|value| value["revision"].as_u64())
+            .unwrap_or(0);
+        if revision != expected_revision {
+            return Err("工作区已发生变化，请重新载入后再保存。".into());
+        }
+        if let Some(current) = &current {
+            collaboration::permissions::validate_changes(current, &workspace)?;
+        }
         experiments::catalog::validate_changes(&storage, &files, current.as_ref(), &workspace)?;
         if let Some(terminal) = app.try_state::<experiments::terminal::TerminalState>() {
             terminal.protect(current.as_ref(), Some(&workspace))?;
@@ -416,6 +427,9 @@ pub fn run() {
             collaboration::collaboration_remove_member,
             collaboration::collaboration_sync_project,
             collaboration::collaboration_sync_state,
+            collaboration::collaboration_set_project_sync,
+            collaboration::collaboration_conflict_preview,
+            collaboration::collaboration_resolve_conflict,
         ])
         .run(context)
         .expect("Scientify failed to start");

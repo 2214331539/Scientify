@@ -67,11 +67,13 @@ const highlighting = HighlightStyle.define([
 
 export function CodeEditor({
   session,
+  readOnly = false,
   onSelection,
   onCursor,
   shortcuts,
 }: {
   session: FileSession;
+  readOnly?: boolean;
   onSelection: (text: string) => void;
   onCursor?: (line: number, column: number) => void;
   shortcuts?: ShortcutSettings;
@@ -79,6 +81,14 @@ export function CodeEditor({
   const host = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const phrases = useRef(new Compartment());
+  const access = useRef(new Compartment());
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: access.current.reconfigure(EditorState.readOnly.of(readOnly)),
+    });
+  }, [readOnly]);
   const { language: displayLanguage } = usePreferences();
   const selectionCallback = useRef(onSelection);
   selectionCallback.current = onSelection;
@@ -109,7 +119,7 @@ export function CodeEditor({
     };
     const customKeymap = [
       customBinding('editor.save', 'Mod+S', () => {
-        void session.save();
+        if (!readOnlyRef.current) void session.save();
         return true;
       }),
       customBinding('editor.find', 'Mod+F', (view) => {
@@ -129,6 +139,7 @@ export function CodeEditor({
       theme,
       search({ top: true }),
       wrap.of(session.editorWrap ? EditorView.lineWrapping : []),
+      access.current.of(EditorState.readOnly.of(readOnlyRef.current)),
       phrases.current.of(EditorState.phrases.of(searchPhrases())),
       EditorView.contentAttributes.of({
         'aria-label': t('编辑 {path}', { path: session.path }),

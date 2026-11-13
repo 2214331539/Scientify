@@ -1008,6 +1008,7 @@ pub async fn code_git_action(
     workspace_root: Option<String>,
     request: Action,
 ) -> Result<String, String> {
+    crate::collaboration::permissions::require_write(&state.storage, &project_id, "code")?;
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
         project_action(

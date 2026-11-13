@@ -13,6 +13,7 @@
 //! save hook has to report them.
 
 use scientify_core::{library::LocalLibrary, research::ResearchFiles, storage::Storage};
+pub(crate) mod resolution;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
@@ -30,7 +31,6 @@ const PUSH_BATCH: usize = 100;
 const PUSH_BATCH_BYTES: usize = 4 * 1024 * 1024;
 pub(crate) const MAX_FILE_BYTES: u64 = 200 * 1024 * 1024;
 const MAX_FILES: usize = 20_000;
-const CONFLICTS_KEPT: usize = 50;
 
 /// Folders a code root never syncs: environments, caches and version control.
 const CODE_SKIP: &[&str] = &[
@@ -130,17 +130,25 @@ pub(crate) struct Conflict {
     /// Where this device's version was kept, or empty when the remote one won.
     pub copy: String,
     pub at: String,
+    /// Older entries have no local snapshot; never guess which record was its copy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local: Option<Value>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub(crate) struct ProjectSync {
+    pub paused: bool,
+    pub skipped: usize,
+    pub deferred: usize,
     /// Server change number this device has fully processed.
     pub since: u64,
     pub entries: BTreeMap<String, Entry>,
     pub conflicts: Vec<Conflict>,
     pub last_sync_at: Option<String>,
     pub last_error: Option<String>,
+    /// The folder each file domain was synced from, so a new folder is not read as deletions.
+    pub roots: BTreeMap<String, String>,
 }
 
 fn state_path(data: &Path, project: &str) -> PathBuf {
@@ -166,6 +174,37 @@ fn save_state(data: &Path, project: &str, state: &ProjectSync) -> Result<(), Str
     scientify_core::storage::write_atomic_bytes(&path, &bytes)
 }
 
+/// A folder that changed since the last sync is a new place: forget what was tracked there
+/// and pull everything again, so the old folder's files are downloaded or adopted instead
+/// of being pushed as deletions.
+fn rebase_moved_roots(state: &mut ProjectSync, roots: &BTreeMap<Domain, PathBuf>) {
+    for (domain, root) in roots {
+        // A missing folder is handled as unavailable, never as a move.
+        if !root.exists() {
+            continue;
+        }
+        let now = root_id(root);
+        if state
+            .roots
+            .get(domain.name())
+            .is_some_and(|before| *before != now)
+        {
+            state
+                .entries
+                .retain(|item, _| split_key(item).is_none_or(|(d, _)| d != *domain));
+            state.since = 0;
+        }
+    }
+}
+
+/// The same folder may be reported with or without the `\\?\` prefix; compare the real one.
+fn root_id(root: &Path) -> String {
+    fs::canonicalize(root)
+        .unwrap_or_else(|_| root.to_path_buf())
+        .display()
+        .to_string()
+}
+
 /// Keep the failure where the settings page can show it.
 pub(crate) fn record_error(data: &Path, project: &str, error: &str) {
     if let Ok(mut state) = load_state(data, project) {
@@ -183,6 +222,9 @@ fn running() -> &'static Mutex<HashSet<String>> {
 pub(crate) struct Running(String);
 
 impl Running {
+    pub(crate) fn contains(project: &str) -> bool {
+        running().lock().is_ok_and(|set| set.contains(project))
+    }
     pub(crate) fn start(project: &str) -> Result<Self, String> {
         let mut set = running().lock().map_err(|error| error.to_string())?;
         if !set.insert(project.into()) {
@@ -510,33 +552,38 @@ fn scan(
 ) -> Result<BTreeMap<String, Item>, String> {
     let mut found = BTreeMap::new();
     if !root.is_dir() {
+        if known.iter().any(|(name, entry)| {
+            name.starts_with(&format!("{}/", domain.name())) && entry.hash.is_some()
+        }) {
+            return Err(format!(
+                "同步目录暂时不可用，已停止同步以避免误删：{}",
+                root.display()
+            ));
+        }
         return Ok(found);
     }
     let mut pending = vec![(root.to_path_buf(), String::new())];
     while let Some((dir, prefix)) = pending.pop() {
-        let entries = match fs::read_dir(&dir) {
-            Ok(entries) => entries,
-            Err(error) if prefix.is_empty() => {
-                return Err(format!("无法读取同步目录：{error}"));
-            }
-            Err(_) => {
-                *skipped += 1;
-                continue;
-            }
-        };
-        for entry in entries.flatten() {
+        let entries = fs::read_dir(&dir).map_err(|error| format!("无法读取同步目录：{error}"))?;
+        for entry in entries {
+            let entry = entry.map_err(|error| format!("无法读取同步文件：{error}"))?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            let Ok(kind) = entry.file_type() else {
-                continue;
-            };
-            if kind.is_symlink() {
-                continue;
-            }
+            let kind = entry.file_type().map_err(|error| error.to_string())?;
             let rel = if prefix.is_empty() {
                 name.clone()
             } else {
                 format!("{prefix}/{name}")
             };
+            if kind.is_symlink() {
+                let prefix = key(domain, &rel);
+                if known.iter().any(|(name, entry)| {
+                    entry.hash.is_some()
+                        && (name == &prefix || name.starts_with(&format!("{prefix}/")))
+                }) {
+                    return Err(format!("已同步路径变成链接，已停止同步：{rel}"));
+                }
+                continue;
+            }
             if !include(domain, &rel, &name, kind.is_dir()) {
                 continue;
             }
@@ -544,10 +591,18 @@ fn scan(
                 pending.push((entry.path(), rel));
                 continue;
             }
-            let Ok(meta) = entry.metadata() else {
-                continue;
-            };
+            let meta = entry
+                .metadata()
+                .map_err(|error| format!("无法读取同步文件 {rel}：{error}"))?;
             if !kind.is_file() || meta.len() > MAX_FILE_BYTES {
+                if known
+                    .get(&key(domain, &rel))
+                    .is_some_and(|entry| entry.hash.is_some())
+                {
+                    return Err(format!(
+                        "已同步文件暂时无法读取或超过 200 MB，已停止同步：{rel}"
+                    ));
+                }
                 *skipped += 1;
                 continue;
             }
@@ -556,13 +611,9 @@ fn scan(
                 .get(&key(domain, &rel))
                 .filter(|entry| entry.size == size && entry.modified == modified)
                 .and_then(|entry| entry.hash.clone());
-            let hash = match cached.map_or_else(|| hash_file(&entry.path()), Ok) {
-                Ok(hash) => hash,
-                Err(_) => {
-                    *skipped += 1;
-                    continue;
-                }
-            };
+            let hash = cached
+                .map_or_else(|| hash_file(&entry.path()), Ok)
+                .map_err(|error| format!("无法读取同步文件 {rel}：{error}"))?;
             found.insert(
                 rel,
                 Item::File {
@@ -923,13 +974,27 @@ pub(crate) async fn sync(
         .as_str()
         .ok_or("该项目没有开启云同步。")?
         .to_string();
-    let can_push = |domain: Domain| match role.as_str() {
-        "owner" | "editor" => true,
-        "reviewer" => domain == Domain::Record,
-        _ => false,
-    };
+    let can_push = |domain: Domain| super::permissions::can_write(Some(&role), domain.name());
     let mut state = load_state(device.data(), project)?;
+    if state.paused {
+        return Err("此设备上的项目同步已关闭。".into());
+    }
     let mut outcome = Outcome::default();
+
+    // The project's folders on this device.
+    let mut roots: BTreeMap<Domain, PathBuf> = BTreeMap::new();
+    let library_root = ensure_library(device, project, &info)?;
+    outcome.library_root = Some(library_root.display().to_string());
+    roots.insert(Domain::Library, library_root);
+    roots.insert(
+        Domain::Code,
+        crate::research::project_root(device.storage, device.files, project)?,
+    );
+    roots.insert(
+        Domain::Asset,
+        device.data().join("note-assets").join(project),
+    );
+    rebase_moved_roots(&mut state, &roots);
 
     // 1. Everything the server changed since this device last caught up.
     let mut remote_items: BTreeMap<String, Value> = BTreeMap::new();
@@ -955,25 +1020,7 @@ pub(crate) async fn sync(
     }
     outcome.pulled = remote_items.len();
 
-    // 2. The project's folders on this device, and what is in them now.
-    let mut roots: BTreeMap<Domain, PathBuf> = BTreeMap::new();
-    match ensure_library(device, project, &info) {
-        Ok(root) => {
-            outcome.library_root = Some(root.display().to_string());
-            roots.insert(Domain::Library, root);
-        }
-        Err(error) => outcome.errors.push(format!("文献文件夹：{error}")),
-    }
-    match crate::research::project_root(device.storage, device.files, project) {
-        Ok(root) => {
-            roots.insert(Domain::Code, root);
-        }
-        Err(error) => outcome.errors.push(format!("代码目录：{error}")),
-    }
-    roots.insert(
-        Domain::Asset,
-        device.data().join("note-assets").join(project),
-    );
+    // 2. What is in the project's folders now.
     let mut local: BTreeMap<String, Item> = local_records(&data, project);
     for (domain, root) in &roots {
         for (rel, item) in scan(root, *domain, &state.entries, &mut outcome.skipped)? {
@@ -991,7 +1038,7 @@ pub(crate) async fn sync(
         .chain(state.entries.keys())
         .cloned()
         .collect();
-    let stamp = chrono::Utc::now().format("%Y%m%d-%H%M").to_string();
+    let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S-%f").to_string();
     let mut downloads: Vec<(String, Value)> = Vec::new();
     let mut records: Vec<RecordAction> = Vec::new();
     let mut record_keys: Vec<(String, u64)> = Vec::new();
@@ -1046,7 +1093,11 @@ pub(crate) async fn sync(
                     outcome.deferred += 1;
                     continue;
                 }
-                let conflict = decision == Plan::Conflict;
+                // Project details and experiments this device never synced (a new device's
+                // defaults) follow the server; so does anything this member may not push.
+                let conflict = decision == Plan::Conflict
+                    && !(base.is_none() && matches!(domain, Domain::Project | Domain::Experiment))
+                    && (domain.is_file() || can_push(domain));
                 if domain.is_file() {
                     if conflict {
                         let root = &roots[&domain];
@@ -1063,6 +1114,7 @@ pub(crate) async fn sync(
                             path: path.into(),
                             copy: copy.clone(),
                             at: scientify_core::workspace::now(),
+                            local: None,
                         });
                         outcome.conflicts += 1;
                         // The copy is new here; push it this round.
@@ -1087,19 +1139,27 @@ pub(crate) async fn sync(
                 } else {
                     let revision = remote_revision(&entity);
                     if conflict {
+                        let mut copy_id = String::new();
+                        let local_snapshot = match here {
+                            Some(Item::Record { content, .. }) => Some(content.clone()),
+                            _ => None,
+                        };
                         if let (Some(Item::Record { content, .. }), true) =
                             (here, matches!(domain, Domain::Record | Domain::Run))
                         {
+                            let copy = conflict_record(domain, content, project);
+                            copy_id = copy["id"].as_str().unwrap().to_string();
                             records.push(RecordAction::Copy {
                                 domain,
-                                content: conflict_record(domain, content, project),
+                                content: copy,
                             });
                         }
                         state.conflicts.push(Conflict {
                             domain: domain.name().into(),
                             path: path.into(),
-                            copy: String::new(),
+                            copy: copy_id,
                             at: scientify_core::workspace::now(),
+                            local: local_snapshot,
                         });
                         outcome.conflicts += 1;
                     }
@@ -1314,13 +1374,17 @@ pub(crate) async fn sync(
         Some(seq) => seq.saturating_sub(1).max(state.since),
         None => cursor,
     };
-    if state.conflicts.len() > CONFLICTS_KEPT {
-        let extra = state.conflicts.len() - CONFLICTS_KEPT;
-        state.conflicts.drain(..extra);
-    }
+
     outcome.last_sync_at = scientify_core::workspace::now();
     state.last_sync_at = Some(outcome.last_sync_at.clone());
     state.last_error = outcome.errors.first().cloned();
+    state.skipped = outcome.skipped;
+    state.deferred = outcome.deferred;
+    for (domain, root) in &roots {
+        if root.exists() {
+            state.roots.insert(domain.name().to_string(), root_id(root));
+        }
+    }
     save_state(device.data(), project, &state)?;
     Ok(outcome)
 }
@@ -1534,6 +1598,202 @@ mod tests {
         fs::write(path, text).unwrap();
         // Make the next scan see a different modification time.
         std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+
+    #[tokio::test]
+    async fn conflict_choices_roundtrip_without_losing_the_selected_version() {
+        use resolution::{Choice, ConflictKey};
+        for choice in [Choice::Local, Choice::Remote, Choice::Both] {
+            let server = memory::Server::default();
+            let a = Machine::new("a", "owner");
+            let b = Machine::new("b", "editor");
+            a.edit(|data| data["records"] = json!([note("n", "Title", "base")]));
+            a.sync(&server).await;
+            write(a.library_root().join("note.md"), "base");
+            a.sync(&server).await;
+            b.sync(&server).await;
+            // A fresh device can have a seeded default experiment; settle that initial metadata separately.
+            for conflict in load_state(b.storage.directory(), PROJECT)
+                .unwrap()
+                .conflicts
+            {
+                let key = ConflictKey {
+                    domain: conflict.domain,
+                    path: conflict.path,
+                    at: conflict.at,
+                };
+                let preview = resolution::preview(&b.device(), PROJECT, &key).unwrap();
+                resolution::resolve(&b.device(), PROJECT, &key, &preview.token, Choice::Remote)
+                    .unwrap();
+            }
+            a.edit(|data| data["records"][0]["body"] = json!("remote"));
+            b.edit(|data| data["records"][0]["body"] = json!("local"));
+            write(a.library_root().join("note.md"), "remote text");
+            write(b.library_root().join("note.md"), "local text");
+            a.sync(&server).await;
+            b.sync(&server).await;
+            let state = load_state(b.storage.directory(), PROJECT).unwrap();
+            assert_eq!(state.conflicts.len(), 2);
+            for conflict in &state.conflicts {
+                assert!(!conflict.copy.is_empty());
+                let key = ConflictKey {
+                    domain: conflict.domain.clone(),
+                    path: conflict.path.clone(),
+                    at: conflict.at.clone(),
+                };
+                let preview = resolution::preview(&b.device(), PROJECT, &key).unwrap();
+                resolution::resolve(&b.device(), PROJECT, &key, &preview.token, choice).unwrap();
+            }
+            assert!(load_state(b.storage.directory(), PROJECT)
+                .unwrap()
+                .conflicts
+                .is_empty());
+            let expected = if matches!(choice, Choice::Local) {
+                "local"
+            } else {
+                "remote"
+            };
+            assert_eq!(
+                b.records().iter().find(|r| r["id"] == "n").unwrap()["body"],
+                expected
+            );
+            assert_eq!(
+                fs::read_to_string(b.library_root().join("note.md")).unwrap(),
+                format!("{expected} text")
+            );
+            assert_eq!(
+                b.records().len(),
+                if matches!(choice, Choice::Both) { 2 } else { 1 }
+            );
+            b.sync(&server).await;
+            a.sync(&server).await;
+            assert_eq!(
+                a.records().iter().find(|r| r["id"] == "n").unwrap()["body"],
+                expected
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn resolution_rejects_stale_preview_and_viewer_edits_and_sync_can_pause() {
+        use resolution::{Choice, ConflictKey};
+        let server = memory::Server::default();
+        let machine = Machine::new("a", "owner");
+        machine.sync(&server).await;
+        write(machine.library_root().join("note.md"), "remote");
+        write(machine.library_root().join("copy.md"), "local");
+        let conflict = Conflict {
+            domain: "library".into(),
+            path: "note.md".into(),
+            copy: "copy.md".into(),
+            at: "now".into(),
+            local: None,
+        };
+        let mut state = load_state(machine.storage.directory(), PROJECT).unwrap();
+        state.conflicts.push(conflict);
+        save_state(machine.storage.directory(), PROJECT, &state).unwrap();
+        let key = ConflictKey {
+            domain: "library".into(),
+            path: "note.md".into(),
+            at: "now".into(),
+        };
+        let preview = resolution::preview(&machine.device(), PROJECT, &key).unwrap();
+        write(machine.library_root().join("note.md"), "newer edit");
+        assert!(resolution::resolve(
+            &machine.device(),
+            PROJECT,
+            &key,
+            &preview.token,
+            Choice::Local
+        )
+        .unwrap_err()
+        .contains("已变化"));
+        assert_eq!(
+            fs::read_to_string(machine.library_root().join("note.md")).unwrap(),
+            "newer edit"
+        );
+        let preview = resolution::preview(&machine.device(), PROJECT, &key).unwrap();
+        machine.edit(|data| data["projects"][0]["collaborationRole"] = json!("viewer"));
+        // A viewer may not keep its own version, but may always take the server's.
+        assert!(resolution::resolve(
+            &machine.device(),
+            PROJECT,
+            &key,
+            &preview.token,
+            Choice::Local
+        )
+        .is_err());
+        resolution::resolve(
+            &machine.device(),
+            PROJECT,
+            &key,
+            &preview.token,
+            Choice::Remote,
+        )
+        .unwrap();
+        resolution::set_paused(machine.storage.directory(), PROJECT, true).unwrap();
+        assert!(sync(&machine.device(), &Remote::Memory(&server), PROJECT)
+            .await
+            .unwrap_err()
+            .contains("已关闭"));
+        resolution::set_paused(machine.storage.directory(), PROJECT, false).unwrap();
+        machine.sync(&server).await;
+    }
+
+    #[test]
+    fn an_unavailable_synced_directory_never_looks_like_an_empty_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let missing = temp.path().join("unmounted");
+        let mut known = BTreeMap::new();
+        known.insert(
+            key(Domain::Library, "paper.pdf"),
+            Entry {
+                hash: Some("old".into()),
+                ..Entry::default()
+            },
+        );
+        assert!(scan(&missing, Domain::Library, &known, &mut 0)
+            .unwrap_err()
+            .contains("避免误删"));
+        assert!(scan(&missing, Domain::Asset, &known, &mut 0)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn a_moved_folder_is_rebased_instead_of_deleted() {
+        let mut state = ProjectSync {
+            since: 42,
+            ..ProjectSync::default()
+        };
+        for item in ["library/a.pdf", "code/train.py", "record/n1"] {
+            state.entries.insert(item.into(), Entry::default());
+        }
+        let temp = tempfile::tempdir().unwrap();
+        for name in ["old", "new", "code"] {
+            fs::create_dir(temp.path().join(name)).unwrap();
+        }
+        state
+            .roots
+            .insert("library".into(), root_id(&temp.path().join("old")));
+        state
+            .roots
+            .insert("code".into(), root_id(&temp.path().join("code")));
+        let mut roots = BTreeMap::new();
+        roots.insert(Domain::Library, temp.path().join("old"));
+        roots.insert(Domain::Code, temp.path().join("code"));
+        // Missing folders are unavailable, not moved.
+        roots.insert(Domain::Asset, temp.path().join("not-yet"));
+        rebase_moved_roots(&mut state, &roots);
+        assert_eq!(state.since, 42);
+        assert_eq!(state.entries.len(), 3);
+
+        roots.insert(Domain::Library, temp.path().join("new"));
+        rebase_moved_roots(&mut state, &roots);
+        assert_eq!(state.since, 0);
+        assert!(!state.entries.contains_key("library/a.pdf"));
+        assert!(state.entries.contains_key("code/train.py"));
+        assert!(state.entries.contains_key("record/n1"));
     }
 
     #[test]

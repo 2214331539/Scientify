@@ -3239,5 +3239,89 @@
     "Paper file names in this project, all projects and notes"
   ],
   "项目、论文文件名和笔记": ["项目、论文文件名和笔记", "Projects, paper file names and notes"],
-  "正在搜索…": ["正在搜索…", "Searching…"]
+  "正在搜索…": ["正在搜索…", "Searching…"],
+  "{size} 字节": ["{size} 字节", "{size} bytes"],
+  "二进制文件不支持文本对比，可按版本选择保留。": [
+    "二进制文件不支持文本对比，可按版本选择保留。",
+    "Binary files cannot be compared as text. Choose which version to keep."
+  ],
+  "保留所选版本并移除另一份冲突副本？此更改将在下次同步时上传。": [
+    "保留所选版本并移除另一份冲突副本？此更改将在下次同步时上传。",
+    "Keep the selected version and remove the other conflict copy? This change will be uploaded on the next sync."
+  ],
+  "关闭此设备上此项目的同步？本机和云端资料都会保留，其他设备继续同步。": [
+    "关闭此设备上此项目的同步？本机和云端资料都会保留，其他设备继续同步。",
+    "Turn off sync for this project on this device? Local and cloud content is kept. Other devices continue syncing."
+  ],
+  "内容较长，仅预览前 256 KB；保留操作使用完整文件。": [
+    "内容较长，仅预览前 256 KB；保留操作使用完整文件。",
+    "Preview limited to the first 256 KB. Resolution uses the complete file."
+  ],
+  "冲突对比": ["冲突对比", "Compare conflict"],
+  "右侧是当前已接收的远端版本；如果内容再次变化，需要重新打开对比。": [
+    "右侧是当前已接收的远端版本；如果内容再次变化，需要重新打开对比。",
+    "The right side shows the received remote version. Reopen the comparison if either version changes."
+  ],
+  "同步开关只影响当前设备，不删除资料，也不改变团队成员权限。": [
+    "同步开关只影响当前设备，不删除资料，也不改变团队成员权限。",
+    "This switch affects only this device. It does not delete content or change member permissions."
+  ],
+  "同步未启用": ["同步未启用", "Sync disabled"],
+  "审阅者 · 仅可编辑项目笔记": ["审阅者 · 仅可编辑项目笔记", "Reviewer · Project notes only"],
+  "已跟踪内容": ["已跟踪内容", "Tracked items"],
+  "当前角色只允许阅读文献。": [
+    "当前角色只允许阅读文献。",
+    "Your role allows reading literature only."
+  ],
+  "当前角色只能查看此冲突。": [
+    "当前角色只能查看此冲突。",
+    "Your role only allows viewing this conflict."
+  ],
+  "当前项目角色不允许编辑此内容。": [
+    "当前项目角色不允许编辑此内容。",
+    "Your project role does not allow editing this content."
+  ],
+  "当前项目角色不允许编辑项目信息。": [
+    "当前项目角色不允许编辑项目信息。",
+    "Your project role does not allow editing project details."
+  ],
+  "当前项目角色仅允许问答，不能使用 Agent 修改文件或执行命令。": [
+    "当前项目角色仅允许问答，不能使用 Agent 修改文件或执行命令。",
+    "Your role allows chat only. Agent file changes and command execution are unavailable."
+  ],
+  "待处理冲突": ["待处理冲突", "Unresolved conflicts"],
+  "有冲突": ["有冲突", "Conflicts"],
+  "本机冲突副本": ["本机冲突副本", "Local conflict copy"],
+  "本机同步已关闭": ["本机同步已关闭", "Sync off on this device"],
+  "查看对比": ["查看对比", "Compare versions"],
+  "查看者 · 只读": ["查看者 · 只读", "Viewer · Read only"],
+  "此版本不存在": ["此版本不存在", "This version does not exist"],
+  "没有待处理冲突": ["没有待处理冲突", "No unresolved conflicts"],
+  "等待上传": ["等待上传", "Pending upload"],
+  "等待同步": ["等待同步", "Pending sync"],
+  "请先保存草稿并结束此项目的 AI 任务，再处理冲突。": [
+    "请先保存草稿并结束此项目的 AI 任务，再处理冲突。",
+    "Save your drafts and finish this project’s AI tasks before resolving conflicts."
+  ],
+  "返回同步面板": ["返回同步面板", "Back to sync"],
+  "远端版本": ["远端版本", "Remote version"],
+  "项目同步": ["项目同步", "Project sync"],
+  "项目同步：{status}": ["项目同步：{status}", "Project sync: {status}"],
+  "开启本机同步": ["开启本机同步", "Enable sync on this device"],
+  "关闭本机同步": ["关闭本机同步", "Turn off sync on this device"],
+  "保留本机": ["保留本机", "Keep local"],
+  "保留远端": ["保留远端", "Keep remote"],
+  "两份都保留": ["两份都保留", "Keep both"],
+  "正在检查同步…": ["正在检查同步…", "Checking sync…"],
+  "查看成员": ["查看成员", "View members"],
+  "待注册": ["待注册", "Registration pending"],
+  "部分内容未同步": ["部分内容未同步", "Some items were not synced"],
+  "上次同步跳过 {count} 项（例如超过 200 MB 的文件）。": [
+    "上次同步跳过 {count} 项（例如超过 200 MB 的文件）。",
+    "The last sync skipped {count} items (for example, files larger than 200 MB)."
+  ],
+  "{count} 项暂缓同步，请等待目录中的任务结束后重试。": [
+    "{count} 项暂缓同步，请等待目录中的任务结束后重试。",
+    "{count} items are deferred. Retry after tasks in this folder finish."
+  ]
 }

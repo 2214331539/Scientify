@@ -105,6 +105,9 @@ pub async fn library_command<R: tauri::Runtime>(
     project(&state, &project_id)?;
     let service = app.state::<LibraryState>().service.clone();
     let id = project_id.clone();
+    if !matches!(&operation, Operation::Scan | Operation::Open { .. }) {
+        crate::collaboration::permissions::require_write(&state.storage, &project_id, "library")?;
+    }
     let result = tauri::async_runtime::spawn_blocking(move || {
         let _lease = if matches!(&operation, Operation::Scan | Operation::Open { .. }) {
             None
@@ -182,6 +185,13 @@ pub async fn library_note<R: tauri::Runtime>(
     copy: Option<String>,
 ) -> Result<Note, String> {
     trusted(&view)?;
+    if content.is_some() {
+        crate::collaboration::permissions::require_write(
+            &app.state::<AppState>().storage,
+            &project_id,
+            "library",
+        )?;
+    }
     let service = app.state::<LibraryState>().service.clone();
     tauri::async_runtime::spawn_blocking(move || match content {
         Some(content) => {
@@ -260,6 +270,11 @@ pub async fn library_import_bytes(
     )
     .map_err(|_| "拖入文件信息无效。")?;
     project(&state, &destination.project_id)?;
+    crate::collaboration::permissions::require_write(
+        &state.storage,
+        &destination.project_id,
+        "library",
+    )?;
     let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
         return Err("拖入文件内容无效。".into());
     };

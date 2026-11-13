@@ -33,7 +33,7 @@ import { undoDepth, redoDepth } from '@codemirror/commands';
 import type { Project } from '../../domain/workspace';
 import type { WorkContext } from '../../domain/context';
 import type { FileContent, ResearchBackend, ResearchFile } from '../../platform/research';
-import { requestProjectSync } from '../../platform/collaboration';
+import { canEditProject, requestProjectSync } from '../../platform/collaboration';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
   beginFileOperation,
@@ -88,6 +88,7 @@ function useRuntime(backend: ResearchBackend) {
 export function FileWorkspace(props: FileWorkspaceProps) {
   const viewActive = useActiveView();
   const { project, backend, mode, view, onContext, onDirtyChange, onActivePathChange } = props;
+  const readOnly = !canEditProject(project, 'code');
   const runtime = useRuntime(backend);
   const shortcuts = useStore(props.store, (state) => state.data?.settings.shortcuts);
   const workspaceRoot = props.workspaceRoot;
@@ -302,6 +303,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           className="sf-file-add"
           title={t('新建文件')}
           aria-label={t('新建文件')}
+          disabled={!canEditProject(project, 'code')}
           onClick={() => {
             setCreateContent('');
             setShowCreate(true);
@@ -327,7 +329,11 @@ export function FileWorkspace(props: FileWorkspaceProps) {
             onChange={(event) => setCreateName(event.target.value)}
             disabled={creating}
           />
-          <Button variant="primary" type="submit" disabled={creating || !createName.trim()}>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={readOnly || creating || !createName.trim()}
+          >
             {creating ? t('创建中…') : t('创建')}
           </Button>
           <Button type="button" onClick={() => setShowCreate(false)} disabled={creating}>
@@ -365,6 +371,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           shortcuts={shortcuts}
           onContext={onContext}
           onCreate={(content) => {
+            if (readOnly) return;
             setCreateContent(content ?? '');
             setCreateName('');
             setShowCreate(true);
@@ -376,6 +383,7 @@ export function FileWorkspace(props: FileWorkspaceProps) {
           <h2>{mode === 'writing' ? t('Paper') : mode === 'files' ? t('Files') : t('Code')}</h2>
 
           <Button
+            disabled={readOnly}
             onClick={() => {
               setCreateContent('');
               setShowCreate(true);
@@ -407,6 +415,7 @@ function FileDocument({
   onCreate: (content?: string) => void;
 }) {
   const viewActive = useActiveView();
+  const readOnly = !canEditProject(project, 'code');
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [layout, setLayout] = useState<'source' | 'split' | 'preview'>('split');
   const [wide, setWide] = useState(false);
@@ -459,7 +468,7 @@ function FileDocument({
         <Button
           variant="ghost"
           onClick={() => void session.save()}
-          disabled={!snapshot.dirty || !loaded || snapshot.phase === 'saving'}
+          disabled={readOnly || !snapshot.dirty || !loaded || snapshot.phase === 'saving'}
           title={t('保存 (Ctrl+S)')}
         >
           <Save size={14} />
@@ -635,6 +644,7 @@ function FileDocument({
             {!isMarkdown || actualLayout !== 'preview' ? (
               <Suspense fallback={<div className="sf-file-loading">{t('正在加载编辑器…')}</div>}>
                 <CodeEditor
+                  readOnly={readOnly}
                   session={session}
                   shortcuts={shortcuts}
                   onSelection={setSelection}
@@ -785,7 +795,13 @@ export function FileResources({
               : t('资源管理器')}
         </span>
         {onCreate && (
-          <Button variant="ghost" iconOnly aria-label={t('新建文件')} onClick={onCreate}>
+          <Button
+            variant="ghost"
+            iconOnly
+            aria-label={t('新建文件')}
+            disabled={!canEditProject(project, 'code')}
+            onClick={onCreate}
+          >
             <FilePlus2 size={13} />
           </Button>
         )}

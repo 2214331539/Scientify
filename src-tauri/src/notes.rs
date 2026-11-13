@@ -123,6 +123,17 @@ pub async fn note_image<R: tauri::Runtime>(
     operation: ImageOperation,
 ) -> Result<String, String> {
     crate::library::trusted(&view)?;
+    if matches!(&operation, ImageOperation::Save { .. }) {
+        crate::collaboration::permissions::require_write(
+            &state.storage,
+            &project_id,
+            if paper_id.is_some() {
+                "library"
+            } else {
+                "asset"
+            },
+        )?;
+    }
     let storage = state.storage.clone();
     let library = app.state::<LibraryState>().service.clone();
     tauri::async_runtime::spawn_blocking(move || {

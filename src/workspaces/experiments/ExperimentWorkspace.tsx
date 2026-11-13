@@ -1,3 +1,4 @@
+import { canEditProject } from '../../platform/collaboration';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from 'zustand';
 import {
@@ -93,6 +94,7 @@ export function ExperimentWorkspace({
   resize: ReactNode;
   onProjectRun?: (projectId: string, runId: string) => void;
 }) {
+  const readOnly = !canEditProject(project, 'code');
   const viewActive = useActiveView();
   const data = useStore(store, (state) => state.data);
   const experimentId = useStore(codeContext, (state) => state.experiments[project.id]);
@@ -312,6 +314,7 @@ export function ExperimentWorkspace({
     if (!sidebarOpen || same) onSidebarToggle();
   }
   async function startTerminal(pythonFile = false) {
+    if (readOnly) return;
     if (!experiment || !code.ready || starting) return;
     if (pythonFile && !experiment.python) {
       showResource('python');
@@ -450,10 +453,14 @@ export function ExperimentWorkspace({
                 activePath={currentPath}
                 onOpen={openPath}
                 workspaceRoot={root}
-                onCreate={() => {
-                  setCreateRequest((value) => value + 1);
-                  onView('files');
-                }}
+                onCreate={
+                  readOnly
+                    ? undefined
+                    : () => {
+                        setCreateRequest((value) => value + 1);
+                        onView('files');
+                      }
+                }
               />
             </div>
             <div hidden={resourceView !== 'search'} className="sf-code-resource-content">
@@ -467,15 +474,19 @@ export function ExperimentWorkspace({
               />
             </div>
             <div hidden={resourceView !== 'python'} className="sf-code-resource-content">
-              <PythonSidebar
-                key={experiment.id}
-                projectId={project.id}
-                experiment={experiment}
-                store={store}
-                active={viewActive && view === 'files' && sidebarOpen && resourceView === 'python'}
-                tasks={development.tasks}
-                onTerminal={() => void startTerminal()}
-              />
+              {!readOnly && (
+                <PythonSidebar
+                  key={experiment.id}
+                  projectId={project.id}
+                  experiment={experiment}
+                  store={store}
+                  active={
+                    viewActive && view === 'files' && sidebarOpen && resourceView === 'python'
+                  }
+                  tasks={development.tasks}
+                  onTerminal={() => void startTerminal()}
+                />
+              )}
             </div>
           </>
         ) : undefined
@@ -572,6 +583,7 @@ export function ExperimentWorkspace({
           <Button
             variant="ghost"
             iconOnly
+            disabled={readOnly}
             aria-label={t('环境与依赖')}
             tooltip={t('Python 环境')}
             aria-current={view === 'files' && resourceView === 'python' ? 'page' : undefined}
@@ -613,7 +625,7 @@ export function ExperimentWorkspace({
               iconOnly
               tooltip={t('新建终端')}
               aria-label={t('新建终端')}
-              disabled={starting || !code.ready || !experimentApi.available()}
+              disabled={readOnly || starting || !code.ready || !experimentApi.available()}
               onClick={() => {
                 onView('files');
                 void startTerminal();
@@ -688,7 +700,7 @@ export function ExperimentWorkspace({
               iconOnly
               tooltip={t('保存全部')}
               aria-label={t('保存全部')}
-              disabled={!code.ready || savingAll}
+              disabled={readOnly || !code.ready || savingAll}
               onClick={() => void saveAll()}
             >
               <SaveAll size={15} />
@@ -708,7 +720,7 @@ export function ExperimentWorkspace({
                 iconOnly
                 tooltip={t('在终端运行当前 Python 文件')}
                 aria-label={t('在终端运行当前 Python 文件')}
-                disabled={starting || !code.ready || !experimentApi.available()}
+                disabled={readOnly || starting || !code.ready || !experimentApi.available()}
                 onClick={() => void startTerminal(true)}
               >
                 <Play size={15} />
@@ -716,7 +728,7 @@ export function ExperimentWorkspace({
             )}
             <Button
               variant="primary"
-              disabled={starting || !code.ready || !experimentApi.available()}
+              disabled={readOnly || starting || !code.ready || !experimentApi.available()}
               title={!experimentApi.available() ? t('本地执行仅在桌面应用可用') : undefined}
               onClick={() => void run()}
             >

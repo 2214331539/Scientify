@@ -1,0 +1,116 @@
+dialog.project-sync-dialog {
+  width: min(900px, calc(100vw - 40px));
+}
+@layer components {
+  .project-sync-trigger {
+    gap: 6px;
+    font-size: 12px;
+  }
+  .project-sync-content {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+    overflow: auto;
+    max-height: 75vh;
+  }
+  .project-sync-content > button {
+    justify-self: start;
+  }
+  .project-sync-heading,
+  .sync-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .project-sync-heading {
+    justify-content: space-between;
+  }
+  .sync-summary {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 24px;
+    margin: 0;
+  }
+  .sync-summary dd {
+    margin: 0;
+  }
+  .sync-conflicts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sync-conflicts li {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid var(--sf-border-subtle);
+  }
+  .sync-conflicts li > div {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+    overflow-wrap: anywhere;
+  }
+  .sync-comparison {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    border: 1px solid var(--sf-border-subtle);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .sync-comparison section + section {
+    border-left: 1px solid var(--sf-border-subtle);
+  }
+  .sync-comparison h3 {
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px;
+    margin: 0;
+    border-bottom: 1px solid var(--sf-border-subtle);
+  }
+  .sync-comparison small {
+    font-weight: normal;
+  }
+  .sync-comparison pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: auto;
+    max-height: 40vh;
+    margin: 0;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .sync-comparison p {
+    padding: 12px;
+  }
+  .sync-conflict-path {
+    overflow-wrap: anywhere;
+  }
+  .sync-spinning {
+    animation: sync-spin 1s linear infinite;
+  }
+  @keyframes sync-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sync-spinning {
+      animation: none;
+    }
+  }
+  @media (max-width: 640px) {
+    .sync-comparison {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .project-sync-trigger span {
+      display: none;
+    }
+  }
+}

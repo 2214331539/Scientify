@@ -3,6 +3,7 @@
 //! The server address and sign-in tokens live in the data folder. `sync.rs`
 //! keeps each synced project's files and records the same on every device.
 
+pub(crate) mod permissions;
 mod sync;
 
 use crate::{library::trusted, AppState};
@@ -159,7 +160,11 @@ async fn request_json(
     payload: Option<Value>,
 ) -> Result<Value, String> {
     let url = format!("{}/v1{}", endpoint.trim_end_matches('/'), path);
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|error| error.to_string())?;
     let mut request = client.request(method, url);
     if let Some(token) = token {
         request = request.bearer_auth(token);
@@ -597,6 +602,10 @@ pub async fn collaboration_sync_project<R: tauri::Runtime>(
         return Err("请先登录协作账号。".into());
     }
     let _running = sync::Running::start(&project_id)?;
+    if sync::load_state(state.storage.directory(), &project_id)?.paused {
+        return Err("此设备上的项目同步已关闭。".into());
+    }
+    let _ = app.emit("collaboration-updated", json!({"projectId": project_id}));
     let library = app.state::<crate::library::LibraryState>();
     let documents = app
         .path()
@@ -614,7 +623,39 @@ pub async fn collaboration_sync_project<R: tauri::Runtime>(
         state: &state,
         endpoint: config.endpoint.clone(),
     };
-    match sync::sync(&device, &remote, &project_id).await {
+    let result = async {
+        let projects = auth_request(
+            &state,
+            &config.endpoint,
+            "/projects",
+            reqwest::Method::GET,
+            None,
+        )
+        .await?;
+        let member = projects["projects"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|p| p["id"] == project_id);
+        let role = member.and_then(|p| p["role"].as_str()).unwrap_or("viewer");
+        if permissions::remember_role(&state.storage, &project_id, role)? {
+            let _ = app.emit(
+                "collaboration-synced",
+                json!({"projectId": project_id, "changed":["project"]}),
+            );
+        }
+        if member.is_none() {
+            return Err("你已不再是此云端项目的成员。本机副本保留为只读。".into());
+        }
+        sync::sync(&device, &remote, &project_id).await
+    }
+    .await;
+    if let Err(error) = &result {
+        sync::record_error(state.storage.directory(), &project_id, error);
+    }
+    drop(_running);
+    let _ = app.emit("collaboration-updated", json!({"projectId": project_id}));
+    match result {
         Ok(outcome) => {
             let _ = app.emit(
                 "collaboration-synced",
@@ -625,16 +666,29 @@ pub async fn collaboration_sync_project<R: tauri::Runtime>(
             }
             Ok(outcome)
         }
-        Err(error) => {
-            sync::record_error(state.storage.directory(), &project_id, &error);
-            Err(error)
-        }
+        Err(error) => Err(error),
     }
 }
 
-/// Last sync time, the latest error and recent conflict copies for one project.
+/// Local inspection shares the device mapping with the sync engine.
+fn with_device<R: tauri::Runtime, T>(
+    app: &AppHandle<R>,
+    action: impl FnOnce(&sync::Device<'_>) -> Result<T, String>,
+) -> Result<T, String> {
+    let state = app.state::<AppState>();
+    let library = app.state::<crate::library::LibraryState>();
+    let device = sync::Device {
+        storage: &state.storage,
+        files: &state.files,
+        library: &library.service,
+        device_id: String::new(),
+        documents: PathBuf::new(),
+    };
+    action(&device)
+}
+
 #[tauri::command]
-pub fn collaboration_sync_state<R: tauri::Runtime>(
+pub async fn collaboration_sync_state<R: tauri::Runtime>(
     view: Webview<R>,
     app: AppHandle<R>,
     project_id: String,
@@ -643,19 +697,104 @@ pub fn collaboration_sync_state<R: tauri::Runtime>(
     if !valid_token(&project_id, 80) {
         return Err("协作项目标识无效。".into());
     }
-    let state = app.state::<AppState>();
-    let current = sync::load_state(state.storage.directory(), &project_id)?;
-    let library_root = app
-        .state::<crate::library::LibraryState>()
-        .service
-        .root(&project_id)?;
-    Ok(json!({
-        "lastSyncAt": current.last_sync_at,
-        "lastError": current.last_error,
-        "conflicts": current.conflicts,
-        "tracked": current.entries.values().filter(|entry| entry.hash.is_some()).count(),
-        "libraryRoot": library_root.map(|root| root.display().to_string()),
-    }))
+    tauri::async_runtime::spawn_blocking(move || {
+        with_device(&app, |device| {
+            let current = sync::load_state(device.storage.directory(), &project_id)?;
+            let pending = sync::resolution::pending(device, &project_id, &current);
+            Ok(json!({
+                "lastSyncAt": current.last_sync_at,
+                "lastError": current.last_error.as_ref().or_else(|| pending.as_ref().err()),
+                "conflicts": current.conflicts,
+                "paused": current.paused,
+                "syncing": sync::Running::contains(&project_id),
+                "pending": pending.as_ref().ok(),
+                "skipped": current.skipped,
+                "deferred": current.deferred,
+                "tracked": current.entries.values().filter(|entry| entry.hash.is_some()).count(),
+                "libraryRoot": device.library.root(&project_id).ok().flatten().map(|p| p.display().to_string()),
+            }))
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn collaboration_set_project_sync<R: tauri::Runtime>(
+    view: Webview<R>,
+    app: AppHandle<R>,
+    project_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    trusted(&view)?;
+    if !valid_token(&project_id, 80) {
+        return Err("协作项目标识无效。".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let _running = sync::Running::start(&project_id)?;
+        sync::resolution::set_paused(
+            app.state::<AppState>().storage.directory(),
+            &project_id,
+            !enabled,
+        )?;
+        drop(_running);
+        let _ = app.emit("collaboration-updated", json!({"projectId": project_id}));
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn collaboration_conflict_preview<R: tauri::Runtime>(
+    view: Webview<R>,
+    app: AppHandle<R>,
+    project_id: String,
+    conflict: sync::resolution::ConflictKey,
+) -> Result<sync::resolution::Preview, String> {
+    trusted(&view)?;
+    if !valid_token(&project_id, 80) {
+        return Err("协作项目标识无效。".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let _running = sync::Running::start(&project_id)?;
+        with_device(&app, |device| {
+            sync::resolution::preview(device, &project_id, &conflict)
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn collaboration_resolve_conflict<R: tauri::Runtime>(
+    view: Webview<R>,
+    app: AppHandle<R>,
+    project_id: String,
+    conflict: sync::resolution::ConflictKey,
+    token: String,
+    choice: sync::resolution::Choice,
+) -> Result<(), String> {
+    trusted(&view)?;
+    if !valid_token(&project_id, 80) {
+        return Err("协作项目标识无效。".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let _running = sync::Running::start(&project_id)?;
+        with_device(&app, |device| {
+            sync::resolution::resolve(device, &project_id, &conflict, &token, choice)
+        })?;
+        drop(_running);
+        let _ = app.emit("collaboration-updated", json!({"projectId": project_id}));
+        let _ = app.emit("library-changed", json!({"projectId": project_id}));
+        let _ = app.emit(
+            "collaboration-synced",
+            json!({"projectId": project_id, "changed":[conflict.domain]}),
+        );
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg(test)]

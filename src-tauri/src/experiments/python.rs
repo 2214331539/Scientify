@@ -633,6 +633,7 @@ pub async fn python_command<R: tauri::Runtime>(
             return Ok(json!(String::from_utf8_lossy(&bytes)));
         }
         let (root, experiment) = trust::context(&storage, &files, &project_id, &experiment_id)?;
+        crate::collaboration::permissions::require_write(&storage, &project_id, "code")?;
         trust::require(&storage, &root)?;
         match request {
             Action::Discover => {

@@ -14,6 +14,7 @@ import { t, translateError } from '../../i18n';
 
 export function PaperNotes({
   library,
+  readOnly = false,
   project,
   id,
   paper,
@@ -21,6 +22,7 @@ export function PaperNotes({
   onPage,
 }: {
   library: LibraryBackend;
+  readOnly?: boolean;
   project: string;
   id: string;
   paper?: LibraryPaper;
@@ -47,7 +49,7 @@ export function PaperNotes({
           variant="ghost"
           iconOnly
           aria-label={t('保存')}
-          disabled={!state.dirty || state.phase === 'saving'}
+          disabled={readOnly || !state.dirty || state.phase === 'saving'}
           onClick={() => void session.save()}
         >
           <Save />
@@ -101,7 +103,7 @@ export function PaperNotes({
             }}
             ariaLabel={t('论文笔记正文')}
             value={state.content}
-            disabled={state.phase === 'error'}
+            disabled={readOnly || state.phase === 'error'}
             onChange={(value) => session.edit(value)}
             onSave={() => void session.save()}
             onPage={onPage}

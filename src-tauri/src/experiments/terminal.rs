@@ -376,6 +376,9 @@ pub async fn terminal_command<R: tauri::Runtime>(
     request: Action,
 ) -> Result<Value, String> {
     crate::library::trusted(&view)?;
+    if matches!(&request, Action::Input { .. }) {
+        crate::collaboration::permissions::require_write(&state.storage, &project_id, "code")?;
+    }
     let storage = state.storage.clone();
     let files = state.files.clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -386,6 +389,7 @@ pub async fn terminal_command<R: tauri::Runtime>(
             args,
         } = request
         {
+            crate::collaboration::permissions::require_write(&storage, &project_id, "code")?;
             let (root, experiment) = trust::context(&storage, &files, &project_id, &experiment_id)?;
             trust::require(&storage, &root)?;
             let interpreter = python::bound(&storage, &root, &experiment)?;

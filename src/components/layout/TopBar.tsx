@@ -19,6 +19,7 @@ export function TopBar({
   onNewProject,
   onProjectSettings,
   onSearch,
+  syncControl,
 }: {
   project?: Project;
   projects: Project[];
@@ -28,6 +29,7 @@ export function TopBar({
   onNewProject: () => void;
   onProjectSettings: () => void;
   onSearch?: () => void;
+  syncControl?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -153,6 +155,7 @@ export function TopBar({
       ) : null}
       <span className="spacer topbar-drag-region" data-tauri-drag-region />
       <div className="topbar-tools">
+        {syncControl}
         <AppearanceControls />
       </div>
       <WindowControls />

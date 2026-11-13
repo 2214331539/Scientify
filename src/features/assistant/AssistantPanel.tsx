@@ -1,3 +1,4 @@
+import { canEditProject } from '../../platform/collaboration';
 import { t, translateError } from '../../i18n';
 import { isTauri } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -273,6 +274,10 @@ export function AssistantPanel({
   const routesToAgent =
     (agent !== nativeAgent || isTauri()) &&
     !!agentProject &&
+    canEditProject(
+      data?.projects.find((project) => project.id === agentProject),
+      'code',
+    ) &&
     !!domain &&
     engineSupports(settings.provider);
   const agentConnection: AgentConnection = {
@@ -1360,6 +1365,14 @@ export function AssistantPanel({
           </Button>
         </div>
       ) : null}
+      {!canEditProject(
+        data?.projects.find((p) => p.id === scope),
+        'code',
+      ) && (
+        <div className="sf-agent-sandbox-notice" role="status">
+          {t('当前项目角色仅允许问答，不能使用 Agent 修改文件或执行命令。')}
+        </div>
+      )}
       {activeTask?.saving ? (
         <div className="sf-ai-task-status" role="status">
           {t('正在保存结果…')}

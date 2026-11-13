@@ -72,7 +72,7 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import type { PdfBackend, ResearchBackend } from '../../platform/research';
 import type { WorkContext } from '../../domain/context';
 import { errorMessage } from '../../domain/errors';
-import { requestProjectSync } from '../../platform/collaboration';
+import { canEditProject, requestProjectSync } from '../../platform/collaboration';
 import './local-literature.css';
 
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
@@ -111,6 +111,7 @@ export function LocalLiterature({
   requestedPaper?: string | null;
   requestedBrowser?: string;
 }) {
+  const readOnly = !canEditProject(project, 'library');
   const viewActive = useActiveView();
   const workspaceBusy = useStore(store, (s) => s.busy);
   const webSources = useStore(store, (s) => s.data?.webSources);
@@ -185,6 +186,7 @@ export function LocalLiterature({
   const selectedEntry = scan.entries.find((e) => e.path === selected);
   const directory = selectedEntry?.directory ? selected : parent(selected);
   const protect = () => {
+    if (readOnly) throw new Error(t('当前角色只允许阅读文献。'));
     if (workspaceBusy) throw new Error(t('请等待当前保存完成。'));
     if (notesDirty(library) || notesPending(library))
       throw new Error(t('请先保存论文笔记，再操作文件。'));
@@ -454,7 +456,7 @@ export function LocalLiterature({
       id: entry.path,
       label: entry.name,
       tooltip: entry.path,
-      draggable: true,
+      draggable: !readOnly,
       ...(entry.directory ? { children: [] } : {}),
     });
   const tree: TreeItem[] = [];
@@ -747,7 +749,7 @@ export function LocalLiterature({
                     variant="ghost"
                     iconOnly
                     aria-label={t('新建文件夹')}
-                    disabled={!scan.root || busy}
+                    disabled={readOnly || !scan.root || busy}
                     onClick={() => command('mkdir', directory)}
                   >
                     <FolderPlus />
@@ -799,6 +801,7 @@ export function LocalLiterature({
               }}
               onDrop={(e) => {
                 e.preventDefault();
+                if (readOnly) return;
                 setDropTarget(null);
                 const dest = pathFrom(e.target);
                 const entry = scan.entries.find((v) => v.path === dest);
@@ -1102,6 +1105,7 @@ export function LocalLiterature({
                 >
                   {session.activeNote && (
                     <PaperNotes
+                      readOnly={readOnly}
                       key={session.activeNote}
                       library={library}
                       project={project.id}
@@ -1149,16 +1153,17 @@ export function LocalLiterature({
         label={t('文献操作')}
         onClose={() => setMenu(null)}
       >
-        <Button role="menuitem" onClick={() => command('mkdir')}>
+        <Button disabled={readOnly} role="menuitem" onClick={() => command('mkdir')}>
           {t('新建文件夹')}
         </Button>
         {target && (
           <>
-            <Button role="menuitem" onClick={() => command('rename')}>
+            <Button disabled={readOnly} role="menuitem" onClick={() => command('rename')}>
               {t('重命名')}
             </Button>
             <Button
               role="menuitem"
+              disabled={readOnly}
               onClick={async () => {
                 setClipboard({ paths: selectedBundle(target), copy: false });
                 setMenu(null);
@@ -1175,14 +1180,14 @@ export function LocalLiterature({
             >
               {t('复制')}
             </Button>
-            <Button role="menuitem" onClick={() => command('move')}>
+            <Button disabled={readOnly} role="menuitem" onClick={() => command('move')}>
               {t('移动到')}
             </Button>
           </>
         )}
         <Button
           role="menuitem"
-          disabled={!clipboard || !scan.root}
+          disabled={readOnly || !clipboard || !scan.root}
           onClick={async () => {
             if (clipboard) void transferMany(clipboard.paths, targetFolder, clipboard.copy);
             setMenu(null);
@@ -1226,6 +1231,7 @@ export function LocalLiterature({
         {target && (
           <Button
             role="menuitem"
+            disabled={readOnly}
             onClick={async () => {
               setMenu(null);
               if (

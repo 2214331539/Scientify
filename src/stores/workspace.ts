@@ -3,6 +3,7 @@ import { createStore } from 'zustand/vanilla';
 import { emptyWorkspace, normalizeExperiments, type Workspace } from '../domain/workspace';
 import { desktop, type WorkspaceBackend, type StorageLocation } from '../platform/desktop';
 import { errorMessage } from '../domain/errors';
+import { canEditProject } from '../platform/collaboration';
 
 interface WorkspaceState {
   data: Workspace | null;
@@ -96,6 +97,25 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         const draft = structuredClone(data);
         edit(draft);
         normalizeExperiments(draft);
+        for (const project of data.projects) {
+          const next = draft.projects.find((p) => p.id === project.id);
+          if (!next || canEditProject(project)) continue;
+          if (
+            ['name', 'question', 'color', 'description'].some((key) => project[key] !== next[key])
+          )
+            throw new Error(t('当前项目角色不允许编辑项目信息。'));
+          for (const [collection, domain] of [
+            ['records', 'record'],
+            ['experiments', 'experiment'],
+            ['runs', 'run'],
+          ] as const) {
+            if (canEditProject(project, domain)) continue;
+            const entries = (workspace: Workspace) =>
+              (workspace[collection] ?? []).filter((item) => item.project === project.id);
+            if (JSON.stringify(entries(data)) !== JSON.stringify(entries(draft)))
+              throw new Error(t('当前项目角色不允许编辑此内容。'));
+          }
+        }
         for (const projectId of Object.values(get().agentTasks)) {
           const before = data.projects.find((project) => project.id === projectId);
           const after = draft.projects.find((project) => project.id === projectId);

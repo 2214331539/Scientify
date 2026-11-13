@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-resolve-conflict"
+description = "Enables the collaboration_resolve_conflict command without any pre-configured scope."
+commands.allow = ["collaboration_resolve_conflict"]
+
+[[permission]]
+identifier = "deny-collaboration-resolve-conflict"
+description = "Denies the collaboration_resolve_conflict command without any pre-configured scope."
+commands.deny = ["collaboration_resolve_conflict"]

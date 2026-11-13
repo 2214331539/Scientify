@@ -144,6 +144,7 @@ pub async fn experiment_prepare<R: tauri::Runtime>(
     directory: Option<String>,
 ) -> Result<Prepared, String> {
     crate::library::trusted(&view)?;
+    crate::collaboration::permissions::require_write(&state.storage, &project_id, "code")?;
     let (storage, files) = (state.storage.clone(), state.files.clone());
     tauri::async_runtime::spawn_blocking(move || {
         let data = storage.load()?.ok_or("请先保存项目。")?;

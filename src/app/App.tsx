@@ -1,3 +1,4 @@
+import { ProjectSyncControl } from '../features/projects/ProjectSyncControl';
 import { t, translateError } from '../i18n';
 import { Button } from '../components/primitives';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -70,10 +71,9 @@ import { nativeResearch, type ResearchBackend } from '../platform/research';
 import { ViewTransition } from '../components/workspace/ViewTransition';
 import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/shortcuts';
 import {
-  collaboration,
+  canEditProject,
   collaborationStateEvent,
   isSyncedProject,
-  projectSyncRequestEvent,
   signInRequestEvent,
   type CollaborationProject,
 } from '../platform/collaboration';
@@ -344,52 +344,6 @@ export function App({
     window.addEventListener(signInRequestEvent, open);
     return () => window.removeEventListener(signInRequestEvent, open);
   }, []);
-  // Keep the open cloud project in sync: when it opens, every 30 s, and a few
-  // seconds after local saves. Records that arrive load without touching drafts.
-  const syncedProjectId =
-    windowMode === 'workspace' &&
-    isSyncedProject(data?.projects.find((item) => item.id === ui.projectId))
-      ? ui.projectId
-      : null;
-  useEffect(() => {
-    if (!syncedProjectId) return;
-    let disposed = false;
-    let soon: number | undefined;
-    let reloadPending = false;
-    const run = async () => {
-      try {
-        const state = await collaboration.status();
-        if (!state.enabled || !state.authenticated || disposed) return;
-        const outcome = await collaboration.syncProject(syncedProjectId);
-        if (disposed) return;
-        if (
-          outcome.changed.some((kind) => ['project', 'record', 'experiment', 'run'].includes(kind))
-        )
-          reloadPending = true;
-      } catch {
-        // Retried on the next tick; the settings page shows the last error.
-      }
-      if (disposed) return;
-      // A busy store skips the reload; try again until it lands.
-      if (reloadPending) reloadPending = !(await store.getState().refreshSaved());
-      window.dispatchEvent(new Event(collaborationStateEvent));
-    };
-    const request = (event: Event) => {
-      if ((event as CustomEvent<{ projectId?: string }>).detail?.projectId !== syncedProjectId)
-        return;
-      window.clearTimeout(soon);
-      soon = window.setTimeout(() => void run(), 3_000);
-    };
-    void run();
-    const timer = window.setInterval(() => void run(), 30_000);
-    window.addEventListener(projectSyncRequestEvent, request);
-    return () => {
-      disposed = true;
-      window.clearInterval(timer);
-      window.clearTimeout(soon);
-      window.removeEventListener(projectSyncRequestEvent, request);
-    };
-  }, [syncedProjectId, store]);
   useEffect(() => {
     if (!epoch || store.getState().dirty) return;
     const runtime = getFileRuntime(backend);
@@ -629,7 +583,8 @@ export function App({
       const local = workspaceData.projects.find((project) => project.id === remote.id);
       if (local) {
         Object.assign(local, {
-          name: remote.name,
+          // Read-only members get the new name from sync; writing it here would be refused.
+          ...(canEditProject(local) ? { name: remote.name } : {}),
           updatedAt: remote.updatedAt ?? timestamp,
           collaborationRole: remote.role,
         });
@@ -1167,6 +1122,16 @@ export function App({
             onNewProject={() => openDialog({ kind: 'project' })}
             onProjectSettings={() => openDialog({ kind: 'project', project })}
             onSearch={() => openDialog({ kind: 'search' })}
+            syncControl={
+              isSyncedProject(project) ? (
+                <ProjectSyncControl
+                  key={project.id}
+                  project={project}
+                  store={store}
+                  automatic={windowMode === 'workspace'}
+                />
+              ) : undefined
+            }
           />
         ) : null
       }
@@ -1197,6 +1162,10 @@ export function App({
                     : t('已保存')}
             </span>
             <span>{preview ? t('浏览器预览 · 独立数据') : t('本地工作区')}</span>
+            {project.collaborationRole === 'viewer' && <span>{t('查看者 · 只读')}</span>}
+            {project.collaborationRole === 'reviewer' && (
+              <span>{t('审阅者 · 仅可编辑项目笔记')}</span>
+            )}
             <span className="spacer" />
             <StatusBarTools
               ready={!!ready}

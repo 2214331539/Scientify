@@ -41,6 +41,9 @@ pub fn operate(
     tool: &str,
     args: &Value,
 ) -> Result<Value, String> {
+    if matches!(tool, "scientify_create_note" | "scientify_write_note") {
+        crate::collaboration::permissions::require_write(storage, project, "record")?;
+    }
     let mut data = storage.load()?.ok_or("工作区尚未载入。")?;
     let revision = data["revision"].as_u64().ok_or("工作区版本无效。")?;
     let records = data["records"].as_array_mut().ok_or("笔记记录无效。")?;

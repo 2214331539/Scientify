@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-conflict-preview"
+description = "Enables the collaboration_conflict_preview command without any pre-configured scope."
+commands.allow = ["collaboration_conflict_preview"]
+
+[[permission]]
+identifier = "deny-collaboration-conflict-preview"
+description = "Denies the collaboration_conflict_preview command without any pre-configured scope."
+commands.deny = ["collaboration_conflict_preview"]

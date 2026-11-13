@@ -22,6 +22,7 @@ export type ModelSettings = {
 export type ModelProfile = ModelSettings & { id: string; name: string };
 export type Team = Entity & { name: string; color: string; description?: string };
 export type Project = Entity & {
+  collaborationRole?: string;
   name: string;
   question: string;
   createdAt: string;

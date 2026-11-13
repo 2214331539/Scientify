@@ -1,3 +1,4 @@
+import { canEditProject } from '../../platform/collaboration';
 import { t, translateError } from '../../i18n';
 import { Button, Input, Textarea } from '../../components/primitives';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -79,7 +80,7 @@ export function ProjectForm({
             <label>
               {t('项目名称')}
               <Input
-                disabled={busy}
+                disabled={busy || !canEditProject(project)}
                 autoFocus
                 required
                 maxLength={160}
@@ -91,7 +92,7 @@ export function ProjectForm({
             <label>
               {t('研究问题')}
               <Textarea
-                disabled={busy}
+                disabled={busy || !canEditProject(project)}
                 rows={3}
                 value={draft.question}
                 onChange={(e) => field('question', e.target.value)}
@@ -101,13 +102,13 @@ export function ProjectForm({
             <label>
               {t('研究方向')}
               <Input
-                disabled={busy}
+                disabled={busy || !canEditProject(project)}
                 value={draft.field}
                 onChange={(e) => field('field', e.target.value)}
                 placeholder={t('例如：多模态、幻觉')}
               />
             </label>
-            <fieldset className="wizard-colors" disabled={busy}>
+            <fieldset className="wizard-colors" disabled={busy || !canEditProject(project)}>
               <legend>{t('封面颜色')}</legend>
               {projectCoverColors.map((color) => (
                 <label key={color} className="wizard-swatch" style={{ background: color }}>
@@ -133,7 +134,7 @@ export function ProjectForm({
               {t('项目目录')}
               <div className="input-action">
                 <Input
-                  disabled={busy}
+                  disabled={busy || !canEditProject(project)}
                   readOnly
                   value={draft.path}
                   placeholder={t('尚未关联本地目录')}
@@ -172,7 +173,11 @@ export function ProjectForm({
         ) : null}
         <footer className="dialog-footer">
           <span className="muted">{t('保存在本机工作区')}</span>
-          <Button variant="primary" disabled={busy || !draft.name.trim()} type="submit">
+          <Button
+            variant="primary"
+            disabled={busy || !canEditProject(project) || !draft.name.trim()}
+            type="submit"
+          >
             {busy ? t('正在保存…') : t('保存项目')}
           </Button>
         </footer>
