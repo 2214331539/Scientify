@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
-import { Moon, Sun } from 'lucide-react';
-import { Button, Dropdown } from '../../components/primitives';
+import { Dropdown } from '../../components/primitives';
 import { t } from '../../i18n';
 import {
   setPreferences,
@@ -8,7 +6,6 @@ import {
   type Language,
   type Palette,
 } from '../../i18n/preferences';
-import './appearance.css';
 
 export function PreferenceFields({ field }: { field: 'language' | 'theme' }) {
   const preferences = usePreferences();
@@ -72,36 +69,5 @@ function PalettePicker() {
         </button>
       ))}
     </div>
-  );
-}
-
-export function AppearanceControls() {
-  const prefs = usePreferences();
-  const [systemDark, setSystemDark] = useState(
-    () => matchMedia('(prefers-color-scheme: dark)').matches,
-  );
-  useEffect(() => {
-    const media = matchMedia('(prefers-color-scheme: dark)');
-    const sync = () => setSystemDark(media.matches);
-    sync();
-    media.addEventListener('change', sync);
-    return () => media.removeEventListener('change', sync);
-  }, []);
-  const dark = prefs.theme === 'dark' || (prefs.theme === 'system' && systemDark);
-  const themeLabel = t(dark ? '切换为浅色' : '切换为深色');
-  return (
-    <Button
-      variant="ghost"
-      iconOnly
-      className="theme-toggle"
-      aria-label={themeLabel}
-      title={themeLabel}
-      onClick={() => setPreferences({ theme: dark ? 'light' : 'dark' })}
-    >
-      <span className="theme-glyph" data-dark={dark} aria-hidden="true">
-        <Sun className="theme-sun" />
-        <Moon className="theme-moon" />
-      </span>
-    </Button>
   );
 }

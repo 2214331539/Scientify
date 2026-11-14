@@ -233,7 +233,7 @@ mod tests {
             let app = tauri::test::mock_builder()
                 .build(crate::app_context())
                 .unwrap();
-            let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+            let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
                 .build()
                 .unwrap();
             let result = tauri::async_runtime::block_on(research_verify_model(

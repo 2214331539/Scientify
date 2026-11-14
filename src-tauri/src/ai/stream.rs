@@ -278,7 +278,7 @@ mod tests {
             .0
             .lock()
             .unwrap()
-            .insert("assistant".into(), ("workspace".into(), workspace));
+            .insert("assistant".into(), ("main".into(), workspace));
         state.close_owner("translator");
         assert!(*popup_cancelled.borrow());
         assert!(!*workspace_cancelled.borrow());
@@ -313,10 +313,10 @@ mod tests {
             .manage(ChatState::default())
             .build(crate::app_context())
             .unwrap();
-        let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+        let owner = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
             .unwrap();
-        let main = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        let other = tauri::WebviewWindowBuilder::new(&app, "second", Default::default())
             .build()
             .unwrap();
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -340,7 +340,7 @@ mod tests {
             let _ = ready.send(());
             Ok(())
         });
-        let view = workspace.as_ref().clone();
+        let view = owner.as_ref().clone();
         let handle = app.handle().clone();
         let started = Instant::now();
         let run = tauri::async_runtime::spawn(async move {
@@ -348,17 +348,12 @@ mod tests {
         });
         received.recv_timeout(Duration::from_secs(3)).unwrap();
         assert!(research_chat_cancel(
-            main.as_ref().clone(),
+            other.as_ref().clone(),
             app.state::<ChatState>(),
             request_id.clone()
         )
         .is_err());
-        research_chat_cancel(
-            workspace.as_ref().clone(),
-            app.state::<ChatState>(),
-            request_id,
-        )
-        .unwrap();
+        research_chat_cancel(owner.as_ref().clone(), app.state::<ChatState>(), request_id).unwrap();
         let result = tauri::async_runtime::block_on(run).unwrap().unwrap();
         assert!(result.interrupted);
         assert!(started.elapsed() < Duration::from_secs(3));

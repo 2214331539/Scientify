@@ -5,7 +5,7 @@ import { App } from './App';
 import { emptyWorkspace } from '../domain/workspace';
 import { createWorkspaceStore } from '../stores/workspace';
 import { browserResearch } from '../platform/browser';
-import { emitTo, listen } from '@tauri-apps/api/event';
+import { listen } from '@tauri-apps/api/event';
 
 const native = vi.hoisted(() => ({
   request: undefined as undefined | ((event: { preventDefault(): void }) => Promise<void>),
@@ -19,7 +19,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 }));
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
-    label: 'workspace',
+    label: 'main',
     setTitle: async () => {},
     destroy: native.destroy,
     onCloseRequested: async (callback: typeof native.request) => {
@@ -53,7 +53,7 @@ it('merges repeated native close requests, preserves dirty work on cancel and de
     chooseDirectory: async () => null,
   });
   const user = userEvent.setup();
-  render(<App store={store} backend={browserResearch} windowMode="projects" />);
+  render(<App store={store} backend={browserResearch} windowMode="main" />);
   await screen.findByText('还没有项目');
   act(() => store.getState().setDirtySource('test-note', true));
   const event = { preventDefault: vi.fn() };
@@ -89,7 +89,7 @@ it('merges repeated native close requests, preserves dirty work on cancel and de
   expect(event.preventDefault).toHaveBeenCalledTimes(4);
 });
 
-it('tray exit keeps unsaved work on cancel and closes the project window only after approval', async () => {
+it('tray exit keeps unsaved work on cancel and closes the window only after approval', async () => {
   const data = emptyWorkspace();
   const store = createWorkspaceStore({
     load: async () => ({ workspace: data, directory: 'test-only', legacyAvailable: false }),
@@ -101,13 +101,13 @@ it('tray exit keeps unsaved work on cancel and closes the project window only af
     chooseDirectory: async () => null,
   });
   const user = userEvent.setup();
-  render(<App store={store} backend={browserResearch} windowMode="workspace" />);
+  render(<App store={store} backend={browserResearch} windowMode="main" />);
   await waitFor(() => expect(store.getState().phase).toBe('ready'));
   const call = vi
     .mocked(listen)
     .mock.calls.find(([event]) => event === 'scientify-exit-requested')!;
-  // Exits sent to the other window must not reach this one.
-  expect(call[2]).toEqual({ target: 'workspace' });
+  // Only exits addressed to this window are handled.
+  expect(call[2]).toEqual({ target: 'main' });
   const exit = call[1];
   act(() => store.getState().setDirtySource('test-note', true));
   await act(async () => {
@@ -118,7 +118,6 @@ it('tray exit keeps unsaved work on cancel and closes the project window only af
       name: '取消',
     }),
   );
-  expect(emitTo).not.toHaveBeenCalled();
   expect(native.destroy).not.toHaveBeenCalled();
   expect(store.getState().dirty).toBe(true);
   await act(async () => {
@@ -130,5 +129,4 @@ it('tray exit keeps unsaved work on cancel and closes the project window only af
     }),
   );
   await waitFor(() => expect(native.destroy).toHaveBeenCalledOnce());
-  expect(emitTo).toHaveBeenCalledExactlyOnceWith('main', 'scientify-exit-requested');
 });

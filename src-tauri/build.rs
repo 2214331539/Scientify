@@ -19,8 +19,6 @@ fn main() {
             "browser_command",
             "translation_window",
             "translation_service",
-            "open_project_window",
-            "workspace_window_ready",
             "workspace_load",
             "workspace_save",
             "workspace_restore",

@@ -1,6 +1,6 @@
 //! Native website data stores remain separate from the trusted application UI.
 use std::path::PathBuf;
-use tauri::{webview::WebviewBuilder, Manager, Runtime, WebviewWindowBuilder};
+use tauri::{webview::WebviewBuilder, Runtime};
 
 #[cfg(target_os = "macos")]
 fn identifier(profile: &std::path::Path) -> Result<[u8; 16], String> {
@@ -26,20 +26,6 @@ fn identifier(profile: &std::path::Path) -> Result<[u8; 16], String> {
         Err(error) => return Err(error.to_string()),
     };
     Ok(*id.as_bytes())
-}
-
-pub fn window<'a, R: Runtime, M: Manager<R>>(
-    builder: WebviewWindowBuilder<'a, R, M>,
-    profile: PathBuf,
-) -> Result<WebviewWindowBuilder<'a, R, M>, String> {
-    #[cfg(target_os = "macos")]
-    {
-        Ok(builder.data_store_identifier(identifier(&profile)?))
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        Ok(builder.data_directory(profile))
-    }
 }
 
 pub fn browser<R: Runtime>(

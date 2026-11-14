@@ -44,13 +44,13 @@ pub fn install<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
             tauri::async_runtime::spawn(async move {
                 let result = async {
                     if id == "quit" {
-                        let window = host.get_webview_window("workspace").or_else(|| host.get_webview_window("main")).ok_or("主窗口不可用。")?;
+                        let window = host.get_webview_window("main").ok_or("主窗口不可用。")?;
                         window.unminimize().and_then(|_| window.show()).and_then(|_| window.set_focus()).map_err(|e| e.to_string())?;
                         // Use the frontend's existing dirty-file and running-task guard.
                         return host.emit_to(tauri::EventTarget::webview(window.label()), "scientify-exit-requested", ()).map_err(|e| e.to_string());
                     }
                     if id == "show" {
-                        let window = host.get_webview_window("workspace").or_else(|| host.get_webview_window("main")).ok_or("主窗口不可用。")?;
+                        let window = host.get_webview_window("main").ok_or("主窗口不可用。")?;
                         return window.unminimize().and_then(|_| window.show()).and_then(|_| window.set_focus()).map_err(|e| e.to_string());
                     }
                     // Read authoritative Yita settings; native check menus toggle before this callback.

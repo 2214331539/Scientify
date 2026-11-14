@@ -30,7 +30,6 @@ mod literature_smoke;
 mod notes;
 mod reader;
 mod research;
-mod windows;
 
 struct AppState {
     storage: Arc<Storage>,
@@ -232,10 +231,7 @@ pub fn run() {
         builder
     } else {
         builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            if let Some(window) = app
-                .get_webview_window("workspace")
-                .or_else(|| app.get_webview_window("main"))
-            {
+            if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
@@ -262,11 +258,9 @@ pub fn run() {
             if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
                 yita::stop(window.app_handle());
             }
-            // Projects open inside the main window; whichever research window closes takes
-            // its browser tabs, terminals and Python checks with it.
-            if matches!(window.label(), "main" | "workspace")
-                && matches!(event, tauri::WindowEvent::Destroyed)
-            {
+            // Projects open inside the main window; closing it takes its browser tabs,
+            // terminals and Python checks with it.
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
                 browser::close_owner(window.app_handle(), window.label());
                 if let Some(terminal) = window
                     .app_handle()
@@ -279,9 +273,6 @@ pub fn run() {
                     .try_state::<experiments::python::PythonState>()
                 {
                     python.stop_all();
-                }
-                if window.label() == "workspace" {
-                    windows::show_projects(window.app_handle());
                 }
             }
         })
@@ -358,8 +349,6 @@ pub fn run() {
             browser::browser_command,
             translation_window::translation_window,
             yita::translation_service,
-            windows::open_project_window,
-            windows::workspace_window_ready,
             workspace_load,
             workspace_save,
             workspace_restore,

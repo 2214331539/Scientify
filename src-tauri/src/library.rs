@@ -24,7 +24,7 @@ impl LibraryState {
     }
 }
 pub fn trusted<R: tauri::Runtime>(view: &tauri::Webview<R>) -> Result<(), String> {
-    if matches!(view.label(), "main" | "workspace") {
+    if view.label() == "main" {
         Ok(())
     } else {
         Err("网页不能调用应用接口。".into())

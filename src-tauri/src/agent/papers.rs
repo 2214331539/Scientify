@@ -584,7 +584,7 @@ mod tests {
             ])
             .build(crate::app_context())
             .unwrap();
-        let view = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+        let view = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
             .unwrap();
         invoke(&view, "agent_paper_ready", json!({}), origin()).unwrap();
@@ -634,7 +634,7 @@ mod tests {
     #[test]
     fn paper_bridge_obeys_acl_window_ownership_and_stale_result_rules() {
         let (_temp, app, view, handle) = fixture();
-        let other = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        let other = tauri::WebviewWindowBuilder::new(&app, "second", Default::default())
             .build()
             .unwrap();
         let browser =
@@ -662,7 +662,7 @@ mod tests {
         let reader = std::thread::spawn(move || {
             operate(
                 &native,
-                "workspace",
+                "main",
                 &active,
                 &json!({"tool":"scientify_read_paper","arguments":{"path":"a.pdf"}}),
                 || false,
@@ -717,7 +717,7 @@ mod tests {
         let reader = std::thread::spawn(move || {
             operate(
                 &native,
-                "workspace",
+                "main",
                 &active,
                 &json!({"tool":"scientify_read_paper","arguments":{"path":"a.pdf"}}),
                 || false,
@@ -754,7 +754,7 @@ mod tests {
         let reader = std::thread::spawn(move || {
             operate(
                 &native,
-                "workspace",
+                "main",
                 &active,
                 &json!({"tool":"scientify_read_paper","arguments":{"path":"a.pdf"}}),
                 || stop.load(Ordering::SeqCst),
@@ -774,14 +774,14 @@ mod tests {
         let reader = std::thread::spawn(move || {
             operate(
                 &native,
-                "workspace",
+                "main",
                 &handle,
                 &json!({"tool":"scientify_read_paper","arguments":{"path":"a.pdf"}}),
                 || false,
             )
         });
         wait_request(app.handle());
-        app.state::<PaperState>().close_owner("workspace");
+        app.state::<PaperState>().close_owner("main");
         assert!(reader.join().unwrap().unwrap_err().contains("关闭"));
         assert!(app
             .state::<PaperState>()
@@ -803,14 +803,14 @@ mod tests {
             .unwrap();
         }
         let request = json!({"tool":"scientify_list_papers","arguments":{}});
-        let first = operate(app.handle(), "workspace", &handle, &request, || false).unwrap();
+        let first = operate(app.handle(), "main", &handle, &request, || false).unwrap();
         assert_eq!(first["papers"].as_array().unwrap().len(), 100);
         let request =
             json!({"tool":"scientify_list_papers","arguments":{"cursor":first["nextCursor"]}});
         let mut other = handle.clone();
         other.conversation_id = "other".into();
-        assert!(operate(app.handle(), "workspace", &other, &request, || false).is_err());
-        let second = operate(app.handle(), "workspace", &handle, &request, || false).unwrap();
+        assert!(operate(app.handle(), "main", &other, &request, || false).is_err());
+        let second = operate(app.handle(), "main", &handle, &request, || false).unwrap();
         assert_eq!(second["papers"].as_array().unwrap().len(), 2);
         assert_eq!(second["complete"], true);
         for listing in app
@@ -823,7 +823,7 @@ mod tests {
         {
             listing.created -= Duration::from_secs(61);
         }
-        assert!(operate(app.handle(), "workspace", &handle, &request, || false).is_err());
+        assert!(operate(app.handle(), "main", &handle, &request, || false).is_err());
     }
 
     #[test]
@@ -929,7 +929,7 @@ mod tests {
                         let active = handle.clone();
                         let params = event["params"].clone();
                         let reader = std::thread::spawn(move || {
-                            operate(&native, "workspace", &active, &params, || false)
+                            operate(&native, "main", &active, &params, || false)
                         });
                         if tool != "scientify_list_papers" {
                             let (id, job) = wait_request(app.handle());

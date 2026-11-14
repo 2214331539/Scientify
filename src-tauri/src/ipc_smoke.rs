@@ -26,7 +26,7 @@ fn translation_service_passes_generated_acl_only_for_local_app_views() {
     } else {
         "http://127.0.0.1:1420"
     };
-    for label in ["main", "workspace", "untrusted"] {
+    for label in ["main", "untrusted"] {
         let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
             .build()
             .unwrap();
@@ -92,8 +92,8 @@ fn assistant_context_obeys_generated_acl_and_reads_only_the_bound_library_and_no
     } else {
         "http://127.0.0.1:1420"
     };
-    for label in ["main", "workspace"] {
-        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+    {
+        let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
             .unwrap();
         let body = json!({"request":{"projectId":"papers-project","domain":"literature","conversationId":"chat1","resourceId":binding.id}});
@@ -142,7 +142,7 @@ fn chat_stream_commands_are_registered_and_remote_pages_cannot_call_them() {
         ])
         .build(crate::app_context())
         .unwrap();
-    let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+    let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
@@ -209,7 +209,7 @@ fn literature_mutations_share_directory_leases_with_agent_tasks() {
         ])
         .build(crate::app_context())
         .unwrap();
-    let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+    let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
@@ -306,7 +306,7 @@ fn experiment_registration_uses_native_acl_and_enables_only_its_own_projects_roo
         ])
         .build(crate::app_context())
         .unwrap();
-    let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+    let workspace = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
     // Research tools run in the application window; any other webview is refused.
@@ -400,7 +400,7 @@ fn git_commands_enforce_acl_and_use_the_selected_registered_worktree() {
         ])
         .build(crate::app_context())
         .unwrap();
-    let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+    let workspace = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
     // Research tools run in the application window; any other webview is refused.
@@ -538,7 +538,7 @@ fn experiment_commands_use_workspace_only_acl_and_real_processes() {
         ])
         .build(crate::app_context())
         .unwrap();
-    let trusted = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+    let trusted = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
     let denied = tauri::WebviewWindowBuilder::new(&app, "untrusted", Default::default())
@@ -674,8 +674,8 @@ fn model_discovery_and_verification_pass_generated_acl_only_for_local_app_views(
     let untrusted = tauri::WebviewWindowBuilder::new(&app, "browser-untrusted", Default::default())
         .build()
         .unwrap();
-    for label in ["main", "workspace"] {
-        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+    {
+        let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
             .unwrap();
         let (endpoint, server) = ai::tests::server(vec![
@@ -783,14 +783,6 @@ fn ipc_acl_and_local_file_pdf_workflow_are_wired() {
         .deserialize()
         .unwrap();
     assert!(initial["workspace"].is_null());
-    let research_window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
-        .build()
-        .unwrap();
-    let workspace_initial: Value = invoke(&research_window, "workspace_load", json!({}), origin)
-        .unwrap()
-        .deserialize()
-        .unwrap();
-    assert!(workspace_initial["workspace"].is_null());
     let mut workspace = scientify_core::workspace::empty();
     workspace["projects"] = json!([{"id":"smoke-project","name":"IPC smoke","question":"Local persistence?","createdAt":"2026-09-23"}]);
     workspace["revision"] = json!(1);
@@ -886,7 +878,7 @@ fn agent_release_uses_generated_acl_for_both_local_views() {
     } else {
         "http://127.0.0.1:1420"
     };
-    for label in ["main", "workspace", "browser-untrusted"] {
+    for label in ["main", "browser-untrusted"] {
         let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
             .build()
             .unwrap();
@@ -911,7 +903,7 @@ fn agent_steer_uses_generated_acl_and_parses_the_expected_turn_id() {
     } else {
         "http://127.0.0.1:1420"
     };
-    for label in ["main", "workspace", "browser-untrusted"] {
+    for label in ["main", "browser-untrusted"] {
         let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
             .build()
             .unwrap();
@@ -943,7 +935,7 @@ fn agent_skills_uses_generated_acl_and_rejects_untrusted_webviews() {
     } else {
         "http://127.0.0.1:1420"
     };
-    for label in ["main", "workspace", "browser-untrusted"] {
+    for label in ["main", "browser-untrusted"] {
         let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
             .build()
             .unwrap();
@@ -992,7 +984,7 @@ fn storage_location_commands_are_local_only_and_schedule_without_replacing_servi
     } else {
         "http://127.0.0.1:1420"
     };
-    for label in ["main", "workspace", "browser-untrusted"] {
+    for label in ["main", "browser-untrusted"] {
         let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
             .build()
             .unwrap();

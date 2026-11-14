@@ -3,7 +3,6 @@
   "identifier": "workspace-window",
   "description": "Research tools (experiments, terminal, Python, Git) for the application window.",
   "permissions": [
-    "allow-workspace-window-ready",
     "allow-experiment-start",
     "allow-experiment-prepare",
     "allow-experiment-trust",
@@ -21,7 +20,6 @@
     "allow-code-git-action"
   ],
   "webviews": [
-    "main",
-    "workspace"
+    "main"
   ]
 }

@@ -5,8 +5,6 @@ import './styles.css';
 import { isTauri } from '@tauri-apps/api/core';
 import { createWorkspaceStore } from './stores/workspace';
 import { browserResearch, browserWorkspace } from './platform/browser';
-import { windowRole } from './platform/windows';
-import { WorkspaceWindow } from './app/WorkspaceWindow';
 import { applyAppearance, getPreferences, setPreferences } from './i18n/preferences';
 
 const native = isTauri();
@@ -31,12 +29,8 @@ const store = native ? undefined : createWorkspaceStore(browserWorkspace);
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {native ? (
-      windowRole() === 'workspace' ? (
-        <WorkspaceWindow />
-      ) : (
-        // One window: the project center and an open project share it.
-        <App windowMode="main" />
-      )
+      // One window: the project center and an open project share it.
+      <App windowMode="main" />
     ) : (
       <App store={store} backend={browserResearch} preview />
     )}

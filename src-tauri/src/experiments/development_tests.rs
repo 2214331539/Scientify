@@ -57,7 +57,7 @@ fn real_python_environment_terminal_and_formal_run_work_without_a_model() {
         ])
         .build(crate::app_context())
         .unwrap();
-    let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
+    let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
     // Research tools run in the application window; any other webview is refused.

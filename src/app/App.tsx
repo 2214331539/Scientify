@@ -4,8 +4,7 @@ import { Button } from '../components/primitives';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { emitTo, listen } from '@tauri-apps/api/event';
-import { openProjectWindow } from '../platform/windows';
+import { listen } from '@tauri-apps/api/event';
 import { applyAppearance, migrateTheme, usePreferences } from '../i18n/preferences';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { X } from 'lucide-react';
@@ -53,7 +52,6 @@ import {
   invalidateProjectFileSessions,
   notifyFileRuntime,
 } from '../editor/sessions';
-import { Modal } from '../components/Modal';
 import type { Project } from '../domain/workspace';
 import type { WorkContext, WorkspaceId } from '../domain/context';
 import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
@@ -172,7 +170,7 @@ function readSession(storageKey = 'scientify.ui.v2'): UISession {
   return structuredClone(defaults);
 }
 
-function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, returning = false) {
+function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend) {
   useEffect(() => {
     const runtime = getFileRuntime(noteFiles(nativeLibrary));
     const sync = () =>
@@ -228,7 +226,7 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
     let closing = false;
     const cleanups: (() => void)[] = [];
     if (isTauri()) {
-      const requestClose = async (quit = false) => {
+      const requestClose = async () => {
         if (closing) return;
         const { busy } = store.getState();
         if (busy || hasPendingFileOperations(backend)) return;
@@ -248,14 +246,8 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
           }
           if (
             !store.getState().dirty ||
-            (await confirmAction(
-              returning && !quit
-                ? t('仍有未保存的内容。确认放弃这些修改并返回项目管理？')
-                : t('仍有未保存的内容。确认放弃这些修改并退出？'),
-            ))
+            (await confirmAction(t('仍有未保存的内容。确认放弃这些修改并退出？')))
           ) {
-            // Closing the hidden project window also runs its own save guard.
-            if (quit && returning) await emitTo('main', 'scientify-exit-requested');
             await getCurrentWindow().destroy();
           }
         } catch (error) {
@@ -279,7 +271,7 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
       );
       // Only exits addressed to this window: a plain listen also hears ones sent to the other window.
       register(
-        listen('scientify-exit-requested', () => void requestClose(true), {
+        listen('scientify-exit-requested', () => void requestClose(), {
           target: getCurrentWindow().label,
         }),
       );
@@ -289,7 +281,7 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend, ret
       cleanups.forEach((unlisten) => unlisten());
       window.removeEventListener('beforeunload', beforeUnload);
     };
-  }, [store, backend, returning]);
+  }, [store, backend]);
 }
 
 export function App({
@@ -300,11 +292,11 @@ export function App({
   store?: WorkspaceStore;
   backend?: ResearchBackend;
   preview?: boolean;
-  /** `main` is the desktop's single window; `projects`/`workspace` are the former pair. */
-  windowMode?: 'main' | 'projects' | 'workspace' | 'browser';
+  /** `main` is the desktop window; `browser` is the preview and the tests. */
+  windowMode?: 'main' | 'browser';
 }) {
-  const experiments = useExecutions(store, windowMode !== 'projects');
-  useDevelopmentRuntime(store, windowMode !== 'projects');
+  const experiments = useExecutions(store, true);
+  useDevelopmentRuntime(store, true);
   useEffect(() => {
     // Inbox chats in the project center read attached PDFs too.
     if (windowMode === 'browser') return;
@@ -319,14 +311,7 @@ export function App({
   const [ui, setUI] = useState(() => {
       const saved = readSession(sessionKey);
       // The desktop starts in the project center.
-      if (windowMode === 'projects' || windowMode === 'main')
-        return { ...saved, projectId: null, dockOpen: false };
-      if (windowMode === 'workspace')
-        return {
-          ...saved,
-          projectId: new URLSearchParams(window.location.search).get('project'),
-          dockOpen: false,
-        };
+      if (windowMode === 'main') return { ...saved, projectId: null, dockOpen: false };
       return saved;
     }),
     [dialog, setDialog] = useState<Dialog>(null),
@@ -340,11 +325,10 @@ export function App({
     title: t('项目管理'),
   });
   const [pendingNote, setPendingNote] = useState<{ scope: string; id: string } | null>(null);
-  const [launching, setLaunching] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const notesLayerRef = useRef<HTMLElement>(null);
   const [notesPlacement, setNotesPlacement] = useState(false);
-  useCloseProtection(store, backend, windowMode === 'workspace');
+  useCloseProtection(store, backend);
   // Every sign-in entry asks for the same page; it opens over any dialog.
   useEffect(() => {
     const open = () => setSigningIn(true);
@@ -370,17 +354,6 @@ export function App({
     }
   }, [ui, sessionKey]);
   useEffect(() => {
-    if (windowMode !== 'projects') return;
-    const subscription = listen('projects-refresh', () => {
-      setLaunching(false);
-      store.setState({ busy: false });
-      void store.getState().load();
-    });
-    return () => {
-      void subscription.then((stop) => stop());
-    };
-  }, [windowMode, store]);
-  useEffect(() => {
     if (!isTauri()) return;
     // The agent writes notes straight to disk; show them without waiting for the turn to end.
     const subscription = listen('notes-changed', () => void store.getState().refreshSaved());
@@ -395,7 +368,7 @@ export function App({
   // The project center keeps the cloud list fresh: on open, after sign-in changes,
   // when the window comes back into focus, and every two minutes.
   const cloud = useCloud();
-  const cloudWatched = windowMode !== 'workspace' && phase === 'ready';
+  const cloudWatched = phase === 'ready';
   useEffect(() => {
     if (!cloudWatched) return;
     let last = 0;
@@ -416,12 +389,6 @@ export function App({
       window.clearInterval(timer);
     };
   }, [cloudWatched, store]);
-  useEffect(() => {
-    if (windowMode !== 'workspace' || !['ready', 'error'].includes(phase)) return;
-    void invoke('workspace_window_ready').catch((error: unknown) =>
-      store.setState({ error: String(error) }),
-    );
-  }, [windowMode, phase, store]);
   useEffect(() => {
     const onResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', onResize);
@@ -447,13 +414,9 @@ export function App({
   useEffect(() => {
     if (!isTauri() || windowMode === 'browser') return;
     void getCurrentWindow()
-      .setTitle(
-        windowMode === 'main'
-          ? 'Scientify'
-          : `Scientify · ${t(windowMode === 'projects' ? 'Projects' : 'Workspace')}`,
-      )
+      .setTitle('Scientify')
       .catch(() => {});
-  }, [preferences.language, windowMode]);
+  }, [windowMode]);
   useEffect(() => {
     if (data) migrateTheme(data.settings.theme);
   }, [data]);
@@ -621,10 +584,6 @@ export function App({
   }, [data?.settings.shortcuts, navigate, openTool, patchLocation, workspace]);
   function openProject(id: string) {
     markOpened(id);
-    if (windowMode === 'projects') {
-      void launchWorkspace(id);
-      return;
-    }
     // A project created a moment ago may not be in this render's data yet.
     const p = store.getState().data?.projects.find((p) => p.id === id);
     if (p) {
@@ -662,10 +621,6 @@ export function App({
     });
     if (!saved) throw new Error(store.getState().error ?? t('协作项目无法载入，请重试。'));
     markOpened(remote.id);
-    if (windowMode === 'projects') {
-      await launchWorkspace(remote.id);
-      return;
-    }
     setUI((current) => ({
       ...current,
       projectId: remote.id,
@@ -679,10 +634,6 @@ export function App({
   }
   function openTarget(id: string, target: SearchTarget | { source: WorkContext }) {
     markOpened(id);
-    if (windowMode === 'projects') {
-      void launchWorkspace(id, target);
-      return;
-    }
     if ('source' in target)
       window.dispatchEvent(new CustomEvent('scientify-open-source', { detail: target.source }));
     else goToTarget(target);
@@ -703,25 +654,8 @@ export function App({
     window.addEventListener('scientify-open-project', open);
     return () => window.removeEventListener('scientify-open-project', open);
   }, []);
-  async function launchWorkspace(id: string, target?: SearchTarget | { source: WorkContext }) {
-    if (launching) return;
-    if (store.getState().dirty || store.getState().busy) {
-      store.setState({ error: t('请先保存当前修改，并等待操作完成后再打开项目。') });
-      return;
-    }
-    setLaunching(true);
-    store.setState({ busy: true });
-    try {
-      await openProjectWindow(id, target);
-    } catch (error) {
-      setLaunching(false);
-      store.setState({ busy: false });
-      store.setState({ error: error instanceof Error ? error.message : String(error) });
-    }
-  }
   function returnToProjects(page?: CenterPage) {
-    if (windowMode === 'workspace') void getCurrentWindow().close();
-    else setUI((s) => ({ ...s, projectId: null, page: page ?? s.page }));
+    setUI((s) => ({ ...s, projectId: null, page: page ?? s.page }));
   }
   function navigate(id: WorkspaceId) {
     if (id === workspace) return;
@@ -747,15 +681,6 @@ export function App({
     });
   }, []);
   function goToTarget(target: SearchTarget) {
-    if (windowMode === 'workspace' && !target.projectId) {
-      returnToProjects();
-      return;
-    }
-    if (windowMode === 'projects' && target.projectId) {
-      setDialog(null);
-      void launchWorkspace(target.projectId, target);
-      return;
-    }
     setDialog(null);
     setUI((s) => ({
       ...s,
@@ -786,31 +711,6 @@ export function App({
       setPendingNote({ scope: target.projectId ?? '__inbox__', id: target.resourceId });
   }
   useEffect(() => {
-    if (windowMode !== 'workspace' || phase !== 'ready') return;
-    const params = new URLSearchParams(window.location.search);
-    const raw = params.get('target');
-    if (!raw) return;
-    params.delete('target');
-    window.history.replaceState(null, '', `${window.location.pathname}?${params}`);
-    try {
-      const parsed = JSON.parse(raw) as SearchTarget & { source?: WorkContext };
-      if (parsed.source) {
-        requestAnimationFrame(() =>
-          window.dispatchEvent(new CustomEvent('scientify-open-source', { detail: parsed.source })),
-        );
-        return;
-      }
-      const target = parsed;
-      if (
-        target.projectId &&
-        store.getState().data?.projects.some((p) => p.id === target.projectId)
-      )
-        goToTarget(target);
-    } catch {
-      /* Optional deep link; the project overview remains available. */
-    }
-  }, [windowMode, phase]);
-  useEffect(() => {
     if (!pendingNote) return;
     const frame = requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent('scientify-open-note', { detail: pendingNote }));
@@ -822,19 +722,6 @@ export function App({
     const open = (event: Event) => {
       const source = (event as CustomEvent<WorkContext>).detail;
       if (!source?.projectId || !data?.projects.some((p) => p.id === source.projectId)) return;
-      if (windowMode === 'projects') {
-        void launchWorkspace(source.projectId, {
-          source: {
-            projectId: source.projectId,
-            workspace: source.workspace,
-            resourceId: source.resourceId,
-            path: source.path,
-            page: source.page,
-            title: source.title.slice(0, 160),
-          },
-        });
-        return;
-      }
       const w = source.workspace === 'projects' ? 'literature' : source.workspace;
       if (w === 'experiments' && (source.experimentId || source.workspaceRoot)) {
         const target = data.experiments?.find(
@@ -1148,7 +1035,7 @@ export function App({
         key={project.id}
         project={project}
         store={store}
-        automatic={windowMode === 'workspace' || windowMode === 'main'}
+        automatic={windowMode === 'main'}
         trigger="share"
       />
     ) : project ? (
@@ -1234,11 +1121,6 @@ export function App({
       }
       dialogs={
         <>
-          {launching && (
-            <Modal title={t('正在打开项目')} busy onClose={() => {}}>
-              <p className="form-grid">{t('正在准备工作区…')}</p>
-            </Modal>
-          )}
           {dialog?.kind === 'project' && dialog.project ? (
             <ProjectForm store={store} project={dialog.project} onClose={() => setDialog(null)} />
           ) : null}

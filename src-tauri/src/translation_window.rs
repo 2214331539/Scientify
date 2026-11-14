@@ -52,20 +52,15 @@ pub enum Action {
     TakeConversations,
     ConversationReply { id: String, result: Value },
 }
-fn host<R: Runtime>(app: &tauri::AppHandle<R>) -> &'static str {
-    if app.get_webview_window("workspace").is_some() {
-        "workspace"
-    } else {
-        "main"
-    }
-}
+/// Conversations handed over from the popup go to the application window.
+const HOST: &str = "main";
 
 pub(crate) async fn conversation<R: Runtime>(
     app: &tauri::AppHandle<R>,
     request: ConversationRequest,
 ) -> Result<Value, String> {
     request.validate()?;
-    let owner = host(app);
+    let owner = HOST;
     if request.op == "open" {
         let window = app
             .get_webview_window(owner)
@@ -121,7 +116,7 @@ pub async fn translation_window<R: Runtime>(
     action: Action,
 ) -> Result<Value, String> {
     crate::library::trusted(&view)?;
-    if view.label() != host(&app) {
+    if view.label() != HOST {
         return Ok(Value::Null);
     }
     let state = app.state::<WindowState>();
@@ -171,16 +166,13 @@ mod tests {
     }
 
     #[test]
-    fn only_the_owning_local_window_can_take_and_answer_requests() {
+    fn only_the_application_window_can_take_and_answer_requests() {
         let app = tauri::test::mock_builder()
             .manage(WindowState::default())
             .invoke_handler(tauri::generate_handler![translation_window])
             .build(crate::app_context())
             .unwrap();
         let main = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
-            .build()
-            .unwrap();
-        let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
             .build()
             .unwrap();
         let remote =
@@ -200,7 +192,7 @@ mod tests {
             .insert(
                 id.clone(),
                 PendingConversation {
-                    owner: "workspace".into(),
+                    owner: "main".into(),
                     request: Some(request),
                     reply,
                 },
@@ -217,29 +209,24 @@ mod tests {
         let call =
             |view, action| invoke(view, "translation_window", json!({"action":action}), origin);
         assert!(call(&remote, json!({"type":"takeConversations"})).is_err());
-        let hidden: Value = call(&main, json!({"type":"takeConversations"}))
-            .unwrap()
-            .deserialize()
-            .unwrap();
-        assert!(hidden.is_null());
-        call(
-            &main,
-            json!({"type":"conversationReply","id":id,"result":{"fake":true}}),
+        assert!(call(
+            &remote,
+            json!({"type":"conversationReply","id":id,"result":{"fake":true}})
         )
-        .unwrap();
+        .is_err());
         assert!(received.try_recv().is_err());
-        let items: Value = call(&workspace, json!({"type":"takeConversations"}))
+        let items: Value = call(&main, json!({"type":"takeConversations"}))
             .unwrap()
             .deserialize()
             .unwrap();
         assert_eq!(items.as_array().unwrap().len(), 1);
-        let again: Value = call(&workspace, json!({"type":"takeConversations"}))
+        let again: Value = call(&main, json!({"type":"takeConversations"}))
             .unwrap()
             .deserialize()
             .unwrap();
         assert!(again.as_array().unwrap().is_empty());
         call(
-            &workspace,
+            &main,
             json!({"type":"conversationReply","id":id,"result":{"running":true}}),
         )
         .unwrap();

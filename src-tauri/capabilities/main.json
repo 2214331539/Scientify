@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Shared local data operations and guarded close for the two application windows.",
+  "description": "Local data operations and guarded close for the application window.",
   "permissions": [
     "core:event:default",
     "core:window:allow-destroy",
@@ -87,7 +87,6 @@
     "allow-collaboration-resolve-conflict"
   ],
   "webviews": [
-    "main",
-    "workspace"
+    "main"
   ]
 }
