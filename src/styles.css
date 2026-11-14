@@ -142,13 +142,6 @@ hr {
   border-bottom: 1px solid var(--sf-border-subtle);
   flex-shrink: 0;
 }
-.toolbar .toolbar-title {
-  font-weight: 500;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .toolbar input {
   min-height: 26px;
   padding: 2px 7px;
@@ -165,46 +158,12 @@ hr {
   background: var(--sf-border-subtle);
   margin: 0 4px;
 }
-.content-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 92px;
-  max-width: 240px;
-  padding: 0 12px;
-  align-self: center;
-  min-height: 28px;
-  margin: 0 2px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 5px;
-  background: var(--sf-surface-hover);
-}
-.content-tab span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tab-strip {
-  height: var(--sf-header-height);
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--sf-border-subtle);
-  background: var(--sf-surface-canvas);
-  padding: 0 6px;
-  flex-shrink: 0;
-}
 .panel-stack {
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-.panel-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
 }
 dialog {
   color: var(--sf-text-primary);
@@ -219,7 +178,7 @@ dialog {
   overscroll-behavior: contain;
 }
 dialog::backdrop {
-  background: rgb(10 14 13 / 38%);
+  background: rgb(12 12 14 / 26%);
 }
 dialog.prompt-dialog {
   width: min(400px, calc(100vw - 40px));
@@ -250,11 +209,6 @@ dialog.prompt-dialog {
 .form-grid label textarea {
   font-weight: 400;
 }
-.form-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
 .input-action {
   display: flex;
   gap: 6px;
@@ -262,10 +216,6 @@ dialog.prompt-dialog {
 .input-action input {
   flex: 1;
   min-width: 0;
-}
-.color-label input {
-  width: 48px;
-  padding: 2px;
 }
 .dialog-footer {
   display: flex;

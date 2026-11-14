@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { emptyWorkspace, normalizeExperiments } from '../../domain/workspace';
@@ -86,7 +86,7 @@ it('registers a new isolated root and retains it when renaming, archiving and re
   await waitFor(() => expect(store.getState().data?.experiments?.[1].name).toBe('Renamed'));
   await user.click(screen.getAllByRole('button', { name: '归档实验' })[1]);
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Renamed' })).toBeNull());
-  await user.click(screen.getByRole('checkbox', { name: '显示归档' }));
+  await user.click(screen.getByRole('button', { name: '已归档' }));
   expect((screen.getByRole('button', { name: 'Renamed' }) as HTMLButtonElement).disabled).toBe(
     true,
   );
@@ -140,23 +140,28 @@ it('prevents removing an experiment with a running chat while other experiments 
   expect(screen.getByRole('alert').textContent).toContain('请先停止');
   expect(store.getState().data?.experiments).toHaveLength(1);
 });
-it('switches card and vertical layouts, expands details and remembers the display preference', async () => {
+it('lists experiments in one table with their latest run', async () => {
   const { store, project } = await setup();
-  const user = userEvent.setup();
-  render(<ExperimentManager project={project} store={store} executions={[]} onOpen={() => {}} />);
-  expect(screen.getByRole('button', { name: '卡片视图' }).getAttribute('aria-pressed')).toBe(
-    'true',
+  const experiment = store.getState().data!.experiments![0];
+  render(
+    <ExperimentManager
+      project={project}
+      store={store}
+      executions={[
+        {
+          id: 'x1',
+          project: 'p1',
+          experimentId: experiment.id,
+          name: 'train-seed-1',
+          status: 'failed',
+          startedAt: 2,
+        } as never,
+      ]}
+      onOpen={() => {}}
+    />,
   );
-  const details = screen.getByText('实验详情').closest('details')!;
-  await user.click(screen.getByText('实验详情'));
-  expect(details.open).toBe(true);
-  await user.click(screen.getByRole('button', { name: '列表视图' }));
-  expect(screen.getByRole('table')).toBeTruthy();
-  expect(localStorage.getItem('scientify.experiments.layout.v1')).toBe('list');
-  expect(store.getState().data?.experiments).toHaveLength(1);
-  cleanup();
-  render(<ExperimentManager project={project} store={store} executions={[]} onOpen={() => {}} />);
-  expect(screen.getByRole('button', { name: '列表视图' }).getAttribute('aria-pressed')).toBe(
-    'true',
-  );
+  const table = screen.getByRole('table');
+  expect(within(table).getByText('train-seed-1')).toBeTruthy();
+  expect(within(table).getByText('失败')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: '已归档' })).toBeNull();
 });

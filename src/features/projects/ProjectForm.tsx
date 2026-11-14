@@ -72,8 +72,8 @@ export function ProjectForm({
             <ProjectCoverArt
               name={draft.name.trim() || t('项目名称')}
               field={draft.field.trim() || t('研究方向')}
+              question={draft.question.trim()}
               color={draft.color}
-              favorite={project.favorite}
             />
           </div>
           <div className="wizard-fields">

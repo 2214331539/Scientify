@@ -57,7 +57,7 @@ it('broadcasts a local preference change and applies another window without rebr
   expect(screen.getByText('zh-CN:light')).toBeTruthy();
   expect(events.emit).toHaveBeenCalledTimes(1);
   act(() => events.receive?.({ payload: { language: 'invalid', theme: 'dark' } }));
-  expect(getPreferences()).toEqual({ language: 'zh-CN', theme: 'light' });
+  expect(getPreferences()).toEqual({ language: 'zh-CN', theme: 'light', palette: 'graphite' });
   cleanup();
   await waitFor(() => expect(events.stop).toHaveBeenCalledTimes(1));
 });

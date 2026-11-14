@@ -1,0 +1,34 @@
+/* The window: chrome around one raised content surface. */
+.sf-frame.app-shell.research-shell {
+  grid-template-rows: var(--sf-topbar-height) minmax(0, 1fr);
+  background: var(--sf-surface-chrome);
+}
+.sf-frame-body {
+  display: grid;
+  grid-template-columns: var(--sf-sidebar-width) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+.sf-frame-body[data-sidebar='closed'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sf-frame-main {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--sf-surface-canvas);
+  border-top-left-radius: 10px;
+  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+}
+.sf-frame-body[data-sidebar='closed'] .sf-frame-main {
+  border-top-left-radius: 0;
+}
+/* The right panel sits on the same surface, divided by a line. */
+.sf-frame-main > .sf-dock-layout,
+.sf-frame-main > .central-area {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}

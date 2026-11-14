@@ -66,9 +66,8 @@ it('navigates a matching saved note with its project and resource identity', asy
   await user.click(screen.getByRole('button', { name: /实验结论/ }));
   expect(navigate).toHaveBeenCalledWith({
     projectId: 'p1',
-    workspace: 'overview',
+    workspace: 'notes',
     resourceId: data.records[0].id,
-    tool: 'notes',
   });
   expect(close).toHaveBeenCalledOnce();
 });

@@ -491,9 +491,8 @@ it('opens a real context menu and restores the embedded browser subscription ent
   await screen.findByRole('menuitem', { name: '打开论文笔记' });
   await user.click(screen.getByRole('menuitem', { name: '复制' }));
   await user.click(screen.getByRole('button', { name: '订阅' }));
-  expect(screen.getByText('开发中')).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: /消息推荐/ }));
-  expect(screen.getByText('敬请期待')).toBeTruthy();
+  // No recommendation service yet, so no placeholder entry.
+  expect(screen.queryByRole('button', { name: /消息推荐/ })).toBeNull();
   expect(screen.getByRole('button', { name: '打开浏览器' })).toBeTruthy();
   expect(library.command).toHaveBeenCalledWith(expect.any(String), { op: 'scan' });
 });

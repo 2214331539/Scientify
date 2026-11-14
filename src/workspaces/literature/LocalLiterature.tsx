@@ -75,7 +75,19 @@ import { errorMessage } from '../../domain/errors';
 import { canEditProject, requestProjectSync } from '../../platform/collaboration';
 import './local-literature.css';
 
+import { createPortal } from 'react-dom';
+import type {
+  DragEvent as ReactDragEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+} from 'react';
+import { BookOpen } from 'lucide-react';
+import { useSidebarSlot } from '../../shell/Sidebar';
+import { LibraryTable } from './LibraryTable';
+
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
+/** The pinned first tab: the library table itself. */
+const HOME = '__library__';
 const parent = (path: string) => path.split('/').slice(0, -1).join('/');
 const filename = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 const join = (folder: string, name: string) => (folder ? `${folder}/${name}` : name);
@@ -113,6 +125,8 @@ export function LocalLiterature({
 }) {
   const readOnly = !canEditProject(project, 'library');
   const viewActive = useActiveView();
+  // Inside a project the folder tree lives in the app sidebar while this module is showing.
+  const slot = useSidebarSlot();
   const workspaceBusy = useStore(store, (s) => s.busy);
   const webSources = useStore(store, (s) => s.data?.webSources);
   const [bookmark, setBookmark] = useState<BookmarkRequest | null>(null);
@@ -412,6 +426,39 @@ export function LocalLiterature({
       }));
     });
   }
+  function importFiles(files: File[], folder: string, hasDirectory = false) {
+    return run(async () => {
+      protect();
+      if (!scan.root) throw new Error(t('请先打开文献文件夹。'));
+      if (hasDirectory || !files.length) throw new Error(t('请拖入文件，暂不支持整文件夹导入。'));
+      if (files.some((file) => file.size > 150 * 1024 * 1024))
+        throw new Error(t('文件名无效或文件超过 150 MiB。'));
+      let completed = 0;
+      try {
+        for (const file of files) {
+          setImportProgress(
+            t('导入文件 {current}/{total}', {
+              current: completed + 1,
+              total: files.length,
+            }),
+          );
+          const next = await library.importFile(project.id, folder, file);
+          completed++;
+          requestProjectSync(project.id);
+          if (alive.current) setScan(next);
+        }
+      } catch (error) {
+        throw new Error(
+          t('已导入 {count} 个文件。{error}', {
+            count: completed,
+            error: translateError(errorMessage(error)),
+          }),
+        );
+      } finally {
+        if (alive.current) setImportProgress('');
+      }
+    });
+  }
   async function closeTab(id: string) {
     const tab = session.tabs.find((t) => t.id === id);
     if (tab?.kind === 'web') await browserCommand({ op: 'close', id });
@@ -609,6 +656,289 @@ export function LocalLiterature({
             : path,
     });
   }
+  const fileEvents = {
+    onContextMenu: (e: ReactMouseEvent<HTMLElement>) => {
+      e.preventDefault();
+      void showMenu(pathFrom(e.target), e.clientX, e.clientY);
+    },
+    onDragStart: (e: ReactDragEvent<HTMLElement>) => {
+      if (busy || !scan.root) {
+        e.preventDefault();
+        return;
+      }
+      const path = pathFrom(e.target);
+      drag.current = selectedBundle(path);
+      if (!selectedPaths.has(path)) setSelectedPaths(new Set([path]));
+      e.dataTransfer.effectAllowed = 'copyMove';
+      e.dataTransfer.setData('text/plain', drag.current.join('\n'));
+      e.dataTransfer.setData('application/x-scientify-library', JSON.stringify(drag.current));
+    },
+    onDragEnd: () => {
+      drag.current = [];
+      setDropTarget(null);
+    },
+    onDragOver: (e: ReactDragEvent<HTMLElement>) => {
+      if (drag.current.length || e.dataTransfer.types.includes('Files')) {
+        e.preventDefault();
+        const path = pathFrom(e.target);
+        const target = scan.entries.find((entry) => entry.path === path);
+        setDropTarget(target?.directory ? path : parent(path));
+        e.dataTransfer.dropEffect =
+          busy || !scan.root ? 'none' : drag.current.length && !e.ctrlKey ? 'move' : 'copy';
+      }
+    },
+    onDragLeave: (e: ReactDragEvent<HTMLElement>) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(null);
+    },
+    onDrop: (e: ReactDragEvent<HTMLElement>) => {
+      e.preventDefault();
+      if (readOnly) return;
+      setDropTarget(null);
+      const dest = pathFrom(e.target);
+      const entry = scan.entries.find((v) => v.path === dest);
+      const folder = entry?.directory ? dest : parent(dest);
+      if (drag.current.length) {
+        void transferMany(drag.current, folder, !!(e.ctrlKey || e.metaKey));
+        drag.current = [];
+      } else if (e.dataTransfer.types.includes('Files')) {
+        const files = Array.from(e.dataTransfer.files);
+        const hasDirectory = Array.from(e.dataTransfer.items).some(
+          (item) => item.webkitGetAsEntry?.()?.isDirectory,
+        );
+        void importFiles(files, folder, hasDirectory);
+      }
+    },
+    onKeyDown: (e: ReactKeyboardEvent<HTMLElement>) => {
+      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        const focusPath = pathFrom(e.target) || selected;
+        const focusEntry = scan.entries.find((entry) => entry.path === focusPath);
+        const pasteFolder = focusEntry?.directory ? focusPath : parent(focusPath);
+        if (e.key.toLowerCase() === 'v' && clipboard)
+          void transferMany(clipboard.paths, pasteFolder, clipboard.copy);
+        else if (focusPath)
+          setClipboard({
+            paths: selectedBundle(focusPath),
+            copy: e.key.toLowerCase() === 'c',
+          });
+      }
+      if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+        e.preventDefault();
+        const r = (e.target as HTMLElement).getBoundingClientRect();
+        void showMenu(pathFrom(e.target), r.left, r.bottom);
+      }
+    },
+  };
+  const resources = (
+    <aside
+      className={`literature-sidebar${slot ? ' is-docked' : ''}`}
+      style={{ '--literature-sidebar-width': `${width}px` } as CSSProperties}
+      aria-label={t('本地文献目录')}
+    >
+      <nav className="literature-sidebar-views">
+        <Button
+          variant="ghost"
+          aria-current={view !== 'subscriptions' ? 'page' : undefined}
+          onClick={() => onView('local')}
+        >
+          {t('Library')}
+        </Button>
+        <Button
+          variant="ghost"
+          aria-current={view === 'subscriptions' ? 'page' : undefined}
+          onClick={() => onView('subscriptions')}
+        >
+          {t('Subscriptions')}
+        </Button>
+      </nav>
+      {view === 'subscriptions' ? (
+        <SubscriptionSidebar
+          store={store}
+          bookmark={bookmark}
+          onBookmarkHandled={() => setBookmark(null)}
+          onNewBrowser={() => void newWeb()}
+          onOpen={async (address) => {
+            const tab = await browserCommand<BrowserTab>({
+              op: 'openUrl',
+              project_id: project.id,
+              address,
+            });
+            setSession((s) => ({
+              ...s,
+              active: tab.id,
+              tabs: [
+                ...s.tabs.filter((t) => t.id !== tab.id),
+                { id: tab.id, title: tab.title || tab.url, url: tab.url, kind: 'web' },
+              ],
+            }));
+          }}
+        />
+      ) : (
+        <div className="library-directory">
+          <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
+            {searchOpen ? (
+              <Input
+                ref={search}
+                className="library-toolbar-search"
+                autoFocus
+                aria-label={t('搜索文献')}
+                placeholder={t('搜索文件名和路径')}
+                value={query}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  if (e.target.value) setCollapsed(new Set());
+                }}
+                onBlur={() => setSearchOpen(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'Escape') {
+                    e.preventDefault();
+                    if (e.key === 'Escape') setQuery('');
+                    setSearchOpen(false);
+                    requestAnimationFrame(() => {
+                      if (!search.current) searchTrigger.current?.focus();
+                    });
+                  }
+                }}
+              />
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  aria-label={t('打开文献文件夹')}
+                  onClick={() => void choose()}
+                  disabled={busy}
+                >
+                  <FolderOpen />
+                </Button>
+                <div className="library-root-title">
+                  <span className="truncate" title={scan.root ?? ''}>
+                    {scan.root ? filename(scan.root) : t('文献库')}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  aria-label={t('搜索文献')}
+                  ref={searchTrigger}
+                  onClick={() => {
+                    setSearchOpen(true);
+                  }}
+                >
+                  <Search />
+                </Button>
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  aria-label={t('更多操作')}
+                  onClick={(e) =>
+                    void showMenu(
+                      '',
+                      e.currentTarget.getBoundingClientRect().left,
+                      e.currentTarget.getBoundingClientRect().bottom,
+                    )
+                  }
+                >
+                  <MoreHorizontal />
+                </Button>
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  aria-label={t('新建文件夹')}
+                  disabled={readOnly || !scan.root || busy}
+                  onClick={() => command('mkdir', directory)}
+                >
+                  <FolderPlus />
+                </Button>
+              </>
+            )}
+          </div>
+          <div
+            className={`local-file-tree${dropTarget !== null ? ' is-file-dragging' : ''}`}
+            {...fileEvents}
+          >
+            <TreeView
+              label={t('项目文献')}
+              items={tree}
+              selectedId={selected}
+              selectedIds={selectedPaths}
+              onSelectionChange={(paths, active) => {
+                setSelectedPaths(paths);
+                setSelected(active);
+              }}
+              dropTargetId={dropTarget}
+              collapsed={collapsed}
+              onToggle={(id) => {
+                setSelected(id);
+                setCollapsed((s) => {
+                  const n = new Set(s);
+                  if (n.has(id)) n.delete(id);
+                  else n.add(id);
+                  return n;
+                });
+              }}
+              onOpen={(path) => void open(path)}
+              onContextMenu={(path, event) => void showMenu(path, event.clientX, event.clientY)}
+            />
+            {dropTarget !== null && (
+              <div className="library-drop-hint">
+                {t('复制到 {folder}', {
+                  folder: dropTarget || filename(scan.root ?? t('文献库')),
+                })}
+              </div>
+            )}
+            {!scan.root && (
+              <div className="library-unmounted">
+                <Button onClick={() => void choose()}>{t('打开文献文件夹')}</Button>
+                <p>{t('选择真实目录，PDF 与笔记保存在原位置。')}</p>
+              </div>
+            )}
+            {scan.papers
+              .filter((p) => !scan.entries.some((e) => e.path === p.path))
+              .map((p) => (
+                <div key={p.id} className="missing-paper-row">
+                  <Button
+                    variant="ghost"
+                    className="missing-paper"
+                    onClick={() => {
+                      setDialog({ kind: 'relink', path: p.id, value: p.path });
+                    }}
+                  >
+                    {t('重新关联')} · {filename(p.path)}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    iconOnly
+                    size="sm"
+                    aria-label={t('移除失联记录')}
+                    title={t('移除失联记录')}
+                    onClick={async () => {
+                      if (
+                        await confirmAction(
+                          t('移除“{name}”的失联记录？不会删除仍存在的文件。', {
+                            name: filename(p.path),
+                          }),
+                        )
+                      )
+                        void mutate({ op: 'pruneMissing', id: p.id });
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              ))}
+          </div>
+          <div className="library-bottom">
+            <span role={importProgress ? 'status' : undefined}>
+              {importProgress || `${scan.entries.filter((e) => e.pdf).length} PDF`}
+            </span>
+            <span className="spacer" />
+          </div>
+        </div>
+      )}
+    </aside>
+  );
   return (
     <div
       className="literature-studio local-library"
@@ -621,335 +951,8 @@ export function LocalLiterature({
         }
       }}
     >
-      <aside
-        className="literature-sidebar"
-        style={{ '--literature-sidebar-width': `${width}px` } as CSSProperties}
-        aria-label={t('本地文献目录')}
-      >
-        <nav className="literature-sidebar-views">
-          <Button
-            variant="ghost"
-            aria-current={view !== 'subscriptions' ? 'page' : undefined}
-            onClick={() => onView('local')}
-          >
-            {t('Library')}
-          </Button>
-          <Button
-            variant="ghost"
-            aria-current={view === 'subscriptions' ? 'page' : undefined}
-            onClick={() => onView('subscriptions')}
-          >
-            {t('Subscriptions')}
-          </Button>
-        </nav>
-        {view === 'subscriptions' ? (
-          <SubscriptionSidebar
-            store={store}
-            bookmark={bookmark}
-            onBookmarkHandled={() => setBookmark(null)}
-            onNewBrowser={() => void newWeb()}
-            onOpen={async (address) => {
-              const tab = await browserCommand<BrowserTab>({
-                op: 'openUrl',
-                project_id: project.id,
-                address,
-              });
-              setSession((s) => ({
-                ...s,
-                active: tab.id,
-                tabs: [
-                  ...s.tabs.filter((t) => t.id !== tab.id),
-                  { id: tab.id, title: tab.title || tab.url, url: tab.url, kind: 'web' },
-                ],
-              }));
-            }}
-            onRecommendations={() =>
-              setSession((s) => {
-                const id = `recommendations:${project.id}`;
-                return {
-                  ...s,
-                  active: id,
-                  tabs: s.tabs.some((t) => t.id === id)
-                    ? s.tabs
-                    : [...s.tabs, { id, title: t('消息推荐'), kind: 'recommendations' }],
-                };
-              })
-            }
-          />
-        ) : (
-          <div className="library-directory">
-            <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
-              {searchOpen ? (
-                <Input
-                  ref={search}
-                  className="library-toolbar-search"
-                  autoFocus
-                  aria-label={t('搜索文献')}
-                  placeholder={t('搜索文件名和路径')}
-                  value={query}
-                  onFocus={(e) => e.currentTarget.select()}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    if (e.target.value) setCollapsed(new Set());
-                  }}
-                  onBlur={() => setSearchOpen(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === 'Escape') {
-                      e.preventDefault();
-                      if (e.key === 'Escape') setQuery('');
-                      setSearchOpen(false);
-                      requestAnimationFrame(() => {
-                        if (!search.current) searchTrigger.current?.focus();
-                      });
-                    }
-                  }}
-                />
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    aria-label={t('打开文献文件夹')}
-                    onClick={() => void choose()}
-                    disabled={busy}
-                  >
-                    <FolderOpen />
-                  </Button>
-                  <div className="library-root-title">
-                    <span className="truncate" title={scan.root ?? ''}>
-                      {scan.root ? filename(scan.root) : t('文献库')}
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    aria-label={t('搜索文献')}
-                    ref={searchTrigger}
-                    onClick={() => {
-                      setSearchOpen(true);
-                    }}
-                  >
-                    <Search />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    aria-label={t('更多操作')}
-                    onClick={(e) =>
-                      void showMenu(
-                        '',
-                        e.currentTarget.getBoundingClientRect().left,
-                        e.currentTarget.getBoundingClientRect().bottom,
-                      )
-                    }
-                  >
-                    <MoreHorizontal />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    aria-label={t('新建文件夹')}
-                    disabled={readOnly || !scan.root || busy}
-                    onClick={() => command('mkdir', directory)}
-                  >
-                    <FolderPlus />
-                  </Button>
-                </>
-              )}
-            </div>
-            <div
-              className={`local-file-tree${dropTarget !== null ? ' is-file-dragging' : ''}`}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                void showMenu(pathFrom(e.target), e.clientX, e.clientY);
-              }}
-              onDragStart={(e) => {
-                if (busy || !scan.root) {
-                  e.preventDefault();
-                  return;
-                }
-                const path = pathFrom(e.target);
-                drag.current = selectedBundle(path);
-                if (!selectedPaths.has(path)) setSelectedPaths(new Set([path]));
-                e.dataTransfer.effectAllowed = 'copyMove';
-                e.dataTransfer.setData('text/plain', drag.current.join('\n'));
-                e.dataTransfer.setData(
-                  'application/x-scientify-library',
-                  JSON.stringify(drag.current),
-                );
-              }}
-              onDragEnd={() => {
-                drag.current = [];
-                setDropTarget(null);
-              }}
-              onDragOver={(e) => {
-                if (drag.current.length || e.dataTransfer.types.includes('Files')) {
-                  e.preventDefault();
-                  const path = pathFrom(e.target);
-                  const target = scan.entries.find((entry) => entry.path === path);
-                  setDropTarget(target?.directory ? path : parent(path));
-                  e.dataTransfer.dropEffect =
-                    busy || !scan.root
-                      ? 'none'
-                      : drag.current.length && !e.ctrlKey
-                        ? 'move'
-                        : 'copy';
-                }
-              }}
-              onDragLeave={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(null);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (readOnly) return;
-                setDropTarget(null);
-                const dest = pathFrom(e.target);
-                const entry = scan.entries.find((v) => v.path === dest);
-                const folder = entry?.directory ? dest : parent(dest);
-                if (drag.current.length) {
-                  void transferMany(drag.current, folder, !!(e.ctrlKey || e.metaKey));
-                  drag.current = [];
-                } else if (e.dataTransfer.types.includes('Files')) {
-                  const files = Array.from(e.dataTransfer.files);
-                  const hasDirectory = Array.from(e.dataTransfer.items).some(
-                    (item) => item.webkitGetAsEntry?.()?.isDirectory,
-                  );
-                  void run(async () => {
-                    protect();
-                    if (!scan.root) throw new Error(t('请先打开文献文件夹。'));
-                    if (hasDirectory || !files.length)
-                      throw new Error(t('请拖入文件，暂不支持整文件夹导入。'));
-                    if (files.some((file) => file.size > 150 * 1024 * 1024))
-                      throw new Error(t('文件名无效或文件超过 150 MiB。'));
-                    let completed = 0;
-                    try {
-                      for (const file of files) {
-                        setImportProgress(
-                          t('导入文件 {current}/{total}', {
-                            current: completed + 1,
-                            total: files.length,
-                          }),
-                        );
-                        const next = await library.importFile(project.id, folder, file);
-                        completed++;
-                        requestProjectSync(project.id);
-                        if (alive.current) setScan(next);
-                      }
-                    } catch (error) {
-                      throw new Error(
-                        t('已导入 {count} 个文件。{error}', {
-                          count: completed,
-                          error: translateError(errorMessage(error)),
-                        }),
-                      );
-                    } finally {
-                      if (alive.current) setImportProgress('');
-                    }
-                  });
-                }
-              }}
-              onKeyDown={(e) => {
-                if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
-                  e.preventDefault();
-                  const focusPath = pathFrom(e.target) || selected;
-                  const focusEntry = scan.entries.find((entry) => entry.path === focusPath);
-                  const pasteFolder = focusEntry?.directory ? focusPath : parent(focusPath);
-                  if (e.key.toLowerCase() === 'v' && clipboard)
-                    void transferMany(clipboard.paths, pasteFolder, clipboard.copy);
-                  else if (focusPath)
-                    setClipboard({
-                      paths: selectedBundle(focusPath),
-                      copy: e.key.toLowerCase() === 'c',
-                    });
-                }
-                if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
-                  e.preventDefault();
-                  const r = (e.target as HTMLElement).getBoundingClientRect();
-                  void showMenu(pathFrom(e.target), r.left, r.bottom);
-                }
-              }}
-            >
-              <TreeView
-                label={t('项目文献')}
-                items={tree}
-                selectedId={selected}
-                selectedIds={selectedPaths}
-                onSelectionChange={(paths, active) => {
-                  setSelectedPaths(paths);
-                  setSelected(active);
-                }}
-                dropTargetId={dropTarget}
-                collapsed={collapsed}
-                onToggle={(id) => {
-                  setSelected(id);
-                  setCollapsed((s) => {
-                    const n = new Set(s);
-                    if (n.has(id)) n.delete(id);
-                    else n.add(id);
-                    return n;
-                  });
-                }}
-                onOpen={(path) => void open(path)}
-                onContextMenu={(path, event) => void showMenu(path, event.clientX, event.clientY)}
-              />
-              {dropTarget !== null && (
-                <div className="library-drop-hint">
-                  {t('复制到 {folder}', {
-                    folder: dropTarget || filename(scan.root ?? t('文献库')),
-                  })}
-                </div>
-              )}
-              {!scan.root && (
-                <div className="library-unmounted">
-                  <Button onClick={() => void choose()}>{t('打开文献文件夹')}</Button>
-                  <p>{t('选择真实目录，PDF 与笔记保存在原位置。')}</p>
-                </div>
-              )}
-              {scan.papers
-                .filter((p) => !scan.entries.some((e) => e.path === p.path))
-                .map((p) => (
-                  <div key={p.id} className="missing-paper-row">
-                    <Button
-                      variant="ghost"
-                      className="missing-paper"
-                      onClick={() => {
-                        setDialog({ kind: 'relink', path: p.id, value: p.path });
-                      }}
-                    >
-                      {t('重新关联')} · {filename(p.path)}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      iconOnly
-                      size="sm"
-                      aria-label={t('移除失联记录')}
-                      title={t('移除失联记录')}
-                      onClick={async () => {
-                        if (
-                          await confirmAction(
-                            t('移除“{name}”的失联记录？不会删除仍存在的文件。', {
-                              name: filename(p.path),
-                            }),
-                          )
-                        )
-                          void mutate({ op: 'pruneMissing', id: p.id });
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                ))}
-            </div>
-            <div className="library-bottom">
-              <span role={importProgress ? 'status' : undefined}>
-                {importProgress || `${scan.entries.filter((e) => e.pdf).length} PDF`}
-              </span>
-              <span className="spacer" />
-            </div>
-          </div>
-        )}
-      </aside>
-      {resize}
+      {slot ? (viewActive ? createPortal(resources, slot) : null) : resources}
+      {slot ? null : resize}
       <div className="local-library-center">
         {(error || scan.warnings.length > 0) && (
           <div className="inline-error" role="alert">
@@ -970,13 +973,16 @@ export function LocalLiterature({
         <div className="local-editor-groups">
           <div className="local-reading-group">
             <DocumentTabs
-              tabs={session.tabs.map((tab) => ({
-                id: tab.id,
-                title: tab.paperId
-                  ? filename(scan.papers.find((p) => p.id === tab.paperId)?.path ?? tab.title)
-                  : tab.title,
-              }))}
-              activeId={session.active}
+              tabs={[
+                { id: HOME, title: t('文献库'), pinned: true, icon: <BookOpen size={14} /> },
+                ...session.tabs.map((tab) => ({
+                  id: tab.id,
+                  title: tab.paperId
+                    ? filename(scan.papers.find((p) => p.id === tab.paperId)?.path ?? tab.title)
+                    : tab.title,
+                })),
+              ]}
+              activeId={active ? session.active : HOME}
               panelId={panelId}
               newLabel={t('浏览器新页')}
               onContextMenu={(id, position) => {
@@ -988,6 +994,7 @@ export function LocalLiterature({
               }}
               onSelect={(id) =>
                 setSession((s) => {
+                  if (id === HOME) return { ...s, active: null };
                   const tab = s.tabs.find((t) => t.id === id);
                   return {
                     ...s,
@@ -1071,7 +1078,25 @@ export function LocalLiterature({
                   />
                 </Suspense>
               ) : (
-                <div className="literature-blank">{t('从左侧打开文献')}</div>
+                <LibraryTable
+                  root={scan.root}
+                  entries={scan.entries}
+                  papers={scan.papers}
+                  folder={directory}
+                  query={query}
+                  selected={selected}
+                  busy={busy}
+                  readOnly={readOnly}
+                  importing={importProgress}
+                  onSelect={(path) => {
+                    setSelected(path);
+                    setSelectedPaths(new Set([path]));
+                  }}
+                  onOpen={(path) => void open(path)}
+                  onChoose={() => void choose()}
+                  onImport={(files) => void importFiles(files, directory)}
+                  fileEvents={fileEvents}
+                />
               )}
             </div>
           </div>

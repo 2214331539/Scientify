@@ -5,9 +5,9 @@ import { locale, t } from '../../i18n';
 /** Local space of projects that are shared with other people. */
 export const COLLABORATION_TEAM_ID = 'scientify-collaboration';
 
-export type CenterPage = 'home' | 'mine' | 'team' | 'inbox';
-export const CENTER_PAGES: CenterPage[] = ['home', 'mine', 'team', 'inbox'];
-export type ProjectFilter = 'all' | 'favorite' | 'synced' | 'archived';
+export type CenterPage = 'mine' | 'team';
+export const CENTER_PAGES: CenterPage[] = ['mine', 'team'];
+export type ProjectFilter = 'all' | 'archived';
 export type ProjectSort = 'opened' | 'updated' | 'name' | 'created';
 
 /** Removing a project only changes workspace records; referenced disk files remain intact. */
@@ -50,24 +50,34 @@ export function personalProjects(data: Workspace) {
   return data.projects.filter((project) => !isTeamProject(project));
 }
 
+/** Covers use seven quiet neutrals; older, brighter cover colours map onto one of them. */
 export const projectCoverColors = [
-  '#496b8d',
-  '#3d5a80',
-  '#756b83',
-  '#a18a67',
-  '#b08a3e',
-  '#9a5b4b',
-  '#3f7a7a',
-  '#667775',
+  '#4f5866',
+  '#6a5f53',
+  '#55625a',
+  '#5e5a6b',
+  '#6b6157',
+  '#5a5f66',
+  '#58615e',
 ];
-const fallbackColors = ['#435e55', '#496b8d', '#a18a67', '#756b83', '#667775'];
+export function toneOf(color: string) {
+  const value = color.toLowerCase();
+  if (projectCoverColors.includes(value)) return value;
+  let hash = 0;
+  for (const char of value) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return projectCoverColors[hash % projectCoverColors.length];
+}
 export function colorForId(id: string) {
   const seed = Array.from(id).reduce((value, char) => value + char.charCodeAt(0), 0);
-  return fallbackColors[seed % fallbackColors.length];
+  return projectCoverColors[seed % projectCoverColors.length];
 }
 export function coverColor(project: Pick<Project, 'id' | 'color'>) {
   if (project.color && /^#[0-9a-f]{6}$/i.test(project.color)) return project.color;
   return colorForId(project.id);
+}
+/** The neutral a project's cover shows wherever it appears. */
+export function coverTone(project: Pick<Project, 'id' | 'color'>) {
+  return toneOf(coverColor(project));
 }
 export function coverInk(color: string) {
   const channels = [1, 3, 5].map((start) => {
@@ -107,8 +117,6 @@ export function filterProjects(projects: Project[], filter: ProjectFilter, query
   return projects.filter(
     (project) =>
       (filter === 'archived' ? !!project.archived : !project.archived) &&
-      (filter !== 'favorite' || !!project.favorite) &&
-      (filter !== 'synced' || isSyncedProject(project)) &&
       [project.name, project.question, project.field ?? '']
         .join(' ')
         .toLocaleLowerCase()

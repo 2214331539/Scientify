@@ -26,7 +26,8 @@ export function SubscriptionSidebar({
   store: WorkspaceStore;
   onNewBrowser(): void;
   onOpen(url: string): Promise<void>;
-  onRecommendations(): void;
+  /** Only shown once a recommendation service exists. */
+  onRecommendations?(): void;
   bookmark: BookmarkRequest | null;
   onBookmarkHandled(): void;
 }) {
@@ -292,11 +293,12 @@ export function SubscriptionSidebar({
           );
         })}
       </div>
-      <Button className="source-recommendations" variant="ghost" onClick={onRecommendations}>
-        <Rss />
-        {t('消息推荐')}
-        <small>{t('开发中')}</small>
-      </Button>
+      {onRecommendations ? (
+        <Button className="source-recommendations" variant="ghost" onClick={onRecommendations}>
+          <Rss />
+          {t('消息推荐')}
+        </Button>
+      ) : null}
       {error && !editor && (
         <p role="alert" className="inline-error">
           {error}

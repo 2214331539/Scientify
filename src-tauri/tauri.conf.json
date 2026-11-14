@@ -13,11 +13,11 @@
     "windows": [
       {
         "label": "main",
-        "title": "Scientify · Projects",
-        "width": 1100,
-        "height": 740,
-        "minWidth": 800,
-        "minHeight": 560,
+        "title": "Scientify",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1000,
+        "minHeight": 640,
         "center": true,
         "dragDropEnabled": false,
         "decorations": false

@@ -1,45 +1,30 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { Cloud, CloudOff, Download, UsersRound } from 'lucide-react';
-import { WindowControls } from '../../components/layout/WindowControls';
 import { t } from '../../i18n';
-import { coverInk } from './model';
+import { toneOf } from './model';
 import './project-library.css';
 
-export type CoverBadge = 'team' | 'synced' | 'offline' | 'remote';
-
-/** The book cover that stands for a project everywhere in the project center. */
+/** The book cover that stands for a project in the project center. */
 export function ProjectCoverArt({
   name,
   field,
+  question,
   color,
-  favorite,
   archived,
-  badges = [],
 }: {
   name: string;
   field?: string;
+  question?: string;
   color: string;
-  favorite?: boolean;
   archived?: boolean;
-  badges?: CoverBadge[];
 }) {
-  const icons: Record<CoverBadge, ReactNode> = {
-    team: <UsersRound key="team" />,
-    synced: <Cloud key="synced" />,
-    offline: <CloudOff key="offline" />,
-    remote: <Download key="remote" />,
-  };
   return (
     <span
       className={`project-cover-art${archived ? ' archived' : ''}`}
-      style={{ '--cover': color, '--cover-ink': coverInk(color) } as CSSProperties}
+      style={{ '--cover': toneOf(color) } as CSSProperties}
     >
-      {favorite ? <i className="project-cover-ribbon" aria-hidden="true" /> : null}
       <span className="project-cover-field">{archived ? t('已归档') : field}</span>
       <strong className="project-cover-name">{name}</strong>
-      <span className="project-cover-badges" aria-hidden="true">
-        {badges.map((badge) => icons[badge])}
-      </span>
+      {question ? <span className="project-cover-question">{question}</span> : null}
     </span>
   );
 }
@@ -48,13 +33,13 @@ export function MiniCover({ color }: { color: string }) {
   return (
     <span
       className="project-mini-cover"
-      style={{ '--cover': color } as CSSProperties}
+      style={{ '--cover': toneOf(color) } as CSSProperties}
       aria-hidden="true"
     />
   );
 }
 
-/** Page title row of the project center; window controls sit at its right edge on Windows. */
+/** Page title and the page's actions. */
 export function CenterHeader({
   title,
   count,
@@ -65,13 +50,12 @@ export function CenterHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="center-header" data-tauri-drag-region>
-      <h1 data-tauri-drag-region>
+    <header className="center-header">
+      <h1>
         {title}
         {count ? <span className="center-count">{count}</span> : null}
       </h1>
       <div className="center-header-actions">{children}</div>
-      <WindowControls />
     </header>
   );
 }

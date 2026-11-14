@@ -54,7 +54,7 @@ it('merges repeated native close requests, preserves dirty work on cancel and de
   });
   const user = userEvent.setup();
   render(<App store={store} backend={browserResearch} windowMode="projects" />);
-  await screen.findByText('开始使用');
+  await screen.findByText('还没有项目');
   act(() => store.getState().setDirtySource('test-note', true));
   const event = { preventDefault: vi.fn() };
   let first!: Promise<void>;

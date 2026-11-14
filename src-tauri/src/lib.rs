@@ -262,8 +262,12 @@ pub fn run() {
             if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
                 yita::stop(window.app_handle());
             }
-            if window.label() == "workspace" && matches!(event, tauri::WindowEvent::Destroyed) {
-                browser::close_owner(window.app_handle(), "workspace");
+            // Projects open inside the main window; whichever research window closes takes
+            // its browser tabs, terminals and Python checks with it.
+            if matches!(window.label(), "main" | "workspace")
+                && matches!(event, tauri::WindowEvent::Destroyed)
+            {
+                browser::close_owner(window.app_handle(), window.label());
                 if let Some(terminal) = window
                     .app_handle()
                     .try_state::<experiments::terminal::TerminalState>()
@@ -276,7 +280,9 @@ pub fn run() {
                 {
                     python.stop_all();
                 }
-                windows::show_projects(window.app_handle());
+                if window.label() == "workspace" {
+                    windows::show_projects(window.app_handle());
+                }
             }
         })
         .setup(move |app| {

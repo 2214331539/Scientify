@@ -1,0 +1,150 @@
+/* Title bar: navigation and location on the left, search in the middle, shared entries on
+   the right. Windows draws its own window buttons here; macOS keeps the native title bar. */
+.sf-titlebar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 400px) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  height: var(--sf-topbar-height);
+  padding-left: 10px;
+  background: var(--sf-surface-chrome);
+  user-select: none;
+}
+.platform-macos .sf-titlebar {
+  padding-right: 10px;
+}
+.sf-titlebar-left,
+.sf-titlebar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  height: 100%;
+}
+.sf-titlebar-right {
+  justify-content: flex-end;
+}
+.sf-titlebar .sf-button {
+  border: 0;
+  background: transparent;
+  color: var(--sf-text-secondary);
+}
+.sf-titlebar .sf-button:hover:not(:disabled) {
+  background: var(--sf-surface-hover);
+  color: var(--sf-text-primary);
+}
+.sf-titlebar .sf-button[aria-pressed='true'] {
+  background: var(--sf-surface-selected);
+  color: var(--sf-text-primary);
+}
+.sf-titlebar .sf-button:disabled {
+  opacity: 0.4;
+}
+.sf-titlebar .sf-button svg {
+  width: 16px;
+  height: 16px;
+}
+.sf-titlebar-brand.sf-button {
+  margin-right: 4px;
+}
+.sf-titlebar-brand .brand-mark img {
+  width: 20px;
+  height: 20px;
+}
+.sf-titlebar-tool.sf-button {
+  gap: 6px;
+  padding: 0 8px;
+}
+.sf-titlebar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: var(--sf-border-control);
+}
+
+.sf-crumbs {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-left: 6px;
+  color: var(--sf-text-muted);
+  white-space: nowrap;
+}
+.sf-crumb-part {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-width: 0;
+}
+.sf-crumb-part:last-child {
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+.sf-crumb-sep {
+  margin: 0 6px;
+  color: var(--sf-text-disabled);
+}
+button.sf-crumb {
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+button.sf-crumb:hover {
+  color: var(--sf-text-primary);
+  background: var(--sf-surface-hover);
+}
+.sf-crumb-here {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--sf-text-primary);
+  font-weight: 500;
+}
+
+.sf-searchbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--sf-surface-canvas);
+  box-shadow: inset 0 0 0 1px var(--sf-border-subtle);
+  color: var(--sf-text-muted);
+  cursor: pointer;
+  transition: box-shadow var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-searchbox:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--sf-border-control);
+}
+.sf-searchbox svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.sf-searchbox span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.sf-searchbox kbd {
+  font: 11px/1 var(--sf-font-body);
+  color: var(--sf-text-muted);
+}
+.sf-titlebar .window-controls {
+  align-self: stretch;
+  margin-left: 6px;
+}
+
+@media (max-width: 1240px) {
+  .sf-titlebar-tool.sf-button span {
+    display: none;
+  }
+}

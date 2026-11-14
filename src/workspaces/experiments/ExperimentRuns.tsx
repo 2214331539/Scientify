@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
-import { ArrowLeft, Columns3, Pencil, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Columns3, Pencil, Plus, RotateCcw, Search } from 'lucide-react';
 import { Button, Dropdown, Input } from '../../components/primitives';
 import { useActiveView } from '../../components/workspace/ViewTransition';
 import type { Entity, Project } from '../../domain/workspace';
@@ -10,6 +10,7 @@ import { t } from '../../i18n';
 import { confirmAction } from '../../components/prompts';
 import { RunForm, metricsOf } from './RunForm';
 import { statusLabel } from './status';
+import { relativeTime } from '../../features/projects/model';
 import { ExecutionPanel } from './ExecutionPanel';
 import type { Execution } from './runtime';
 type Record = Entity & { project: string };
@@ -130,12 +131,15 @@ export function ExperimentRuns({
           </Button>
         ) : (
           <>
-            <Input
-              aria-label={t('搜索实验记录')}
-              placeholder={t('搜索运行…')}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            <label className="sf-search-field">
+              <Search />
+              <Input
+                aria-label={t('搜索实验记录')}
+                placeholder={t('搜索运行…')}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
             <Dropdown
               aria-label={t('筛选实验状态')}
               value={filter}
@@ -250,7 +254,11 @@ export function ExperimentRuns({
                         {text(r.name) || t('未命名实验')}
                       </Button>
                     </td>
-                    <td>{statusLabel(text(r.status))}</td>
+                    <td>
+                      <span className="sf-state" data-status={text(r.status)}>
+                        {statusLabel(text(r.status))}
+                      </span>
+                    </td>
                     <td>
                       {t(
                         native.get(r.id)?.source
@@ -260,7 +268,9 @@ export function ExperimentRuns({
                             : '手动记录',
                       )}
                     </td>
-                    <td>{text(r.updatedAt).slice(0, 16).replace('T', ' ')}</td>
+                    <td title={text(r.updatedAt).slice(0, 16).replace('T', ' ')}>
+                      {relativeTime(text(r.updatedAt))}
+                    </td>
                   </tr>
                 ))}
               </tbody>

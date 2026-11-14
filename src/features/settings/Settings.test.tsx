@@ -50,7 +50,7 @@ it('keeps one dialog and the input draft when changing category or language', as
   const nav = within(screen.getByRole('navigation', { name: 'Settings categories' }));
   await user.click(nav.getByRole('button', { name: 'Appearance' }));
   expect(screen.queryByRole('combobox', { name: 'Language' })).toBeNull();
-  expect(screen.getByRole('combobox', { name: 'Theme' })).toBeTruthy();
+  expect(screen.getByRole('radiogroup', { name: 'Palette' })).toBeTruthy();
   await user.click(nav.getByRole('button', { name: 'Data & backups' }));
   expect((screen.getByRole('button', { name: 'Import' }) as HTMLButtonElement).disabled).toBe(true);
   await user.click(nav.getByRole('button', { name: 'General' }));
@@ -66,10 +66,10 @@ it('protects dirty profile input on close and allows retry after a failed save',
   await user.click(within(confirm).getByRole('button', { name: '取消' }));
   expect(close).not.toHaveBeenCalled();
   vi.mocked(adapter.save).mockRejectedValueOnce(new Error('磁盘只读'));
-  await user.click(screen.getByRole('button', { name: '保存偏好' }));
+  await user.click(screen.getByRole('button', { name: '保存' }));
   expect((await screen.findByRole('alert')).textContent).toBe('磁盘只读');
   expect(store.getState().dirty).toBe(true);
-  await user.click(screen.getByRole('button', { name: '保存偏好' }));
+  await user.click(screen.getByRole('button', { name: '保存' }));
   await waitFor(() => expect(store.getState().dirty).toBe(false));
   expect(store.getState().data?.settings.name).toBe('Ada');
   fireEvent(
@@ -89,7 +89,7 @@ it('blocks closing while a profile save is in flight', async () => {
       }),
   );
   await user.type(screen.getByRole('textbox', { name: '显示名称' }), 'Grace');
-  await user.click(screen.getByRole('button', { name: '保存偏好' }));
+  await user.click(screen.getByRole('button', { name: '保存' }));
   fireEvent(
     screen.getByRole('dialog', { name: '设置' }),
     new Event('cancel', { bubbles: true, cancelable: true }),

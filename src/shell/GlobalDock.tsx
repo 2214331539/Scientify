@@ -47,6 +47,7 @@ function AuxiliarySession({
   store,
   backend,
   markDirty,
+  split,
   onNoteContext,
 }: {
   tool: 'assistant' | 'notes';
@@ -56,6 +57,7 @@ function AuxiliarySession({
   store: WorkspaceStore;
   backend: ResearchBackend;
   markDirty: (source: string, dirty: boolean) => void;
+  split?: boolean;
   onNoteContext?: (context: WorkContext) => void;
 }) {
   const dirty = useCallback(
@@ -77,6 +79,7 @@ function AuxiliarySession({
           store={store}
           scope={scope}
           context={context}
+          split={split}
           onDirtyChange={dirty}
           onContext={active ? onNoteContext : undefined}
         />
@@ -184,6 +187,7 @@ export function GlobalDock({
         store={store}
         backend={backend}
         markDirty={markDirty}
+        split={current === 'notes' && notesWorkspaceActive && sessionScope === scope}
         onNoteContext={notesWorkspaceActive ? onNoteContext : undefined}
       />
     ));
@@ -237,9 +241,6 @@ export function GlobalDock({
           notesWorkspaceActive ? t('Notes workspace') : integrated ? t('全局辅助工具') : t('Notes')
         }
       >
-        <div className="sf-dock-header sf-notes-workspace-header" hidden={!notesWorkspace}>
-          <span className="workspace-name">{t('Notes')}</span>
-        </div>
         {sessions('notes')}
       </div>
       <aside

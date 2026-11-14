@@ -34,8 +34,8 @@ export const SHORTCUT_COMMANDS: ReadonlyArray<{
   {
     command: 'app.openAssistant',
     scope: 'global',
-    label: '打开 AI 助手',
-    description: '显示或聚焦侧边栏 AI 助手。',
+    label: '打开或关闭 AI 助手',
+    description: '在项目里显示或收起右侧的 AI 助手。',
   },
   {
     command: 'app.openNotes',
@@ -113,7 +113,7 @@ export const SHORTCUT_COMMANDS: ReadonlyArray<{
 
 export const DEFAULT_SHORTCUTS: ShortcutSettings = {
   bindings: [
-    ['app.openAssistant', 'Mod+Shift+L'],
+    ['app.openAssistant', 'Mod+J'],
     ['app.openNotes', 'Mod+Shift+O'],
     ['app.openLiterature', 'Mod+Shift+R'],
     ['app.openExperiments', 'Mod+Shift+E'],

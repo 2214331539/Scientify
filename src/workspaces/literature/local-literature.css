@@ -314,3 +314,63 @@
   color: var(--sf-text-muted);
   font-size: 11px;
 }
+
+/* Inside a project the library's own sidebar sits in the app sidebar. */
+.sf-side-resources > .literature-sidebar.is-docked {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: transparent;
+}
+.literature-sidebar.is-docked .literature-sidebar-views {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  height: auto;
+  padding: 2px;
+  margin-bottom: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--sf-surface-hover);
+}
+.literature-sidebar.is-docked .literature-sidebar-views .sf-button {
+  height: 24px;
+  min-height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sf-text-secondary);
+}
+.literature-sidebar.is-docked .literature-sidebar-views .sf-button[aria-current='page'] {
+  background: var(--sf-surface-canvas);
+  color: var(--sf-text-primary);
+  box-shadow:
+    0 0 0 1px var(--sf-border-subtle),
+    0 1px 2px rgb(0 0 0 / 5%);
+}
+.literature-sidebar.is-docked .library-directory {
+  flex: 1;
+}
+.literature-sidebar.is-docked .library-root-toolbar {
+  height: 30px;
+  padding: 0 0 0 6px;
+  border: 0;
+  color: var(--sf-text-muted);
+}
+.literature-sidebar.is-docked .library-root-title {
+  font-size: 12px;
+  color: var(--sf-text-muted);
+}
+.literature-sidebar.is-docked .library-bottom {
+  border: 0;
+  padding: 6px 8px 0;
+  color: var(--sf-text-muted);
+}
+.literature-sidebar.is-docked .sf-tree .sf-tree-row {
+  border-radius: var(--sf-radius);
+}
+/* The table already offers to open a folder; the docked tree stays quiet. */
+.literature-sidebar.is-docked .library-unmounted {
+  display: none;
+}

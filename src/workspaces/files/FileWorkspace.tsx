@@ -262,7 +262,12 @@ export function FileWorkspace(props: FileWorkspaceProps) {
             : t('实验文件工作区')
       }
     >
-      <div className="sf-file-tabs" role="tablist" aria-label={t('打开的文件')}>
+      <div
+        className="sf-file-tabs"
+        role="tablist"
+        aria-label={t('打开的文件')}
+        hidden={!tabs.length}
+      >
         {tabs.map((path) => (
           <div key={path} className={`sf-file-tab ${path === activePath ? 'is-active' : ''}`}>
             <Button
@@ -379,9 +384,8 @@ export function FileWorkspace(props: FileWorkspaceProps) {
         />
       ) : (
         <div className="sf-file-empty">
-          <FileCode2 size={28} strokeWidth={1.4} />
-          <h2>{mode === 'writing' ? t('Paper') : mode === 'files' ? t('Files') : t('Code')}</h2>
-
+          <FileCode2 size={30} strokeWidth={1.3} aria-hidden="true" />
+          <h2>{t('没有打开的文件')}</h2>
           <Button
             disabled={readOnly}
             onClick={() => {
@@ -392,7 +396,6 @@ export function FileWorkspace(props: FileWorkspaceProps) {
             <FilePlus2 size={15} />
             {t('新建文件')}
           </Button>
-          <span>{workspaceRoot || project.path}</span>
         </div>
       )}
     </Panel>
@@ -626,9 +629,6 @@ function FileDocument({
           <p>{t('可将所需内容复制回编辑器；“重新读取”会丢弃当前未保存编辑。')}</p>
         </div>
       ) : null}
-      {mode === 'writing' && isTex ? (
-        <div className="sf-file-hint">{t('LaTeX 源码编辑 · 当前 MVP 尚未接入 TeX 编译器。')}</div>
-      ) : null}
       <div
         ref={canvas}
         className={`sf-file-canvas ${isMarkdown && actualLayout === 'split' ? 'is-split' : ''}`}
@@ -788,11 +788,7 @@ export function FileResources({
     <div className="sf-file-resources">
       <div className="sf-resource-heading">
         <span>
-          {view === 'versions'
-            ? t('项目文件')
-            : mode === 'writing'
-              ? t('论文文件')
-              : t('资源管理器')}
+          {view === 'versions' ? t('项目文件') : mode === 'writing' ? t('论文文件') : t('文件')}
         </span>
         {onCreate && (
           <Button
@@ -874,9 +870,11 @@ export function FileResources({
           <p>{search ? t('没有匹配的文件') : t('暂无文件')}</p>
         )}
       </div>
-      <div className="sf-resource-root" title={workspaceRoot || project.path}>
-        {workspaceRoot || project.path || t('本机项目目录')}
-      </div>
+      {workspaceRoot || project.path ? (
+        <div className="sf-resource-root" title={workspaceRoot || project.path}>
+          {workspaceRoot || project.path}
+        </div>
+      ) : null}
     </div>
   );
 }

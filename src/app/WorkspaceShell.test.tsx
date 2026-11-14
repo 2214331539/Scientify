@@ -159,10 +159,12 @@ async function selectProject(user: ReturnType<typeof userEvent.setup>, name: str
     return;
   }
   await user.click(screen.getByLabelText('切换项目'));
-  await user.click(within(screen.getByLabelText('项目切换')).getByRole('button', { name }));
+  await user.click(
+    within(screen.getByRole('menu', { name: '项目切换' })).getByRole('menuitemradio', { name }),
+  );
 }
 
-it('provides the five primary workspace destinations and starts with AI closed', async () => {
+it('provides four project modules, title bar tools and starts with AI closed', async () => {
   const { store, backend } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={backend} />);
@@ -171,28 +173,17 @@ it('provides the five primary workspace destinations and starts with AI closed',
   expect(
     rail()
       .getAllByRole('button')
-      .map((button) => button.getAttribute('aria-label')),
-  ).toEqual([t('Overview'), t('Literature'), t('Notes'), t('Experiments'), t('Paper')]);
-  for (const button of rail().getAllByRole('button')) expect(button.textContent).toBe('');
-  const topbar = within(
-    screen.getByRole('button', { name: 'Scientify 项目管理' }).closest('header')!,
-  );
-  expect(topbar.queryByRole('button', { name: 'AI 助手' })).toBeNull();
-  expect(topbar.queryByRole('button', { name: '研究笔记' })).toBeNull();
-  const statusbar = within(screen.getByRole('contentinfo'));
-  expect(statusbar.getByRole('button', { name: 'AI 助手' }).textContent).toBe('');
-  expect(statusbar.getByRole('button', { name: '研究笔记' }).textContent).toBe('');
-  expect(statusbar.queryByText(t('Overview'))).toBeNull();
-  expect(
-    rail()
-      .getByRole('button', { name: t('Overview') })
-      .getAttribute('aria-current'),
-  ).toBe('page');
+      .map((button) => button.textContent),
+  ).toEqual(['文献', '笔记', '实验', '写作']);
+  expect(rail().getByRole('button', { name: '文献' }).getAttribute('aria-current')).toBe('page');
+  const titlebar = within(screen.getByRole('button', { name: '回到项目中心' }).closest('header')!);
+  expect(screen.queryByRole('contentinfo')).toBeNull();
   expect(screen.queryByRole('region', { name: 'AI 助手内容' })).toBeNull();
   expect(screen.queryByRole('textbox', { name: '向 AI 提问' })).toBeNull();
   expect(backend.askAI).not.toHaveBeenCalled();
 
-  const trigger = statusbar.getByRole('button', { name: 'AI 助手' });
+  const trigger = titlebar.getByRole('button', { name: 'AI 助手' });
+  expect(titlebar.getByRole('button', { name: '研究笔记' })).toBeTruthy();
   expect(trigger.getAttribute('aria-pressed')).toBe('false');
   await user.click(trigger);
   expect(screen.getByPlaceholderText(t('Ask about this project...'))).toBeTruthy();
@@ -201,13 +192,19 @@ it('provides the five primary workspace destinations and starts with AI closed',
   expect(screen.queryByRole('textbox', { name: '向 AI 提问' })).toBeNull();
   expect(document.activeElement).toBe(trigger);
   expect(backend.askAI).not.toHaveBeenCalled();
-  await user.click(screen.getByRole('button', { name: 'Scientify 项目管理' }));
+
+  await user.click(screen.getByRole('button', { name: '回到项目中心' }));
   expect(screen.queryByRole('complementary', { name: '工作区导航' })).toBeNull();
-  const spaces = within(screen.getByRole('complementary', { name: '项目中心导航' }));
-  expect(spaces.getByRole('button', { name: '设置' })).toBeTruthy();
-  expect(spaces.queryByRole('button', { name: '数据与备份' })).toBeNull();
+  const center = within(screen.getByRole('complementary', { name: '项目中心导航' }));
+  expect(center.getByRole('button', { name: '设置' })).toBeTruthy();
+  expect(center.queryByRole('button', { name: /收集箱/ })).toBeNull();
+  expect(titlebar.queryByRole('button', { name: 'AI 助手' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: '后退' }));
+  expect(rail().getByRole('button', { name: '文献' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '前进' }));
+  expect(screen.getByRole('complementary', { name: '项目中心导航' })).toBeTruthy();
   await selectProject(user, 'ToolHCL');
-  expect(rail().getByRole('button', { name: t('Literature') })).toBeTruthy();
+  expect(rail().getByRole('button', { name: '实验' })).toBeTruthy();
 });
 
 it('updates assistant context with the active material and isolates project conversations and requests', async () => {
@@ -220,7 +217,7 @@ it('updates assistant context with the active material and isolates project conv
   await user.click(assistant.getByRole('button', { name: '对话选项' }));
   await user.click(screen.getByRole('menuitem', { name: '查看当前材料' }));
   expect(assistant.getByText('ToolHCL')).toBeTruthy();
-  expect(assistant.getByText(t('Overview'))).toBeTruthy();
+  expect(assistant.getAllByText(t('Literature')).length).toBeGreaterThan(0);
   await user.click(screen.getByLabelText('关闭弹窗'));
 
   await user.click(rail().getByRole('button', { name: t('Literature') }));
@@ -248,7 +245,7 @@ it('updates assistant context with the active material and isolates project conv
   await user.click(assistant.getByRole('button', { name: '对话选项' }));
   await user.click(screen.getByRole('menuitem', { name: '查看当前材料' }));
   expect(assistant.getByText('Protein Study')).toBeTruthy();
-  expect(assistant.getByText(t('Overview'))).toBeTruthy();
+  expect(assistant.getAllByText(t('Literature')).length).toBeGreaterThan(0);
   expect(assistant.queryByText('Question for project A')).toBeNull();
   expect(assistant.queryByText('Isolated answer 1')).toBeNull();
   expect(assistant.queryByText('p1.md')).toBeNull();
@@ -384,14 +381,14 @@ it('keeps the same note editor during interrupted central fades and restores the
     const notes = editor.closest('.sf-dock-notes') as HTMLElement;
     fireEvent.click(rail().getByRole('button', { name: t('Notes') }));
     expect(jobs.length).toBeGreaterThan(0);
-    fireEvent.click(rail().getByRole('button', { name: t('Overview') }));
+    fireEvent.click(rail().getByRole('button', { name: t('Literature') }));
     expect(notes.classList.contains('notes-workspace-surface')).toBe(true);
     expect(notes.getAttribute('aria-hidden')).toBe('true');
     fireEvent.click(rail().getByRole('button', { name: t('Notes') }));
     await act(async () => jobs.forEach((job) => job.finish()));
     expect(notes.hidden).toBe(false);
     expect(within(screen.getByRole('main')).getByLabelText('笔记正文')).toBe(editor);
-    fireEvent.click(rail().getByRole('button', { name: t('Overview') }));
+    fireEvent.click(rail().getByRole('button', { name: t('Literature') }));
     await act(async () => jobs.forEach((job) => job.finish()));
     expect(notes.classList.contains('notes-workspace-surface')).toBe(false);
     expect(notes.hidden).toBe(false);
@@ -409,25 +406,24 @@ it('keeps the same note editor during interrupted central fades and restores the
   }
 });
 
-it('keeps unavailable workspaces as placeholders without loading files or disabling the assistant', async () => {
+it('opens manuscripts in writing and keeps the assistant draft across modules', async () => {
   const { store, backend } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={backend} />);
-  await screen.findByRole('region', { name: t('Overview') });
-  expect(screen.getByText(t('开发中'))).toBeTruthy();
-  await user.click(rail().getByRole('button', { name: t('Paper') }));
-  const paper = within(screen.getByRole('region', { name: t('LaTeX 论文撰写') }));
-  expect(paper.getByText(t('敬请期待'))).toBeTruthy();
-  expect(screen.queryByRole('button', { name: t('Manuscript') })).toBeNull();
-  expect(backend.listFiles).not.toHaveBeenCalled();
-  expect(backend.readFile).not.toHaveBeenCalled();
+  await screen.findByRole('navigation', { name: '一级导航' });
+  await user.click(rail().getByRole('button', { name: '写作' }));
+  expect(await screen.findByRole('region', { name: t('论文文件工作区') })).toBeTruthy();
+  await waitFor(() => expect(backend.listFiles).toHaveBeenCalled());
+  expect(screen.getByRole('button', { name: t('Manuscript') })).toBeTruthy();
   await user.click(screen.getByRole('button', { name: 'AI 助手' }));
   const draft = screen.getByRole('textbox', { name: '向 AI 提问' });
   await user.type(draft, 'Keep my question');
   await user.click(rail().getByRole('button', { name: t('Literature') }));
   await user.click(screen.getByRole('button', { name: t('Subscriptions') }));
   expect(
-    within(screen.getByRole('region', { name: t('文献订阅') })).getByText(t('开发中')),
+    within(screen.getByRole('region', { name: t('文献订阅') })).getByRole('button', {
+      name: /打开浏览器/,
+    }),
   ).toBeTruthy();
   expect(screen.getByRole('textbox', { name: '向 AI 提问' })).toBe(draft);
   expect((draft as HTMLTextAreaElement).value).toBe('Keep my question');

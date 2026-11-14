@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { FileText, Plus, X } from 'lucide-react';
 import { Button } from '../primitives';
 import { t } from '../../i18n';
@@ -15,7 +15,8 @@ export function DocumentTabs({
   newLabel,
   onContextMenu,
 }: {
-  tabs: { id: string; title: string }[];
+  /** A pinned tab (the library itself) has no close button. */
+  tabs: { id: string; title: string; pinned?: boolean; icon?: ReactNode }[];
   activeId: string | null;
   panelId: string;
   onSelect: (id: string) => void;
@@ -77,7 +78,7 @@ export function DocumentTabs({
                   target = tabs[(index + tabs.length - 1) % tabs.length]?.id;
                 else if (event.key === 'Home') target = tabs[0]?.id;
                 else if (event.key === 'End') target = tabs.at(-1)?.id;
-                else if (event.key === 'Delete') {
+                else if (event.key === 'Delete' && !tab.pinned) {
                   event.preventDefault();
                   focusPending.current = true;
                   onClose(tab.id);
@@ -90,21 +91,23 @@ export function DocumentTabs({
                 }
               }}
             >
-              <FileText size={14} />
+              {tab.icon ?? <FileText size={14} />}
               <span>{tab.title}</span>
             </Button>
-            <Button
-              variant="ghost"
-              iconOnly
-              tabIndex={-1}
-              aria-label={t('关闭 {name}', { name: tab.title })}
-              onClick={() => {
-                focusPending.current = true;
-                onClose(tab.id);
-              }}
-            >
-              <X size={12} />
-            </Button>
+            {tab.pinned ? null : (
+              <Button
+                variant="ghost"
+                iconOnly
+                tabIndex={-1}
+                aria-label={t('关闭 {name}', { name: tab.title })}
+                onClick={() => {
+                  focusPending.current = true;
+                  onClose(tab.id);
+                }}
+              >
+                <X size={12} />
+              </Button>
+            )}
           </div>
         ))}
       </div>

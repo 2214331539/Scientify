@@ -66,22 +66,22 @@ function fixture() {
   return { store: createWorkspaceStore(backend), backend, data };
 }
 
+const titlebar = () => screen.getByRole('button', { name: '回到项目中心' }).closest('header')!;
+
 it('switches both appearance and language immediately without saving or translating research data', async () => {
   const { store, backend } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={browserResearch} />);
   await screen.findByRole('button', { name: /^Notes/ });
-  expect(within(screen.getByRole('banner')).queryByRole('button', { name: '全局搜索' })).toBeNull();
-  expect(
-    within(screen.getByRole('banner')).queryByRole('button', { name: '切换为英文' }),
-  ).toBeNull();
+  expect(within(titlebar()).queryByRole('button', { name: '全局搜索' })).toBeNull();
+  expect(within(titlebar()).queryByRole('button', { name: '切换为英文' })).toBeNull();
   await user.click(screen.getByRole('button', { name: '设置' }));
   await user.click(
     within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', {
       name: '外观',
     }),
   );
-  await user.selectOptions(screen.getByRole('combobox', { name: '界面主题' }), 'dark');
+  await user.click(screen.getByRole('radio', { name: '夜' }));
   expect(document.documentElement.classList.contains('dark')).toBe(true);
   await user.click(
     within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', {
@@ -90,20 +90,21 @@ it('switches both appearance and language immediately without saving or translat
   );
   await user.selectOptions(screen.getByRole('combobox', { name: '界面语言' }), 'en');
   expect(document.documentElement.lang).toBe('en');
-  expect(screen.getByRole('button', { name: 'New project' })).toBeTruthy();
+  expect(screen.getAllByRole('button', { name: 'New project' }).length).toBeGreaterThan(0);
   expect(screen.getByRole('button', { name: /^Notes/ })).toBeTruthy();
   expect(backend.save).not.toHaveBeenCalled();
   expect(store.getState().data?.projects[0]).toMatchObject({ name: 'Notes', question: '未保存' });
   expect(JSON.parse(localStorage.getItem(preferenceKey)!)).toEqual({
     language: 'en',
     theme: 'dark',
+    palette: 'graphite',
   });
   await user.click(
     within(screen.getByRole('navigation', { name: 'Settings categories' })).getByRole('button', {
       name: 'Appearance',
     }),
   );
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Theme' }), 'system');
+  await user.click(screen.getByRole('radio', { name: 'System' }));
   expect(document.documentElement.classList.contains('dark')).toBe(false);
   act(() => {
     systemDark = true;
@@ -159,16 +160,16 @@ it('receives a preference change from another window and restores it on mount', 
     window.dispatchEvent(new StorageEvent('storage', { key: preferenceKey }));
   });
   await waitFor(() => expect(document.documentElement.lang).toBe('en'));
-  expect(screen.getByRole('button', { name: 'New project' })).toBeTruthy();
+  expect(screen.getAllByRole('button', { name: 'New project' }).length).toBeGreaterThan(0);
   cleanup();
   render(<App store={fixture().store} backend={browserResearch} />);
-  await screen.findByRole('button', { name: 'New project' });
+  await screen.findAllByRole('button', { name: 'New project' });
   expect(document.documentElement.classList.contains('dark')).toBe(true);
 });
 
 it('falls back safely for corrupt preferences and localizes parameterized backend errors', () => {
   localStorage.setItem(preferenceKey, '{broken');
-  expect(getPreferences()).toEqual({ language: 'zh-CN', theme: 'system' });
+  expect(getPreferences()).toEqual({ language: 'zh-CN', theme: 'system', palette: 'graphite' });
   setPreferences({ language: 'en' });
   expect(translateError('服务返回 HTTP 401，请检查服务地址、模型名称和访问凭据。')).toBe(
     'Service returned HTTP 401. Check the endpoint, model name and credentials.',

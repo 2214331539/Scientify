@@ -1,28 +1,27 @@
 dialog.settings-dialog {
-  width: min(880px, calc(100vw - 48px));
-  height: min(700px, calc(100dvh - 64px));
+  width: min(860px, calc(100vw - 48px));
+  height: min(640px, calc(100dvh - 64px));
   max-height: none;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--sf-surface-canvas);
 }
 dialog.settings-dialog[open] {
   display: grid;
-  grid-template-columns: 184px minmax(0, 1fr);
+  grid-template-columns: 196px minmax(0, 1fr);
 }
 .settings-dialog .settings-navigation {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px;
   min-height: 0;
   overflow-y: auto;
-  padding: 14px 10px;
+  padding: 16px 10px;
   background: var(--sf-surface-chrome);
   border-right: 1px solid var(--sf-border-subtle);
 }
 .settings-title {
-  height: 28px;
-  padding-inline: 8px;
+  padding: 2px 10px 12px;
   flex-shrink: 0;
   font-size: 13px;
   font-weight: 600;
@@ -30,25 +29,28 @@ dialog.settings-dialog[open] {
 .settings-navigation .sf-button {
   justify-content: flex-start;
   gap: 9px;
-  min-height: 34px;
-  padding: 6px 9px;
-  font-size: 12px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--sf-radius);
+  background: transparent;
+  color: var(--sf-text-secondary);
+  font-size: 13px;
   overflow: hidden;
+}
+.settings-navigation .sf-button:hover:not(:disabled) {
+  background: var(--sf-surface-hover);
+  color: var(--sf-text-primary);
 }
 .settings-navigation .sf-button span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .settings-navigation .sf-button[aria-current='page'] {
-  background: var(--sf-surface-canvas);
-  border-color: var(--sf-border-subtle);
+  background: var(--sf-surface-selected);
   color: var(--sf-text-primary);
-}
-.settings-brand {
-  margin-top: auto;
-  padding: 20px 9px 0;
-  color: var(--sf-text-muted);
-  font-size: 11px;
+  font-weight: 500;
 }
 .settings-dialog .modal-main {
   display: flex;
@@ -57,17 +59,18 @@ dialog.settings-dialog[open] {
   min-height: 0;
 }
 .settings-dialog .dialog-heading {
-  height: 46px;
-  padding: 0 18px;
+  height: 56px;
+  padding: 0 16px 0 28px;
   flex-shrink: 0;
+  border-bottom: 0;
 }
 .settings-dialog .dialog-heading h2 {
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 600;
 }
 .settings-scroll {
   flex: 1;
-  padding: 20px;
+  padding: 4px 28px 28px;
   min-height: 0;
   overflow-y: auto;
   scrollbar-gutter: stable;
@@ -76,29 +79,47 @@ dialog.settings-dialog[open] {
 .settings-scroll [hidden] {
   display: none !important;
 }
-.settings-preference-row,
-.settings-input-row {
+/* Rows grouped in one card, like system settings. */
+.settings-group {
   border: 1px solid var(--sf-border-subtle);
-  border-radius: 6px;
-  padding: 12px;
+  border-radius: 10px;
+  overflow: hidden;
 }
-.settings-preference-row .preference-fields label,
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 14px;
+}
+.settings-item + .settings-item {
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.settings-item > .preference-fields,
+.settings-item > .settings-input-row {
+  flex: 1;
+  min-width: 0;
+}
+.settings-item .preference-fields label,
 .settings-input-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
+  grid-template-columns: minmax(0, 1fr) 220px;
   align-items: center;
   gap: 16px;
   font-size: 13px;
 }
-.settings-preference-row p,
-.settings-note {
+.settings-input-row input {
+  width: 100%;
+}
+.settings-item-action {
+  min-width: 52px;
   color: var(--sf-text-muted);
   font-size: 12px;
-  margin-top: 8px;
-  line-height: 1.6;
+  text-align: right;
 }
-.settings-preference-row p {
-  min-height: 3.2em;
+.settings-error {
+  margin-top: 10px;
+  font-size: 12px;
 }
 .settings-section-heading {
   font-size: 12px;
@@ -106,13 +127,103 @@ dialog.settings-dialog[open] {
   color: var(--sf-text-secondary);
   margin: 28px 0 10px;
 }
-.settings-profile {
+section > .settings-section-heading:first-child {
+  margin-top: 4px;
+}
+.settings-note {
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+/* Palette: four small window previews. */
+.palette-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.palette-option {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sf-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
 }
-.settings-input-row input {
+.palette-option[aria-checked='true'] {
+  color: var(--sf-text-primary);
+  font-weight: 500;
+}
+.palette-preview {
+  position: relative;
   width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+  --chrome: #f4f4f5;
+  --canvas: #ffffff;
+  --ink: #18181b;
+  background: var(--chrome);
+  transition: box-shadow var(--sf-motion-feedback, 120ms) ease;
+}
+.palette-option:hover .palette-preview {
+  box-shadow: 0 0 0 1px var(--sf-border-control);
+}
+.palette-option[aria-checked='true'] .palette-preview {
+  box-shadow:
+    0 0 0 2px var(--sf-surface-canvas),
+    0 0 0 4px var(--sf-accent);
+}
+.palette-option:focus-visible {
+  outline: none;
+}
+.palette-option:focus-visible .palette-preview {
+  box-shadow:
+    0 0 0 2px var(--sf-surface-canvas),
+    0 0 0 4px var(--sf-focus);
+}
+.palette-preview > i {
+  position: absolute;
+  inset: 14% 8% 0 30%;
+  border-radius: 5px 0 0;
+  background: var(--canvas);
+}
+.palette-preview > b {
+  position: absolute;
+  top: 26%;
+  left: 38%;
+  width: 34%;
+  height: 6%;
+  border-radius: 2px;
+  background: var(--ink);
+  box-shadow:
+    0 14px 0 -1px color-mix(in srgb, var(--ink) 25%, transparent),
+    0 26px 0 -1px color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.palette-preview[data-palette='paper'] {
+  --chrome: #f1efea;
+  --canvas: #fcfbf8;
+  --ink: #23466f;
+}
+.palette-preview[data-palette='night'] {
+  --chrome: #0e0e10;
+  --canvas: #1c1c1f;
+  --ink: #ededef;
+}
+.palette-preview[data-palette='system'] {
+  background: linear-gradient(135deg, #f4f4f5 50%, #0e0e10 50%);
+}
+.palette-preview[data-palette='system'] > i {
+  background: linear-gradient(135deg, #ffffff 50%, #1c1c1f 50%);
+}
+.palette-preview[data-palette='system'] > b {
+  background: #71717a;
 }
 .settings-actions {
   display: flex;
@@ -124,15 +235,20 @@ dialog.settings-dialog[open] {
   color: var(--sf-text-muted);
 }
 .settings-actions button {
-  min-width: 112px;
+  min-width: 96px;
+}
+.settings-brand {
+  margin-top: auto;
+  padding: 20px 10px 0;
+  color: var(--sf-text-muted);
+  font-size: 11px;
 }
 .settings-data {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-.settings-data > p,
-.settings-about p {
+.settings-data > p {
   font-size: 12px;
   line-height: 1.7;
   color: var(--sf-text-secondary);
@@ -153,10 +269,6 @@ dialog.settings-dialog[open] {
   margin-top: 6px;
   overflow-wrap: anywhere;
 }
-.settings-about {
-  display: grid;
-  gap: 18px;
-}
 .storage-pending {
   font-size: 12px;
   color: var(--sf-text-secondary);
@@ -164,9 +276,32 @@ dialog.settings-dialog[open] {
 .storage-pending button {
   margin-top: 8px;
 }
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 0 24px;
+  text-align: center;
+}
+.settings-about .brand-mark,
+.settings-about svg {
+  width: 44px;
+  height: 44px;
+}
 .settings-about h3 {
-  font-size: 18px;
+  margin: 6px 0 0;
+  font-size: 20px;
   font-weight: 600;
+}
+.settings-about p {
+  color: var(--sf-text-secondary);
+  font-size: 13px;
+}
+.settings-version {
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 .settings-collaboration-status {
   display: grid;
@@ -285,7 +420,7 @@ dialog.settings-dialog[open] {
   .settings-scroll {
     padding: 12px;
   }
-  .settings-preference-row .preference-fields label,
+  .settings-item .preference-fields label,
   .settings-input-row {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from 'zustand';
-import { Cloud, CloudOff, RefreshCw, AlertCircle } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, AlertCircle, UsersRound } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/primitives';
 import { confirmAction } from '../../components/prompts';
@@ -46,10 +46,13 @@ export function ProjectSyncControl({
   project,
   store,
   automatic = false,
+  trigger = 'status',
 }: {
   project: Project;
   store: WorkspaceStore;
   automatic?: boolean;
+  /** `share` shows a plain “Share” entry; problems are reported through notifications. */
+  trigger?: 'status' | 'share';
 }) {
   const sync = useProjectSync(project.id, store, automatic);
   const [open, setOpen] = useState(false);
@@ -112,23 +115,36 @@ export function ProjectSyncControl({
     <>
       <Button
         variant="ghost"
-        className="project-sync-trigger"
-        aria-label={t('项目同步：{status}', { status })}
+        className={trigger === 'share' ? 'sf-titlebar-tool' : 'project-sync-trigger'}
+        aria-label={
+          trigger === 'share'
+            ? t('共享与同步：{status}', { status })
+            : t('项目同步：{status}', { status })
+        }
         onClick={() => {
           setOpen(true);
           void sync.refresh();
         }}
       >
-        {sync.syncing ? (
-          <RefreshCw className="sync-spinning" size={15} />
-        ) : !sync.online || info?.paused ? (
-          <CloudOff size={15} />
-        ) : sync.error || info?.lastError || info?.conflicts.length ? (
-          <AlertCircle size={15} />
+        {trigger === 'share' ? (
+          <>
+            <UsersRound size={15} />
+            <span>{t('共享')}</span>
+          </>
         ) : (
-          <Cloud size={15} />
+          <>
+            {sync.syncing ? (
+              <RefreshCw className="sync-spinning" size={15} />
+            ) : !sync.online || info?.paused ? (
+              <CloudOff size={15} />
+            ) : sync.error || info?.lastError || info?.conflicts.length ? (
+              <AlertCircle size={15} />
+            ) : (
+              <Cloud size={15} />
+            )}
+            <span>{status}</span>
+          </>
         )}
-        <span>{status}</span>
       </Button>
       {open && (
         <Modal

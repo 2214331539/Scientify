@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Scientify 研究工作台设计预览</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="review-bar">
+    <div><strong>Scientify</strong><span class="review-tag">设计预览 01</span></div>
+    <nav class="segment" aria-label="预览页面"><button data-view="projects" aria-pressed="true">项目中心</button><button data-view="reader" aria-pressed="false">阅读工作台</button></nav>
+    <div class="review-options"><button id="width-toggle" aria-pressed="false">窄窗口</button><button id="theme-toggle" aria-label="切换明暗主题" title="切换明暗主题"></button><button id="guide-open">体验说明</button></div>
+  </header>
+  <div class="preview-wrap"><div id="frame" class="frame">
+    <div id="projects-view" class="app-content"></div>
+    <div id="reader-view" class="app-content reader-app" hidden></div>
+  </div></div>
+  <footer class="review-footer"><span>独立交互原型 · 示例数据 · 不连接应用或服务器</span><a href="../../2026-11-12-界面诊断与体验优化方案.md">阅读设计方案 ↗</a></footer>
+  <dialog id="guide">
+    <div class="dialog-header"><h2>从这几个操作开始</h2><button data-close-dialog aria-label="关闭说明">×</button></div>
+    <ol><li>切换书架与列表，打开一本研究札记。</li><li>切换 AI 和论文笔记，主阅读区域保持稳定。</li><li>点击“窄窗口”，观察资源栏收起和辅助浮层。</li><li>拖动辅助面板左边缘；聚焦分隔条后也可用方向键调整。</li><li>输入问题，体验模拟流式回复、中止与继续输入。</li><li>试试明暗主题、Ctrl/⌘ K 搜索和 Escape 关闭浮层。</li></ol>
+    <p class="subtle">PDF 是 HTML 排版示意；页码、同步与 AI 为本地模拟。没有上传、登录、模型调用或文件操作。笔记仅保留在本页内存中，刷新恢复示例。</p>
+    <button class="primary" data-close-dialog>开始体验</button>
+  </dialog>
+  <dialog id="search-dialog"><div class="dialog-header"><input id="global-search" aria-label="搜索示例内容" placeholder="搜索项目、论文…"><button data-close-dialog aria-label="关闭搜索">×</button></div><div id="search-results"></div><p class="dialog-foot">仅搜索本页示例 · Esc 关闭</p></dialog>
+  <dialog id="new-dialog"><form id="new-form"><div class="dialog-header"><h2>新建研究项目</h2><button type="button" data-close-dialog aria-label="关闭">×</button></div><label class="form-label" for="project-title">项目名称</label><input id="project-title" required maxlength="50" placeholder="例如：具身智能的主动感知"><p class="subtle">只在本次预览中创建，不写入 Scientify。</p><button class="primary" type="submit">创建并打开</button></form></dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

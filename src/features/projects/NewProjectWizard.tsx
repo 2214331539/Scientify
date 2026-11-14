@@ -132,20 +132,32 @@ export function NewProjectWizard({
           else if (step === 2) void create();
         }}
       >
-        <p className="wizard-step">
-          {t('第 {step} 步，共 2 步：{label}', {
+        <ol
+          className="wizard-steps"
+          aria-label={t('第 {step} 步，共 2 步：{label}', {
             step,
             label: step === 1 ? t('基本信息') : team ? t('文件夹与成员') : t('文件夹与同步'),
           })}
-        </p>
+        >
+          {[t('基本信息'), team ? t('文件夹与成员') : t('文件夹与同步')].map((label, index) => (
+            <li
+              key={label}
+              aria-current={step === index + 1 ? 'step' : undefined}
+              data-done={step > index + 1}
+            >
+              <span>{index + 1}</span>
+              {label}
+            </li>
+          ))}
+        </ol>
         {step === 1 ? (
           <div className="wizard-body">
             <div className="wizard-preview" aria-hidden="true">
               <ProjectCoverArt
                 name={name || t('项目名称')}
                 field={draft.field.trim() || t('研究方向')}
+                question={draft.question.trim()}
                 color={draft.color}
-                badges={team ? ['team'] : []}
               />
               <small>{t('封面预览')}</small>
             </div>

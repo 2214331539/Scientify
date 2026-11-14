@@ -147,6 +147,9 @@ function setup() {
   return { store: createWorkspaceStore(workspace), backend, workspace };
 }
 
+const moduleButton = (name: string) =>
+  within(screen.getByRole('navigation', { name: '一级导航' })).getByRole('button', { name });
+
 it('remembers the code view after opening a changed file and leaving the workspace', async () => {
   const { store, backend } = setup();
   backend.gitStatus = vi.fn(async () => [{ path: 'paper.md', status: 'M' }]);
@@ -155,13 +158,13 @@ it('remembers the code view after opening a changed file and leaving the workspa
     render(<App store={store} backend={backend} />);
   });
   await screen.findByLabelText('编辑 paper.md');
-  await user.click(screen.getByLabelText(t('Experiments')));
-  await user.click(screen.getByLabelText('Git'));
+  await user.click(moduleButton(t('Experiments')));
+  await user.click(screen.getByLabelText('版本'));
   await user.click(await screen.findByLabelText('查看更改 paper.md'));
   await user.click(screen.getByLabelText(t('打开文件')));
   expect(screen.getByLabelText(t('Code')).getAttribute('aria-current')).toBe('page');
-  await user.click(screen.getByLabelText(t('Overview')));
-  await user.click(screen.getByLabelText(t('Experiments')));
+  await user.click(moduleButton(t('Notes')));
+  await user.click(moduleButton(t('Experiments')));
   expect(screen.getByLabelText(t('Code')).getAttribute('aria-current')).toBe('page');
   expect(
     await within(screen.getByRole('main')).findByRole('textbox', { name: '编辑 paper.md' }),
@@ -268,7 +271,9 @@ it('blocks directory changes with drafts and reloads the tree and editor after a
   });
   await user.click(screen.getByLabelText('切换项目'));
   await user.click(
-    within(screen.getByLabelText('项目切换')).getByRole('button', { name: '项目设置' }),
+    within(screen.getByRole('menu', { name: '项目切换' })).getByRole('menuitem', {
+      name: '项目设置',
+    }),
   );
   let settings = within(screen.getByRole('dialog'));
   expect((settings.getByRole('button', { name: '选择目录' }) as HTMLButtonElement).disabled).toBe(
@@ -281,7 +286,9 @@ it('blocks directory changes with drafts and reloads the tree and editor after a
   const previousListings = vi.mocked(backend.listFiles).mock.calls.length;
   await user.click(screen.getByLabelText('切换项目'));
   await user.click(
-    within(screen.getByLabelText('项目切换')).getByRole('button', { name: '项目设置' }),
+    within(screen.getByRole('menu', { name: '项目切换' })).getByRole('menuitem', {
+      name: '项目设置',
+    }),
   );
   settings = within(screen.getByRole('dialog'));
   await user.click(settings.getByRole('button', { name: '选择目录' }));
@@ -360,7 +367,7 @@ it('opens the exact experiment source, remembers selection, and opens a recent n
   expect(JSON.parse(localStorage.getItem('scientify.ui.v2')!).locations.p1.runId).toBe('r-old');
   await user.click(screen.getByRole('button', { name: /Latest result/ }));
   expect(JSON.parse(localStorage.getItem('scientify.ui.v2')!).locations.p1.runId).toBe('r-new');
-  await user.click(screen.getByLabelText(t('Notes'), { selector: 'button' }));
+  await user.click(moduleButton(t('Notes')));
   await user.click(screen.getByRole('button', { name: /Insight note/ }));
   expect(((await screen.findByLabelText('笔记标题')) as HTMLInputElement).value).toBe(
     'Insight note',
@@ -368,7 +375,7 @@ it('opens the exact experiment source, remembers selection, and opens a recent n
   expect((screen.getByLabelText('笔记正文') as HTMLTextAreaElement).value).toBe(
     'Keep the useful conclusion.',
   );
-  await user.click(screen.getByLabelText(t('Experiments')));
+  await user.click(moduleButton(t('Experiments')));
   await user.click(screen.getByLabelText(t('Runs')));
   expect(await screen.findByRole('heading', { name: 'Latest result' })).toBeTruthy();
 });

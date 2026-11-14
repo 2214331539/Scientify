@@ -1,5 +1,6 @@
 import { canEditProject } from '../../platform/collaboration';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from 'zustand';
 import {
   Box,
@@ -9,8 +10,8 @@ import {
   GitBranch,
   ListTodo,
   PanelBottom,
-  PanelLeftClose,
   Play,
+  Plus,
   SaveAll,
   Search,
   Settings2,
@@ -35,8 +36,9 @@ import { operatingSystem } from '../../platform/os';
 import { GitWorkspace, type GitView } from './GitWorkspace';
 import { CodeSearch, type SearchHit } from './CodeSearch';
 import { clearCodeRoot, codeContext, selectExperiment, useCodeWorkspace } from './code-context';
-import { ExperimentManager } from './ExperimentManager';
-import { experimentsFor, registerExperiment, sameCodeRoot } from './catalog';
+import { ExperimentForm, ExperimentManager, runsOfExperiment } from './ExperimentManager';
+import { experimentCatalog, experimentsFor, registerExperiment, sameCodeRoot } from './catalog';
+import { SideGroup, SideItem, useSidebarSlot } from '../../shell/Sidebar';
 import { ExperimentRuns } from './ExperimentRuns';
 import { ExecutionPanel } from './ExecutionPanel';
 import { PythonSidebar } from './PythonSidebar';
@@ -102,9 +104,18 @@ export function ExperimentWorkspace({
   const experiment = catalog.find((item) => item.id === experimentId) ?? catalog[0];
   const code = useCodeWorkspace(project, experiment);
   const development = useDevelopment();
+  // In the app the experiment list and its files live in the sidebar.
+  const slot = useSidebarSlot();
+  const docked = !!slot;
+  const resourcesOpen = docked || sidebarOpen;
+  const [creating, setCreating] = useState(false);
   function openExperiment(next: Experiment) {
     selectExperiment(project.id, next);
     onView('files');
+  }
+  function pickExperiment(next: Experiment) {
+    selectExperiment(project.id, next);
+    if (view === 'manage') onView('files');
   }
   async function openWorktree(root: string) {
     try {
@@ -311,7 +322,7 @@ export function ExperimentWorkspace({
     const same = view === 'files' && resourceView === next;
     setResourceView(next);
     onView('files');
-    if (!sidebarOpen || same) onSidebarToggle();
+    if (!docked && (!sidebarOpen || same)) onSidebarToggle();
   }
   async function startTerminal(pythonFile = false) {
     if (readOnly) return;
@@ -405,7 +416,7 @@ export function ExperimentWorkspace({
         event.preventDefault();
         setResourceView(next);
         onView('files');
-        if (!sidebarOpen) onSidebarToggle();
+        if (!docked && !sidebarOpen) onSidebarToggle();
         requestAnimationFrame(() =>
           document
             .querySelector<HTMLInputElement>(
@@ -435,62 +446,104 @@ export function ExperimentWorkspace({
     window.addEventListener('keydown', shortcut);
     return () => window.removeEventListener('keydown', shortcut);
   });
+  const resources =
+    code.ready && experiment ? (
+      <>
+        <div hidden={resourceView !== 'files'} className="sf-code-resource-content">
+          <FileResources
+            project={project}
+            backend={backend}
+            mode="experiments"
+            view="files"
+            activePath={currentPath}
+            onOpen={openPath}
+            workspaceRoot={root}
+            onCreate={
+              readOnly
+                ? undefined
+                : () => {
+                    setCreateRequest((value) => value + 1);
+                    onView('files');
+                  }
+            }
+          />
+        </div>
+        <div hidden={resourceView !== 'search'} className="sf-code-resource-content">
+          <CodeSearch
+            key={JSON.stringify([project.id, root])}
+            projectId={project.id}
+            root={root}
+            backend={backend}
+            active={viewActive && view === 'files' && resourcesOpen && resourceView === 'search'}
+            onOpen={(hit) => void openMatch(hit)}
+          />
+        </div>
+        <div hidden={resourceView !== 'python'} className="sf-code-resource-content">
+          {!readOnly && (
+            <PythonSidebar
+              key={experiment.id}
+              projectId={project.id}
+              experiment={experiment}
+              store={store}
+              active={viewActive && view === 'files' && resourcesOpen && resourceView === 'python'}
+              tasks={development.tasks}
+              onTerminal={() => void startTerminal()}
+            />
+          )}
+        </div>
+      </>
+    ) : undefined;
+  const side =
+    docked && viewActive && slot
+      ? createPortal(
+          <div className="sf-experiment-side">
+            <SideGroup
+              label={t('实验')}
+              action={
+                readOnly ? undefined : (
+                  <Button
+                    variant="ghost"
+                    iconOnly
+                    tooltip={t('新建实验')}
+                    aria-label={t('新建实验')}
+                    disabled={!experimentCatalog.available()}
+                    onClick={() => setCreating(true)}
+                  >
+                    <Plus size={14} />
+                  </Button>
+                )
+              }
+            >
+              {catalog.map((item) => (
+                <SideItem
+                  key={item.id}
+                  icon={
+                    <span
+                      className="sf-status-dot"
+                      data-status={runsOfExperiment(project, item, executions)[0]?.status}
+                    />
+                  }
+                  label={item.name}
+                  title={item.purpose || item.name}
+                  current={view !== 'manage' && item.id === experiment?.id}
+                  onClick={() => pickExperiment(item)}
+                />
+              ))}
+            </SideGroup>
+            <div className="sf-experiment-side-files" hidden={view !== 'files'}>
+              {resources}
+            </div>
+          </div>,
+          slot,
+        )
+      : null;
   return (
     <WorkspaceFrame
       label={view === 'manage' ? t('Experiments') : (experiment?.name ?? t('Experiments'))}
       views={[]}
       view={view}
       onView={onView}
-      sidebar={
-        code.ready && experiment ? (
-          <>
-            <div hidden={resourceView !== 'files'} className="sf-code-resource-content">
-              <FileResources
-                project={project}
-                backend={backend}
-                mode="experiments"
-                view="files"
-                activePath={currentPath}
-                onOpen={openPath}
-                workspaceRoot={root}
-                onCreate={
-                  readOnly
-                    ? undefined
-                    : () => {
-                        setCreateRequest((value) => value + 1);
-                        onView('files');
-                      }
-                }
-              />
-            </div>
-            <div hidden={resourceView !== 'search'} className="sf-code-resource-content">
-              <CodeSearch
-                key={JSON.stringify([project.id, root])}
-                projectId={project.id}
-                root={root}
-                backend={backend}
-                active={viewActive && view === 'files' && sidebarOpen && resourceView === 'search'}
-                onOpen={(hit) => void openMatch(hit)}
-              />
-            </div>
-            <div hidden={resourceView !== 'python'} className="sf-code-resource-content">
-              {!readOnly && (
-                <PythonSidebar
-                  key={experiment.id}
-                  projectId={project.id}
-                  experiment={experiment}
-                  store={store}
-                  active={
-                    viewActive && view === 'files' && sidebarOpen && resourceView === 'python'
-                  }
-                  tasks={development.tasks}
-                  onTerminal={() => void startTerminal()}
-                />
-              )}
-            </div>
-          </>
-        ) : undefined
-      }
+      sidebar={docked ? undefined : resources}
       sidebarOpen={sidebarOpen && view === 'files'}
       onSidebarToggle={onSidebarToggle}
       width={width}
@@ -499,24 +552,57 @@ export function ExperimentWorkspace({
         <nav className="sf-code-activity" aria-label={t('代码工具')}>
           <Button
             variant="ghost"
-            iconOnly
             aria-label={t('实验管理')}
-            tooltip={t('实验管理')}
             aria-current={view === 'manage' ? 'page' : undefined}
             onClick={() => onView('manage')}
           >
-            <FlaskConical size={21} />
+            <FlaskConical size={15} />
+            <span>{t('实验')}</span>
           </Button>
           <Button
             variant="ghost"
-            iconOnly
             aria-label={t('Code')}
-            tooltip={t('资源管理器')}
             aria-current={view === 'files' && resourceView === 'files' ? 'page' : undefined}
             onClick={() => showResource('files')}
           >
-            <Files size={21} />
+            <Files size={15} />
+            <span>{t('代码')}</span>
           </Button>
+          <Button
+            variant="ghost"
+            aria-label={t('版本')}
+            aria-current={view === 'versions' && gitView !== 'worktrees' ? 'page' : undefined}
+            onClick={() => {
+              setGitView('changes');
+              onView('versions');
+            }}
+          >
+            <GitBranch size={15} />
+            <span>{t('版本')}</span>
+            {!!code.snapshot?.changes.length && (
+              <span className="sf-code-badge">{code.snapshot.changes.length}</span>
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            aria-label={t('Runs')}
+            aria-current={view === 'runs' ? 'page' : undefined}
+            onClick={() => onView('runs')}
+          >
+            <Play size={15} />
+            <span>{t('记录')}</span>
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={readOnly}
+            aria-label={t('环境与依赖')}
+            aria-current={view === 'files' && resourceView === 'python' ? 'page' : undefined}
+            onClick={() => showResource('python')}
+          >
+            <Box size={15} />
+            <span>{t('环境')}</span>
+          </Button>
+          <span className="spacer" />
           <Button
             variant="ghost"
             iconOnly
@@ -525,33 +611,7 @@ export function ExperimentWorkspace({
             aria-current={view === 'files' && resourceView === 'search' ? 'page' : undefined}
             onClick={() => showResource('search')}
           >
-            <Search size={21} />
-          </Button>
-          <Button
-            variant="ghost"
-            iconOnly
-            aria-label="Git"
-            tooltip={t('源代码管理')}
-            aria-current={view === 'versions' && gitView !== 'worktrees' ? 'page' : undefined}
-            onClick={() => {
-              setGitView('changes');
-              onView('versions');
-            }}
-          >
-            <GitBranch size={21} />
-            {!!code.snapshot?.changes.length && (
-              <span className="sf-code-badge">{code.snapshot.changes.length}</span>
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            iconOnly
-            aria-label={t('Runs')}
-            tooltip={t('Runs')}
-            aria-current={view === 'runs' ? 'page' : undefined}
-            onClick={() => onView('runs')}
-          >
-            <Play size={21} />
+            <Search size={15} />
           </Button>
           <Button
             variant="ghost"
@@ -564,117 +624,43 @@ export function ExperimentWorkspace({
               onView('versions');
             }}
           >
-            <FolderGit2 size={21} />
+            <FolderGit2 size={15} />
           </Button>
-          <span className="spacer" />
           <Button
             variant="ghost"
             iconOnly
             aria-label={t('后台任务')}
+            tooltip={t('后台任务')}
             onClick={() => setDialog('tasks')}
           >
-            <ListTodo size={20} />
+            <ListTodo size={15} />
             {executions.some((r) => r.status === 'running') && (
               <span className="sf-code-badge">
                 {executions.filter((r) => r.status === 'running').length}
               </span>
             )}
           </Button>
-          <Button
-            variant="ghost"
-            iconOnly
-            disabled={readOnly}
-            aria-label={t('环境与依赖')}
-            tooltip={t('Python 环境')}
-            aria-current={view === 'files' && resourceView === 'python' ? 'page' : undefined}
-            onClick={() => showResource('python')}
-          >
-            <Box size={20} />
-          </Button>
         </nav>
-      }
-      footer={
-        view === 'manage' ? undefined : (
-          <footer className="sf-code-statusbar">
-            <Button
-              variant="ghost"
-              aria-label={t('分支')}
-              onClick={() => {
-                setGitView('branches');
-                onView('versions');
-              }}
-            >
-              <GitBranch size={12} />
-              <span>{code.snapshot?.branch || 'Git'}</span>
-            </Button>
-            <span>
-              {code.snapshot ? t('{count} 个变更', { count: code.snapshot.changes.length }) : ''}
-            </span>
-            <span className="spacer" />
-            <Button
-              variant="ghost"
-              aria-label={t('选择 Python 解释器')}
-              onClick={() => showResource('python')}
-            >
-              {experiment?.python
-                ? `Python ${experiment.python.version} (${experiment.python.manager})`
-                : t('选择 Python 解释器')}
-            </Button>
-            <Button
-              variant="ghost"
-              iconOnly
-              tooltip={t('新建终端')}
-              aria-label={t('新建终端')}
-              disabled={readOnly || starting || !code.ready || !experimentApi.available()}
-              onClick={() => {
-                onView('files');
-                void startTerminal();
-              }}
-            >
-              <TerminalSquare size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t(sidebarOpen ? '收起资源' : '展开资源')}
-              onClick={() => {
-                onView('files');
-                onSidebarToggle();
-              }}
-            >
-              <PanelLeftClose size={13} />
-            </Button>
-            <Button
-              variant="ghost"
-              iconOnly
-              aria-label={t(panelOpen ? '收起运行日志' : '展开运行日志')}
-              onClick={() => {
-                onView('files');
-                setPanelOpen((value) => !value);
-              }}
-            >
-              <PanelBottom size={13} />
-            </Button>
-          </footer>
-        )
       }
       actions={
         view !== 'manage' && experiment ? (
           <div className="sf-experiment-actions">
-            <Dropdown
-              aria-label={t('当前实验')}
-              value={experiment.id}
-              onChange={(event) => {
-                const next = catalog.find((e) => e.id === event.target.value);
-                if (next) openExperiment(next);
-              }}
-            >
-              {catalog.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </Dropdown>
+            {docked ? null : (
+              <Dropdown
+                aria-label={t('当前实验')}
+                value={experiment.id}
+                onChange={(event) => {
+                  const next = catalog.find((e) => e.id === event.target.value);
+                  if (next) openExperiment(next);
+                }}
+              >
+                {catalog.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Dropdown>
+            )}
             <Dropdown
               aria-label={t('运行配置')}
               value={config?.id || ''}
@@ -757,6 +743,18 @@ export function ExperimentWorkspace({
         ) : undefined
       }
     >
+      {side}
+      {creating && (
+        <ExperimentForm
+          project={project}
+          store={store}
+          onClose={() => setCreating(false)}
+          onSaved={(next) => {
+            setCreating(false);
+            openExperiment(next);
+          }}
+        />
+      )}
       {(error || runtimeError || development.error) && (
         <div role="alert" className="sf-experiment-error">
           {translateError(error || runtimeError || development.error)}
@@ -840,6 +838,32 @@ export function ExperimentWorkspace({
                   </Button>
                 ))}
                 <span className="spacer" />
+                <Button
+                  variant="ghost"
+                  className="sf-panel-chip"
+                  aria-label={t('分支')}
+                  title={t('分支')}
+                  onClick={() => {
+                    setGitView('branches');
+                    onView('versions');
+                  }}
+                >
+                  <GitBranch size={13} />
+                  <span>{code.snapshot?.branch || 'Git'}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="sf-panel-chip"
+                  aria-label={t('选择 Python 解释器')}
+                  title={t('选择 Python 解释器')}
+                  onClick={() => showResource('python')}
+                >
+                  <span>
+                    {experiment?.python
+                      ? `Python ${experiment.python.version}`
+                      : t('选择 Python 解释器')}
+                  </span>
+                </Button>
                 {panelTab !== 'terminal' && (
                   <Dropdown
                     aria-label={t('查看运行输出')}
@@ -857,6 +881,16 @@ export function ExperimentWorkspace({
                 <Button
                   variant="ghost"
                   iconOnly
+                  tooltip={t('新建终端')}
+                  aria-label={t('新建终端')}
+                  disabled={readOnly || starting || !code.ready || !experimentApi.available()}
+                  onClick={() => void startTerminal()}
+                >
+                  <TerminalSquare size={14} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  iconOnly
                   aria-label={t(panelMaximized ? '还原输出面板' : '最大化输出面板')}
                   onClick={() => {
                     setPanelMaximized((value) => !value);
@@ -868,10 +902,10 @@ export function ExperimentWorkspace({
                 <Button
                   variant="ghost"
                   iconOnly
-                  aria-label={t('关闭输出面板')}
-                  onClick={() => setPanelOpen(false)}
+                  aria-label={t(panelOpen ? '收起输出面板' : '展开输出面板')}
+                  onClick={() => setPanelOpen((value) => !value)}
                 >
-                  <X size={14} />
+                  {panelOpen ? <X size={14} /> : <PanelBottom size={14} />}
                 </Button>
               </header>
               <div className="sf-terminal-container" hidden={!panelOpen || panelTab !== 'terminal'}>

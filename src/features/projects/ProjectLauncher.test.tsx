@@ -59,7 +59,7 @@ async function nav(name: RegExp) {
 const openMine = async (user: ReturnType<typeof userEvent.setup>) =>
   user.click(await nav(/我的项目/));
 
-it('shows recent work on the home page, then filters, sorts and remembers the view in my projects', async () => {
+it('opens on my projects, then filters, sorts and remembers the view', async () => {
   const now = new Date().toISOString();
   const data = emptyWorkspace();
   data.projects.push(
@@ -71,29 +71,23 @@ it('shows recent work on the home page, then filters, sorts and remembers the vi
   data.records.push({ ...createNote('Alpha', 'Reading notes'), updatedAt: now });
   data.runs.push({ id: 'r1', project: 'Beta', name: 'ablation', status: 'failed', updatedAt: now });
   const { user } = fixture(data);
-  const home = within(await screen.findByRole('region', { name: '首页' }));
-  expect(home.getByRole('button', { name: 'Alpha' })).toBeTruthy();
-  expect(home.queryByRole('button', { name: 'Old' })).toBeNull();
-  expect(home.getByText('Reading notes')).toBeTruthy();
-  expect(home.getByText('运行失败：ablation')).toBeTruthy();
-  await user.click(home.getByRole('button', { name: '知道了' }));
-  expect(home.queryByText('运行失败：ablation')).toBeNull();
+  await screen.findByRole('region', { name: '我的项目' });
   expect(screen.getByRole('button', { name: '登录' })).toBeTruthy();
-  expect(
-    within(screen.getByRole('complementary', { name: '项目中心导航' })).getByRole('button', {
-      name: 'Starred',
-    }),
-  ).toBeTruthy();
+  // A failed run waits in the notifications instead of a home page.
+  await user.click(screen.getByRole('button', { name: '通知（1）' }));
+  const notices = within(screen.getByRole('dialog', { name: '通知' }));
+  expect(notices.getByText('运行失败：ablation')).toBeTruthy();
+  await user.click(notices.getByRole('button', { name: '知道了' }));
+  expect(notices.queryByText('运行失败：ablation')).toBeNull();
+  await user.keyboard('{Escape}');
 
   await openMine(user);
   const mine = within(screen.getByRole('region', { name: '我的项目' }));
   expect(mine.queryByRole('button', { name: 'Old' })).toBeNull();
   await user.click(mine.getByRole('button', { name: /已归档/ }));
   expect(mine.getByRole('button', { name: 'Old' })).toBeTruthy();
-  await user.click(mine.getByRole('button', { name: /^收藏/ }));
+  await user.click(mine.getByRole('button', { name: /^进行中/ }));
   expect(mine.getByRole('button', { name: 'Starred' })).toBeTruthy();
-  expect(mine.queryByRole('button', { name: 'Alpha' })).toBeNull();
-  await user.click(mine.getByRole('button', { name: /^全部/ }));
   await user.type(mine.getByRole('searchbox', { name: '搜索项目' }), 'Beta');
   expect(mine.queryByRole('button', { name: 'Alpha' })).toBeNull();
   await user.click(mine.getByRole('button', { name: '列表视图' }));
@@ -106,17 +100,16 @@ it('shows recent work on the home page, then filters, sorts and remembers the vi
   expect(localStorage.getItem('scientify.projects.sort')).toBe('name');
 });
 
-it('creates a project in two steps from the first-run home page', async () => {
+it('creates a project in two steps from an empty project list', async () => {
   const { user, store } = fixture();
-  await screen.findByText('开始使用');
-  expect(screen.getByText('D:/ScientifyData')).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: /新建项目/ }));
+  await screen.findByText('还没有项目');
+  await user.click(screen.getAllByRole('button', { name: /新建项目/ })[0]);
   const dialog = within(screen.getByRole('dialog', { name: '新建项目' }));
   expect((dialog.getByRole('button', { name: '下一步' }) as HTMLButtonElement).disabled).toBe(true);
   await user.type(dialog.getByLabelText('项目名称'), '视觉剪枝');
   await user.type(dialog.getByLabelText('研究问题'), '剪枝会不会加剧幻觉？');
   await user.click(dialog.getByRole('button', { name: '下一步' }));
-  expect(dialog.getByText(/第 2 步/)).toBeTruthy();
+  expect(dialog.getByRole('list', { name: /第 2 步/ })).toBeTruthy();
   expect(dialog.getByText('登录后可用。')).toBeTruthy();
   await user.click(dialog.getByRole('button', { name: '上一步' }));
   expect((dialog.getByLabelText('项目名称') as HTMLInputElement).value).toBe('视觉剪枝');
@@ -205,19 +198,6 @@ it('edits projects from the context menu, restores keyboard focus and restores a
   await waitFor(() => expect(store.getState().data?.projects[0].archived).toBe(false));
 });
 
-it('lists inbox notes and opens them in the notes panel', async () => {
-  const data = emptyWorkspace();
-  data.records.push({
-    ...createNote('__inbox__', '组会要问的问题'),
-    updatedAt: new Date().toISOString(),
-  });
-  const { user } = fixture(data);
-  await user.click(await nav(/收集箱/));
-  const inbox = within(screen.getByRole('region', { name: '收集箱' }));
-  await user.click(inbox.getByRole('button', { name: /组会要问的问题/ }));
-  expect(await screen.findByRole('region', { name: '研究笔记内容' })).toBeTruthy();
-});
-
 it('removes only owned project records and preserves shared literature, other projects and disk references', () => {
   const data = emptyWorkspace();
   data.projects.push(project('a', 'team'), project('b', 'team'));
@@ -262,14 +242,13 @@ it('keeps solo synced projects personal and treats shared ones as team projects'
   expect(isTeamCloudProject(remote('mine'), shared, [me], 'me')).toBe(true);
 });
 
-it('filters archived and favorite projects and sorts by name, creation or last opening', () => {
+it('filters archived projects and sorts by name, creation or last opening', () => {
   const list: Project[] = [
     { ...project('b'), createdAt: '2026-01-02' },
     { ...project('a'), createdAt: '2026-01-03', favorite: true },
     { ...project('c'), createdAt: '2026-01-01', archived: true },
   ];
   expect(filterProjects(list, 'all', '').map((p) => p.id)).toEqual(['b', 'a']);
-  expect(filterProjects(list, 'favorite', '').map((p) => p.id)).toEqual(['a']);
   expect(filterProjects(list, 'archived', '').map((p) => p.id)).toEqual(['c']);
   expect(sortProjects(list, 'name', {}).map((p) => p.id)).toEqual(['a', 'b', 'c']);
   expect(sortProjects(list, 'created', {}).map((p) => p.id)).toEqual(['a', 'b', 'c']);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { openBrowserSource } from '../../platform/browser-pane';
-import { ChevronRight, LoaderCircle } from 'lucide-react';
+import { ChevronRight, LoaderCircle, Sparkles } from 'lucide-react';
 import { ApprovalCard } from '../../components/ai/ApprovalCard';
 import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import { Button } from '../../components/primitives';
@@ -90,6 +90,7 @@ export function AssistantTranscript({
         <AssistantRuns key={conversation.id} projectId={scope} conversationId={conversation.id} />
         {!conversation.messages.length ? (
           <div className="sf-ai-conversation-empty">
+            <Sparkles size={22} strokeWidth={1.5} aria-hidden="true" />
             {t('提问，或直接描述要在当前工作区完成的任务')}
           </div>
         ) : (

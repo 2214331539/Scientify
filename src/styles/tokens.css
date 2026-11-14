@@ -1,6 +1,12 @@
+/* Three palettes share every token. Hierarchy comes from type, space and surfaces;
+   colour is reserved for state. Graphite is the default light palette, paper the warm
+   one, night the dark one. */
 :root {
   --sf-font-body:
-    'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei UI', sans-serif;
+  --sf-font-read: 'Source Serif 4', Charter, Georgia, 'Songti SC', SimSun, serif;
+  --sf-font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Consolas, monospace;
   font-family: var(--sf-font-body);
   color-scheme: light;
   font-synthesis: none;
@@ -8,75 +14,124 @@
   --sf-topbar-height: 44px;
   --sf-header-height: 40px;
   --sf-toolbar-height: 36px;
-  --sf-radius: 4px;
-  --sf-radius-dialog: 8px;
-  --sf-radius-overlay: 8px;
+  --sf-sidebar-width: 232px;
+  --sf-radius: 6px;
+  --sf-radius-overlay: 10px;
+  --sf-radius-dialog: 12px;
   --sf-control-sm: 26px;
   --sf-control-md: 30px;
   /* Motion values are installed from platform/motion.ts before the first paint. */
-  --sf-surface-topbar: #fff;
-  --sf-surface-canvas: #fff;
-  --sf-surface-chrome: #f7f7f7;
-  --sf-surface-raised: #fff;
+
+  /* Graphite */
+  --sf-surface-topbar: #f4f4f5;
+  --sf-surface-chrome: #f4f4f5;
+  --sf-surface-canvas: #ffffff;
+  --sf-surface-raised: #ffffff;
   --sf-surface-sunken: #fafafa;
-  --sf-surface-hover: #f0f0f0;
-  --sf-surface-selected: #eaeaea;
-  --sf-surface-selected-hover: #e3e3e3;
-  --sf-text-primary: #242727;
-  --sf-text-secondary: #555b5b;
-  --sf-text-muted: #626867;
-  --sf-text-disabled: #9aa2a8;
-  --sf-border-subtle: #e5e7e6;
-  --sf-border-control: #d1d6d4;
-  --sf-border-hover: #a6b0ac;
-  --sf-accent: #3d4643;
-  --sf-accent-hover: #282f2c;
-  --sf-on-accent: #fff;
-  --sf-status-success: #246b45;
-  --sf-status-warning: #865a16;
-  --sf-status-danger: #b03636;
-  --sf-status-info: #2e65a4;
-  --sf-focus: var(--sf-accent);
-  --sf-font-mono: 'Cascadia Code', Consolas, monospace;
-  --sf-shadow: 0 6px 24px rgb(0 0 0 / 10%);
-  --sf-shadow-popover: 0 2px 8px rgb(0 0 0 / 8%);
-  --sf-editor-line: #f7f8f7;
-  --sf-syntax-keyword: #a62645;
-  --sf-syntax-string: #35734a;
-  --sf-syntax-number: #986226;
-  --sf-syntax-function: #4078a0;
-  --sf-syntax-comment: #636f6d;
+  --sf-surface-hover: rgb(24 24 27 / 4.5%);
+  --sf-surface-selected: rgb(24 24 27 / 7%);
+  --sf-surface-selected-hover: rgb(24 24 27 / 10%);
+  --sf-text-primary: #18181b;
+  --sf-text-secondary: #52525b;
+  --sf-text-muted: #71717a;
+  --sf-text-disabled: #a1a1aa;
+  --sf-border-subtle: rgb(24 24 27 / 8%);
+  --sf-border-control: rgb(24 24 27 / 14%);
+  --sf-border-hover: rgb(24 24 27 / 26%);
+  --sf-accent: #18181b;
+  --sf-accent-hover: #3f3f46;
+  --sf-accent-soft: rgb(24 24 27 / 6%);
+  --sf-on-accent: #ffffff;
+  --sf-status-success: #2f7d4f;
+  --sf-status-warning: #a5650e;
+  --sf-status-danger: #c0392b;
+  --sf-status-info: #3b5bdb;
+  --sf-mark: rgb(250 204 21 / 38%);
+  --sf-focus: rgb(24 24 27 / 35%);
+  --sf-paper: #ffffff;
+  --sf-paper-text: #1f1f22;
+  --sf-shadow: 0 0 0 1px rgb(0 0 0 / 6%), 0 24px 64px rgb(0 0 0 / 16%);
+  --sf-shadow-popover: 0 0 0 1px rgb(0 0 0 / 6%), 0 10px 32px rgb(0 0 0 / 10%);
+  --sf-editor-line: rgb(24 24 27 / 3.5%);
+  --sf-syntax-keyword: #7d3c5c;
+  --sf-syntax-string: #3f6b4a;
+  --sf-syntax-number: #8a5a1f;
+  --sf-syntax-function: #3d5f8a;
+  --sf-syntax-comment: #8b8b93;
+  /* Book covers: low-saturation neutrals, never brand colours. */
+  --sf-tone-1: #4f5866;
+  --sf-tone-2: #6a5f53;
+  --sf-tone-3: #55625a;
+  --sf-tone-4: #5e5a6b;
+  --sf-tone-5: #6b6157;
+  --sf-tone-6: #5a5f66;
+  --sf-tone-7: #58615e;
 }
-.dark {
+
+:root[data-palette='paper']:not(.dark) {
+  --sf-surface-topbar: #f1efea;
+  --sf-surface-chrome: #f1efea;
+  --sf-surface-canvas: #fcfbf8;
+  --sf-surface-raised: #fffefb;
+  --sf-surface-sunken: #f7f5f0;
+  --sf-surface-hover: rgb(60 46 26 / 5%);
+  --sf-surface-selected: rgb(60 46 26 / 8.5%);
+  --sf-surface-selected-hover: rgb(60 46 26 / 12%);
+  --sf-text-primary: #1d1b18;
+  --sf-text-secondary: #5c574f;
+  --sf-text-muted: #7a746a;
+  --sf-text-disabled: #aaa395;
+  --sf-border-subtle: rgb(60 46 26 / 10%);
+  --sf-border-control: rgb(60 46 26 / 17%);
+  --sf-border-hover: rgb(60 46 26 / 28%);
+  --sf-accent: #23466f;
+  --sf-accent-hover: #1b3757;
+  --sf-accent-soft: rgb(35 70 111 / 8%);
+  --sf-status-info: #23466f;
+  --sf-focus: rgb(35 70 111 / 40%);
+  --sf-paper: #fffefb;
+  --sf-paper-text: #22201c;
+  --sf-shadow: 0 0 0 1px rgb(60 46 26 / 8%), 0 24px 64px rgb(60 46 26 / 16%);
+  --sf-shadow-popover: 0 0 0 1px rgb(60 46 26 / 8%), 0 10px 32px rgb(60 46 26 / 10%);
+  --sf-editor-line: rgb(60 46 26 / 4%);
+}
+
+:root.dark {
   color-scheme: dark;
-  --sf-surface-topbar: #202222;
-  --sf-surface-canvas: #202222;
-  --sf-surface-chrome: #1b1d1d;
-  --sf-surface-raised: #292c2b;
-  --sf-surface-sunken: #161818;
-  --sf-surface-hover: #2c302f;
-  --sf-surface-selected: #343a37;
-  --sf-surface-selected-hover: #404743;
-  --sf-text-primary: #e5e9ec;
-  --sf-text-secondary: #b8c1c8;
-  --sf-text-muted: #aab5bd;
-  --sf-text-disabled: #626d75;
-  --sf-border-subtle: #343837;
-  --sf-border-control: #49514e;
-  --sf-border-hover: #68736e;
-  --sf-accent: #c4cdca;
-  --sf-accent-hover: #e0e5e3;
-  --sf-on-accent: #171b19;
-  --sf-status-success: #8bd5a8;
-  --sf-status-warning: #e4ba71;
-  --sf-status-danger: #f19b9b;
-  --sf-status-info: #8dbcf1;
-  --sf-shadow: 0 4px 16px rgb(0 0 0 / 32%);
-  --sf-shadow-popover: 0 2px 8px rgb(0 0 0 / 24%);
-  --sf-editor-line: #272b29;
-  --sf-syntax-keyword: #e6a0ab;
-  --sf-syntax-string: #acd2a0;
-  --sf-syntax-number: #e9bd80;
-  --sf-syntax-function: #9ac5e8;
-  --sf-syntax-comment: #899591;
+  --sf-surface-topbar: #0e0e10;
+  --sf-surface-chrome: #0e0e10;
+  --sf-surface-canvas: #151517;
+  --sf-surface-raised: #1c1c1f;
+  --sf-surface-sunken: #121214;
+  --sf-surface-hover: rgb(255 255 255 / 5%);
+  --sf-surface-selected: rgb(255 255 255 / 8.5%);
+  --sf-surface-selected-hover: rgb(255 255 255 / 12%);
+  --sf-text-primary: #ededef;
+  --sf-text-secondary: #a3a3ab;
+  --sf-text-muted: #8a8a93;
+  --sf-text-disabled: #5a5a62;
+  --sf-border-subtle: rgb(255 255 255 / 7.5%);
+  --sf-border-control: rgb(255 255 255 / 14%);
+  --sf-border-hover: rgb(255 255 255 / 24%);
+  --sf-accent: #ededef;
+  --sf-accent-hover: #ffffff;
+  --sf-accent-soft: rgb(255 255 255 / 7%);
+  --sf-on-accent: #111113;
+  --sf-status-success: #5cb67d;
+  --sf-status-warning: #d79a3c;
+  --sf-status-danger: #e2675b;
+  --sf-status-info: #7c9cff;
+  --sf-mark: rgb(250 204 21 / 30%);
+  --sf-focus: rgb(255 255 255 / 40%);
+  /* Papers stay on paper in the dark. */
+  --sf-paper: #f3f2ef;
+  --sf-paper-text: #1f1f22;
+  --sf-shadow: 0 0 0 1px rgb(255 255 255 / 8%), 0 28px 72px rgb(0 0 0 / 60%);
+  --sf-shadow-popover: 0 0 0 1px rgb(255 255 255 / 8%), 0 12px 36px rgb(0 0 0 / 50%);
+  --sf-editor-line: rgb(255 255 255 / 4%);
+  --sf-syntax-keyword: #d6a3bd;
+  --sf-syntax-string: #a7c9a6;
+  --sf-syntax-number: #dcb27c;
+  --sf-syntax-function: #9cb8de;
+  --sf-syntax-comment: #6f6f78;
 }

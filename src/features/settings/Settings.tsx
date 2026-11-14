@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
+import { BrandMark } from '../../components/layout/BrandMark';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { StorageLocation } from '../../platform/desktop';
 import {
@@ -204,6 +205,14 @@ export function SettingsDialog({
     saved: data?.settings.name ?? '',
   });
   const [profileError, setProfileError] = useState('');
+  const [version, setVersion] = useState('');
+  useEffect(() => {
+    if (!isTauri()) return;
+    void import('@tauri-apps/api/app')
+      .then((app) => app.getVersion())
+      .then((value) => setVersion(t('版本 {version}', { version: value })))
+      .catch(() => {});
+  }, []);
   const [saved, setSaved] = useState(false);
   const busy = useStore(store, (s) => s.busy);
   const dirty = profile.name !== profile.saved;
@@ -255,66 +264,65 @@ export function SettingsDialog({
               <span>{label}</span>
             </Button>
           ))}
-          <span className="settings-brand">Scientify</span>
         </nav>
       }
     >
       <div className="settings-scroll">
         <section hidden={section !== 'general'} aria-label={t('通用')}>
-          <div className="settings-preference-row">
-            <PreferenceFields field="language" />
-            <p>{t('仅切换界面语言，不修改研究内容。')}</p>
+          <div className="settings-group">
+            <div className="settings-item">
+              <PreferenceFields field="language" />
+              <span className="settings-item-action" aria-hidden="true" />
+            </div>
+            <form
+              className="settings-item settings-profile"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (busy || !data || !dirty) return;
+                setProfileError('');
+                const name = profile.name;
+                const success = await store.getState().update((d) => {
+                  d.settings.name = name;
+                });
+                if (success) {
+                  setProfile({ name, saved: name });
+                  setSaved(true);
+                } else setProfileError(store.getState().error ?? t('保存失败，请重试。'));
+              }}
+            >
+              <label className="settings-input-row">
+                {t('显示名称')}
+                <Input
+                  disabled={busy || !data}
+                  value={profile.name}
+                  maxLength={100}
+                  onChange={(e) => {
+                    setProfile({ ...profile, name: e.target.value });
+                    setSaved(false);
+                    setProfileError('');
+                  }}
+                />
+              </label>
+              <span className="settings-item-action" role="status">
+                {dirty ? (
+                  <Button type="submit" variant="primary" size="sm" disabled={busy || !data}>
+                    {busy ? t('正在保存…') : t('保存')}
+                  </Button>
+                ) : saved ? (
+                  t('已保存')
+                ) : null}
+              </span>
+            </form>
           </div>
-          <h3 className="settings-section-heading">{t('个人资料')}</h3>
-          <form
-            className="settings-profile"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (busy || !data || !dirty) return;
-              setProfileError('');
-              const name = profile.name;
-              const success = await store.getState().update((d) => {
-                d.settings.name = name;
-              });
-              if (success) {
-                setProfile({ name, saved: name });
-                setSaved(true);
-              } else setProfileError(store.getState().error ?? t('保存失败，请重试。'));
-            }}
-          >
-            <label className="settings-input-row">
-              {t('显示名称')}
-              <Input
-                disabled={busy || !data}
-                value={profile.name}
-                maxLength={100}
-                onChange={(e) => {
-                  setProfile({ ...profile, name: e.target.value });
-                  setSaved(false);
-                  setProfileError('');
-                }}
-              />
-            </label>
-            <p className="settings-note">{t('这是本地个人资料，无需登录。')}</p>
-            {profileError ? (
-              <p role="alert" className="error-text">
-                {translateError(profileError)}
-              </p>
-            ) : null}
-            <footer className="settings-actions">
-              <span role="status">{saved && !dirty ? t('已保存') : ''}</span>
-              <Button type="submit" variant="primary" disabled={busy || !data || !dirty}>
-                {busy ? t('正在保存…') : t('保存偏好')}
-              </Button>
-            </footer>
-          </form>
+          {profileError ? (
+            <p role="alert" className="error-text settings-error">
+              {translateError(profileError)}
+            </p>
+          ) : null}
         </section>
         <section hidden={section !== 'appearance'} aria-label={t('外观')}>
-          <div className="settings-preference-row">
-            <PreferenceFields field="theme" />
-            <p>{t('跟随系统，或固定使用浅色和深色外观。')}</p>
-          </div>
-          <p className="settings-note">{t('顶栏按钮可直接切换亮暗。')}</p>
+          <h3 className="settings-section-heading">{t('配色')}</h3>
+          <PreferenceFields field="theme" />
         </section>
         <section hidden={section !== 'models'} aria-label={t('AI 模型')}>
           <ModelPreferences store={store} {...(backend ? { backend } : {})} />
@@ -333,19 +341,10 @@ export function SettingsDialog({
         </section>
         <section hidden={section !== 'about'} aria-label={t('关于 Scientify')}>
           <div className="settings-about">
+            <BrandMark />
             <h3>Scientify</h3>
-            <p>{t('本地科研工作区 · 文献 / 笔记 / 实验 / 论文')}</p>
-            <p>
-              {t(
-                '已支持：本地文献与 PDF 阅读、笔记、代码编辑、Git 差异、并行实验与日志、运行结果、Markdown 预览，以及可操作工作区的全局 AI。',
-              )}
-            </p>
-            <p>{t('后续接入：LaTeX 编译、PDF 批注与更多文献工具。')}</p>
-            <p>
-              {t(
-                'JSON 导出包含元数据，不包含 PDF 和源码；备份请保留完整数据目录及关联项目文件夹。',
-              )}
-            </p>
+            <p>{t('文献、笔记、实验和写作，在一个本地工作区里。')}</p>
+            {version ? <span className="settings-version">{version}</span> : null}
           </div>
         </section>
       </div>

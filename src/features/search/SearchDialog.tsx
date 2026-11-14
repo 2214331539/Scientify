@@ -1,20 +1,30 @@
 import { t, translateError } from '../../i18n';
 import { isTrashed } from '../notes/model';
 import { Input } from '../../components/primitives';
-import { Section } from '../../components/workspace/Section';
 import { ResourceList, ResourceRow } from '../../components/workspace/ResourceList';
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useState, type KeyboardEvent } from 'react';
 import { useStore } from 'zustand';
-import { BookOpen, FolderKanban, NotebookPen, Search } from 'lucide-react';
+import {
+  BookOpen,
+  CornerDownLeft,
+  FlaskConical,
+  FolderKanban,
+  NotebookPen,
+  PenLine,
+  Search,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Workspace } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { Modal } from '../../components/Modal';
 import { nativeLibrary, type LibraryBackend, type LibraryEntry } from '../../platform/library';
+import { relativeTime } from '../projects/model';
 import './search.css';
 
 export interface SearchTarget {
   projectId?: string;
-  workspace: 'overview' | 'literature' | 'experiments' | 'writing' | 'projects';
+  /** `overview` opens a project where the user left it. */
+  workspace: 'overview' | 'literature' | 'notes' | 'experiments' | 'writing' | 'projects';
   resourceId?: string;
   tool?: 'notes' | 'assistant';
 }
@@ -37,6 +47,12 @@ function excerpt(text: string, term: string) {
   const index = text.toLocaleLowerCase().indexOf(term);
   const start = Math.max(0, index - 28);
   return `${start ? '…' : ''}${text.slice(start, start + 130).replace(/\s+/g, ' ')}`;
+}
+
+function noteTarget(note: { id: string; project: string }, personal: boolean): SearchTarget {
+  return personal
+    ? { projectId: undefined, workspace: 'projects', resourceId: note.id, tool: 'notes' }
+    : { projectId: note.project, workspace: 'notes', resourceId: note.id };
 }
 
 export function searchWorkspace(
@@ -102,15 +118,43 @@ export function searchWorkspace(
       excerpt: excerpt(note.body, term),
       scope: personal ? t('个人收集箱') : project?.name || t('来源项目不存在'),
       unavailable: !personal && !project,
-      target: {
-        projectId: personal ? undefined : note.project,
-        workspace: personal ? 'projects' : 'overview',
-        resourceId: note.id,
-        tool: 'notes',
-      },
+      target: noteTarget(note, personal),
     });
   }
   return results;
+}
+
+const modules: { workspace: SearchTarget['workspace']; label: string; Icon: LucideIcon }[] = [
+  { workspace: 'literature', label: '文献', Icon: BookOpen },
+  { workspace: 'notes', label: '笔记', Icon: NotebookPen },
+  { workspace: 'experiments', label: '实验', Icon: FlaskConical },
+  { workspace: 'writing', label: '写作', Icon: PenLine },
+];
+
+/** Arrow keys walk the rows; Enter opens the focused one, or the first from the field. */
+function moveFocus(event: KeyboardEvent<HTMLElement>) {
+  if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key) || event.nativeEvent.isComposing)
+    return;
+  const rows = [
+    ...event.currentTarget.querySelectorAll<HTMLButtonElement>('.sf-search-result:not(:disabled)'),
+  ];
+  const fromField = (event.target as HTMLElement).tagName === 'INPUT';
+  if (event.key === 'Enter') {
+    if (fromField && rows[0]) {
+      event.preventDefault();
+      rows[0].click();
+    }
+    return;
+  }
+  event.preventDefault();
+  const index = rows.indexOf(document.activeElement as HTMLButtonElement);
+  const next =
+    event.key === 'ArrowDown'
+      ? rows[fromField ? 0 : Math.min(rows.length - 1, index + 1)]
+      : index <= 0
+        ? event.currentTarget.querySelector<HTMLInputElement>('input')
+        : rows[index - 1];
+  next?.focus();
 }
 
 export function SearchDialog({
@@ -175,29 +219,71 @@ export function SearchDialog({
       setOpening('');
     }
   }
+  function go(target: SearchTarget) {
+    onNavigate(target);
+    onClose();
+  }
   const groups = [
     { kind: 'project' as const, title: t('项目'), Icon: FolderKanban },
     { kind: 'paper' as const, title: t('文献'), Icon: BookOpen },
-    { kind: 'note' as const, title: t('研究笔记'), Icon: NotebookPen },
+    { kind: 'note' as const, title: t('笔记'), Icon: NotebookPen },
   ];
+  // Before typing: where the user can go next.
+  const recentNotes = projectId
+    ? (data?.records ?? [])
+        .filter((note) => note.project === projectId && !isTrashed(note))
+        .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
+        .slice(0, 5)
+    : [];
+  const recentProjects = projectId
+    ? []
+    : (data?.projects ?? [])
+        .filter((project) => !project.archived)
+        .sort((a, b) =>
+          (b.updatedAt ?? b.createdAt ?? '').localeCompare(a.updatedAt ?? a.createdAt ?? ''),
+        )
+        .slice(0, 6);
+  const row = (
+    key: string,
+    Icon: LucideIcon,
+    title: string,
+    meta: string,
+    onClick: () => void,
+    detail?: string,
+    disabled?: boolean,
+  ) => (
+    <ResourceRow
+      key={key}
+      className="sf-search-result"
+      disabled={disabled}
+      title={title}
+      onClick={onClick}
+    >
+      <Icon size={16} />
+      <span>
+        <strong>{title}</strong>
+        {detail ? <small>{detail}</small> : null}
+      </span>
+      {meta ? <em>{meta}</em> : null}
+      <CornerDownLeft size={13} className="sf-search-enter" aria-hidden="true" />
+    </ResourceRow>
+  );
   return (
-    <Modal title={t('搜索工作区')} onClose={onClose}>
-      <div className="sf-search-dialog">
+    <Modal title={t('搜索')} className="sf-palette" onClose={onClose}>
+      <div className="sf-search-dialog" onKeyDown={moveFocus}>
         <label className="sf-search-query">
-          <Search size={16} />
+          <Search size={18} />
           <Input
             autoFocus
             aria-label={t('搜索项目、文献和笔记')}
-            placeholder={t('项目、论文或笔记')}
+            placeholder={projectId ? t('搜索论文、笔记，或跳转') : t('搜索项目、论文和笔记')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
+          <kbd>Esc</kbd>
         </label>
-        <p className="sf-search-hint">
-          {projectId ? t('当前项目的论文文件名、全部项目和笔记') : t('项目、论文文件名和笔记')}
-        </p>
         {error ? (
-          <p className="sf-search-hint error-text" role="alert">
+          <p className="sf-search-error" role="alert">
             {translateError(error)}
           </p>
         ) : null}
@@ -205,8 +291,52 @@ export function SearchDialog({
           className="sf-search-results"
           aria-busy={query !== deferredQuery || (typed && !libraries)}
         >
-          {!query.trim() ? (
-            <div className="sf-search-empty">{t('输入关键词')}</div>
+          {!typed ? (
+            projectId ? (
+              <>
+                <div className="sf-search-group">
+                  <h3>{t('前往')}</h3>
+                  <ResourceList label={t('前往')}>
+                    {modules.map(({ workspace, label, Icon }) =>
+                      row(workspace, Icon, t(label), '', () => go({ projectId, workspace })),
+                    )}
+                  </ResourceList>
+                </div>
+                {recentNotes.length ? (
+                  <div className="sf-search-group">
+                    <h3>{t('最近的笔记')}</h3>
+                    <ResourceList label={t('最近的笔记')}>
+                      {recentNotes.map((note) =>
+                        row(
+                          note.id,
+                          NotebookPen,
+                          note.title || t('未命名笔记'),
+                          relativeTime(note.updatedAt),
+                          () => go(noteTarget(note, false)),
+                        ),
+                      )}
+                    </ResourceList>
+                  </div>
+                ) : null}
+              </>
+            ) : recentProjects.length ? (
+              <div className="sf-search-group">
+                <h3>{t('最近的项目')}</h3>
+                <ResourceList label={t('最近的项目')}>
+                  {recentProjects.map((project) =>
+                    row(
+                      project.id,
+                      FolderKanban,
+                      project.name,
+                      relativeTime(project.updatedAt ?? project.createdAt),
+                      () => go({ projectId: project.id, workspace: 'overview' }),
+                    ),
+                  )}
+                </ResourceList>
+              </div>
+            ) : (
+              <div className="sf-search-empty">{t('还没有项目')}</div>
+            )
           ) : !results.length ? (
             <div className="sf-search-empty" role="status">
               {libraries ? t('没有找到“{query}”相关内容。', { query }) : t('正在搜索…')}
@@ -215,34 +345,27 @@ export function SearchDialog({
             groups.map(({ kind, title, Icon }) => {
               const matching = results.filter((result) => result.kind === kind);
               return matching.length ? (
-                <Section
-                  key={kind}
-                  title={t(title)}
-                  actions={<span className="muted">{matching.length}</span>}
-                  className="sf-search-group"
-                >
-                  <ResourceList label={t('{title}搜索结果', { title: t(title) })}>
-                    {matching.slice(0, 30).map((result) => (
-                      <ResourceRow
-                        className="sf-search-result"
-                        key={result.id}
-                        disabled={result.unavailable || !!opening}
-                        title={result.unavailable ? result.scope : result.title}
-                        onClick={() => void open(result)}
-                      >
-                        <Icon size={17} />
-                        <span>
-                          <strong>{result.title}</strong>
-                          {result.excerpt ? <small>{result.excerpt}</small> : null}
-                          <em>{result.scope}</em>
-                        </span>
-                      </ResourceRow>
-                    ))}
+                <div key={kind} className="sf-search-group">
+                  <h3>
+                    {title}
+                    <span>{matching.length}</span>
+                  </h3>
+                  <ResourceList label={t('{title}搜索结果', { title })}>
+                    {matching
+                      .slice(0, 30)
+                      .map((result) =>
+                        row(
+                          result.id,
+                          Icon,
+                          result.title,
+                          result.scope,
+                          () => void open(result),
+                          result.excerpt,
+                          result.unavailable || !!opening,
+                        ),
+                      )}
                   </ResourceList>
-                  {matching.length > 30 ? (
-                    <p className="sf-search-hint">{t('仅显示前 30 项，请缩小关键词范围。')}</p>
-                  ) : null}
-                </Section>
+                </div>
               ) : null;
             })
           )}

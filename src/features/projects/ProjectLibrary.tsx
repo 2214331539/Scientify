@@ -12,7 +12,6 @@ import {
   MoreHorizontal,
   Plus,
   Search,
-  Star,
 } from 'lucide-react';
 import { t, translateError } from '../../i18n';
 import { Button, Input } from '../../components/primitives';
@@ -20,22 +19,12 @@ import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/M
 import { ViewTransition } from '../../components/workspace/ViewTransition';
 import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
-import {
-  collaboration,
-  isSyncedProject,
-  type CollaborationProject,
-} from '../../platform/collaboration';
+import { collaboration, type CollaborationProject } from '../../platform/collaboration';
 import { nativeLibrary } from '../../platform/library';
 import { classifyCloud, refreshCloud, useCloud, type CloudEntry } from './cloud';
 import { ProjectActions, type ProjectAction } from './ProjectActions';
 import { DeleteProjectDialog, ShareProjectDialog, SyncProjectDialog } from './ProjectDialogs';
-import {
-  CenterEmpty,
-  CenterHeader,
-  MiniCover,
-  ProjectCoverArt,
-  type CoverBadge,
-} from './ProjectCover';
+import { CenterEmpty, CenterHeader, MiniCover, ProjectCoverArt } from './ProjectCover';
 import {
   colorForId,
   coverColor,
@@ -116,14 +105,12 @@ export function ProjectLibrary({
   const { elsewhere } = classifyCloud(cloud, data.projects);
   const counts = {
     all: mine.filter((p) => !p.archived).length,
-    favorite: mine.filter((p) => p.favorite && !p.archived).length,
-    synced: mine.filter((p) => isSyncedProject(p) && !p.archived).length + elsewhere.length,
     archived: mine.filter((p) => p.archived).length,
   };
   const projects = sortProjects(filterProjects(mine, filter, query), sort, opened);
   const term = query.trim().toLocaleLowerCase();
   const remote =
-    filter === 'all' || filter === 'synced'
+    filter === 'all'
       ? elsewhere.filter((entry) => entry.remote.name.toLocaleLowerCase().includes(term))
       : [];
   const total = projects.length + remote.length;
@@ -131,7 +118,7 @@ export function ProjectLibrary({
     setView(next);
     writeSetting('scientify.projects.view', next);
   }
-  async function toggle(project: Project, key: 'favorite' | 'archived') {
+  async function toggle(project: Project, key: 'archived') {
     await store.getState().update((value) => {
       const target = value.projects.find((entry) => entry.id === project.id);
       if (target) {
@@ -156,7 +143,6 @@ export function ProjectLibrary({
     setError('');
     if (action === 'open') onOpen(project.id);
     else if (action === 'edit') onEdit(project);
-    else if (action === 'favorite') void toggle(project, 'favorite');
     else if (action === 'archive') void toggle(project, 'archived');
     else if (action === 'delete') {
       store.getState().clearMessage();
@@ -216,8 +202,6 @@ export function ProjectLibrary({
       <MoreHorizontal />
     </Button>
   );
-  const badges = (project: Project): CoverBadge[] =>
-    isSyncedProject(project) ? [signedIn && !cloud.reachable ? 'offline' : 'synced'] : [];
   const meta = (project: Project) =>
     project.archived
       ? t('已归档')
@@ -226,7 +210,7 @@ export function ProjectLibrary({
         : sort === 'updated'
           ? t('{time}更新', { time: relativeTime(project.updatedAt ?? project.createdAt) })
           : t('{time}打开', { time: relativeTime(lastActive(project, opened)) });
-  const chip = (value: ProjectFilter, label: string, count: number) => (
+  const chip = (value: ProjectFilter, label: string) => (
     <Button
       variant="ghost"
       size="sm"
@@ -235,25 +219,12 @@ export function ProjectLibrary({
       onClick={() => setFilter(value)}
     >
       {label}
-      <span className="center-chip-count">{count}</span>
     </Button>
   );
   const emptyAll = !mine.length && !elsewhere.length;
   return (
     <section className="center-page" aria-label={t('我的项目')}>
-      <CenterHeader title={t('我的项目')} count={counts.all}>
-        {!emptyAll ? (
-          <label className="center-search-field">
-            <Search aria-hidden="true" />
-            <Input
-              type="search"
-              aria-label={t('搜索项目')}
-              placeholder={t('搜索项目名称或研究问题')}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-        ) : null}
+      <CenterHeader title={t('我的项目')}>
         <Button variant="primary" disabled={busy} onClick={onNew}>
           <FolderPlus />
           {t('新建项目')}
@@ -275,13 +246,23 @@ export function ProjectLibrary({
       ) : (
         <div className="center-scroll">
           <div className="center-toolbar">
-            <div className="center-chips" role="group" aria-label={t('筛选项目')}>
-              {chip('all', t('全部'), counts.all)}
-              {chip('favorite', t('收藏'), counts.favorite)}
-              {signedIn || counts.synced ? chip('synced', t('多设备同步'), counts.synced) : null}
-              {chip('archived', t('已归档'), counts.archived)}
-            </div>
+            {counts.archived || filter === 'archived' ? (
+              <div className="center-chips" role="group" aria-label={t('筛选项目')}>
+                {chip('all', t('进行中'))}
+                {chip('archived', t('已归档'))}
+              </div>
+            ) : null}
             <span className="spacer" />
+            <label className="center-search-field">
+              <Search aria-hidden="true" />
+              <Input
+                type="search"
+                aria-label={t('搜索项目')}
+                placeholder={t('筛选项目')}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
             <Button
               variant="ghost"
               size="sm"
@@ -359,39 +340,14 @@ export function ProjectLibrary({
                           <ProjectCoverArt
                             name={project.name}
                             field={project.field}
+                            question={project.question}
                             color={coverColor(project)}
-                            favorite={project.favorite}
                             archived={project.archived}
-                            badges={badges(project)}
                           />
                         </button>
                         {menuButton(project, 'on-cover')}
                       </div>
                       <span className="project-book-meta">{meta(project)}</span>
-                    </article>
-                  ))}
-                  {remote.map((entry) => (
-                    <article className="project-book remote" key={entry.remote.id}>
-                      <div className="project-book-binding">
-                        <button
-                          type="button"
-                          className="project-cover"
-                          aria-label={t('下载“{name}”', { name: entry.remote.name })}
-                          disabled={busy || !!downloading || !cloud.reachable}
-                          onClick={() => void download(entry)}
-                        >
-                          <ProjectCoverArt
-                            name={entry.remote.name}
-                            color={colorForId(entry.remote.id)}
-                            badges={['synced', 'remote']}
-                          />
-                        </button>
-                      </div>
-                      <span className="project-book-meta">
-                        {downloading === entry.remote.id
-                          ? t('正在下载…')
-                          : t('未下载 · 在其他设备上')}
-                      </span>
                     </article>
                   ))}
                   {filter === 'all' && !query ? (
@@ -412,9 +368,7 @@ export function ProjectLibrary({
                     <thead>
                       <tr>
                         <th>{t('名称')}</th>
-                        <th className="wide-only">{t('研究方向')}</th>
                         <th className="wide-only">{t('内容')}</th>
-                        <th>{t('同步')}</th>
                         <th>{t(sortLabels[sort])}</th>
                         <th>
                           <span className="sr-only">{t('项目操作')}</span>
@@ -441,26 +395,13 @@ export function ProjectLibrary({
                                 <span>
                                   <strong>
                                     <span>{project.name}</span>
-                                    {project.favorite ? <Star aria-label={t('已收藏')} /> : null}
                                     {project.archived ? <em>{t('已归档')}</em> : null}
                                   </strong>
-                                  {project.question ? <small>{project.question}</small> : null}
                                 </span>
                               </button>
                             </td>
-                            <td className="wide-only muted">{project.field || '—'}</td>
                             <td className="wide-only muted">
                               {t('笔记 {notes} · 运行 {runs}', { notes, runs })}
-                            </td>
-                            <td>
-                              {isSyncedProject(project) ? (
-                                <span className="center-pill ok">
-                                  <Check />
-                                  {t('多设备同步')}
-                                </span>
-                              ) : (
-                                <span className="muted">{t('仅本机')}</span>
-                              )}
                             </td>
                             <td className="muted">
                               {relativeTime(
@@ -493,11 +434,7 @@ export function ProjectLibrary({
                               </span>
                             </button>
                           </td>
-                          <td className="wide-only muted">—</td>
-                          <td className="wide-only muted">—</td>
-                          <td>
-                            <span className="muted">{t('未下载')}</span>
-                          </td>
+                          <td className="wide-only muted">{t('未下载')}</td>
                           <td className="muted">{relativeTime(entry.remote.updatedAt)}</td>
                           <td />
                         </tr>
@@ -508,6 +445,28 @@ export function ProjectLibrary({
               )}
             </ViewTransition>
           )}
+          {view === 'grid' && remote.length ? (
+            <section className="center-section" aria-label={t('在其他设备上')}>
+              <h2>{t('在其他设备上')}</h2>
+              <ul className="project-elsewhere">
+                {remote.map((entry) => (
+                  <li key={entry.remote.id}>
+                    <MiniCover color={colorForId(entry.remote.id)} />
+                    <strong>{entry.remote.name}</strong>
+                    <small>{relativeTime(entry.remote.updatedAt)}</small>
+                    <Button
+                      size="sm"
+                      aria-label={t('下载“{name}”', { name: entry.remote.name })}
+                      disabled={busy || !!downloading || !cloud.reachable}
+                      onClick={() => void download(entry)}
+                    >
+                      {downloading === entry.remote.id ? t('正在下载…') : t('下载到这台电脑')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       )}
       <Menu

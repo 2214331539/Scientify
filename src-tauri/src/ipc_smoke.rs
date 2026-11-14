@@ -309,7 +309,8 @@ fn experiment_registration_uses_native_acl_and_enables_only_its_own_projects_roo
     let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
         .unwrap();
-    let launcher = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+    // Research tools run in the application window; any other webview is refused.
+    let outsider = tauri::WebviewWindowBuilder::new(&app, "untrusted", Default::default())
         .build()
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
@@ -317,7 +318,7 @@ fn experiment_registration_uses_native_acl_and_enables_only_its_own_projects_roo
     } else {
         "http://127.0.0.1:1420"
     };
-    for (window, url) in [(&launcher, origin), (&workspace, "https://example.com")] {
+    for (window, url) in [(&outsider, origin), (&workspace, "https://example.com")] {
         assert!(invoke(
             window,
             "experiment_prepare",
@@ -402,7 +403,8 @@ fn git_commands_enforce_acl_and_use_the_selected_registered_worktree() {
     let workspace = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
         .unwrap();
-    let launcher = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+    // Research tools run in the application window; any other webview is refused.
+    let outsider = tauri::WebviewWindowBuilder::new(&app, "untrusted", Default::default())
         .build()
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {
@@ -411,7 +413,7 @@ fn git_commands_enforce_acl_and_use_the_selected_registered_worktree() {
         "http://127.0.0.1:1420"
     };
     for command in ["code_git_inspect", "code_git_action", "code_git_diff"] {
-        for (window, url) in [(&launcher, origin), (&workspace, "https://example.com")] {
+        for (window, url) in [(&outsider, origin), (&workspace, "https://example.com")] {
             assert!(invoke(window, command, json!({}), url)
                 .unwrap_err()
                 .to_string()
@@ -539,7 +541,7 @@ fn experiment_commands_use_workspace_only_acl_and_real_processes() {
     let trusted = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
         .unwrap();
-    let denied = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+    let denied = tauri::WebviewWindowBuilder::new(&app, "untrusted", Default::default())
         .build()
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {

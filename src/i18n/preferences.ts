@@ -5,9 +5,12 @@ import { applyMotion } from '../platform/motion';
 
 export type Language = 'zh-CN' | 'en';
 export type Theme = 'light' | 'dark' | 'system';
-export type Preferences = { language: Language; theme: Theme };
+/** The light palette; dark mode always uses “night”. */
+export type Palette = 'graphite' | 'paper';
+export type Preferences = { language: Language; theme: Theme; palette: Palette };
 export const preferenceKey = 'scientify.preferences.v1';
-const defaults: Preferences = { language: 'zh-CN', theme: 'system' };
+const defaults: Preferences = { language: 'zh-CN', theme: 'system', palette: 'graphite' };
+const palette = (value: unknown): Palette => (value === 'paper' ? 'paper' : 'graphite');
 let snapshot = defaults;
 let lastRaw: string | null | undefined;
 const listeners = new Set<() => void>();
@@ -27,6 +30,7 @@ export function getPreferences(): Preferences {
       snapshot = {
         language: value.language === 'en' ? 'en' : 'zh-CN',
         theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : 'system',
+        palette: palette(value.palette),
       };
     }
   } catch {
@@ -76,7 +80,11 @@ function subscribe(listener: () => void) {
             !['light', 'dark', 'system'].includes(payload.theme)
           )
             return;
-          const next = { language: payload.language, theme: payload.theme };
+          const next = {
+            language: payload.language,
+            theme: payload.theme,
+            palette: palette(payload.palette),
+          };
           const raw = JSON.stringify(next);
           if (raw === lastRaw) return;
           snapshot = next;
@@ -118,5 +126,6 @@ export function applyAppearance(prefs: Preferences, systemDark: boolean) {
     'dark',
     prefs.theme === 'dark' || (prefs.theme === 'system' && systemDark),
   );
+  document.documentElement.dataset.palette = prefs.palette;
   document.documentElement.lang = prefs.language;
 }

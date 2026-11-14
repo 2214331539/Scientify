@@ -4,11 +4,6 @@
 .research-shell [hidden] {
   display: none !important;
 }
-.research-shell .app-topbar {
-  gap: 12px;
-  padding: 0 12px;
-  background: var(--sf-surface-canvas);
-}
 
 /* macOS uses the native title bar and traffic lights. The web chrome keeps a
    quieter, slightly taller content header instead of imitating Windows controls. */
@@ -16,113 +11,11 @@
   grid-template-rows: 48px minmax(0, 1fr) 28px;
 }
 
-.platform-macos .app-topbar {
-  min-height: 48px;
-  padding: 0 14px;
-  gap: 14px;
-  background: var(--sf-surface-canvas);
-  border-bottom: 1px solid var(--sf-border-subtle);
-}
-
-.platform-macos .app-topbar .brand {
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .platform-macos .window-controls {
   display: none;
 }
 
-.platform-macos .statusbar {
-  min-height: 28px;
-  padding-inline: 14px;
-}
-.research-shell .native-topbar {
-  padding-right: 0;
-}
-.topbar-drag-region {
-  align-self: stretch;
-  min-width: 24px;
-}
-.app-topbar {
-  user-select: none;
-}
-.project-switcher {
-  position: relative;
-  min-width: 0;
-}
-
 /* Kept as a non-visual compatibility trigger for existing keyboard/test flows. */
-.project-switcher-compat {
-  position: absolute;
-  z-index: 40;
-  left: 0;
-  top: 0;
-  width: 1px;
-  height: 1px;
-}
-
-.project-switcher-compat > .project-switcher-trigger {
-  width: 1px;
-  min-width: 1px;
-  height: 1px;
-  min-height: 1px;
-  padding: 0;
-  opacity: 0;
-}
-
-.project-switcher-popover {
-  position: absolute;
-  top: calc(100% + 7px);
-  left: 0;
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  padding: 6px;
-  border: 1px solid var(--sf-border-control);
-  border-radius: var(--sf-radius-overlay);
-  background: var(--sf-surface-raised);
-  box-shadow: var(--sf-shadow);
-}
-
-.project-switcher-popover > input {
-  width: 100%;
-  min-height: 30px;
-  font-size: 12px;
-}
-
-.project-switcher-list {
-  max-height: 280px;
-  overflow: auto;
-  padding: 4px 0;
-}
-
-.project-switcher-row {
-  width: 100%;
-  justify-content: flex-start;
-  gap: 8px;
-  border: 0;
-  font-size: 12px;
-}
-
-.project-switcher-row span {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: left;
-}
-
-.project-switcher-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--sf-border-subtle);
-}
-
-.project-switcher-footer button {
-  border: 0;
-  font-size: 12px;
-}
 .window-controls {
   display: flex;
   align-self: stretch;
@@ -169,78 +62,6 @@
 }
 .research-shell .topbar-tools .icon-button {
   width: 30px;
-}
-.workspace-rail {
-  flex: 0 0 var(--sf-rail-width);
-  width: var(--sf-rail-width);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: var(--sf-surface-chrome);
-  border-right: 1px solid var(--sf-border-subtle);
-  padding: 6px 5px;
-}
-.workspace-rail nav {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.workspace-rail nav::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  width: 2px;
-  height: 18px;
-  border-radius: 1px;
-  background: var(--sf-accent);
-  transform: translateY(calc(var(--sf-navigation-index, 0) * 42px));
-  transition: transform var(--sf-motion-content) var(--sf-ease-enter);
-  pointer-events: none;
-  z-index: 1;
-}
-.workspace-rail nav button {
-  height: 38px;
-  width: 100%;
-  border: 0;
-  border-radius: 4px;
-  padding: 0;
-  color: var(--sf-text-muted);
-  position: relative;
-}
-.workspace-rail nav button svg {
-  width: 19px;
-  height: 19px;
-  stroke-width: 1.55;
-}
-.workspace-rail nav button[aria-current='page'] {
-  background: var(--sf-surface-selected);
-  color: var(--sf-text-primary);
-  font-weight: 600;
-}
-.workspace-rail nav button[aria-current='page']::before {
-  content: none;
-}
-.rail-utilities {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 5px;
-}
-.rail-utilities button {
-  width: 30px;
-  height: 30px;
-  border: 0;
-  padding: 4px;
-  color: var(--sf-text-muted);
-}
-.workspace-stage {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  position: relative;
 }
 .workspace-frame {
   height: 100%;
@@ -302,9 +123,6 @@
   overflow: auto;
   background: var(--sf-surface-chrome);
 }
-.workspace-resource-list {
-  padding: 5px;
-}
 .workspace-document {
   flex: 1;
   min-height: 0;
@@ -357,40 +175,6 @@
   border-bottom-color: var(--sf-text-secondary);
   color: var(--sf-text-primary);
 }
-.research-shell .statusbar {
-  background: var(--sf-surface-canvas);
-  font-size: 11px;
-  padding-right: 0;
-}
-.statusbar-tools {
-  display: flex;
-  align-self: stretch;
-  flex-shrink: 0;
-  align-items: center;
-  border-left: 1px solid var(--sf-border-subtle);
-}
-.research-shell .statusbar-tools .sf-button {
-  width: 32px;
-  height: 24px;
-  min-height: 24px;
-  padding: 0;
-  border-radius: 0;
-}
-.statusbar-tools .sf-button[aria-pressed='true'] {
-  background: var(--sf-surface-selected);
-  color: var(--sf-text-primary);
-}
-.statusbar-tools .sf-button:focus-visible {
-  outline-offset: -3px;
-}
-.research-shell .save-dot {
-  width: 4px;
-  height: 4px;
-  background: var(--sf-text-muted);
-}
-.research-shell .save-dot.dirty {
-  background: var(--sf-status-warning);
-}
 @media (max-width: 900px) {
   .auxiliary-surface:not(.sf-workspace-layout):not([hidden]) {
     position: absolute;
@@ -427,96 +211,6 @@
 }
 
 /* Project workspaces use a soft, inset desktop frame. Launcher geometry stays unchanged. */
-.research-shell:not(.launcher-shell) .shell-body {
-  gap: 0;
-  padding: 0;
-  background: var(--sf-surface-canvas);
-}
-
-.research-shell:not(.launcher-shell) .app-topbar {
-  position: relative;
-  border-bottom: 0;
-  background: var(--sf-surface-chrome);
-}
-
-.research-shell:not(.launcher-shell) .app-topbar::after,
-.research-shell:not(.launcher-shell) .statusbar::before {
-  content: '';
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  height: 1px;
-  background: var(--sf-border-subtle);
-  pointer-events: none;
-}
-
-.research-shell:not(.launcher-shell) .app-topbar::after {
-  bottom: 0;
-}
-
-.research-shell:not(.launcher-shell) .statusbar {
-  position: relative;
-  border-top: 0;
-  background: var(--sf-surface-topbar);
-}
-
-.research-shell:not(.launcher-shell) .statusbar::before {
-  top: 0;
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail {
-  flex-basis: var(--sf-rail-width);
-  width: var(--sf-rail-width);
-  padding: 8px 6px;
-  border: 0;
-  border-radius: 0;
-  background: var(--sf-surface-chrome);
-  box-shadow: none;
-  position: relative;
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail::after {
-  content: '';
-  position: absolute;
-  top: 12px;
-  right: 0;
-  bottom: 12px;
-  width: 1px;
-  background: var(--sf-border-subtle);
-  pointer-events: none;
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail nav {
-  gap: 4px;
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail nav button,
-.research-shell:not(.launcher-shell) .rail-utilities button {
-  border-radius: var(--sf-radius);
-  transition:
-    color var(--sf-motion-feedback) var(--sf-ease-standard),
-    background-color var(--sf-motion-feedback) var(--sf-ease-standard);
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail nav button:hover:not(:disabled),
-.research-shell:not(.launcher-shell) .rail-utilities button:hover:not(:disabled) {
-  background: var(--sf-surface-hover);
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail nav button:active:not(:disabled),
-.research-shell:not(.launcher-shell) .rail-utilities button:active:not(:disabled) {
-  background: var(--sf-surface-selected-hover);
-  transition-duration: 0s;
-}
-
-.research-shell:not(.launcher-shell) .workspace-rail nav button[aria-current='page'] {
-  background: var(--sf-surface-selected);
-}
-
-.research-shell:not(.launcher-shell) .workspace-stage {
-  gap: 0;
-  overflow: hidden;
-}
 
 .research-shell:not(.launcher-shell) :is(.auxiliary-surface, .notes-workspace-surface) {
   position: relative;
@@ -552,7 +246,6 @@
 .research-shell:not(.launcher-shell) .workspace-commandbar,
 .research-shell:not(.launcher-shell) .sf-dock-header,
 .research-shell:not(.launcher-shell) .document-tabs,
-.research-shell:not(.launcher-shell) .tab-strip,
 .research-shell:not(.launcher-shell)
   :is(
     .toolbar,
@@ -572,7 +265,6 @@
 .research-shell:not(.launcher-shell) .workspace-commandbar::after,
 .research-shell:not(.launcher-shell) .sf-dock-header::after,
 .research-shell:not(.launcher-shell) .document-tabs::after,
-.research-shell:not(.launcher-shell) .tab-strip::after,
 .research-shell:not(.launcher-shell)
   :is(
     .toolbar,
@@ -717,32 +409,3 @@
 }
 
 /* Search in the project window top bar, like the project center sidebar entry. */
-.topbar-search.sf-button {
-  flex: 0 1 260px;
-  min-width: 120px;
-  height: 28px;
-  min-height: 28px;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 0 9px;
-  border: 1px solid var(--sf-border-control);
-  border-radius: 6px;
-  background: var(--sf-surface-canvas);
-  color: var(--sf-text-muted);
-  font-size: 12px;
-  font-weight: 400;
-}
-.topbar-search.sf-button:hover:not(:disabled) {
-  border-color: var(--sf-border-hover);
-  background: var(--sf-surface-canvas);
-}
-.topbar-search svg {
-  width: 14px;
-  height: 14px;
-}
-.topbar-search kbd {
-  margin-left: auto;
-  font: inherit;
-  font-size: 11px;
-  color: var(--sf-text-disabled);
-}

@@ -1,14 +1,28 @@
 import { canEditProject } from '../../platform/collaboration';
 import { t, translateError, locale } from '../../i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { noteImages } from '../../platform/note-images';
 import { openBrowserSource } from '../../platform/browser-pane';
 import { useStore } from 'zustand';
-import { ArrowLeft, Check, Link2, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  Link2,
+  NotebookPen,
+  NotebookText,
+  Plus,
+  RotateCcw,
+  Save,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
 import { confirmAction } from '../../components/prompts';
 import { ResourceList, ResourceRow } from '../../components/workspace/ResourceList';
 import { Panel } from '../../components/layout/Panel';
+import { SideGroup, SideItem, useSidebarSlot } from '../../shell/Sidebar';
+import { relativeTime } from '../projects/model';
 import type { WorkContext } from '../../domain/context';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
@@ -32,11 +46,32 @@ export interface NotesPanelProps {
   store: WorkspaceStore;
   scope: string;
   context: WorkContext;
+  /** The notes module: list and editor side by side, views in the sidebar. */
+  split?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
   onContext?: (context: WorkContext) => void;
 }
 
-export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: NotesPanelProps) {
+/** First words of a note without Markdown marks, for the list. */
+function preview(body: string) {
+  return body
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*(#{1,6}|[-*+]|\d+\.|>)\s+/gm, '')
+    .replace(/[*_`~$]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140);
+}
+
+export function NotesPanel({
+  store,
+  scope,
+  context,
+  split = false,
+  onDirtyChange,
+  onContext,
+}: NotesPanelProps) {
   const data = useStore(store, (state) => state.data);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<Note | null>(null);
@@ -51,9 +86,11 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
   const images = useMemo(() => noteImages(scope), [scope]);
   const imagePending = useRef(false);
   const notes = selectNotes(data, scope, query);
+  const total = query ? selectNotes(data, scope, '').length : notes.length;
   const trash = selectTrash(data, scope);
   const [trashOpen, setTrashOpen] = useState(false);
   const [removed, setRemoved] = useState<{ id: string; title: string } | null>(null);
+  const slot = useSidebarSlot();
   const readOnly = !canEditProject(
     data?.projects.find((project) => project.id === scope),
     'record',
@@ -127,7 +164,7 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     window.addEventListener('scientify-open-note', handle);
     return () => window.removeEventListener('scientify-open-note', handle);
   }, [scope]);
-  // The project center's inbox page asks the panel that owns the drafts to start a note.
+  // Other surfaces ask the panel that owns the drafts to start a note.
   useEffect(() => {
     function handle(event: Event) {
       if ((event as CustomEvent<{ scope?: string }>).detail?.scope === scope) newNote.current();
@@ -159,6 +196,11 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     setStatus(isNew ? 'dirty' : 'saved');
     markDirty(isNew);
     if (next) setTrashOpen(false);
+  }
+
+  function startNote() {
+    setRemoved(null);
+    void switchNote(createNote(scope), true);
   }
 
   newNote.current = () => void switchNote(createNote(scope), true);
@@ -208,71 +250,214 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
     edit({ ...draft, sources: [...(Array.isArray(draft.sources) ? draft.sources : []), source] });
   }
 
-  return (
-    <Panel className="sf-notes-panel" role="region" aria-label={t('研究笔记内容')}>
-      <div className="sf-aux-toolbar">
-        {draft || trashOpen ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            title={t('返回笔记列表')}
-            aria-label={t('返回笔记列表')}
-            onClick={() => (draft ? void switchNote(null) : setTrashOpen(false))}
-          >
-            <ArrowLeft size={16} />
-          </Button>
-        ) : (
-          <span className="sf-muted">
-            {scope === '__inbox__' ? t('个人收集箱') : t('项目笔记')}
-          </span>
-        )}
-        {trashOpen && !draft ? <span className="sf-muted">{t('回收站')}</span> : null}
-        <span className="sf-spacer" />
-        {!draft && !trashOpen && trash.length ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            title={t('回收站')}
-            aria-label={t('回收站')}
-            onClick={() => {
-              setRemoved(null);
-              setTrashOpen(true);
-            }}
-          >
-            <Trash2 size={14} />
-          </Button>
-        ) : null}
-        {readOnly || (trashOpen && !draft) ? null : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setRemoved(null);
-              void switchNote(createNote(scope), true);
-            }}
-          >
-            <Plus size={14} />
-            {t('新建笔记')}
-          </Button>
-        )}
-      </div>
-      {draft ? (
-        <>
-          <div className="sf-note-heading">
-            <Input
-              aria-label={t('笔记标题')}
-              disabled={readOnly}
-              value={draft.title}
-              onChange={(event) => edit({ ...draft, title: event.target.value })}
+  const views =
+    split && slot
+      ? createPortal(
+          <SideGroup label={t('笔记')}>
+            <SideItem
+              icon={<NotebookText size={16} />}
+              label={t('全部笔记')}
+              count={total || undefined}
+              current={!trashOpen}
+              onClick={() => setTrashOpen(false)}
             />
-            <div className="sf-note-subline">
-              <span role="status" className={status === 'error' ? 'sf-error-text' : 'sf-muted'}>
+            <SideItem
+              icon={<Trash2 size={16} />}
+              label={t('回收站')}
+              count={trash.length || undefined}
+              current={trashOpen}
+              onClick={() => {
+                setRemoved(null);
+                setTrashOpen(true);
+              }}
+            />
+          </SideGroup>,
+          slot,
+        )
+      : null;
+
+  return (
+    <Panel
+      className={`sf-notes-panel${split ? ' is-split' : ''}`}
+      role="region"
+      aria-label={t('研究笔记内容')}
+    >
+      {views}
+      <section className="sf-notes-index" hidden={!split && !!draft}>
+        <div className="sf-aux-toolbar sf-notes-index-head">
+          {trashOpen ? (
+            <>
+              {split ? null : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  title={t('返回笔记列表')}
+                  aria-label={t('返回笔记列表')}
+                  onClick={() => setTrashOpen(false)}
+                >
+                  <ArrowLeft size={16} />
+                </Button>
+              )}
+              <span className="sf-notes-index-title">{t('回收站')}</span>
+              <span className="sf-spacer" />
+            </>
+          ) : (
+            <label className="sf-aux-search">
+              <Search size={14} />
+              <Input
+                aria-label={t('搜索笔记')}
+                placeholder={t('搜索笔记')}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+          )}
+          {!split && !trashOpen && trash.length ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              title={t('回收站')}
+              aria-label={t('回收站')}
+              onClick={() => {
+                setRemoved(null);
+                setTrashOpen(true);
+              }}
+            >
+              <Trash2 size={14} />
+            </Button>
+          ) : null}
+          {readOnly || trashOpen ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly={split}
+              title={t('新建笔记')}
+              aria-label={split ? t('新建笔记') : undefined}
+              onClick={startNote}
+            >
+              <Plus size={split ? 16 : 14} />
+              {split ? null : t('新建笔记')}
+            </Button>
+          )}
+        </div>
+        {removed && !trashOpen ? (
+          <div className="sf-note-removed" role="status">
+            <span>{t('已移到回收站')}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void restoreNote(store, scope, removed.id);
+                setRemoved(null);
+              }}
+            >
+              {t('撤销')}
+            </Button>
+          </div>
+        ) : null}
+        {error && !draft ? (
+          <div className="sf-aux-error" role="alert">
+            {translateError(error)}
+          </div>
+        ) : null}
+        {trashOpen ? (
+          <>
+            <p className="sf-note-trash-hint">
+              {t('删除 {days} 天后自动清除。', { days: TRASH_DAYS })}
+            </p>
+            <ResourceList
+              className="sf-note-list sf-aux-scroll"
+              label={t('回收站')}
+              empty={t('回收站是空的')}
+            >
+              {trash.map((note) => (
+                <li key={note.id} className="sf-resource-item sf-note-trash-row">
+                  <span>
+                    <strong>{note.title || t('未命名笔记')}</strong>
+                    <time dateTime={note.deletedAt}>
+                      {t('删除于 {date}', {
+                        date: new Date(note.deletedAt ?? '').toLocaleDateString(locale()),
+                      })}
+                    </time>
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    title={t('恢复')}
+                    aria-label={t('恢复“{title}”', { title: note.title || t('未命名笔记') })}
+                    disabled={readOnly}
+                    onClick={() => void restoreNote(store, scope, note.id)}
+                  >
+                    <RotateCcw size={14} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    title={t('彻底删除')}
+                    aria-label={t('彻底删除“{title}”', { title: note.title || t('未命名笔记') })}
+                    disabled={readOnly}
+                    onClick={() => void purge(note)}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </li>
+              ))}
+            </ResourceList>
+          </>
+        ) : (
+          <ResourceList
+            className="sf-note-list sf-aux-scroll"
+            label={t('研究笔记')}
+            empty={query ? t('没有匹配的笔记') : t('暂无笔记')}
+          >
+            {notes.map((note) => (
+              <ResourceRow
+                key={note.id}
+                className="sf-note-row"
+                selected={split && draft?.id === note.id}
+                onClick={() => void switchNote(note)}
+              >
+                <span>
+                  <strong>{note.title || t('未命名笔记')}</strong>
+                  <span className="sf-note-row-meta">
+                    <time dateTime={note.updatedAt}>{relativeTime(note.updatedAt)}</time>
+                    <small>{preview(note.body) || t('空白笔记')}</small>
+                  </span>
+                </span>
+              </ResourceRow>
+            ))}
+          </ResourceList>
+        )}
+      </section>
+      <section className="sf-notes-sheet" hidden={!split && !draft}>
+        {draft ? (
+          <>
+            <div className="sf-aux-toolbar sf-note-bar">
+              {/* In the module the list stays beside the page; it folds away when narrow. */}
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                className="sf-note-back"
+                title={t('返回笔记列表')}
+                aria-label={t('返回笔记列表')}
+                onClick={() => void switchNote(null)}
+              >
+                <ArrowLeft size={16} />
+              </Button>
+              <span
+                role="status"
+                className={`sf-note-status${status === 'error' ? ' sf-error-text' : ''}`}
+                data-status={status}
+              >
                 {status === 'saving'
                   ? t('正在保存…')
                   : status === 'saved'
-                    ? t('已保存到本机')
+                    ? t('已保存')
                     : status === 'error'
                       ? t('保存失败，草稿保留')
                       : t('未保存')}
@@ -291,204 +476,129 @@ export function NotesPanel({ store, scope, context, onDirtyChange, onContext }: 
                   <Trash2 size={14} />
                 </Button>
               )}
-            </div>
-          </div>
-          {error ? (
-            <div className="sf-aux-error" role="alert">
-              {translateError(error)}
-              <Button variant="ghost" size="sm" onClick={() => void save()}>
-                {t('重试保存')}
-              </Button>
-            </div>
-          ) : null}
-          <div className="sf-note-workbench">
-            <MarkdownLiveEditor
-              disabled={readOnly}
-              key={draft.id}
-              images={images}
-              onLink={(url) => openBrowserSource(scope, url)}
-              onPendingChange={(pending) => {
-                imagePending.current = pending;
-                store.getState().setDirtySource(`${sourceKey}:images`, pending);
-              }}
-              className="sf-note-editor"
-              ariaLabel={t('笔记正文')}
-              value={draft.body}
-              onChange={(value) => edit({ ...draft, body: value })}
-              onSave={() => void save()}
-              shortcuts={data?.settings.shortcuts}
-            />
-          </div>
-          {sources.length ? (
-            <details className="sf-note-sources">
-              <summary>{t('来源 · {count}', { count: sources.length })}</summary>
-              {sources.map((source) => {
-                const available =
-                  !!(source.resourceId || source.path) &&
-                  !!(
-                    source.projectId &&
-                    data?.projects.some((project) => project.id === source.projectId)
-                  );
-                return (
-                  <div key={source.id}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-
-                      disabled={!available}
-                      title={
-                        available ? source.path || source.title : t('来源暂不可定位，摘录仍保留')
-                      }
-                      onClick={() =>
-                        window.dispatchEvent(
-                          new CustomEvent('scientify-open-source', { detail: { ...source } }),
-                        )
-                      }
-                    >
-                      <Link2 size={12} />
-                      {source.title}
-                      {source.page ? t(' · 第 {page} 页', { page: source.page }) : ''}
-                    </Button>
-                    {source.selection ? <blockquote>{source.selection}</blockquote> : null}
-                  </div>
-                );
-              })}
-            </details>
-          ) : null}
-          <div className="sf-aux-toolbar sf-note-footer">
-            <Button
-              variant="ghost"
-              size="sm"
-
-              disabled={
-                readOnly ||
-                (!context.resourceId && !context.path && !context.selection && !context.text) ||
-                (context.workspace === 'notes' && context.resourceId === draft.id)
-              }
-              onClick={addSource}
-              title={t('添加来源：{title}', { title: context.title })}
-            >
-              <Link2 size={14} />
-              {t('添加当前来源')}
-            </Button>
-            <span className="sf-spacer" />
-            <Button
-              variant="ghost"
-              size="sm"
-
-              disabled={readOnly || status === 'saving' || status === 'saved'}
-              onClick={() => void save()}
-            >
-              {status === 'saved' ? <Check size={14} /> : <Save size={14} />}
-              {t('保存')}
-            </Button>
-          </div>
-        </>
-      ) : trashOpen ? (
-        <>
-          {error ? (
-            <div className="sf-aux-error" role="alert">
-              {translateError(error)}
-            </div>
-          ) : null}
-          <p className="sf-note-trash-hint">
-            {t('删除 {days} 天后自动清除。', { days: TRASH_DAYS })}
-          </p>
-          <ResourceList
-            className="sf-note-list sf-aux-scroll"
-            label={t('回收站')}
-            empty={t('回收站是空的')}
-          >
-            {trash.map((note) => (
-              <li key={note.id} className="sf-resource-item sf-note-trash-row">
-                <span>
-                  <strong>{note.title || t('未命名笔记')}</strong>
-                  <time dateTime={note.deletedAt}>
-                    {t('删除于 {date}', {
-                      date: new Date(note.deletedAt ?? '').toLocaleDateString(locale()),
-                    })}
-                  </time>
-                </span>
+              {readOnly || split ? null : (
                 <Button
                   variant="ghost"
                   size="sm"
                   iconOnly
-                  title={t('恢复')}
-                  aria-label={t('恢复“{title}”', { title: note.title || t('未命名笔记') })}
-                  disabled={readOnly}
-                  onClick={() => void restoreNote(store, scope, note.id)}
+                  title={t('新建笔记')}
+                  aria-label={t('新建笔记')}
+                  onClick={startNote}
                 >
-                  <RotateCcw size={14} />
+                  <Plus size={15} />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  title={t('彻底删除')}
-                  aria-label={t('彻底删除“{title}”', { title: note.title || t('未命名笔记') })}
-                  disabled={readOnly}
-                  onClick={() => void purge(note)}
-                >
-                  <Trash2 size={14} />
+              )}
+            </div>
+            <div className="sf-note-heading">
+              <Input
+                aria-label={t('笔记标题')}
+                placeholder={t('未命名笔记')}
+                disabled={readOnly}
+                value={draft.title}
+                onChange={(event) => edit({ ...draft, title: event.target.value })}
+              />
+            </div>
+            {error ? (
+              <div className="sf-aux-error" role="alert">
+                {translateError(error)}
+                <Button variant="ghost" size="sm" onClick={() => void save()}>
+                  {t('重试保存')}
                 </Button>
-              </li>
-            ))}
-          </ResourceList>
-        </>
-      ) : (
-        <>
-          {removed ? (
-            <div className="sf-note-removed" role="status">
-              <span>{t('已移到回收站')}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  void restoreNote(store, scope, removed.id);
-                  setRemoved(null);
+              </div>
+            ) : null}
+            <div className="sf-note-workbench">
+              <MarkdownLiveEditor
+                disabled={readOnly}
+                key={draft.id}
+                images={images}
+                onLink={(url) => openBrowserSource(scope, url)}
+                onPendingChange={(pending) => {
+                  imagePending.current = pending;
+                  store.getState().setDirtySource(`${sourceKey}:images`, pending);
                 }}
-              >
-                {t('撤销')}
+                className="sf-note-editor"
+                ariaLabel={t('笔记正文')}
+                value={draft.body}
+                onChange={(value) => edit({ ...draft, body: value })}
+                onSave={() => void save()}
+                shortcuts={data?.settings.shortcuts}
+              />
+            </div>
+            {sources.length ? (
+              <details className="sf-note-sources">
+                <summary>{t('来源 · {count}', { count: sources.length })}</summary>
+                {sources.map((source) => {
+                  const available =
+                    !!(source.resourceId || source.path) &&
+                    !!(
+                      source.projectId &&
+                      data?.projects.some((project) => project.id === source.projectId)
+                    );
+                  return (
+                    <div key={source.id}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!available}
+                        title={
+                          available ? source.path || source.title : t('来源暂不可定位，摘录仍保留')
+                        }
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent('scientify-open-source', { detail: { ...source } }),
+                          )
+                        }
+                      >
+                        <Link2 size={12} />
+                        {source.title}
+                        {source.page ? t(' · 第 {page} 页', { page: source.page }) : ''}
+                      </Button>
+                      {source.selection ? <blockquote>{source.selection}</blockquote> : null}
+                    </div>
+                  );
+                })}
+              </details>
+            ) : null}
+            {split ? null : (
+              <div className="sf-aux-toolbar sf-note-footer">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={
+                    readOnly ||
+                    (!context.resourceId && !context.path && !context.selection && !context.text) ||
+                    (context.workspace === 'notes' && context.resourceId === draft.id)
+                  }
+                  onClick={addSource}
+                  title={t('添加来源：{title}', { title: context.title })}
+                >
+                  <Link2 size={14} />
+                  {t('添加当前来源')}
+                </Button>
+                <span className="sf-spacer" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={readOnly || status === 'saving' || status === 'saved'}
+                  onClick={() => void save()}
+                >
+                  {status === 'saved' ? <Check size={14} /> : <Save size={14} />}
+                  {t('保存')}
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="sf-notes-blank">
+            <NotebookPen size={30} strokeWidth={1.3} aria-hidden="true" />
+            {readOnly ? null : (
+              <Button variant="secondary" size="sm" onClick={startNote}>
+                {t('写一篇笔记')}
               </Button>
-            </div>
-          ) : null}
-          {error ? (
-            <div className="sf-aux-error" role="alert">
-              {translateError(error)}
-            </div>
-          ) : null}
-          <label className="sf-aux-search">
-            <Search size={14} />
-            <Input
-              aria-label={t('搜索笔记')}
-              placeholder={t('搜索笔记')}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <ResourceList
-            className="sf-note-list sf-aux-scroll"
-            label={t('研究笔记')}
-            empty={query ? t('没有匹配的笔记') : t('暂无笔记')}
-          >
-            {notes.map((note) => (
-              <ResourceRow
-                key={note.id}
-                className="sf-note-row"
-                onClick={() => void switchNote(note)}
-              >
-                <span>
-                  <strong>{note.title || t('未命名笔记')}</strong>
-                  <small>{note.body.slice(0, 100).replace(/\n/g, ' ') || t('空白笔记')}</small>
-                  <time dateTime={note.updatedAt}>
-                    {new Date(note.updatedAt).toLocaleDateString(locale())}
-                  </time>
-                </span>
-              </ResourceRow>
-            ))}
-          </ResourceList>
-        </>
-      )}
+            )}
+          </div>
+        )}
+      </section>
     </Panel>
   );
 }

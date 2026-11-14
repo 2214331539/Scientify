@@ -49,8 +49,14 @@ export function WorkspaceFrame({
             {sidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
           </Button>
         )}
-        <span className="workspace-name">{t(label)}</span>
-        {views.length > 1 && (
+        {/* A module with its own tools shows them as the header tabs; the title bar names it. */}
+        {activity ?? (
+          // The title bar's path already names the module when it has its own tabs.
+          <span className={`workspace-name${views.length > 1 ? ' sf-visually-hidden' : ''}`}>
+            {t(label)}
+          </span>
+        )}
+        {!activity && views.length > 1 && (
           <nav className="workspace-views" aria-label={t('二级导航')}>
             {views.map((item) => (
               <Button
@@ -67,7 +73,6 @@ export function WorkspaceFrame({
         {actions && <div className="workspace-command-actions">{actions}</div>}
       </header>
       <div className="workspace-frame-body">
-        {activity}
         {sidebar && (
           <>
             <Sidebar

@@ -121,9 +121,18 @@
   scrollbar-gutter: stable;
 }
 .sf-ai-conversation-empty {
-  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 22vh 20px 0;
   color: var(--sf-text-muted);
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  text-align: center;
+}
+.sf-ai-conversation-empty > svg {
+  color: var(--sf-text-disabled);
 }
 .sf-chat-message {
   position: relative;

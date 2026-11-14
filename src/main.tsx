@@ -6,7 +6,6 @@ import { isTauri } from '@tauri-apps/api/core';
 import { createWorkspaceStore } from './stores/workspace';
 import { browserResearch, browserWorkspace } from './platform/browser';
 import { windowRole } from './platform/windows';
-import { ProjectsWindow } from './app/ProjectsWindow';
 import { WorkspaceWindow } from './app/WorkspaceWindow';
 import { applyAppearance, getPreferences, setPreferences } from './i18n/preferences';
 
@@ -35,7 +34,8 @@ createRoot(document.getElementById('root')!).render(
       windowRole() === 'workspace' ? (
         <WorkspaceWindow />
       ) : (
-        <ProjectsWindow />
+        // One window: the project center and an open project share it.
+        <App windowMode="main" />
       )
     ) : (
       <App store={store} backend={browserResearch} preview />

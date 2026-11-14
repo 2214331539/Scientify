@@ -80,6 +80,7 @@
 }
 .sf-md-rendered {
   overflow-wrap: anywhere;
+  white-space: normal;
   padding: 2px 0;
   cursor: text;
 }

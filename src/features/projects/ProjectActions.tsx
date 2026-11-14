@@ -6,7 +6,6 @@ import {
   FolderOpen,
   Pencil,
   RefreshCw,
-  Star,
   Trash2,
   UsersRound,
 } from 'lucide-react';
@@ -17,7 +16,7 @@ import { isSyncedProject } from '../../platform/collaboration';
 import { isMacOS } from '../../platform/os';
 
 export type ProjectAction =
-  'open' | 'edit' | 'favorite' | 'sync' | 'syncNow' | 'share' | 'reveal' | 'archive' | 'delete';
+  'open' | 'edit' | 'sync' | 'syncNow' | 'share' | 'reveal' | 'archive' | 'delete';
 
 /** Menu items of a personal project; cloud actions say why they are unavailable. */
 export function ProjectActions({
@@ -53,7 +52,6 @@ export function ProjectActions({
     <>
       {item('open', <ArrowUpRight />, t('打开'))}
       {item('edit', <Pencil />, t('编辑信息…'))}
-      {item('favorite', <Star />, project.favorite ? t('取消收藏') : t('收藏'))}
       <div role="separator" className="sf-menu-separator" />
       {synced
         ? item('syncNow', <RefreshCw />, t('立即同步'), busy || !signedIn || !reachable, cloudHint)

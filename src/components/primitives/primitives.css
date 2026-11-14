@@ -175,6 +175,25 @@
   }
 }
 
+.sf-panel-popover {
+  position: fixed;
+  z-index: 1000;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  padding: 6px;
+  border-radius: var(--sf-radius-overlay);
+  background: var(--sf-surface-raised);
+  color: var(--sf-text-primary);
+  box-shadow: var(--sf-shadow-popover);
+  animation: sf-popover-in var(--sf-motion-feedback) var(--sf-ease-enter);
+}
+@keyframes sf-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
 .sf-menu {
   position: fixed;
   z-index: 1000;

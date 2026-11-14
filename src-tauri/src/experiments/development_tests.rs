@@ -60,7 +60,8 @@ fn real_python_environment_terminal_and_formal_run_work_without_a_model() {
     let window = tauri::WebviewWindowBuilder::new(&app, "workspace", Default::default())
         .build()
         .unwrap();
-    let launcher = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+    // Research tools run in the application window; any other webview is refused.
+    let launcher = tauri::WebviewWindowBuilder::new(&app, "untrusted", Default::default())
         .build()
         .unwrap();
     let origin = if cfg!(feature = "custom-protocol") {

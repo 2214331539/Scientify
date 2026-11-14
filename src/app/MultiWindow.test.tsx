@@ -100,7 +100,7 @@ it('opens the requested project and returns through the guarded native close pat
   render(<App store={store} backend={browserResearch} windowMode="workspace" />);
   await screen.findByRole('navigation', { name: '一级导航' });
   await waitFor(() => expect(native.invoke).toHaveBeenCalledWith('workspace_window_ready'));
-  await userEvent.click(screen.getByRole('button', { name: 'Scientify 项目管理' }));
+  await userEvent.click(screen.getByRole('button', { name: '回到项目中心' }));
   expect(native.close).toHaveBeenCalledTimes(1);
 });
 

@@ -85,7 +85,7 @@ it('locks form fields while persistence is pending so late input cannot be lost'
   const store = createWorkspaceStore(adapter);
   const user = userEvent.setup();
   render(<App store={store} />);
-  await screen.findByText('开始使用');
+  await screen.findByText('还没有项目');
   await user.click(screen.getAllByRole('button', { name: /新建项目/ })[0]);
   await user.type(screen.getByLabelText('项目名称'), '延迟保存');
   await user.keyboard('{Control>}k{/Control}');
@@ -126,7 +126,7 @@ it('creates a project, retains failed form edits, and retries into the real stor
   const store = createWorkspaceStore(adapter);
   const user = userEvent.setup();
   render(<App store={store} />);
-  await screen.findByText('开始使用');
+  await screen.findByText('还没有项目');
   await user.click(screen.getAllByRole('button', { name: /新建项目/ })[0]);
   await user.type(screen.getByLabelText('项目名称'), '迁移验证项目');
   await user.type(screen.getByLabelText('研究问题'), '数据是否完整？');
@@ -143,15 +143,12 @@ it('creates a project, retains failed form edits, and retries into the real stor
   expect(store.getState().data?.projects[0].question).toBe('数据是否完整？');
   expect(store.getState().dirty).toBe(false);
   // Creating opens the project; go back to the project center.
-  await user.click(await screen.findByRole('button', { name: 'Scientify 项目管理' }));
+  await user.click(await screen.findByRole('button', { name: '回到项目中心' }));
   await user.click(
     within(screen.getByRole('complementary', { name: '项目中心导航' })).getByRole('button', {
       name: /我的项目/,
     }),
   );
-  await user.click(screen.getByRole('button', { name: '项目操作 迁移验证项目' }));
-  await user.click(screen.getByRole('menuitem', { name: '收藏' }));
-  await waitFor(() => expect(store.getState().data?.projects[0].favorite).toBe(true));
   await user.click(screen.getByRole('button', { name: '项目操作 迁移验证项目' }));
   await user.click(screen.getByRole('menuitem', { name: '归档' }));
   await waitFor(() => expect(store.getState().data?.projects[0].archived).toBe(true));
@@ -242,8 +239,11 @@ it.each([
     expect(store.getState().dirty).toBe(false);
 
     // Keep the note editor mounted behind the real data dialog while replacing its record.
+    await user.click(screen.getByRole('button', { name: '设置' }));
     await user.click(screen.getByRole('button', { name: '数据与备份' }));
-    await user.click(screen.getByRole('button', { name: action }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: '设置' })).getByRole('button', { name: action }),
+    );
     await user.click(
       within(await screen.findByRole('dialog', { name: '确认操作' })).getByRole('button', {
         name: '确认',

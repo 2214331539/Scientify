@@ -9,11 +9,8 @@ Scientify 通过导航、资源列表、面板与编辑器组织研究任务。�
 ```text
 components/
   layout/
-    AppShell.tsx       顶栏、导航、中央区、辅助区和状态栏的布局槽位
     Sidebar.tsx        导航或资源区域的语义容器
     Panel.tsx          工作区域；可组合 header / toolbar / footer
-    TopBar.tsx         项目切换和全局操作
-    StatusBarTools.tsx 底栏右下角的 AI/笔记图标入口，保留开关状态与焦点返回标识
     WindowControls.tsx 原生窗口最小化、最大化/还原与受保护的关闭请求
   navigation/         五个一级入口与二级视图配置
   primitives/
@@ -42,7 +39,7 @@ components/
 - AI 业务组合位于 `features/assistant`：[AssistantPanel](../features/assistant/AssistantPanel.tsx) 协调模型配置、草稿、上下文与任务操作；[AssistantConversations](../features/assistant/AssistantConversations.tsx) 呈现会话菜单和后台任务导航；[AssistantTranscript](../features/assistant/AssistantTranscript.tsx) 呈现消息、审批与执行记录，并管理滚动跟随。AgentRuntime / ChatRuntime 持有任务，切换会话或关闭面板不会取消后台执行。
 - 页面控制业务状态，布局和 primitive 不读写 store、磁盘或模型服务。
 - 桌面只保留主 Topbar；空白区域通过 Tauri 拖动属性操作窗口，关闭按钮发起 close 请求，由 App 的未保存保护决定是否退出。浏览器不显示窗口控制。
-- 项目管理只显示空间侧栏，其底部工具只保留设置与亮暗按钮；进入项目后显示 48px 五入口纯图标 Rail（Overview、Literature、Notes、Experiments、Paper）。名称放入 Tooltip 和 aria-label，不显示固定文字。
+- 窗口外壳在 `src/shell/`：`AppFrame` 排版，`TitleBar` 是标题栏，`Sidebar` 里的 `CenterNavigation` / `ProjectNavigation` / `SidebarFooter` 是两级侧边栏。项目里四个模块（文献、笔记、实验、写作）用带文字的导航项。模块自己的资源（目录树、笔记分组、实验列表、代码和稿件文件树）通过 `useSidebarSlot()` 放进侧边栏下半部分，只在模块可见时放入；分组列表用 `SideGroup` / `SideItem`。模块里的表格页用共享样式 `sf-page`、`sf-table`、`sf-search-field`、`sf-segmented`、`sf-state`（`workspace-primitives.css`）。
 - Files 入口及独立 All files 页面直接移除，不作为隐藏页面保留。`src/workspaces/files/` 是实验 Code 与论文 Manuscript 复用的文件编辑模块，不能据此新增独立文件入口；文件会话、草稿与保存保护继续沿用。
 - Panel 是无外阴影、无圆角外框的连续工作区域；Section 分组内容；List 表达对象集合；Tree 表达层级关系。表格保留其列语义。
 - Button 接收原生属性与 ref。主要提交用 `primary`，普通操作用 `secondary`，工具栏与导航用 `ghost`。表单内明确指定 `type="submit"` 或 `type="button"`。
