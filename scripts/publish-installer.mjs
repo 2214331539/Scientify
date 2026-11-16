@@ -2,8 +2,9 @@
 // public download bucket the website links to: once under the version and once
 // under latest/ with a fixed name, plus its SHA256SUMS line. Run on the machine
 // that built it:
-//   node scripts/stage-release.mjs && node scripts/publish-installer.mjs
-// Credentials come from OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET, or from the
+//   node scripts/stage-release.mjs && node scripts/publish-installer.mjs [windows_x64|macos_arm64]
+// An installer built elsewhere can be copied into .release/ with its
+// SHA256SUMS_<platform>.txt and published from here. Credentials come from OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET, or from the
 // [default] section of ~/.ossutilconfig. They are only used to sign requests here.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -111,8 +112,13 @@ async function upload(file, key, keys) {
 const directory = '.release';
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const keys = credentials();
+// Platforms named on the command line (windows_x64, macos_arm64) limit the upload to them.
+const only = process.argv.slice(2);
 const staged = readdirSync(directory).filter(
-  (name) => /\.(exe|dmg)$/.test(name) && name.includes(version),
+  (name) =>
+    /\.(exe|dmg)$/.test(name) &&
+    name.includes(version) &&
+    (!only.length || only.some((label) => name.includes(label))),
 );
 if (!staged.length)
   throw new Error(`No ${version} installer in ${directory}; run scripts/stage-release.mjs first.`);
