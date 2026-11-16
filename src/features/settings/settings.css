@@ -510,3 +510,113 @@ section > .settings-section-heading:first-child {
   display: grid;
   gap: 16px;
 }
+.settings-subscription {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--sf-border-subtle);
+  font-size: 13px;
+}
+.settings-subscription h4 {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-subscription p {
+  margin: 0;
+  font-size: 12px;
+}
+.settings-plan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+}
+.settings-plan > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-plan strong {
+  font-size: 14px;
+}
+.settings-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.settings-balance strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.settings-balance-reset {
+  margin-left: auto;
+  font-size: 12px;
+}
+.settings-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.settings-meter-bar {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--sf-surface-hover);
+}
+.settings-meter-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--sf-text-secondary);
+}
+.settings-meter-bar i[data-level='high'] {
+  background: var(--sf-status-warning);
+}
+.settings-meter-bar i[data-level='full'] {
+  background: var(--sf-status-danger);
+}
+.settings-meter span {
+  min-width: 150px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.settings-grants,
+.settings-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.settings-grants li,
+.settings-devices li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-usage {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 46px;
+}
+.settings-usage i {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: var(--sf-tone-1);
+}
+.settings-redeem {
+  display: flex;
+  gap: 8px;
+  max-width: 360px;
+}

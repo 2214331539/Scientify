@@ -25,6 +25,10 @@ export function readConfig(env = process.env) {
     trustProxy: optional(env, 'TRUST_PROXY').toLowerCase() === 'true',
     databaseUrl: optional(env, 'DATABASE_URL'),
     jwtSecret: optional(env, 'JWT_SECRET'),
+    // Encrypts channel keys in the database; derived from JWT_SECRET when unset.
+    modelKeySecret: optional(env, 'MODEL_KEY_SECRET'),
+    // Static files of the admin pages, served at /admin.
+    adminDir: optional(env, 'ADMIN_DIR'),
     jwtIssuer: optional(env, 'JWT_ISSUER') || 'scientify-collaboration',
     accessTokenTtl: integer(env.ACCESS_TOKEN_TTL_SECONDS, 900, 60, 86_400),
     refreshTokenTtl: integer(env.REFRESH_TOKEN_TTL_SECONDS, 2_592_000, 600, 31_536_000),

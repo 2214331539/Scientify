@@ -1,0 +1,2752 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scientify · 管理后台原型</title>
+<style>
+/* Scientify admin prototype. Same graphite palette as the desktop app. */
+:root,
+[data-theme='light'] {
+  --page: #f6f6f7;
+  --canvas: #ffffff;
+  --sunken: #fafafa;
+  --hover: rgba(24, 24, 27, 0.045);
+  --selected: rgba(24, 24, 27, 0.075);
+  --line: rgba(24, 24, 27, 0.08);
+  --line-strong: rgba(24, 24, 27, 0.15);
+  --text: #18181b;
+  --text-2: #52525b;
+  --text-3: #71717a;
+  --text-4: #a1a1aa;
+  --accent: #18181b;
+  --on-accent: #ffffff;
+  --link: #2f5bd3;
+  --ok: #2f7d4f;
+  --warn: #a5650e;
+  --bad: #c0392b;
+  --ok-bg: rgba(47, 125, 79, 0.1);
+  --warn-bg: rgba(165, 101, 14, 0.1);
+  --bad-bg: rgba(192, 57, 43, 0.09);
+  --info-bg: rgba(47, 91, 211, 0.08);
+  --shadow-pop: 0 0 0 1px rgba(0, 0, 0, 0.07), 0 12px 36px rgba(0, 0, 0, 0.14);
+  --grid: #ececee;
+  --axis: #c9c9ce;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+  --s5: #e87ba4;
+  --seq0: #f1f5fb;
+  --seq1: #cde2fb;
+  --seq2: #9ec5f4;
+  --seq3: #5598e7;
+  --seq4: #256abf;
+  --seq5: #104281;
+  color-scheme: light;
+}
+[data-theme='night'] {
+  --page: #0e0e10;
+  --canvas: #151517;
+  --sunken: #121214;
+  --hover: rgba(255, 255, 255, 0.05);
+  --selected: rgba(255, 255, 255, 0.085);
+  --line: rgba(255, 255, 255, 0.075);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --text: #ededef;
+  --text-2: #a3a3ab;
+  --text-3: #85858e;
+  --text-4: #5b5b63;
+  --accent: #ededef;
+  --on-accent: #111113;
+  --link: #8aa4ff;
+  --ok: #4fae73;
+  --warn: #d49a3a;
+  --bad: #e66767;
+  --ok-bg: rgba(79, 174, 115, 0.14);
+  --warn-bg: rgba(212, 154, 58, 0.14);
+  --bad-bg: rgba(230, 103, 103, 0.14);
+  --info-bg: rgba(138, 164, 255, 0.12);
+  --shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 36px rgba(0, 0, 0, 0.5);
+  --grid: #26262a;
+  --axis: #3a3a3f;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --s5: #d55181;
+  --seq0: #1b1f27;
+  --seq1: #184f95;
+  --seq2: #1c5cab;
+  --seq3: #2a78d6;
+  --seq4: #5598e7;
+  --seq5: #9ec5f4;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+body {
+  font: 13px/1.5 system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text);
+  background: var(--page);
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+svg.i {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.num,
+td.n,
+th.n {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Shell ---------- */
+.shell {
+  display: grid;
+  grid-template-columns: 224px 1fr;
+  height: 100vh;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 10px;
+  background: var(--canvas);
+  border-right: 1px solid var(--line);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.brand .logo {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.brand small {
+  display: block;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.nav-group {
+  padding: 12px 10px 4px;
+  font-size: 11px;
+  color: var(--text-4);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-2);
+  text-align: left;
+}
+.nav-item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.nav-item.on {
+  background: var(--selected);
+  color: var(--text);
+  font-weight: 550;
+}
+.nav-item .tag {
+  margin-left: auto;
+}
+.side-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 6px 0;
+  border-top: 1px solid var(--line);
+}
+.me {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.me b {
+  display: block;
+  font-weight: 550;
+}
+.me span {
+  color: var(--text-3);
+}
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-3);
+}
+.icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--line);
+  background: var(--canvas);
+}
+.top h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+}
+.crumb button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--text-3);
+}
+.crumb button:hover {
+  color: var(--text);
+}
+.top .spacer {
+  flex: 1;
+}
+.content {
+  flex: 1;
+  overflow: auto;
+  padding: 22px 28px 48px;
+}
+.content > * + * {
+  margin-top: 16px;
+}
+
+/* ---------- Controls ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--canvas);
+  color: var(--text);
+  white-space: nowrap;
+}
+.btn:hover {
+  background: var(--hover);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.btn.primary:hover {
+  opacity: 0.9;
+}
+.btn.danger {
+  color: var(--bad);
+}
+.btn.ghost {
+  border-color: transparent;
+  background: none;
+}
+.btn.sm {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--hover);
+}
+.seg button {
+  height: 26px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-2);
+}
+.seg button.on {
+  background: var(--canvas);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--canvas);
+  color: var(--text-3);
+}
+.field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--text);
+}
+input.text,
+select.text,
+textarea.text {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--canvas);
+  outline: 0;
+}
+textarea.text {
+  height: 64px;
+  padding: 7px 10px;
+  resize: none;
+}
+input.text:focus,
+select.text:focus,
+textarea.text:focus,
+.field:focus-within {
+  border-color: var(--link);
+  box-shadow: 0 0 0 3px var(--info-bg);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.toolbar .grow {
+  flex: 1;
+}
+.toggle {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--line-strong);
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+.toggle.on {
+  background: var(--ok);
+}
+.toggle.on::after {
+  left: 14px;
+}
+
+/* ---------- Cards, tiles ---------- */
+.card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--canvas);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 0;
+}
+.card-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.card-head .sub {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.card-head .spacer {
+  flex: 1;
+}
+.card-body {
+  padding: 12px 16px 16px;
+}
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.g2 {
+  grid-template-columns: 1fr 1fr;
+}
+.g3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.g-main {
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+.tile {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--canvas);
+  text-align: left;
+}
+button.tile:hover {
+  border-color: var(--line-strong);
+}
+.tile .k {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.tile .v {
+  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.tile .d {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.up {
+  color: var(--ok);
+}
+.down {
+  color: var(--bad);
+}
+
+/* ---------- Tables ---------- */
+.table-wrap {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+th {
+  position: sticky;
+  top: 0;
+  background: var(--canvas);
+  color: var(--text-3);
+  font-weight: 500;
+  font-size: 12px;
+}
+th.n,
+td.n {
+  text-align: right;
+}
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+tr.click {
+  cursor: pointer;
+}
+tr.click:hover td {
+  background: var(--hover);
+}
+td .muted,
+.muted {
+  color: var(--text-3);
+}
+.who b {
+  font-weight: 550;
+}
+.who .muted {
+  margin-left: 6px;
+}
+.wrap {
+  white-space: normal;
+}
+
+/* ---------- Chips, meters ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: var(--hover);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.chip.pro {
+  background: var(--info-bg);
+  color: var(--link);
+}
+.chip.ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.chip.warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.chip.bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.chip svg.i {
+  width: 12px;
+  height: 12px;
+}
+.tag {
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 400;
+}
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 150px;
+}
+.meter .bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.meter .bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--text-2);
+}
+.meter .bar i.hi {
+  background: var(--warn);
+}
+.meter .bar i.full {
+  background: var(--bad);
+}
+.meter span {
+  min-width: 92px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.big-meter .bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--hover);
+  overflow: hidden;
+  display: flex;
+  gap: 2px;
+}
+.big-meter .bar i {
+  display: block;
+  height: 100%;
+}
+
+/* ---------- Alerts ---------- */
+.alerts {
+  display: flex;
+  flex-direction: column;
+}
+.alert {
+  display: flex;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.alert:last-child {
+  border-bottom: 0;
+}
+.alert svg.i {
+  margin-top: 2px;
+}
+.alert.warn svg.i {
+  color: var(--warn);
+}
+.alert.bad svg.i {
+  color: var(--bad);
+}
+.alert.info svg.i {
+  color: var(--link);
+}
+.alert .t {
+  font-weight: 500;
+}
+.alert .s {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.alert .btn {
+  margin-left: auto;
+  align-self: center;
+}
+
+/* ---------- Charts ---------- */
+.chart {
+  position: relative;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.chart .gridline {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+.chart .baseline {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+.chart text {
+  fill: var(--text-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.chart .label {
+  fill: var(--text-2);
+}
+.chart .hit {
+  fill: transparent;
+}
+.chart .cross {
+  stroke: var(--text-4);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-bottom: 10px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.legend i.line {
+  height: 2px;
+  border-radius: 1px;
+}
+.tip {
+  position: fixed;
+  z-index: 50;
+  min-width: 140px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--canvas);
+  box-shadow: var(--shadow-pop);
+  font-size: 12px;
+  pointer-events: none;
+}
+.tip .h {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.tip .r {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-2);
+}
+.tip .r i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.tip .r b {
+  margin-left: auto;
+  padding-left: 14px;
+  color: var(--text);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Graph ---------- */
+.graph-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+}
+.graph svg {
+  display: block;
+  width: 100%;
+  height: 590px;
+}
+.graph .edge {
+  stroke: var(--line-strong);
+}
+.graph .edge.hl {
+  stroke: var(--text-3);
+}
+.graph .node {
+  cursor: pointer;
+  stroke: var(--canvas);
+  stroke-width: 2;
+}
+.graph .node.free {
+  fill: var(--text-4);
+}
+.graph .node.pro {
+  fill: var(--s1);
+}
+.graph .node.owner {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.graph .dim {
+  opacity: 0.25;
+}
+.graph .hull {
+  fill: var(--hover);
+  stroke: var(--line);
+  cursor: pointer;
+}
+.graph .hull.hl {
+  fill: var(--selected);
+  stroke: var(--line-strong);
+}
+.graph text.cl {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.graph text.cl tspan {
+  fill: var(--text-3);
+  font-weight: 400;
+}
+.graph text.nm {
+  fill: var(--text-2);
+  font-size: 11px;
+  pointer-events: none;
+}
+.team-list .team {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+}
+.team-list .team:hover,
+.team-list .team.hl {
+  background: var(--hover);
+}
+.team-list .team b {
+  font-weight: 550;
+}
+.team-list .team .muted {
+  font-size: 12px;
+}
+
+/* ---------- Matrix and heatmap ---------- */
+.matrix td,
+.matrix th {
+  text-align: center;
+}
+.matrix td:first-child,
+.matrix th:first-child {
+  text-align: left;
+}
+.role {
+  display: inline-block;
+  min-width: 46px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 11.5px;
+}
+.role.owner {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.role.editor {
+  background: var(--info-bg);
+  color: var(--link);
+}
+.role.reviewer {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.role.viewer {
+  background: var(--hover);
+  color: var(--text-2);
+}
+.heat {
+  display: grid;
+  gap: 2px;
+  align-items: center;
+}
+.heat .lbl {
+  padding-right: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.heat .cell {
+  height: 16px;
+  border-radius: 3px;
+}
+.heat .axis {
+  color: var(--text-4);
+  font-size: 11px;
+}
+.ramp {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+.ramp i {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* ---------- Detail pages ---------- */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--selected);
+  font-weight: 600;
+}
+.avatar.sm {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.profile h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.profile .muted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--link);
+}
+.tabs {
+  display: flex;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.tabs button {
+  padding: 8px 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-3);
+}
+.tabs button.on {
+  border-color: var(--text);
+  color: var(--text);
+  font-weight: 550;
+}
+.kv {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px 12px;
+}
+.kv dt {
+  color: var(--text-3);
+}
+.kv dd {
+  margin: 0;
+}
+.note {
+  display: flex;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 9px;
+  background: var(--info-bg);
+  color: var(--text-2);
+}
+.note svg.i {
+  margin-top: 2px;
+  color: var(--link);
+}
+.note.warn {
+  background: var(--warn-bg);
+}
+.note.warn svg.i {
+  color: var(--warn);
+}
+.badge-phase {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  background: var(--hover);
+  color: var(--text-3);
+  font-size: 12px;
+}
+.rules {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.rule {
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+}
+.rule .k {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.rule .v {
+  margin-top: 2px;
+  font-weight: 550;
+}
+
+/* ---------- Dialog, toast ---------- */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.28);
+}
+.dialog {
+  width: 460px;
+  max-height: 86vh;
+  overflow: auto;
+  border-radius: 12px;
+  background: var(--canvas);
+  box-shadow: var(--shadow-pop);
+}
+.dialog.wide {
+  width: 620px;
+}
+.dialog header {
+  display: flex;
+  align-items: center;
+  padding: 16px 18px 6px;
+}
+.dialog header h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+}
+.dialog .body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 18px 4px;
+}
+.dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 18px;
+}
+.form-row label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.form-row .hint {
+  margin-top: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.form-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.preview {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+.preview b {
+  color: var(--text);
+}
+.codes {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--sunken);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  transform: translateX(-50%);
+  box-shadow: var(--shadow-pop);
+}
+
+/* ---------- Login ---------- */
+.login {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+}
+.login .box {
+  width: 340px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--canvas);
+}
+.login h2 {
+  margin: 14px 0 4px;
+  font-size: 18px;
+}
+.login .muted {
+  margin-bottom: 18px;
+}
+.login .form-row {
+  margin-bottom: 12px;
+}
+.login .code-row {
+  display: flex;
+  gap: 8px;
+}
+.login .btn.primary {
+  width: 100%;
+  justify-content: center;
+  height: 34px;
+  margin-top: 6px;
+}
+
+/* ---------- Client view ---------- */
+.client {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: auto;
+  padding: 24px 28px 40px;
+  background: var(--page);
+}
+.client-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.client-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.client-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.window {
+  border-radius: 12px;
+  background: var(--canvas);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+.window .wbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 12px;
+}
+.settings {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  min-height: 640px;
+}
+.settings nav {
+  padding: 12px 8px;
+  border-right: 1px solid var(--line);
+  background: var(--sunken);
+}
+.settings nav button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-2);
+  text-align: left;
+}
+.settings nav button.on {
+  background: var(--selected);
+  color: var(--text);
+  font-weight: 550;
+}
+.settings .pane {
+  padding: 18px 22px;
+}
+.settings h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.sec {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.sec:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.sec .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sec .row .grow {
+  flex: 1;
+}
+.sec h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.plan-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.plan-card .name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.minibars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 46px;
+}
+.minibars i {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: var(--s1);
+}
+.assistant {
+  display: flex;
+  flex-direction: column;
+  height: 640px;
+}
+.assistant .msgs {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bubble {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--selected);
+}
+.answer {
+  color: var(--text-2);
+}
+.answer .meta {
+  margin-top: 6px;
+  color: var(--text-4);
+  font-size: 11.5px;
+}
+.exhausted {
+  padding: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+.exhausted .t {
+  font-weight: 600;
+}
+.exhausted .s {
+  margin: 2px 0 10px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.exhausted .acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.composer {
+  position: relative;
+  margin: 0 12px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+.composer .ph {
+  color: var(--text-4);
+}
+.composer .bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.model-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--hover);
+  color: var(--text-2);
+  font-size: 12px;
+}
+.model-menu {
+  position: absolute;
+  bottom: 44px;
+  left: 6px;
+  width: 280px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--canvas);
+  box-shadow: var(--shadow-pop);
+}
+.model-menu .g {
+  padding: 6px 8px 2px;
+  color: var(--text-4);
+  font-size: 11px;
+}
+.model-menu .m {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.model-menu .m.on {
+  background: var(--selected);
+}
+.model-menu .m.off {
+  color: var(--text-4);
+}
+.model-menu .m .x {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.model-menu .foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 8px 8px 4px;
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 12px;
+}
+.card-body.flush {
+  padding: 4px 0 0;
+}
+.flush th:first-child,
+.flush td:first-child {
+  padding-left: 16px;
+}
+.flush th:last-child,
+.flush td:last-child {
+  padding-right: 16px;
+}
+.mini-h {
+  margin: 2px 0 6px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.plan-card .grow {
+  flex: 1;
+}
+
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="layer"></div>
+<script>
+/* Scientify admin prototype: users, quota, models, teams and audit on the collaboration server. Sample data only. */
+(() => {
+  'use strict';
+
+  // ---------- Icons ----------
+  const P = {
+    dash: '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    team: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>',
+    plan: '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/>',
+    ticket: '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/>',
+    cpu: '<rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+    receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8M12 17.5v-11"/>',
+    shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    plus: '<path d="M5 12h14M12 5v14"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    right: '<path d="m9 18 6-6-6-6"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+    monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+    ok: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+    eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+    key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+    star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    box: '<path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+    spark: '<path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  };
+  const icon = (name, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name]}</svg>`;
+
+  // ---------- Helpers ----------
+  let seed = 20261116;
+  const rand = () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const between = (a, b) => Math.round(a + rand() * (b - a));
+  const pick = (list) => list[Math.floor(rand() * list.length)];
+  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+  const gb = (n) => (n >= 10 ? n.toFixed(1) : n.toFixed(2).replace(/0$/, '')) + ' GB';
+  const money = (n) => '¥' + fmt(n);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const pad = (n) => String(n).padStart(2, '0');
+  const TODAY = new Date(2026, 10, 16);
+  const day = (offset) => {
+    const d = new Date(TODAY);
+    d.setDate(d.getDate() + offset);
+    return d;
+  };
+  const md = (d) => `${d.getMonth() + 1}-${pad(d.getDate())}`;
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  // ---------- Data ----------
+  const PLANS = [
+    { id: 'free', name: '免费', price: '0', year: '—', points: 300, storage: '2 GB', members: '5 人', history: '7 天', models: '经济模型', rpm: 20, conc: 2, daily: '1/3', users: 1221, on: true },
+    { id: 'pro', name: '个人专业版', price: '¥29/月', year: '¥288/年', points: 3000, storage: '50 GB', members: '20 人', history: '1 年', models: '全部', rpm: 60, conc: 4, daily: '1/3', users: 63, on: true },
+    { id: 'team', name: '课题组版', price: '¥39/人/月', year: '¥388/人/年', points: 3000, storage: '每人 50 GB', members: '不限', history: '1 年', models: '全部', rpm: 60, conc: 6, daily: '1/3', users: 0, on: false, phase: '第三期' },
+  ];
+  const PLAN_NAME = { free: '免费', pro: '个人专业版' };
+  // Token mix of the last 30 days: uncached input, cached input, output.
+  const MIX = [0.4, 0.52, 0.08];
+  const MODELS = [
+    { id: 'ds', name: 'DeepSeek V3.2', tier: '经济', upstream: 'deepseek-chat', channel: 'DeepSeek 开放平台', backup: '阿里云百炼', cost: [2, 0.2, 3], price: [400, 40, 600], plans: ['免费', '专业版'], on: true, def: true },
+    { id: 'glm', name: 'GLM-4.6', tier: '标准', upstream: 'glm-4.6', channel: '智谱开放平台', backup: '', cost: [4, 0.8, 16], price: [750, 150, 3000], plans: ['专业版'], on: true },
+    { id: 'kimi', name: 'Kimi K2', tier: '标准', upstream: 'kimi-k2-turbo', channel: '月之暗面', backup: '', cost: [4, 1, 16], price: [800, 200, 3000], plans: ['专业版'], on: true },
+    { id: 'qwen', name: 'Qwen3 Max', tier: '高级', upstream: 'qwen3-max', channel: '阿里云百炼', backup: '', cost: [6, 1.2, 24], price: [880, 170, 3100], plans: ['专业版'], on: true },
+  ];
+  const mixCost = (m) => MIX.reduce((s, w, i) => s + w * m.cost[i], 0);
+  const mixSale = (m) => MIX.reduce((s, w, i) => s + (w * m.price[i]) / 100, 0);
+  const margin = (m) => Math.round((1 - mixCost(m) / mixSale(m)) * 100);
+  const times = (m) => (m.def ? '1×' : (mixSale(m) / mixSale(MODELS[0])).toFixed(1) + '×');
+  const MIN_MARGIN = 30;
+  const SERIES = MODELS.map((m, i) => ({ key: m.id, name: m.name, color: `var(--s${i + 1})` }));
+  const CHANNELS = [
+    { name: 'DeepSeek 开放平台', url: 'https://api.deepseek.com/v1', key: 'a8f2', req: 18420, err: 0.4, p50: 820, on: true },
+    { name: '阿里云百炼', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', key: '91c0', req: 6210, err: 4.2, p50: 1460, on: true },
+    { name: '智谱开放平台', url: 'https://open.bigmodel.cn/api/paas/v4', key: '3d7e', req: 3980, err: 0.9, p50: 1010, on: true },
+    { name: '月之暗面', url: 'https://api.moonshot.cn/v1', key: '5b14', req: 2875, err: 0.6, p50: 930, on: true },
+  ];
+
+  const NAMES = ['张卫东', '李思远', '王一鸣', '陈晓', '刘佳琪', '赵子涵', '周博文', '吴敏', '孙浩', '郑立群', '徐若溪', '胡可欣', '朱明轩', '高雅', '林泽宇', '何静怡', '郭子豪', '马欣然', '罗一帆', '梁晨', '宋雨桐', '谢天', '韩冰', '唐诗雨', '冯硕', '于洋', '程远', '董蕾', '曹睿', '袁梦', '邓凯', '许诺', '傅琳', '沈哲', '曾毅', '彭悦', '吕航', '苏晴', '卢晨曦', '蒋涛', '蔡文静', '贾鹏', '丁宁', '魏然', '薛凯文', '叶子', '潘越', '杜若'];
+  const PRO = new Set([0, 1, 6, 9, 19, 22, 26, 27, 28, 29, 30, 31]);
+  const TEAMS = [
+    {
+      id: 't1', owner: 0, members: [0, 1, 2, 3, 4, 5], center: [180, 175], invites: ['159****3302 · 编辑'],
+      projects: [
+        { name: '多模态检索', roles: { 0: 'owner', 1: 'editor', 2: 'editor', 3: 'editor', 4: 'reviewer', 5: 'viewer' }, gb: 28.2 },
+        { name: '视觉定位', roles: { 0: 'owner', 2: 'editor', 3: 'editor', 5: 'editor' }, gb: 14.5 },
+        { name: '组会 2026 秋', roles: { 0: 'owner', 1: 'editor', 2: 'editor', 3: 'editor', 4: 'editor', 5: 'editor' }, gb: 1.4 },
+        { name: '毕业论文 · 李思远', roles: { 1: 'owner', 0: 'reviewer' }, gb: 2.1 },
+      ],
+    },
+    {
+      id: 't2', owner: 6, members: [6, 10, 11, 12], center: [565, 150], invites: [],
+      projects: [
+        { name: '蛋白结构预测', roles: { 6: 'owner', 10: 'editor', 11: 'editor', 12: 'viewer' }, gb: 24.8 },
+        { name: 'AlphaFold 复现', roles: { 6: 'owner', 10: 'editor' }, gb: 9.6 },
+        { name: '综述写作', roles: { 11: 'owner', 6: 'editor', 12: 'editor' }, gb: 0.8 },
+      ],
+    },
+    {
+      id: 't3', owner: 7, members: [7, 13, 14, 15, 16], center: [175, 440], invites: ['136****8810 · 查看'],
+      projects: [
+        { name: '城市热岛', roles: { 7: 'owner', 13: 'editor', 14: 'editor', 15: 'editor', 16: 'viewer' }, gb: 1.6 },
+        { name: '遥感数据处理', roles: { 7: 'owner', 13: 'editor', 15: 'editor' }, gb: 0.3 },
+      ],
+    },
+    {
+      id: 't4', owner: 8, members: [8, 17, 18], center: [385, 310], invites: [],
+      projects: [{ name: '推荐系统基线', roles: { 8: 'owner', 17: 'editor', 18: 'editor' }, gb: 0.9 }],
+    },
+    {
+      id: 't5', owner: 9, members: [9, 19, 20, 21, 22, 23, 24, 25], center: [590, 415], invites: [],
+      projects: [
+        { name: '低资源翻译', roles: { 9: 'owner', 19: 'editor', 20: 'editor', 21: 'editor' }, gb: 12.3 },
+        { name: '语音合成', roles: { 9: 'owner', 22: 'editor', 23: 'editor' }, gb: 16 },
+        { name: '评测基准', roles: { 9: 'owner', 19: 'editor', 22: 'editor', 24: 'editor', 25: 'viewer' }, gb: 3.2 },
+        { name: 'ACL 投稿', roles: { 19: 'owner', 9: 'editor', 20: 'editor' }, gb: 0.6 },
+        { name: '实验室知识库', roles: { 9: 'owner', 19: 'editor', 20: 'editor', 21: 'editor', 22: 'editor', 23: 'editor', 24: 'editor', 25: 'editor' }, gb: 0.4 },
+      ],
+    },
+  ];
+  const ROLE = { owner: '所有者', editor: '编辑', reviewer: '审阅', viewer: '查看' };
+  const ACTIVE = ['刚刚', '8 分钟前', '35 分钟前', '2 小时前', '5 小时前', '昨天', '2 天前', '4 天前', '11-08', '10-29'];
+
+  const USERS = NAMES.map((name, i) => {
+    const plan = PRO.has(i) ? 'pro' : 'free';
+    const quota = plan === 'pro' ? 3000 : 300;
+    const inTeam = TEAMS.some((t) => t.members.includes(i));
+    const used = plan === 'pro' ? between(inTeam ? 700 : 300, 2900) : between(0, 300);
+    const owned = TEAMS.flatMap((t) => t.projects).filter((p) => p.roles[i] === 'owner');
+    const teamProjects = TEAMS.flatMap((t) => t.projects).filter((p) => p.roles[i]).length;
+    const personal = between(1, 4);
+    const storage = owned.reduce((s, p) => s + p.gb, 0) + (plan === 'pro' ? rand() * 8 + 1 : rand() * 1.2 + 0.05);
+    const reg = day(-between(2, 45));
+    return {
+      i,
+      id: 'u_' + (7301 + i * 37).toString(36),
+      name,
+      phone: `1${pick(['38', '39', '58', '59', '86', '87', '36', '37'])}${between(0, 9)}`.slice(0, 3) + '****' + between(1000, 9999),
+      plan,
+      quota,
+      used,
+      storage,
+      personal,
+      teamProjects,
+      active: i < 30 ? ACTIVE[between(0, 5)] : pick(ACTIVE),
+      registered: ymd(reg),
+      periodEnd: plan === 'pro' ? ymd(day(between(4, 28))) : '',
+      status: 'active',
+      reason: '',
+      limits: null,
+      devices: between(1, 3),
+      extra: [],
+    };
+  });
+  USERS[26].phone = '139****2231';
+  USERS[26].used = 2410;
+  USERS[0].used = 1240;
+  USERS[0].phone = '138****0001';
+  USERS[0].periodEnd = '2026-12-02';
+  USERS[1].extra.push({ src: '客服补偿', total: 200, left: 200, start: '2026-11-15', end: '2027-02-13' });
+  USERS[47].status = 'disabled';
+  USERS[47].reason = '同一设备批量注册';
+  USERS[47].used = 300;
+  const TOTAL_USERS = 1284;
+
+  const balance = (u) => u.quota - u.used + u.extra.reduce((s, g) => s + g.left, 0);
+  const teamOf = (t) => ({
+    ...t,
+    name: USERS[t.owner].name + '的团队',
+    gb: t.projects.reduce((s, p) => s + p.gb, 0),
+    points: t.members.reduce((s, m) => s + USERS[m].used, 0),
+  });
+
+  // Daily series for the last 30 days.
+  const DAYS = Array.from({ length: 30 }, (_, i) => day(i - 29));
+  const weekend = (d) => d.getDay() === 0 || d.getDay() === 6;
+  const DAU = DAYS.map((d, i) => Math.round(318 + i * 3.1 - (weekend(d) ? 74 : 0) + rand() * 26));
+  const NEW_USERS = DAYS.map((d, i) => Math.round(2 + rand() * 5 + (i === 17 ? 14 : 0) + (i > 22 ? 2 : 0)));
+  const MODEL_DAILY = DAYS.map((d, i) => {
+    const k = (weekend(d) ? 0.62 : 1) * (0.82 + i * 0.012);
+    return { ds: Math.round(4500 * k * (0.9 + rand() * 0.2)), glm: Math.round(1200 * k * (0.85 + rand() * 0.3)), kimi: Math.round(900 * k * (0.85 + rand() * 0.3)), qwen: Math.round(1900 * k * (0.85 + rand() * 0.3)) };
+  });
+  const MONTHS = ['6 月', '7 月', '8 月', '9 月', '10 月', '11 月'];
+  const MONEY = [
+    { key: 'rev', name: '收入', color: 'var(--s1)', data: [380, 520, 760, 1180, 1640, 2146] },
+    { key: 'model', name: '模型成本', color: 'var(--s2)', data: [210, 260, 330, 470, 560, 684] },
+    { key: 'oss', name: '存储与流量', color: 'var(--s3)', data: [12, 15, 19, 26, 33, 41] },
+  ];
+  const userDaily = (u) =>
+    DAYS.map((d) => {
+      const scale = u.used / 30 / (weekend(d) ? 1.7 : 1);
+      const share = u.plan === 'pro' ? [0.55, 0.12, 0.1, 0.23] : [1, 0, 0, 0];
+      const total = Math.max(0, scale * (0.3 + rand() * 1.4));
+      return { ds: Math.round(total * share[0]), glm: Math.round(total * share[1]), kimi: Math.round(total * share[2]), qwen: Math.round(total * share[3]) };
+    });
+
+  const BATCHES = [
+    { name: '11 月组会推广', face: '个人专业版 · 1 个月', count: 100, used: 38, until: '2026-11-23', by: '林', created: '11-01', on: true },
+    { name: '科研训练课 · 第 3 期', face: '2,000 点 · 90 天', count: 60, used: 12, until: '2027-01-31', by: '陈', created: '11-12', on: true },
+    { name: '种子用户', face: '个人专业版 · 3 个月', count: 20, used: 17, until: '2026-12-31', by: '林', created: '10-20', on: true },
+    { name: '内测补偿', face: '500 点 · 30 天', count: 30, used: 30, until: '2026-11-10', by: '林', created: '10-28', on: false },
+  ];
+  const ORDERS = [
+    ['SO20261116-0012', 27, '个人专业版 · 12 个月', 288, '对公转账', '11-16 11:20', '待开具'],
+    ['SO20261115-0011', 9, '个人专业版 · 12 个月', 288, '对公转账', '11-15 18:02', '已开具'],
+    ['SO20261114-0010', 30, '个人专业版 · 1 个月', 0, '兑换码', '11-14 21:47', '—'],
+    ['SO20261113-0009', 19, '个人专业版 · 3 个月', 0, '兑换码', '11-13 10:05', '—'],
+    ['SO20261112-0008', 22, '个人专业版 · 1 个月', 29, '对公转账', '11-12 15:31', '未申请'],
+    ['SO20261110-0007', 28, '个人专业版 · 1 个月', 0, '兑换码', '11-10 08:59', '—'],
+    ['SO20261108-0006', 31, '个人专业版 · 12 个月', 288, '对公转账', '11-08 14:12', '已开具'],
+    ['SO20261102-0005', 0, '个人专业版 · 1 个月', 29, '对公转账', '11-02 09:40', '已开具'],
+  ];
+  const AUDIT = [
+    ['11-16 14:05', '林 · 所有者', '修改模型成本价', 'Qwen3 Max', '输出 ¥20 → ¥24 / 百万', '上游 11-15 调价', '10.2.0.8'],
+    ['11-16 10:41', '林 · 所有者', '显示手机号', '用户 程远', '—', '核实异常用量', '10.2.0.8'],
+    ['11-15 22:10', '陈 · 运营', '补偿额度', '用户 李思远', '+200 点，90 天有效', '同步失败补偿', '10.2.0.15'],
+    ['11-15 18:02', '林 · 所有者', '手动开通', '用户 郑立群', '免费 → 个人专业版，12 个月', '对公转账 ¥288', '10.2.0.8'],
+    ['11-14 09:30', '林 · 所有者', '生成兑换码', '批次 科研训练课 · 第 3 期', '60 个，2,000 点', '—', '10.2.0.8'],
+    ['11-13 16:22', '林 · 所有者', '停用账号', '用户 杜若', '正常 → 停用', '同一设备批量注册', '10.2.0.8'],
+    ['11-12 11:05', '林 · 所有者', '新增渠道', '智谱开放平台', '密钥 ····3d7e', '—', '10.2.0.8'],
+  ];
+
+  // ---------- State ----------
+  const S = {
+    view: 'overview',
+    user: null,
+    userTab: 'overview',
+    team: null,
+    teamView: 'graph',
+    modelTab: 'models',
+    usageGroup: 'user',
+    range: 30,
+    q: '',
+    plan: 'all',
+    status: 'all',
+    theme: 'light',
+    client: false,
+    clientState: 'normal',
+    signedIn: true,
+    shown: {},
+    hl: null,
+  };
+  const TIPS = {};
+  let tipSeq = 0;
+  const tip = (html) => {
+    const id = 't' + ++tipSeq;
+    TIPS[id] = html;
+    return id;
+  };
+  const tipRow = (color, name, value) => `<div class="r">${color ? `<i style="background:${color}"></i>` : ''}${esc(name)}<b>${value}</b></div>`;
+  const CHARTS = {};
+  let chartSeq = 0;
+  const chart = (draw, cls = '') => {
+    const id = 'c' + ++chartSeq;
+    CHARTS[id] = draw;
+    return `<div class="chart ${cls}" data-chart="${id}"></div>`;
+  };
+  const legend = (series, line = false) =>
+    `<div class="legend">${series.map((s) => `<span><i class="${line ? 'line' : ''}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+
+  // ---------- Charts ----------
+  function niceScale(max, count = 4) {
+    const raw = Math.max(max, 1) / count;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
+    const top = Math.ceil(max / step) * step;
+    const ticks = [];
+    for (let v = 0; v <= top + step / 2; v += step) ticks.push(v);
+    return { top, ticks };
+  }
+  const short = (v) => (v >= 10000 ? (v / 10000).toFixed(v % 10000 ? 1 : 0) + ' 万' : fmt(v));
+  function axes(w, h, m, scale, fmtY) {
+    let out = '';
+    for (const t of scale.ticks) {
+      const y = m.t + (h - m.t - m.b) * (1 - t / scale.top);
+      out += `<line class="${t === 0 ? 'baseline' : 'gridline'}" x1="${m.l}" x2="${w - m.r}" y1="${y}" y2="${y}"/>`;
+      out += `<text x="${m.l - 8}" y="${y + 4}" text-anchor="end">${fmtY(t)}</text>`;
+    }
+    return out;
+  }
+  const topRounded = (x, y, w, h, r) => {
+    if (h <= 0) return '';
+    r = Math.min(r, h, w / 2);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  };
+  const rightRounded = (x, y, w, h, r) => {
+    if (w <= 0) return '';
+    r = Math.min(r, w, h / 2);
+    return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+  };
+
+  function lineChart({ labels, series, height = 220, fmtY = short, unit = '' }) {
+    return (w) => {
+      const m = { l: 46, r: 12, t: 10, b: 26 };
+      const max = Math.max(...series.flatMap((s) => s.data));
+      const scale = niceScale(max);
+      const iw = w - m.l - m.r;
+      const x = (i) => m.l + (iw * i) / (labels.length - 1);
+      const y = (v) => m.t + (height - m.t - m.b) * (1 - v / scale.top);
+      let svg = axes(w, height, m, scale, fmtY);
+      labels.forEach((l, i) => {
+        if (i % 5 === 4 || i === 0) svg += `<text x="${x(i)}" y="${height - 8}" text-anchor="middle">${l}</text>`;
+      });
+      for (const s of series) {
+        svg += `<path d="${s.data.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+      }
+      svg += `<line class="cross" x1="0" x2="0" y1="${m.t}" y2="${height - m.b}" style="display:none"/>`;
+      const band = iw / (labels.length - 1);
+      labels.forEach((l, i) => {
+        const id = tip(`<div class="h">${l}</div>${series.map((s) => tipRow(s.color, s.name, fmt(s.data[i]) + unit)).join('')}`);
+        svg += `<rect class="hit" data-tip="${id}" data-cx="${x(i)}" x="${x(i) - band / 2}" y="${m.t}" width="${band}" height="${height - m.t - m.b}"/>`;
+      });
+      return `<svg viewBox="0 0 ${w} ${height}" height="${height}">${svg}</svg>`;
+    };
+  }
+
+  function stackChart({ labels, rows, series, height = 220, unit = ' 点' }) {
+    return (w) => {
+      const m = { l: 46, r: 8, t: 10, b: 26 };
+      const totals = rows.map((r) => series.reduce((s, k) => s + r[k.key], 0));
+      const scale = niceScale(Math.max(...totals));
+      const iw = w - m.l - m.r;
+      const band = iw / labels.length;
+      const bw = Math.max(4, Math.min(22, band * 0.62));
+      const ih = height - m.t - m.b;
+      let svg = axes(w, height, m, scale, short);
+      rows.forEach((r, i) => {
+        const cx = m.l + band * i + band / 2;
+        let base = height - m.b;
+        const visible = series.filter((s) => r[s.key] > 0);
+        visible.forEach((s, j) => {
+          const h = (ih * r[s.key]) / scale.top;
+          const gap = j ? 2 : 0;
+          const top = j === visible.length - 1;
+          const y0 = base - h;
+          if (top) svg += `<path d="${topRounded(cx - bw / 2, y0, bw, h - gap, 4)}" fill="${s.color}"/>`;
+          else svg += `<rect x="${cx - bw / 2}" y="${y0}" width="${bw}" height="${Math.max(0, h - gap)}" fill="${s.color}"/>`;
+          base = y0;
+        });
+        if (i % 5 === 4 || i === 0) svg += `<text x="${cx}" y="${height - 8}" text-anchor="middle">${labels[i]}</text>`;
+        const id = tip(`<div class="h">${labels[i]}</div>${series.map((s) => tipRow(s.color, s.name, fmt(r[s.key]) + unit)).join('')}${tipRow('', '合计', fmt(totals[i]) + unit)}`);
+        svg += `<rect class="hit" data-tip="${id}" x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}"/>`;
+      });
+      return `<svg viewBox="0 0 ${w} ${height}" height="${height}">${svg}</svg>`;
+    };
+  }
+
+  function groupedChart({ labels, series, height = 220 }) {
+    return (w) => {
+      const m = { l: 52, r: 8, t: 10, b: 26 };
+      const scale = niceScale(Math.max(...series.flatMap((s) => s.data)));
+      const iw = w - m.l - m.r;
+      const band = iw / labels.length;
+      const bw = Math.min(18, (band * 0.7) / series.length - 2);
+      const ih = height - m.t - m.b;
+      let svg = axes(w, height, m, scale, (v) => '¥' + short(v));
+      labels.forEach((l, i) => {
+        const start = m.l + band * i + (band - (bw + 2) * series.length + 2) / 2;
+        series.forEach((s, j) => {
+          const h = (ih * s.data[i]) / scale.top;
+          svg += `<path d="${topRounded(start + j * (bw + 2), height - m.b - h, bw, h, 4)}" fill="${s.color}"/>`;
+        });
+        svg += `<text x="${m.l + band * i + band / 2}" y="${height - 8}" text-anchor="middle">${l}</text>`;
+        const id = tip(`<div class="h">${l}</div>${series.map((s) => tipRow(s.color, s.name, money(s.data[i]))).join('')}`);
+        svg += `<rect class="hit" data-tip="${id}" x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}"/>`;
+      });
+      return `<svg viewBox="0 0 ${w} ${height}" height="${height}">${svg}</svg>`;
+    };
+  }
+
+  function hbarChart({ items, color = 'var(--s1)', unit = ' 点' }) {
+    return (w) => {
+      const row = 26;
+      const m = { l: 64, r: 64 };
+      const max = Math.max(...items.map((d) => d.value), 1);
+      const height = items.length * row;
+      let svg = '';
+      items.forEach((d, i) => {
+        const y = i * row + 5;
+        const bw = ((w - m.l - m.r) * d.value) / max;
+        svg += `<text class="label" x="${m.l - 8}" y="${y + 12}" text-anchor="end">${esc(d.label)}</text>`;
+        svg += `<path d="${rightRounded(m.l, y, Math.max(bw, 1), 16, 4)}" fill="${color}"/>`;
+        svg += `<text class="label" x="${m.l + bw + 6}" y="${y + 12}">${fmt(d.value)}</text>`;
+        const id = tip(`<div class="h">${esc(d.label)}</div>${tipRow(color, '本月', fmt(d.value) + unit)}`);
+        svg += `<rect class="hit" data-tip="${id}" x="0" y="${y - 4}" width="${w}" height="${row}"/>`;
+      });
+      return `<svg viewBox="0 0 ${w} ${height}" height="${height}">${svg}</svg>`;
+    };
+  }
+
+  function stackBarH({ items, series }) {
+    return (w) => {
+      const row = 30;
+      const m = { l: 120, r: 70 };
+      const totals = items.map((d) => series.reduce((s, k) => s + d[k.key], 0));
+      const max = Math.max(...totals);
+      const height = items.length * row;
+      let svg = '';
+      items.forEach((d, i) => {
+        const y = i * row + 6;
+        let x = m.l;
+        svg += `<text class="label" x="${m.l - 8}" y="${y + 13}" text-anchor="end">${esc(d.label)}</text>`;
+        const visible = series.filter((s) => d[s.key] > 0);
+        visible.forEach((s, j) => {
+          const bw = ((w - m.l - m.r) * d[s.key]) / max;
+          const last = j === visible.length - 1;
+          const width = Math.max(0.5, bw - (last ? 0 : 2));
+          svg += last ? `<path d="${rightRounded(x, y, width, 18, 4)}" fill="${s.color}"/>` : `<rect x="${x}" y="${y}" width="${width}" height="18" fill="${s.color}"/>`;
+          x += bw;
+        });
+        svg += `<text class="label" x="${x + 6}" y="${y + 13}">${gb(totals[i])}</text>`;
+        const id = tip(`<div class="h">${esc(d.label)}</div>${series.map((s) => tipRow(s.color, s.name, gb(d[s.key]))).join('')}`);
+        svg += `<rect class="hit" data-tip="${id}" x="0" y="${y - 6}" width="${w}" height="${row}"/>`;
+      });
+      return `<svg viewBox="0 0 ${w} ${height}" height="${height}">${svg}</svg>`;
+    };
+  }
+
+  // ---------- Pieces ----------
+  const chip = (text, cls = '') => `<span class="chip ${cls}">${text}</span>`;
+  const planChip = (u) => (u.plan === 'pro' ? chip('专业版', 'pro') : chip('免费'));
+  const statusChip = (u) => (u.status === 'active' ? chip(icon('ok') + '正常', 'ok') : chip(icon('alert') + '已停用', 'bad'));
+  const phoneOf = (u) => (S.shown[u.id] ? u.phone.replace('****', String(4000 + u.i * 13).slice(0, 4)) : u.phone);
+  const meter = (used, total, label) => {
+    const pct = Math.min(100, (used / total) * 100);
+    return `<div class="meter"><div class="bar"><i class="${pct >= 100 ? 'full' : pct >= 85 ? 'hi' : ''}" style="width:${pct}%"></i></div><span>${label}</span></div>`;
+  };
+  const card = (title, body, { sub = '', actions = '', pad = true } = {}) =>
+    `<section class="card"><div class="card-head"><h2>${title}</h2>${sub ? `<span class="sub">${sub}</span>` : ''}<span class="spacer"></span>${actions}</div><div class="${pad ? 'card-body' : 'card-body flush'}">${body}</div></section>`;
+  const tile = (k, v, d = '', act = '') => `<${act ? `button class="tile" ${act}` : 'div class="tile"'}><div class="k">${k}</div><div class="v num">${v}</div>${d ? `<div class="d">${d}</div>` : ''}</${act ? 'button' : 'div'}>`;
+
+  // ---------- Pages ----------
+  const NAV = [
+    { group: '运营' },
+    { id: 'overview', name: '概览', icon: 'dash' },
+    { id: 'users', name: '用户', icon: 'users' },
+    { id: 'teams', name: '团队', icon: 'team' },
+    { group: '计费' },
+    { id: 'plans', name: '套餐与额度', icon: 'plan' },
+    { id: 'codes', name: '兑换码', icon: 'ticket' },
+    { id: 'models', name: '模型与渠道', icon: 'cpu' },
+    { id: 'usage', name: '用量', icon: 'chart' },
+    { id: 'orders', name: '订单', icon: 'receipt' },
+    { group: '系统' },
+    { id: 'audit', name: '审计', icon: 'shield' },
+  ];
+  const TITLES = Object.fromEntries(NAV.filter((n) => n.id).map((n) => [n.id, n.name]));
+
+  function overview() {
+    const monthPoints = MODEL_DAILY.slice(-16).reduce((s, r) => s + r.ds + r.glm + r.kimi + r.qwen, 0);
+    const alerts = [
+      ['bad', '程远（139****2231）一小时内用了 910 点', '已到单日上限的 91%，可能是 Agent 循环', '查看用户', 'data-act="user" data-id="26"'],
+      ['warn', '阿里云百炼的错误率 4.2%', '近 1 小时，影响 Qwen3 Max；其他渠道正常', '查看渠道', 'data-act="go" data-view="models" data-tab="channels"'],
+      ['warn', 'Qwen3 Max 的毛利率 28%', `低于设定的 ${MIN_MARGIN}%，上游 11-15 涨了输出价`, '调整价格', 'data-act="edit-model" data-id="qwen"'],
+      ['info', '吴敏的团队已到免费版的成员上限', '5 人、2 个团队项目，可以介绍课题组版', '查看团队', 'data-act="team" data-id="t3"'],
+      ['info', '兑换码「11 月组会推广」7 天后到期', '已用 38 / 100', '查看', 'data-act="go" data-view="codes"'],
+    ];
+    return `
+      <div class="tiles">
+        ${tile('注册用户', fmt(TOTAL_USERS), '<span class="up">本月 +86</span>', 'data-act="go" data-view="users"')}
+        ${tile('7 日活跃', '412', '<span class="up">较上周 +6%</span>')}
+        ${tile('付费用户', '63', '个人专业版 63', 'data-act="go" data-view="users" data-plan="pro"')}
+        ${tile('本月收入', money(2146), '含年付 3 笔', 'data-act="go" data-view="orders"')}
+        ${tile('本月模型成本', money(684), `售出 ${short(monthPoints)} 点 · 毛利 52%`, 'data-act="go" data-view="usage"')}
+        ${tile('同步空间', '312 GB', 'OSS 本月约 ¥41')}
+      </div>
+      <div class="grid g-main">
+        <div class="grid" style="align-content:start">
+          ${card('每日活跃和新注册', `<div class="mini-h">活跃用户</div>${chart(lineChart({ labels: DAYS.map(md), series: [{ name: '活跃用户', color: 'var(--s1)', data: DAU }], height: 170, unit: ' 人' }))}<div class="mini-h" style="margin-top:14px">新注册</div>${chart(stackChart({ labels: DAYS.map(md), rows: NEW_USERS.map((n) => ({ n })), series: [{ key: 'n', name: '新注册', color: 'var(--s1)' }], height: 110, unit: ' 人' }))}`, { sub: '近 30 天' })}
+          ${card('每日模型消耗', legend(SERIES) + chart(stackChart({ labels: DAYS.map(md), rows: MODEL_DAILY, series: SERIES })), { sub: '点 · 近 30 天', actions: '<button class="btn sm ghost" data-act="go" data-view="usage">用量明细' + icon('right') + '</button>' })}
+        </div>
+        <div class="grid" style="align-content:start">
+          ${card('需要处理', `<div class="alerts">${alerts.map(([k, t, s, b, a]) => `<div class="alert ${k}">${icon(k === 'info' ? 'info' : 'alert')}<div><div class="t">${t}</div><div class="s">${s}</div></div><button class="btn sm" ${a}>${b}</button></div>`).join('')}</div>`, { sub: '5 项' })}
+          ${card('收入和成本', legend(MONEY) + chart(groupedChart({ labels: MONTHS, series: MONEY }), ''), { sub: '按月' })}
+        </div>
+      </div>`;
+  }
+
+  function filteredUsers() {
+    const q = S.q.trim();
+    return USERS.filter((u) => (S.plan === 'all' || u.plan === S.plan) && (S.status === 'all' || u.status === S.status) && (!q || u.name.includes(q) || u.phone.includes(q) || u.id.includes(q)));
+  }
+  function users() {
+    const list = filteredUsers();
+    return `
+      <div class="toolbar">
+        <label class="field" style="width:260px">${icon('search')}<input data-input="q" placeholder="手机号、昵称或 ID" value="${esc(S.q)}"></label>
+        <div class="seg">${[['all', '全部套餐'], ['free', '免费'], ['pro', '专业版']].map(([v, l]) => `<button class="${S.plan === v ? 'on' : ''}" data-act="set" data-key="plan" data-value="${v}">${l}</button>`).join('')}</div>
+        <div class="seg">${[['all', '全部状态'], ['active', '正常'], ['disabled', '已停用']].map(([v, l]) => `<button class="${S.status === v ? 'on' : ''}" data-act="set" data-key="status" data-value="${v}">${l}</button>`).join('')}</div>
+        <span class="grow"></span>
+        <span class="muted">共 ${fmt(TOTAL_USERS)} 人，原型里列出 ${list.length} 人</span>
+        <button class="btn" data-act="toast" data-text="已导出 CSV（手机号保持遮盖）">${icon('download')}导出</button>
+      </div>
+      ${card(
+        '用户',
+        `<div class="table-wrap"><table><thead><tr><th>用户</th><th>套餐</th><th>本周期官方模型额度</th><th>同步空间</th><th class="n">项目</th><th>最近活跃</th><th>注册</th><th>状态</th></tr></thead><tbody>
+        ${list
+          .map(
+            (u) => `<tr class="click" data-act="user" data-id="${u.i}">
+            <td class="who"><b>${esc(u.name)}</b><span class="muted num">${phoneOf(u)}</span></td>
+            <td>${planChip(u)}${u.periodEnd ? `<span class="muted num"> 至 ${u.periodEnd.slice(5)}</span>` : ''}</td>
+            <td>${meter(u.used, u.quota, `${fmt(u.used)} / ${fmt(u.quota)}`)}</td>
+            <td>${meter(u.storage, u.plan === 'pro' ? 50 : 2, gb(u.storage))}</td>
+            <td class="n">${u.personal + u.teamProjects}<span class="muted">（团队 ${u.teamProjects}）</span></td>
+            <td class="muted">${u.active}</td>
+            <td class="muted num">${u.registered}</td>
+            <td>${statusChip(u)}</td></tr>`,
+          )
+          .join('')}
+        </tbody></table></div>`,
+        { pad: false },
+      )}`;
+  }
+
+  function userGrants(u) {
+    const rows = [];
+    if (u.plan === 'pro') rows.push({ src: '套餐月度额度', total: 3000, left: 3000 - u.used, start: ymd(day(-14)), end: u.periodEnd, st: '使用中' });
+    else rows.push({ src: '免费版月度额度', total: 300, left: 300 - u.used, start: '2026-11-01', end: '2026-11-30', st: u.used >= 300 ? '已用完' : '使用中' });
+    for (const g of u.extra) rows.push({ ...g, st: g.left === g.total ? '未使用' : '使用中' });
+    rows.push({ src: '注册赠送', total: 1000, left: 0, start: ymd(day(-44)), end: ymd(day(-14)), st: '已作废 126 点' });
+    return rows;
+  }
+  function userLedger(u) {
+    const rows = [];
+    const daily = userDaily(u);
+    for (let i = 29; i >= 24; i--) {
+      const r = daily[i];
+      const total = r.ds + r.glm + r.kimi + r.qwen;
+      if (total) rows.push([md(DAYS[i]) + ' 合计', '−' + fmt(total), '使用', `${between(6, 40)} 次请求`, '—']);
+    }
+    for (const g of u.extra) rows.push([g.start.slice(5) + ' 22:10', '+' + fmt(g.total), '补偿', '同步失败补偿，90 天有效', '陈 · 运营']);
+    rows.push([ymd(day(-14)).slice(5) + ' 00:00', '+' + fmt(u.quota), '发放', '套餐月度额度', '—']);
+    rows.push([ymd(day(-14)).slice(5) + ' 00:00', '−126', '作废', '注册赠送到期', '—']);
+    return rows;
+  }
+  function userDetail() {
+    const u = USERS[S.user];
+    const tabs = [['overview', '概况'], ['credits', '额度'], ['usage', '用量'], ['projects', '项目'], ['devices', '设备'], ['log', '操作记录']];
+    const grants = userGrants(u);
+    const left = balance(u);
+    let body = '';
+    if (S.userTab === 'overview') {
+      body = `<div class="grid g3">
+        ${card('套餐', `<dl class="kv"><dt>当前</dt><dd>${planChip(u)} ${u.plan === 'pro' ? '月付' : ''}</dd><dt>周期</dt><dd class="num">${u.plan === 'pro' ? ymd(day(-14)) + ' 至 ' + u.periodEnd : '每月 1 日重置'}</dd><dt>来源</dt><dd>${u.plan === 'pro' ? (u.i === 9 ? '对公转账' : '兑换码 · 种子用户') : '—'}</dd><dt>自动续费</dt><dd class="muted">第二期</dd></dl>`, { actions: '<button class="btn sm" data-act="dialog" data-kind="plan">更改套餐</button>' })}
+        ${card('官方模型额度', `<div class="v num" style="font-size:22px;font-weight:600">${fmt(left)} <span class="muted" style="font-size:13px;font-weight:400">点可用</span></div>${meter(u.used, u.quota, `本周期已用 ${fmt(u.used)} / ${fmt(u.quota)}`)}<dl class="kv" style="margin-top:12px"><dt>单日上限</dt><dd class="num">${u.limits ? fmt(u.limits.daily) + ' 点（单独设置）' : fmt(Math.round(u.quota / 3)) + ' 点（跟随套餐）'}</dd><dt>今天已用</dt><dd class="num">${u.i === 26 ? '910 点' : fmt(Math.round(u.used / 18)) + ' 点'}</dd></dl>`, { actions: '<button class="btn sm" data-act="dialog" data-kind="credit">调整额度</button>' })}
+        ${card('同步空间', `${meter(u.storage, u.plan === 'pro' ? 50 : 2, `${gb(u.storage)} / ${u.plan === 'pro' ? '50 GB' : '2 GB'}`)}<dl class="kv" style="margin-top:12px"><dt>拥有的项目</dt><dd>${u.personal + TEAMS.flatMap((t) => t.projects).filter((p) => p.roles[u.i] === 'owner').length} 个</dd><dt>加入的项目</dt><dd>${TEAMS.flatMap((t) => t.projects).filter((p) => p.roles[u.i] && p.roles[u.i] !== 'owner').length} 个（不占自己的空间）</dd><dt>历史版本</dt><dd>${u.plan === 'pro' ? '保留 1 年' : '保留 7 天'}</dd></dl>`)}
+      </div>
+      ${card('近 30 天用量', legend(SERIES) + chart(stackChart({ labels: DAYS.map(md), rows: userDaily(u), series: SERIES, height: 180 })), { sub: '点' })}`;
+    } else if (S.userTab === 'credits') {
+      body = `${card('额度包', `<table><thead><tr><th>来源</th><th class="n">总点数</th><th class="n">剩余</th><th>生效</th><th>到期</th><th>状态</th></tr></thead><tbody>${grants.map((g) => `<tr><td>${g.src}</td><td class="n">${fmt(g.total)}</td><td class="n">${fmt(g.left)}</td><td class="num muted">${g.start}</td><td class="num muted">${g.end}</td><td>${g.st.startsWith('已作废') ? chip(g.st) : g.st === '已用完' ? chip(g.st, 'warn') : chip(g.st, 'ok')}</td></tr>`).join('')}</tbody></table>`, { sub: '先扣最早到期的', pad: false, actions: '<button class="btn sm" data-act="dialog" data-kind="credit">调整额度</button>' })}
+      ${card('流水', `<table><thead><tr><th>时间</th><th class="n">变化</th><th>类型</th><th>说明</th><th>操作人</th></tr></thead><tbody>${userLedger(u).map((r) => `<tr><td class="num muted">${r[0]}</td><td class="n ${r[1].startsWith('+') ? 'up' : ''}">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="muted">${r[4]}</td></tr>`).join('')}</tbody></table>`, { sub: '使用记录按天合并显示', pad: false })}`;
+    } else if (S.userTab === 'usage') {
+      const byProject = TEAMS.flatMap((t) => t.projects).filter((p) => p.roles[u.i]).map((p, i) => ({ label: p.name, value: Math.round(u.used * [0.46, 0.27, 0.12, 0.08, 0.05][i % 5]) }));
+      byProject.push({ label: '个人项目', value: Math.round(u.used * 0.1) });
+      body = `${card('近 30 天用量', legend(SERIES) + chart(stackChart({ labels: DAYS.map(md), rows: userDaily(u), series: SERIES })), { sub: '点' })}
+      <div class="grid g2">${card('按项目', chart(hbarChart({ items: byProject })), { sub: '本周期 · 点' })}
+      ${card('按模型', `<table><thead><tr><th>模型</th><th class="n">请求</th><th class="n">输入</th><th class="n">缓存命中</th><th class="n">输出</th><th class="n">点数</th></tr></thead><tbody>${MODELS.map((m, i) => {
+        const share = u.plan === 'pro' ? [0.55, 0.12, 0.1, 0.23][i] : [1, 0, 0, 0][i];
+        const pts = Math.round(u.used * share);
+        return `<tr><td>${m.name}</td><td class="n">${fmt(pts / 14)}</td><td class="n">${short(pts * 820)}</td><td class="n">${short(pts * 1060)}</td><td class="n">${short(pts * 160)}</td><td class="n">${fmt(pts)}</td></tr>`;
+      }).join('')}</tbody></table>`, { pad: false, sub: 'token 数' })}</div>`;
+    } else if (S.userTab === 'projects') {
+      const rows = TEAMS.flatMap((t) => t.projects.filter((p) => p.roles[u.i]).map((p) => [p.name, ROLE[p.roles[u.i]], Object.keys(p.roles).length, p.roles[u.i] === 'owner' ? gb(p.gb) : '—', pick(ACTIVE.slice(0, 6))]));
+      for (let k = 0; k < u.personal; k++) rows.push([['读论文', '个人笔记', '毕设代码', '课程项目'][k], '所有者', 1, gb(0.2 + k * 0.4), pick(ACTIVE)]);
+      body = card('项目', `<table><thead><tr><th>项目</th><th>角色</th><th class="n">成员</th><th class="n">占用空间</th><th>最近同步</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${esc(r[0])}</td><td><span class="role ${Object.keys(ROLE).find((k) => ROLE[k] === r[1])}">${r[1]}</span></td><td class="n">${r[2]}</td><td class="n">${r[3]}</td><td class="muted">${r[4]}</td></tr>`).join('')}</tbody></table><div class="note" style="margin:12px 16px 16px">${icon('info')}<span>后台只显示项目名、成员和大小；论文、文档、代码和对话的内容看不到。</span></div>`, { pad: false, sub: '占用空间只算这个人拥有的项目' });
+    } else if (S.userTab === 'devices') {
+      const devs = [['Windows · DESKTOP-7Q2LM', '····k3f9', '10 分钟前', '杭州'], ['MacBook Pro', '····p81c', '2 小时前', '杭州'], ['Windows · LAB-PC-03', '····z20d', '11-03', '南京']].slice(0, u.devices);
+      body = card('登录的设备', `<table><thead><tr><th>设备</th><th>模型令牌</th><th>最近使用</th><th>大致位置</th><th></th></tr></thead><tbody>${devs.map((d) => `<tr><td>${d[0]}</td><td class="num">${icon('key')} ${d[1]}</td><td class="muted">${d[2]}</td><td class="muted">${d[3]}</td><td class="n"><button class="btn sm" data-act="toast" data-text="已吊销这台设备的模型令牌，并记入审计">吊销</button></td></tr>`).join('')}</tbody></table>`, { pad: false, actions: '<button class="btn sm" data-act="confirm-logout">全部下线</button>' });
+    } else {
+      const rows = AUDIT.filter((a) => a[3].includes(u.name));
+      body = card('操作记录', rows.length ? auditTable(rows) : '<div class="card-body muted">后台还没有对这个用户做过操作。</div>', { pad: false });
+    }
+    return `
+      <div class="profile">
+        <div class="avatar">${u.name.slice(-2)}</div>
+        <div><h2>${esc(u.name)} ${planChip(u)} ${statusChip(u)}</h2>
+          <div class="muted"><span class="num">${phoneOf(u)}</span>${S.shown[u.id] ? '' : `<button class="link" data-act="reveal" data-id="${u.i}">${icon('eye')} 显示</button>`}<span>·</span><span class="num">${u.id}</span><span>·</span><span>注册于 ${u.registered}</span><span>·</span><span>最近活跃 ${u.active}</span></div>
+          ${u.status === 'disabled' ? `<div class="muted">停用原因：${esc(u.reason)}</div>` : ''}
+        </div>
+        <span style="flex:1"></span>
+        <button class="btn" data-act="dialog" data-kind="credit">调整额度</button>
+        <button class="btn" data-act="dialog" data-kind="plan">更改套餐</button>
+        <button class="btn" data-act="dialog" data-kind="limits">单独限制</button>
+        <button class="btn" data-act="confirm-logout">强制下线</button>
+        ${u.status === 'active' ? '<button class="btn danger" data-act="dialog" data-kind="disable">停用</button>' : '<button class="btn" data-act="enable">恢复</button>'}
+      </div>
+      <div class="tabs">${tabs.map(([k, l]) => `<button class="${S.userTab === k ? 'on' : ''}" data-act="set" data-key="userTab" data-value="${k}">${l}</button>`).join('')}</div>
+      ${body}`;
+  }
+
+  // ---------- Teams ----------
+  let layoutCache = null;
+  function graphLayout() {
+    if (layoutCache) return layoutCache;
+    // Each team is a ring: the owner in the middle, the members around.
+    const nodes = [];
+    const index = new Map();
+    for (const t of TEAMS) {
+      const others = t.members.filter((m) => m !== t.owner);
+      const ring = 46 + others.length * 7;
+      for (const m of t.members) {
+        const k = others.indexOf(m);
+        const angle = -Math.PI / 2 + (2 * Math.PI * k) / others.length;
+        index.set(m, nodes.length);
+        nodes.push({
+          id: m,
+          team: t.id,
+          x: k < 0 ? t.center[0] : t.center[0] + ring * Math.cos(angle),
+          y: k < 0 ? t.center[1] : t.center[1] + ring * Math.sin(angle),
+          r: 6 + Math.sqrt(USERS[m].used) / 5.5,
+        });
+      }
+    }
+    const weights = new Map();
+    for (const t of TEAMS)
+      for (const p of t.projects) {
+        const ids = Object.keys(p.roles).map(Number);
+        for (let a = 0; a < ids.length; a++)
+          for (let b = a + 1; b < ids.length; b++) {
+            const k = Math.min(ids[a], ids[b]) + '-' + Math.max(ids[a], ids[b]);
+            weights.set(k, (weights.get(k) ?? 0) + 1);
+          }
+      }
+    const edges = [...weights].map(([k, w]) => {
+      const [a, b] = k.split('-').map(Number);
+      return { a: index.get(a), b: index.get(b), w };
+    });
+    layoutCache = { nodes, edges };
+    return layoutCache;
+  }
+  function teamGraph() {
+    return () => {
+      const { nodes, edges } = graphLayout();
+      let svg = '';
+      for (const t of TEAMS.map(teamOf)) {
+        const own = nodes.filter((n) => n.team === t.id);
+        const cx = own.reduce((s, n) => s + n.x, 0) / own.length;
+        const cy = own.reduce((s, n) => s + n.y, 0) / own.length;
+        const r = Math.max(...own.map((n) => Math.hypot(n.x - cx, n.y - cy) + n.r)) + 26;
+        const hl = S.hl === t.id ? 'hl' : '';
+        svg += `<circle class="hull ${hl}" data-act="team" data-id="${t.id}" data-hover-team="${t.id}" cx="${cx}" cy="${cy}" r="${r}"/>`;
+        svg += `<text class="cl" data-act="team" data-id="${t.id}" x="${cx}" y="${cy - r - 8}" text-anchor="middle">${esc(t.name)}<tspan> · ${t.members.length} 人 · ${fmt(t.points)} 点</tspan></text>`;
+      }
+      for (const e of edges) {
+        const a = nodes[e.a];
+        const b = nodes[e.b];
+        svg += `<line class="edge" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${0.8 + e.w * 1.1}"/>`;
+      }
+      for (const n of nodes) {
+        const u = USERS[n.id];
+        const t = TEAMS.find((x) => x.id === n.team);
+        const isOwner = t.owner === n.id;
+        const projects = t.projects.filter((p) => p.roles[n.id]).map((p) => p.name);
+        const id = tip(`<div class="h">${esc(u.name)}${isOwner ? ' · 团队所有者' : ''}</div>${tipRow('', '套餐', PLAN_NAME[u.plan])}${tipRow('', '本月用量', fmt(u.used) + ' 点')}${tipRow('', '团队项目', projects.length + ' 个')}`);
+        svg += `<circle class="node ${u.plan} ${isOwner ? 'owner' : ''}" data-tip="${id}" data-act="user" data-id="${n.id}" cx="${n.x}" cy="${n.y}" r="${n.r}"/>`;
+        svg += `<text class="nm" x="${n.x}" y="${n.y + n.r + 12}" text-anchor="middle">${esc(u.name)}</text>`;
+      }
+      return `<div class="graph"><svg viewBox="0 0 780 590" preserveAspectRatio="xMidYMid meet">${svg}</svg></div>`;
+    };
+  }
+  function teams() {
+    const list = TEAMS.map(teamOf);
+    const header = `
+      <div class="tiles" style="grid-template-columns:repeat(4,1fr)">
+        ${tile('团队', list.length, '从共同的团队项目推断')}
+        ${tile('团队项目', list.reduce((s, t) => s + t.projects.length, 0), '有其他成员的项目')}
+        ${tile('团队成员', list.reduce((s, t) => s + t.members.length, 0), '占注册用户的 2%')}
+        ${tile('所有者是免费版', list.filter((t) => USERS[t.owner].plan === 'free').length, '可以介绍课题组版')}
+      </div>
+      <div class="toolbar"><div class="seg"><button class="${S.teamView === 'graph' ? 'on' : ''}" data-act="set" data-key="teamView" data-value="graph">关系图</button><button class="${S.teamView === 'list' ? 'on' : ''}" data-act="set" data-key="teamView" data-value="list">列表</button></div><span class="grow"></span><span class="muted">第三期有了课题组以后，课题组按组织显示</span></div>`;
+    if (S.teamView === 'list') {
+      return (
+        header +
+        card(
+          '团队',
+          `<table><thead><tr><th>团队</th><th>所有者套餐</th><th>成员</th><th class="n">团队项目</th><th class="n">空间</th><th class="n">本月用量</th><th>最近活跃</th></tr></thead><tbody>${list
+            .map((t) => {
+              const best = {};
+              const rank = { owner: 4, editor: 3, reviewer: 2, viewer: 1 };
+              for (const p of t.projects) for (const [m, r] of Object.entries(p.roles)) if (!best[m] || rank[r] > rank[best[m]]) best[m] = r;
+              const byRole = Object.values(best).reduce((s, r) => ((s[r] = (s[r] ?? 0) + 1), s), {});
+              return `<tr class="click" data-act="team" data-id="${t.id}"><td><b>${esc(t.name)}</b></td><td>${planChip(USERS[t.owner])}</td><td>${t.members.length} 人 <span class="muted">${['owner', 'editor', 'reviewer', 'viewer'].filter((r) => byRole[r]).map((r) => ROLE[r] + ' ' + byRole[r]).join(' · ')}</span></td><td class="n">${t.projects.length}</td><td class="n">${gb(t.gb)}</td><td class="n">${fmt(t.points)} 点</td><td class="muted">${USERS[t.owner].active}</td></tr>`;
+            })
+            .join('')}</tbody></table>`,
+          { pad: false, sub: '成员按其在各项目里最高的角色计' },
+        )
+      );
+    }
+    return (
+      header +
+      `<div class="graph-wrap">
+        ${card('协作关系图', `<div class="legend"><span><i style="background:var(--s1);border-radius:50%"></i>专业版</span><span><i style="background:var(--text-4);border-radius:50%"></i>免费</span><span><i style="border:2px solid var(--text);border-radius:50%;background:none"></i>团队所有者</span><span class="muted">点越大，本月 AI 用量越多；线越粗，共同的项目越多</span></div>${chart(teamGraph())}`, { sub: '每个点是一个人，两人在同一个项目里就连线' })}
+        ${card('团队', `<div class="team-list">${list.map((t) => `<button class="team ${S.hl === t.id ? 'hl' : ''}" data-act="team" data-id="${t.id}" data-hover-team="${t.id}"><b>${esc(t.name)}</b> ${planChip(USERS[t.owner])}<div class="muted">${t.members.length} 人 · ${t.projects.length} 个团队项目 · ${gb(t.gb)}</div><div class="muted">本月 ${fmt(t.points)} 点 · 最近活跃 ${USERS[t.owner].active}</div></button>`).join('')}</div>`, { pad: false })}
+      </div>`
+    );
+  }
+  function teamDetail() {
+    const t = teamOf(TEAMS.find((x) => x.id === S.team));
+    const owner = USERS[t.owner];
+    const ownedGb = t.projects.filter((p) => p.roles[t.owner] === 'owner').reduce((s, p) => s + p.gb, 0);
+    const heatRows = t.members.map((m) => {
+      const roles = t.projects.map((p) => p.roles[m]).filter(Boolean);
+      const intensity = roles.includes('owner') ? 1 : roles.includes('editor') ? 0.8 : 0.3;
+      return DAYS.map((d) => (rand() < (weekend(d) ? 0.45 : 0.15) ? 0 : Math.round(intensity * (2 + rand() * 22))));
+    });
+    const all = heatRows.flat().filter((v) => v > 0).sort((a, b) => a - b);
+    const q = (p) => all[Math.floor(p * (all.length - 1))] ?? 1;
+    const steps = [q(0.2), q(0.4), q(0.6), q(0.8)];
+    const level = (v) => (v === 0 ? 0 : 1 + steps.filter((s) => v > s).length);
+    const heat = `<div class="heat" style="grid-template-columns:auto repeat(30,1fr)">
+      ${t.members.map((m, i) => `<div class="lbl">${esc(USERS[m].name)}</div>${heatRows[i].map((v, j) => `<div class="cell" style="background:var(--seq${level(v)})" data-tip="${tip(`<div class="h">${esc(USERS[m].name)} · ${md(DAYS[j])}</div>${tipRow('', '同步推送', v + ' 次')}`)}"></div>`).join('')}`).join('')}
+      <div></div>${DAYS.map((d, j) => `<div class="axis">${j % 5 === 4 || j === 0 ? md(d) : ''}</div>`).join('')}
+    </div>
+    <div class="ramp" style="margin-top:10px">少 ${[0, 1, 2, 3, 4, 5].map((k) => `<i style="background:var(--seq${k})"></i>`).join('')} 多<span class="muted" style="margin-left:12px">每格是一个人一天同步推送的次数</span></div>`;
+    const STORE = [
+      { key: 'lit', name: '文献', color: 'var(--s1)' },
+      { key: 'code', name: '代码', color: 'var(--s2)' },
+      { key: 'doc', name: '文档', color: 'var(--s3)' },
+      { key: 'note', name: '笔记', color: 'var(--s4)' },
+      { key: 'other', name: '其他', color: 'var(--s5)' },
+    ];
+    const storage = t.projects.map((p) => {
+      const lit = 0.3 + rand() * 0.3;
+      const code = 0.15 + rand() * 0.35;
+      const doc = 0.03 + rand() * 0.04;
+      const note = 0.02 + rand() * 0.03;
+      const sum = lit + code + doc + note;
+      const other = Math.max(0.04, 1 - sum);
+      const k = p.gb / (sum + other);
+      return { label: p.name, lit: lit * k, code: code * k, doc: doc * k, note: note * k, other: other * k };
+    });
+    const matrix = `<table class="matrix"><thead><tr><th>成员</th>${t.projects.map((p) => `<th>${esc(p.name)}</th>`).join('')}<th class="n">本月用量</th></tr></thead><tbody>${t.members
+      .map((m) => `<tr><td><b>${esc(USERS[m].name)}</b> ${planChip(USERS[m])}</td>${t.projects.map((p) => `<td>${p.roles[m] ? `<span class="role ${p.roles[m]}">${ROLE[p.roles[m]]}</span>` : '<span class="muted">—</span>'}</td>`).join('')}<td class="n">${fmt(USERS[m].used)} 点</td></tr>`)
+      .join('')}</tbody></table>`;
+    const upsell = owner.plan === 'free' ? `<div class="note warn">${icon('alert')}<span>所有者是免费版，“${esc(t.projects[0].name)}”已有 ${Object.keys(t.projects[0].roles).length} 人，到了免费版每个项目 5 人的上限，再邀请会提示升级。这个团队适合介绍课题组版。</span></div>` : '';
+    return `
+      <div class="profile"><div class="avatar">${icon('team')}</div><div><h2>${esc(t.name)}</h2><div class="muted">所有者 ${esc(owner.name)}（${owner.phone}）· ${PLAN_NAME[owner.plan]}</div></div></div>
+      <div class="tiles" style="grid-template-columns:repeat(4,1fr)">
+        ${tile('成员', t.members.length + ' 人', t.invites.length ? `另有 ${t.invites.length} 个邀请未接受` : '没有待接受的邀请')}
+        ${tile('团队项目', t.projects.length, '有其他成员的项目')}
+        ${tile('空间', gb(t.gb), `所有者占 ${gb(ownedGb)} / ${owner.plan === 'pro' ? '50 GB' : '2 GB'}`)}
+        ${tile('本月 AI 用量', fmt(t.points) + ' 点', '成员各自扣自己的额度')}
+      </div>
+      ${upsell}
+      ${card('成员 × 项目', matrix + (t.invites.length ? `<div class="card-body muted">待接受的邀请：${t.invites.join('、')}</div>` : ''), { pad: false, sub: '每格是这个人在这个项目里的角色' })}
+      ${card('近 30 天活动', heat)}
+      <div class="grid g2">
+        ${card('成员本月用量', chart(hbarChart({ items: t.members.map((m) => ({ label: USERS[m].name, value: USERS[m].used })).sort((a, b) => b.value - a.value) })), { sub: '点' })}
+        ${card('空间构成', legend(STORE) + chart(stackBarH({ items: storage, series: STORE })), { sub: '按项目' })}
+      </div>`;
+  }
+
+  // ---------- Billing ----------
+  function plans() {
+    return `
+      ${card('套餐', `<table><thead><tr><th>套餐</th><th>价格</th><th class="n">月度点数</th><th>同步空间</th><th>项目成员上限</th><th>历史版本</th><th>可用模型</th><th class="n">用户</th><th>状态</th><th></th></tr></thead><tbody>${PLANS.map((p) => `<tr><td><b>${p.name}</b></td><td class="num">${p.price}<span class="muted"> · ${p.year}</span></td><td class="n">${fmt(p.points)}${p.id === 'team' ? ' / 人' : ''}</td><td>${p.storage}</td><td>${p.members}</td><td>${p.history}</td><td>${p.models}</td><td class="n">${fmt(p.users)}</td><td>${p.on ? chip('上架', 'ok') : chip(p.phase)}</td><td class="n"><button class="btn sm" data-act="dialog" data-kind="edit-plan" data-id="${p.id}">编辑</button></td></tr>`).join('')}</tbody></table>`, { pad: false, sub: '价格是建议值，待拍板', actions: '<button class="btn sm">' + icon('plus') + '新增套餐</button>' })}
+      ${card('扣费和限制', `<div class="rules">
+        <div class="rule"><div class="k">扣费顺序</div><div class="v">先扣最早到期的额度包</div></div>
+        <div class="rule"><div class="k">余额不足</div><div class="v">拦新请求，进行中的做完；欠额下次先抵</div></div>
+        <div class="rule"><div class="k">失败的请求</div><div class="v">上游报错不扣；中途停止按已生成的扣</div></div>
+        <div class="rule"><div class="k">单日上限</div><div class="v">月度额度的 1/3，用户可以自己调低</div></div>
+        <div class="rule"><div class="k">每分钟请求 · 同时进行</div><div class="v">免费 20 · 2；专业版 60 · 4</div></div>
+        <div class="rule"><div class="k">单次最大输出</div><div class="v">32k token</div></div>
+        <div class="rule"><div class="k">1 点</div><div class="v">¥0.01（按售价）</div></div>
+        <div class="rule"><div class="k">毛利率提醒</div><div class="v">综合毛利率低于 ${MIN_MARGIN}%</div></div>
+        <div class="rule"><div class="k">新用户</div><div class="v">注册送 1,000 点，30 天有效</div></div>
+      </div>`, { actions: '<button class="btn sm" data-act="toast" data-text="原型里不能改规则">修改</button>' })}
+      ${card('加油包', `<table><thead><tr><th>名称</th><th class="n">点数</th><th class="n">价格</th><th>有效期</th><th>可以买的套餐</th><th>状态</th></tr></thead><tbody>${[['小包', 500, 5], ['中包', 2000, 19], ['大包', 5000, 45]].map(([n, pts, yuan]) => `<tr><td>${n}</td><td class="n">${fmt(pts)}</td><td class="n">¥${yuan}</td><td>12 个月</td><td>免费、个人专业版</td><td>${chip('第二期')}</td></tr>`).join('')}</tbody></table>`, { pad: false, sub: '第二期接入在线支付后上架' })}`;
+  }
+  function codes() {
+    return `
+      <div class="toolbar"><span class="muted">兑换码只保存摘要，生成时显示一次，之后只能导出这一批的状态。</span><span class="grow"></span><button class="btn primary" data-act="dialog" data-kind="codes">${icon('plus')}生成兑换码</button></div>
+      ${card('批次', `<table><thead><tr><th>批次</th><th>面值</th><th class="n">数量</th><th>已兑换</th><th>兑换截止</th><th>创建</th><th>状态</th><th></th></tr></thead><tbody>${BATCHES.map((b, i) => `<tr><td><b>${esc(b.name)}</b></td><td>${b.face}</td><td class="n">${b.count}</td><td>${meter(b.used, b.count, `${b.used} / ${b.count}`)}</td><td class="num">${b.until}</td><td class="muted">${b.created} · ${b.by}</td><td>${b.on ? chip('有效', 'ok') : chip('已结束')}</td><td class="n"><button class="btn sm" data-act="toast" data-text="已导出这一批的兑换状态">导出</button> ${b.on ? `<button class="btn sm danger" data-act="void-batch" data-id="${i}">作废</button>` : ''}</td></tr>`).join('')}</tbody></table>`, { pad: false })}`;
+  }
+  function models() {
+    const tabs = `<div class="tabs"><button class="${S.modelTab === 'models' ? 'on' : ''}" data-act="set" data-key="modelTab" data-value="models">模型</button><button class="${S.modelTab === 'channels' ? 'on' : ''}" data-act="set" data-key="modelTab" data-value="channels">渠道</button></div>`;
+    if (S.modelTab === 'channels') {
+      return (
+        tabs +
+        `<div class="toolbar"><span class="muted">渠道是上游的模型服务。密钥加密保存，只显示末四位，能改不能看。</span><span class="grow"></span><button class="btn primary" data-act="dialog" data-kind="channel">${icon('plus')}新增渠道</button></div>` +
+        card('渠道', `<table><thead><tr><th>渠道</th><th>地址</th><th>密钥</th><th>服务的模型</th><th class="n">24 小时请求</th><th class="n">错误率</th><th class="n">中位延迟</th><th>启用</th><th></th></tr></thead><tbody>${CHANNELS.map((c, i) => `<tr><td><b>${c.name}</b><div class="muted">OpenAI 兼容</div></td><td class="muted">${c.url}</td><td class="num">${icon('key')} ····${c.key}</td><td>${MODELS.filter((m) => m.channel === c.name || m.backup === c.name).map((m) => m.name + (m.backup === c.name ? '（备用）' : '')).join('、')}</td><td class="n">${fmt(c.req)}</td><td class="n">${c.err > 2 ? chip(icon('alert') + c.err + '%', 'warn') : c.err + '%'}</td><td class="n">${fmt(c.p50)} ms</td><td><button class="toggle ${c.on ? 'on' : ''}" data-act="toggle-channel" data-id="${i}" aria-label="启用"></button></td><td class="n"><button class="btn sm" data-act="toast" data-text="${c.name}：连接正常，${c.p50 - 200} ms">测试连接</button></td></tr>`).join('')}</tbody></table>`, { pad: false })
+      );
+    }
+    return (
+      tabs +
+      `<div class="toolbar"><span class="muted">用户看到的是对外名称和倍率；成本价是上游价格，售价是扣的点数，单位都是每百万 token。</span><span class="grow"></span><button class="btn primary" data-act="dialog" data-kind="edit-model" data-id="new">${icon('plus')}新增模型</button></div>` +
+      card('模型', `<table><thead><tr><th>对外名称</th><th>上游模型 · 渠道</th><th class="n">成本价 ¥<br><span class="muted">输入 / 缓存 / 输出</span></th><th class="n">售价 点<br><span class="muted">输入 / 缓存 / 输出</span></th><th class="n">倍率</th><th class="n">综合毛利率</th><th>开放给</th><th class="n">近 30 天</th><th>上架</th><th></th></tr></thead><tbody>${MODELS.map((m, i) => {
+        const mg = margin(m);
+        const pts = MODEL_DAILY.reduce((s, r) => s + r[m.id], 0);
+        return `<tr><td><b>${m.name}</b> ${chip(m.tier)} ${m.def ? `<span class="muted" title="默认模型">${icon('star')}</span>` : ''}</td><td><span class="num">${m.upstream}</span><div class="muted">${m.channel}${m.backup ? ' · 备用 ' + m.backup : ''}</div></td><td class="n">${m.cost.join(' / ')}</td><td class="n">${m.price.map(fmt).join(' / ')}</td><td class="n">${times(m)}</td><td class="n">${mg < MIN_MARGIN ? chip(icon('alert') + mg + '%', 'bad') : mg + '%'}</td><td>${m.plans.join('、')}</td><td class="n">${short(pts)} 点</td><td><button class="toggle ${m.on ? 'on' : ''}" data-act="toggle-model" data-id="${i}" aria-label="上架"></button></td><td class="n"><button class="btn sm" data-act="dialog" data-kind="edit-model" data-id="${m.id}">编辑</button></td></tr>`;
+      }).join('')}</tbody></table>`, { pad: false, sub: `综合毛利率按近 30 天的用量结构算（未命中输入 ${MIX[0] * 100}%、缓存命中 ${MIX[1] * 100}%、输出 ${MIX[2] * 100}%）` })
+    );
+  }
+  function usage() {
+    const top = USERS.filter((u) => u.status === 'active').sort((a, b) => b.used - a.used).slice(0, 10);
+    const groups = [['user', '用户'], ['team', '团队'], ['model', '模型'], ['plan', '套餐']];
+    let table = '';
+    const head = '<th class="n">请求</th><th class="n">输入</th><th class="n">缓存命中</th><th class="n">输出</th><th class="n">点数</th><th class="n">上游成本</th><th class="n">估算的请求</th>';
+    const cells = (pts, est = 1.2) => `<td class="n">${fmt(pts / 14)}</td><td class="n">${short(pts * 820)}</td><td class="n">${short(pts * 1060)}</td><td class="n">${short(pts * 160)}</td><td class="n">${fmt(pts)}</td><td class="n">${money(pts / 200)}</td><td class="n">${est.toFixed(1)}%</td>`;
+    if (S.usageGroup === 'user') table = `<table><thead><tr><th>用户</th><th>套餐</th>${head}</tr></thead><tbody>${top.map((u) => `<tr class="click" data-act="user" data-id="${u.i}"><td class="who"><b>${esc(u.name)}</b><span class="muted num">${u.phone}</span></td><td>${planChip(u)}</td>${cells(u.used, u.i === 26 ? 0.4 : 1 + (u.i % 7) * 0.3)}</tr>`).join('')}</tbody></table>`;
+    else if (S.usageGroup === 'team') table = `<table><thead><tr><th>团队</th><th>成员</th>${head}</tr></thead><tbody>${TEAMS.map(teamOf).sort((a, b) => b.points - a.points).map((t) => `<tr class="click" data-act="team" data-id="${t.id}"><td><b>${esc(t.name)}</b></td><td>${t.members.length} 人</td>${cells(t.points)}</tr>`).join('')}</tbody></table>`;
+    else if (S.usageGroup === 'model') table = `<table><thead><tr><th>模型</th><th>渠道</th>${head}</tr></thead><tbody>${MODELS.map((m) => `<tr><td><b>${m.name}</b></td><td class="muted">${m.channel}</td>${cells(MODEL_DAILY.reduce((s, r) => s + r[m.id], 0), m.id === 'qwen' ? 3.8 : 1.1)}</tr>`).join('')}</tbody></table>`;
+    else table = `<table><thead><tr><th>套餐</th><th>用户</th>${head}</tr></thead><tbody><tr><td><b>免费</b></td><td>1,221</td>${cells(96400)}</tr><tr><td><b>个人专业版</b></td><td>63</td>${cells(158900)}</tr></tbody></table>`;
+    const total = MODEL_DAILY.reduce((s, r) => s + r.ds + r.glm + r.kimi + r.qwen, 0);
+    return `
+      <div class="toolbar">
+        <div class="seg">${[7, 30, 90].map((d) => `<button class="${S.range === d ? 'on' : ''}" data-act="set" data-key="range" data-value="${d}">近 ${d} 天</button>`).join('')}</div>
+        <span class="grow"></span>
+        <button class="btn" data-act="toast" data-text="已导出 CSV">${icon('download')}导出 CSV</button>
+      </div>
+      <div class="tiles" style="grid-template-columns:repeat(5,1fr)">
+        ${tile('请求', fmt(total / 4.2))}
+        ${tile('token', short(total * 2040), '缓存命中 52%')}
+        ${tile('扣除点数', short(total))}
+        ${tile('上游成本', money(total / 200), '综合毛利 50%')}
+        ${tile('估算的请求', '1.8%', '上游没报告用量，按字数估算')}
+      </div>
+      ${card('每日消耗', legend(SERIES) + chart(stackChart({ labels: DAYS.map(md), rows: MODEL_DAILY, series: SERIES })), { sub: `点 · 原型里 7 天和 90 天都显示 30 天的数据` })}
+      ${card('明细', table, { pad: false, actions: `<div class="seg">${groups.map(([k, l]) => `<button class="${S.usageGroup === k ? 'on' : ''}" data-act="set" data-key="usageGroup" data-value="${k}">按${l}</button>`).join('')}</div>` })}`;
+  }
+  function orders() {
+    return `
+      <div class="toolbar"><span class="badge-phase">第一期：手动开通和兑换码；第二期：微信支付、支付宝、退款和发票申请</span><span class="grow"></span><button class="btn primary" data-act="dialog" data-kind="plan" data-pickuser="1">${icon('plus')}手动开通</button></div>
+      ${card('订单', `<table><thead><tr><th>订单号</th><th>用户</th><th>商品</th><th class="n">金额</th><th>方式</th><th>状态</th><th>时间</th><th>发票</th></tr></thead><tbody>${ORDERS.map((o) => `<tr><td class="num">${o[0]}</td><td class="who"><b>${esc(USERS[o[1]].name)}</b><span class="muted num">${USERS[o[1]].phone}</span></td><td>${o[2]}</td><td class="n">${o[3] ? money(o[3]) : '—'}</td><td>${o[4]}</td><td>${chip('已开通', 'ok')}</td><td class="num muted">${o[5]}</td><td>${o[6] === '待开具' ? chip(o[6], 'warn') : o[6]}</td></tr>`).join('')}</tbody></table>`, { pad: false })}`;
+  }
+  const auditTable = (rows) => `<table><thead><tr><th>时间</th><th>管理员</th><th>操作</th><th>对象</th><th>内容</th><th>原因</th><th>IP</th></tr></thead><tbody>${rows.map((a) => `<tr><td class="num muted">${a[0]}</td><td>${a[1]}</td><td><b>${a[2]}</b></td><td>${esc(a[3])}</td><td class="wrap">${esc(a[4])}</td><td class="wrap muted">${esc(a[5])}</td><td class="num muted">${a[6]}</td></tr>`).join('')}</tbody></table>`;
+  function audit() {
+    return `<div class="toolbar"><span class="muted">后台的每一次写操作和“显示手机号”都记在这里，不能删除。</span><span class="grow"></span><button class="btn" data-act="toast" data-text="已导出 CSV">${icon('download')}导出</button></div>${card('审计', auditTable(AUDIT), { pad: false })}`;
+  }
+
+  // ---------- Dialogs ----------
+  let dialog = null;
+  function openDialog(kind, data = {}) {
+    dialog = { kind, ...data };
+    renderDialog();
+  }
+  function closeDialog() {
+    dialog = null;
+    document.getElementById('layer').innerHTML = '';
+  }
+  const frame = (title, body, foot, wide = false) =>
+    `<div class="scrim" data-act="scrim"><div class="dialog ${wide ? 'wide' : ''}" role="dialog" aria-label="${title}"><header><h3>${title}</h3><button class="icon-btn" data-act="close">${icon('x')}</button></header><div class="body">${body}</div><footer>${foot}</footer></div></div>`;
+  function renderDialog() {
+    if (!dialog) return;
+    const u = S.user != null ? USERS[S.user] : null;
+    let html = '';
+    if (dialog.kind === 'credit') {
+      const sign = dialog.sign ?? 1;
+      const pts = dialog.points ?? 200;
+      html = frame(
+        `调整额度 · ${esc(u.name)}`,
+        `<div class="seg"><button class="${sign > 0 ? 'on' : ''}" data-act="dlg" data-key="sign" data-value="1">增加</button><button class="${sign < 0 ? 'on' : ''}" data-act="dlg" data-key="sign" data-value="-1">扣减</button></div>
+        <div class="form-2"><div class="form-row"><label>点数</label><input class="text num" data-dlg="points" value="${pts}"></div>
+        <div class="form-row"><label>有效期</label><select class="text" ${sign < 0 ? 'disabled' : ''}><option>30 天</option><option selected>90 天</option><option>365 天</option></select></div></div>
+        <div class="form-row"><label>原因（必填，会记入审计）</label><select class="text" data-dlg="reason"><option>同步或服务故障补偿</option><option>活动奖励</option><option>误扣退回</option><option>其他</option></select></div>
+        <div class="form-row"><label>备注</label><textarea class="text" placeholder="写清楚为什么调整，之后查账用"></textarea></div>
+        <div class="preview">调整后可用 <b class="num">${fmt(balance(u) + sign * pts)}</b> 点。${sign > 0 ? '会作为一个单独的额度包发放，按到期时间排在扣费顺序里。' : '从最早到期的额度包里扣。'}${pts > 500 ? '<br>超过 500 点，客服角色不能操作。' : ''}</div>`,
+        `<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="apply-credit">确认调整</button>`,
+      );
+    } else if (dialog.kind === 'plan') {
+      const pickUser = dialog.pickuser;
+      html = frame(
+        pickUser ? '手动开通' : `更改套餐 · ${esc(u.name)}`,
+        `${pickUser ? '<div class="form-row"><label>用户</label><label class="field">' + icon('search') + '<input placeholder="手机号" value="138****0001"></label><div class="hint">找到：张卫东（个人专业版，2026-12-02 到期）</div></div>' : ''}
+        <div class="form-2"><div class="form-row"><label>套餐</label><select class="text"><option>个人专业版</option><option>免费</option></select></div>
+        <div class="form-row"><label>时长</label><select class="text"><option>1 个月</option><option>3 个月</option><option selected>12 个月</option></select></div></div>
+        <div class="form-2"><div class="form-row"><label>收款方式</label><select class="text"><option>对公转账</option><option>赠送</option></select></div>
+        <div class="form-row"><label>金额</label><input class="text num" value="¥288"></div></div>
+        <div class="form-row"><label>备注（会记入审计和订单）</label><textarea class="text" placeholder="例如：转账回单号"></textarea></div>
+        <div class="preview">${pickUser || (u && u.plan === 'pro') ? `在现有周期后顺延，到期日变为 <b class="num">2027-12-02</b>。` : '立即生效，周期从今天开始，到期日 <b class="num">2027-11-16</b>；本周期发放 3,000 点。'}会生成一条订单。</div>`,
+        `<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="apply-plan">开通</button>`,
+      );
+    } else if (dialog.kind === 'limits') {
+      html = frame(
+        `单独限制 · ${esc(u.name)}`,
+        `<div class="note">${icon('info')}<span>只在这个用户身上覆盖套餐的默认值，例如异常用量时临时调低，或给合作课题组调高。</span></div>
+        <div class="form-3"><div class="form-row"><label>每分钟请求</label><input class="text num" value="${u.plan === 'pro' ? 60 : 20}"></div><div class="form-row"><label>同时进行</label><input class="text num" value="${u.plan === 'pro' ? 4 : 2}"></div><div class="form-row"><label>单日上限（点）</label><input class="text num" data-dlg="daily" value="${u.i === 26 ? 500 : Math.round(u.quota / 3)}"></div></div>
+        <div class="form-row"><label>到期后恢复套餐默认值</label><select class="text"><option>7 天后</option><option>30 天后</option><option>不恢复</option></select></div>
+        <div class="form-row"><label>原因</label><input class="text" value="${u.i === 26 ? '一小时内用量异常，疑似 Agent 循环' : ''}"></div>`,
+        `<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="apply-limits">保存</button>`,
+      );
+    } else if (dialog.kind === 'disable') {
+      html = frame(
+        `停用账号 · ${esc(u.name)}`,
+        `<div class="note warn">${icon('alert')}<span>停用后这个账号的所有设备立即下线，不能登录、同步和使用官方模型。云端数据保留，团队项目里的其他成员不受影响。</span></div>
+        <div class="form-row"><label>原因（必填，用户登录时会看到）</label><input class="text" data-dlg="reason" placeholder="例如：违反用户协议"></div>`,
+        `<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="apply-disable">停用</button>`,
+      );
+    } else if (dialog.kind === 'codes') {
+      if (dialog.done) {
+        html = frame(
+          '兑换码已生成',
+          `<div class="note warn">${icon('alert')}<span>兑换码只显示这一次。关闭前请导出，之后后台也看不到明文。</span></div><div class="codes">${(dialog.codes ??= Array.from({ length: 8 }, () => 'SFY-' + Array.from({ length: 3 }, () => Math.floor(rand() * 36 ** 4).toString(36).toUpperCase().padStart(4, '0')).join('-'))).join('<br>')}<br><span class="muted">… 共 50 个</span></div>`,
+          `<button class="btn" data-act="toast" data-text="已导出 CSV">${icon('download')}导出 CSV</button><button class="btn primary" data-act="close">完成</button>`,
+        );
+      } else {
+        const kind = dialog.face ?? 'plan';
+        html = frame(
+          '生成兑换码',
+          `<div class="form-row"><label>批次名称</label><input class="text" value="12 月学院讲座"></div>
+          <div class="form-row"><label>面值</label><div class="seg"><button class="${kind === 'plan' ? 'on' : ''}" data-act="dlg" data-key="face" data-value="plan">套餐时长</button><button class="${kind === 'points' ? 'on' : ''}" data-act="dlg" data-key="face" data-value="points">点数</button></div></div>
+          ${kind === 'plan' ? '<div class="form-2"><div class="form-row"><label>套餐</label><select class="text"><option>个人专业版</option></select></div><div class="form-row"><label>时长</label><select class="text"><option>1 个月</option><option>3 个月</option><option>12 个月</option></select></div></div>' : '<div class="form-2"><div class="form-row"><label>点数</label><input class="text num" value="2000"></div><div class="form-row"><label>兑换后有效期</label><select class="text"><option>30 天</option><option selected>90 天</option><option>365 天</option></select></div></div>'}
+          <div class="form-2"><div class="form-row"><label>数量</label><input class="text num" value="50"></div><div class="form-row"><label>兑换截止</label><input class="text num" value="2026-12-31"></div></div>
+          <div class="form-row"><label>每个账号可兑换</label><select class="text"><option>这一批里 1 个</option><option>不限</option></select><div class="hint">同一批次一个账号只能兑一次，防止被一个人领光。</div></div>`,
+          `<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="apply-codes">生成</button>`,
+        );
+      }
+    } else if (dialog.kind === 'edit-model') {
+      const base = MODELS.find((m) => m.id === dialog.id) ?? { id: 'new', name: '', tier: '标准', upstream: '', channel: 'DeepSeek 开放平台', cost: [0, 0, 0], price: [0, 0, 0], plans: ['专业版'] };
+      const m = (dialog.draft ??= structuredClone(base));
+      const comp = (i) => (m.price[i] ? Math.round((1 - m.cost[i] / (m.price[i] / 100)) * 100) : 0);
+      const mg = m.price.some(Boolean) ? margin(m) : 0;
+      const row = (label, key) => `<div class="form-row"><label>${label}</label><div class="form-3">${[0, 1, 2].map((i) => `<input class="text num" data-model="${key}" data-i="${i}" value="${m[key][i]}">`).join('')}</div></div>`;
+      html = frame(
+        base.name ? `编辑模型 · ${base.name}` : '新增模型',
+        `<div class="form-2"><div class="form-row"><label>对外名称</label><input class="text" value="${esc(m.name)}"></div><div class="form-row"><label>档位</label><select class="text"><option ${m.tier === '经济' ? 'selected' : ''}>经济</option><option ${m.tier === '标准' ? 'selected' : ''}>标准</option><option ${m.tier === '高级' ? 'selected' : ''}>高级</option></select></div></div>
+        <div class="form-2"><div class="form-row"><label>上游模型</label><input class="text num" value="${esc(m.upstream)}"></div><div class="form-row"><label>渠道</label><select class="text">${CHANNELS.map((c) => `<option ${c.name === m.channel ? 'selected' : ''}>${c.name}</option>`).join('')}</select></div></div>
+        <div class="muted" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px"><span>输入</span><span>缓存命中的输入</span><span>输出（含思考）</span></div>
+        ${row('成本价（元 / 百万 token）', 'cost')}
+        ${row('售价（点 / 百万 token，1 点 = ¥0.01）', 'price')}
+        <div class="preview">分项毛利率：输入 <b>${comp(0)}%</b> · 缓存 <b>${comp(1)}%</b> · 输出 <b>${comp(2)}%</b><br>按近 30 天的用量结构，综合毛利率约 <b style="color:${mg < MIN_MARGIN ? 'var(--bad)' : 'inherit'}">${mg}%</b>${mg < MIN_MARGIN ? `，低于 ${MIN_MARGIN}%` : ''}；倍率 <b>${m.price.some(Boolean) ? times(m) : '—'}</b></div>
+        <div class="form-row"><label>开放给</label><div class="seg">${['免费', '专业版', '课题组版'].map((p) => `<button class="${m.plans.includes(p) ? 'on' : ''}" data-act="model-plan" data-value="${p}">${p}</button>`).join('')}</div></div>
+        <div class="hint muted">改价从下一次请求开始生效；已经发出的额度不变。</div>`,
+        `<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="apply-model">保存</button>`,
+        true,
+      );
+    } else if (dialog.kind === 'edit-plan') {
+      const p = PLANS.find((x) => x.id === dialog.id);
+      html = frame(
+        `编辑套餐 · ${p.name}`,
+        `<div class="form-2"><div class="form-row"><label>月付价格</label><input class="text num" value="${p.price}"></div><div class="form-row"><label>年付价格</label><input class="text num" value="${p.year}"></div></div>
+        <div class="form-3"><div class="form-row"><label>月度点数</label><input class="text num" value="${p.points}"></div><div class="form-row"><label>同步空间</label><input class="text" value="${p.storage}"></div><div class="form-row"><label>项目成员上限</label><input class="text" value="${p.members}"></div></div>
+        <div class="form-3"><div class="form-row"><label>每分钟请求</label><input class="text num" value="${p.rpm}"></div><div class="form-row"><label>同时进行</label><input class="text num" value="${p.conc}"></div><div class="form-row"><label>单日上限</label><input class="text" value="月度额度的 ${p.daily}"></div></div>
+        <div class="form-row"><label>可用模型</label><div class="seg">${MODELS.map((m) => `<button class="${p.id === 'free' ? (m.tier === '经济' ? 'on' : '') : 'on'}">${m.name}</button>`).join('')}</div></div>
+        <div class="note">${icon('info')}<span>修改从下一个计费周期生效；正在当前周期的用户保持原样。下架的套餐不再出售，已订阅的用户到期前不受影响。</span></div>`,
+        `<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="apply-generic" data-text="已保存套餐“${p.name}”，下个周期生效">保存</button>`,
+        true,
+      );
+    } else if (dialog.kind === 'channel') {
+      html = frame(
+        '新增渠道',
+        `<div class="form-row"><label>名称</label><input class="text" placeholder="例如：火山方舟"></div>
+        <div class="form-row"><label>接口类型</label><select class="text"><option>OpenAI 兼容（Chat Completions）</option><option>OpenAI Responses</option></select></div>
+        <div class="form-row"><label>地址</label><input class="text" placeholder="https://…/v1"></div>
+        <div class="form-row"><label>密钥</label><input class="text" type="password" placeholder="保存后只显示末四位"></div>`,
+        `<button class="btn" data-act="close">取消</button><button class="btn" data-act="toast" data-text="连接正常，可用模型 12 个">测试连接</button><button class="btn primary" data-act="apply-generic" data-text="已新增渠道">保存</button>`,
+      );
+    }
+    document.getElementById('layer').innerHTML = html;
+  }
+
+  // ---------- Client preview ----------
+  const CLIENT_DAILY = userDaily(USERS[0]).map((r) => r.ds + r.glm + r.kimi + r.qwen);
+  function client() {
+    const exhausted = S.clientState === 'empty';
+    const u = USERS[0];
+    const left = exhausted ? 0 : balance(u);
+    const used = exhausted ? 3000 : u.used;
+    const gift = exhausted ? 0 : 200;
+    const peak = Math.max(...CLIENT_DAILY, 1);
+    const whole = 3000 + gift;
+    return `<div class="client">
+      <div class="client-head"><h2>用户端预览</h2><span class="muted">桌面应用里和商业化有关的变化</span><span style="flex:1"></span>
+        <div class="seg"><button class="${!exhausted ? 'on' : ''}" data-act="set" data-key="clientState" data-value="normal">额度充足</button><button class="${exhausted ? 'on' : ''}" data-act="set" data-key="clientState" data-value="empty">额度用完</button></div>
+        <button class="btn" data-act="client-close">${icon('x')}返回后台</button></div>
+      <div class="client-grid">
+        <div class="window"><div class="wbar">设置</div><div class="settings">
+          <nav>${['通用', '外观', '账号与订阅', 'AI 模型', '协作', '快捷键', '关于'].map((n) => `<button class="${n === '账号与订阅' ? 'on' : ''}">${n}</button>`).join('')}</nav>
+          <div class="pane"><h3>账号与订阅</h3>
+            <div class="sec"><div class="row"><div class="avatar sm">卫东</div><div class="grow"><b>张卫东</b> <span class="muted num">138****0001</span></div><button class="btn sm">修改密码</button><button class="btn sm">退出登录</button></div></div>
+            <div class="sec"><div class="plan-card"><div class="grow"><div class="name">个人专业版</div><div class="muted">月付 · 2026-12-02 到期</div></div><button class="btn sm" disabled>续费 · 第二期</button><button class="btn sm">使用兑换码</button></div></div>
+            <div class="sec"><h4>官方模型额度</h4>
+              <div class="row"><div class="grow num" style="font-size:20px;font-weight:600">${fmt(left)} <span class="muted" style="font-size:12px;font-weight:400">点可用</span></div><span class="muted">12-02 恢复 3,000 点</span></div>
+              <div class="big-meter" style="margin:8px 0 6px"><div class="bar"><i style="width:${(used / whole) * 100}%;background:var(--text-4)"></i>${3000 - used > 0 ? `<i style="width:${((3000 - used) / whole) * 100}%;background:var(--s1)"></i>` : ''}${gift ? `<i style="width:${(gift / whole) * 100}%;background:var(--s3)"></i>` : ''}</div></div>
+              <div class="legend" style="margin:0"><span><i style="background:var(--text-4)"></i>本周期已用 ${fmt(used)}</span><span><i style="background:var(--s1)"></i>套餐剩余 ${fmt(3000 - used)}</span><span><i style="background:var(--s3)"></i>赠送 ${gift}${gift ? '（2027-02-13 到期）' : '（已用完）'}</span></div>
+              <div class="row" style="margin-top:10px"><span class="grow muted">单日上限 1,000 点，防止对话失控时用光整月的额度</span><button class="btn sm">修改</button></div></div>
+            <div class="sec"><h4>同步空间</h4>${meter(12.4, 50, '12.4 GB / 50 GB')}<div class="muted" style="margin-top:4px">按你拥有的项目计算，加入别人的项目不占你的空间。</div></div>
+            <div class="sec"><h4>近 30 天用量</h4><div class="minibars">${CLIENT_DAILY.map((v, i) => `<i style="height:${Math.max(2, (v / peak) * 100)}%" data-tip="${tip(`<div class="h">${md(DAYS[i])}</div>${tipRow('var(--s1)', '用量', fmt(v) + ' 点')}`)}"></i>`).join('')}</div>
+              <div class="row muted" style="margin-top:8px;font-size:12px"><span>DeepSeek V3.2 55%</span><span>Qwen3 Max 23%</span><span>GLM-4.6 12%</span><span>Kimi K2 10%</span><span class="grow"></span><button class="link">按项目查看</button></div></div>
+            <div class="sec"><h4>兑换码</h4><div class="row"><input class="text" placeholder="SFY-XXXX-XXXX-XXXX" style="max-width:280px"><button class="btn sm">兑换</button></div></div>
+            <div class="sec"><h4>设备</h4><div class="row"><span class="grow">这台电脑 · Windows <span class="muted">模型令牌 ····k3f9</span></span></div><div class="row" style="margin-top:6px"><span class="grow">MacBook Pro <span class="muted">2 小时前</span></span><button class="btn sm">吊销</button></div></div>
+          </div></div></div>
+        <div class="window"><div class="wbar">${icon('spark')} AI 助手 · 多模态检索</div><div class="assistant">
+          <div class="msgs">
+            <div class="bubble">把这三篇论文的方法差异整理成一页文档，放到“文献调研”下面</div>
+            <div class="answer">已新建文档“三种检索方法对比”，包含方法、训练数据、指标三张表，并标出了每处结论来自哪篇论文的哪一页。<div class="meta">DeepSeek V3.2 · 本轮 14 点</div></div>
+            <div class="bubble">用 Qwen3 Max 再检查一遍第二篇的公式推导</div>
+            ${exhausted ? `<div class="exhausted"><div class="t">本月的官方模型额度已用完</div><div class="s">12 月 2 日恢复 3,000 点。这条消息还没有发出。</div><div class="acts"><button class="btn sm">使用兑换码</button><button class="btn sm" disabled>买加油包 · 第二期</button><button class="btn sm">改用自己的密钥</button></div></div>` : `<div class="answer">第二篇式 (7) 到式 (8) 少了归一化项 1/√d，对结论没有影响；其余推导成立。<div class="meta">Qwen3 Max · 本轮 41 点</div></div>`}
+          </div>
+          <div class="composer"><div class="ph">继续提问…</div>
+            ${exhausted ? '' : `<div class="model-menu"><div class="g">Scientify 官方模型</div>${MODELS.map((m) => `<div class="m ${m.id === 'qwen' ? 'on' : ''}">${m.name}<span class="x">${times(m)}</span></div>`).join('')}<div class="g">我的密钥（不扣点数）</div><div class="m">DeepSeek · 自己的密钥</div><div class="foot"><span>剩余 ${fmt(left)} 点</span><button class="link">账号与订阅</button></div></div>`}
+            <div class="bar"><button class="model-pick">${exhausted ? 'DeepSeek V3.2' : 'Qwen3 Max'} ${icon('down')}</button><span style="flex:1"></span><span class="muted" style="font-size:12px">${exhausted ? '额度已用完' : `剩余 ${fmt(left)} 点`}</span><button class="icon-btn">${icon('send')}</button></div>
+          </div>
+        </div></div>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Shell ----------
+  function login() {
+    return `<div class="login"><div class="box"><div class="brand" style="padding:0"><span class="logo">${icon('box')}</span><span>Scientify<small>管理后台</small></span></div>
+      <h2>登录</h2><div class="muted">只有管理员可以登录。每次登录都要短信验证码。</div>
+      <div class="form-row"><label>手机号</label><input class="text num" value="138****0001"></div>
+      <div class="form-row"><label>密码</label><input class="text" type="password" value="password"></div>
+      <div class="form-row"><label>短信验证码</label><div class="code-row"><input class="text num" value="482913"><button class="btn">重新获取</button></div></div>
+      <button class="btn primary" data-act="sign-in">登录</button>
+      <div class="muted" style="margin:14px 0 0;font-size:12px">会话 8 小时后失效。第一个管理员在服务器上用命令行设置。</div></div></div>`;
+  }
+  function page() {
+    if (S.view === 'users' && S.user != null) return userDetail();
+    if (S.view === 'teams' && S.team) return teamDetail();
+    return { overview, users, teams, plans, codes, models, usage, orders, audit }[S.view]();
+  }
+  function title() {
+    if (S.view === 'users' && S.user != null) return `<div class="crumb"><button data-act="go" data-view="users">用户</button>${icon('right')}<h1>${esc(USERS[S.user].name)}</h1></div>`;
+    if (S.view === 'teams' && S.team) return `<div class="crumb"><button data-act="go" data-view="teams">团队</button>${icon('right')}<h1>${esc(teamOf(TEAMS.find((t) => t.id === S.team)).name)}</h1></div>`;
+    return `<h1>${TITLES[S.view]}</h1>`;
+  }
+  let keepScroll = false;
+  function render() {
+    for (const k of Object.keys(TIPS)) delete TIPS[k];
+    for (const k of Object.keys(CHARTS)) delete CHARTS[k];
+    document.documentElement.dataset.theme = S.theme;
+    const root = document.getElementById('root');
+    if (!S.signedIn) {
+      root.innerHTML = login();
+      return;
+    }
+    const scroll = root.querySelector('.content')?.scrollTop ?? 0;
+    const clientScroll = root.querySelector('.client')?.scrollTop ?? 0;
+    root.innerHTML = `<div class="shell">
+      <aside class="side">
+        <div class="brand"><span class="logo">${icon('box')}</span><span>Scientify<small>管理后台</small></span></div>
+        ${NAV.map((n) => (n.group ? `<div class="nav-group">${n.group}</div>` : `<button class="nav-item ${S.view === n.id ? 'on' : ''}" data-act="go" data-view="${n.id}">${icon(n.icon)}${n.name}${n.id === 'orders' ? '<span class="tag">第一期手动</span>' : ''}</button>`)).join('')}
+        <div class="side-foot"><div class="avatar sm">林</div><div class="me"><b>林</b><span>所有者</span></div><button class="icon-btn" data-act="theme" title="切换深色">${icon('moon')}</button><button class="icon-btn" data-act="sign-out" title="退出">${icon('logout')}</button></div>
+      </aside>
+      <main class="main">
+        <div class="top">${title()}<span class="spacer"></span><span class="muted">数据截至 2026-11-16 14:30 · 原型数据均为虚构</span><button class="btn" data-act="client-open">${icon('monitor')}用户端</button></div>
+        <div class="content">${page()}</div>
+      </main>
+    </div>${S.client ? client() : ''}`;
+    if (keepScroll) {
+      const content = root.querySelector('.content');
+      if (content) content.scrollTop = scroll;
+      const panel = root.querySelector('.client');
+      if (panel) panel.scrollTop = clientScroll;
+    }
+    keepScroll = false;
+    drawCharts();
+  }
+  function drawCharts() {
+    document.querySelectorAll('[data-chart]').forEach((el) => {
+      const draw = CHARTS[el.dataset.chart];
+      if (draw) el.innerHTML = draw(Math.max(200, el.clientWidth));
+    });
+  }
+
+  // ---------- Toast and tooltip ----------
+  let toastTimer = 0;
+  function toast(text) {
+    document.querySelector('.toast')?.remove();
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = icon('ok') + esc(text);
+    document.body.append(el);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.remove(), 2600);
+  }
+  const tipEl = document.createElement('div');
+  tipEl.className = 'tip';
+  tipEl.style.display = 'none';
+  document.addEventListener('mousemove', (event) => {
+    const target = event.target.closest?.('[data-tip]');
+    document.querySelectorAll('.cross').forEach((c) => (c.style.display = 'none'));
+    if (!target || !TIPS[target.dataset.tip]) {
+      tipEl.style.display = 'none';
+      return;
+    }
+    if (!tipEl.isConnected) document.body.append(tipEl);
+    tipEl.innerHTML = TIPS[target.dataset.tip];
+    tipEl.style.display = 'block';
+    const box = tipEl.getBoundingClientRect();
+    let x = event.clientX + 14;
+    let y = event.clientY + 14;
+    if (x + box.width > innerWidth - 8) x = event.clientX - box.width - 14;
+    if (y + box.height > innerHeight - 8) y = event.clientY - box.height - 14;
+    tipEl.style.left = x + 'px';
+    tipEl.style.top = y + 'px';
+    if (target.dataset.cx) {
+      const cross = target.closest('svg').querySelector('.cross');
+      cross.setAttribute('x1', target.dataset.cx);
+      cross.setAttribute('x2', target.dataset.cx);
+      cross.style.display = '';
+    }
+  });
+  document.addEventListener('mouseover', (event) => {
+    const t = event.target.closest?.('[data-hover-team]');
+    const next = t ? t.dataset.hoverTeam : null;
+    if (S.view !== 'teams' || S.team || next === S.hl) return;
+    S.hl = next;
+    document.querySelectorAll('.graph .hull').forEach((h) => h.classList.toggle('hl', h.dataset.hoverTeam === next));
+    document.querySelectorAll('.team-list .team').forEach((h) => h.classList.toggle('hl', h.dataset.hoverTeam === next));
+  });
+
+  // ---------- Events ----------
+  let auditMinute = 30;
+  function record(action, target, content, reason) {
+    AUDIT.unshift([`11-16 14:${auditMinute++}`, '林 · 所有者', action, target, content, reason || '—', '10.2.0.8']);
+  }
+  document.addEventListener('click', (event) => {
+    const el = event.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act;
+    const d = el.dataset;
+    if (act === 'scrim' && event.target !== el) return;
+    switch (act) {
+      case 'go':
+        S.view = d.view;
+        S.user = null;
+        S.team = null;
+        S.userTab = 'overview';
+        if (d.plan) S.plan = d.plan;
+        if (d.tab) S.modelTab = d.tab;
+        S.client = false;
+        render();
+        break;
+      case 'set':
+        S[d.key] = d.key === 'range' ? Number(d.value) : d.value;
+        keepScroll = d.key === 'clientState' || d.key === 'usageGroup';
+        render();
+        break;
+      case 'user':
+        S.view = 'users';
+        S.user = Number(d.id);
+        S.team = null;
+        S.userTab = 'overview';
+        render();
+        break;
+      case 'team':
+        S.view = 'teams';
+        S.team = d.id;
+        S.user = null;
+        S.hl = null;
+        render();
+        break;
+      case 'reveal':
+        S.shown[USERS[d.id].id] = true;
+        record('显示手机号', '用户 ' + USERS[d.id].name, '—', '客服核实');
+        toast('已显示完整手机号，并记入审计');
+        keepScroll = true;
+        render();
+        break;
+      case 'dialog':
+        openDialog(d.kind, { id: d.id, pickuser: d.pickuser });
+        break;
+      case 'edit-model':
+        openDialog('edit-model', { id: d.id });
+        break;
+      case 'dlg':
+        dialog[d.key] = d.key === 'sign' ? Number(d.value) : d.value;
+        renderDialog();
+        break;
+      case 'model-plan': {
+        const list = dialog.draft.plans;
+        const i = list.indexOf(d.value);
+        if (i >= 0) list.splice(i, 1);
+        else list.push(d.value);
+        renderDialog();
+        break;
+      }
+      case 'close':
+      case 'scrim':
+        closeDialog();
+        break;
+      case 'apply-credit': {
+        const u = USERS[S.user];
+        const pts = Number(dialog.points ?? 200) || 0;
+        const sign = dialog.sign ?? 1;
+        if (sign > 0) u.extra.push({ src: '人工调整', total: pts, left: pts, start: '2026-11-16', end: '2027-02-14' });
+        else u.used = Math.min(u.quota, u.used + pts);
+        record(sign > 0 ? '补偿额度' : '扣减额度', '用户 ' + u.name, `${sign > 0 ? '+' : '−'}${pts} 点${sign > 0 ? '，90 天有效' : ''}`, '同步或服务故障补偿');
+        closeDialog();
+        toast(`已${sign > 0 ? '增加' : '扣减'} ${pts} 点，并记入审计`);
+        keepScroll = true;
+        render();
+        break;
+      }
+      case 'apply-plan':
+        if (S.user != null && !dialog.pickuser) record('更改套餐', '用户 ' + USERS[S.user].name, '个人专业版，顺延 12 个月', '对公转账');
+        else record('手动开通', '用户 张卫东', '个人专业版，顺延 12 个月', '对公转账 ¥288');
+        closeDialog();
+        toast('已开通，已生成订单并记入审计');
+        render();
+        break;
+      case 'apply-limits':
+        USERS[S.user].limits = { daily: Number(document.querySelector('[data-dlg="daily"]').value) || 0 };
+        record('单独限制', '用户 ' + USERS[S.user].name, '单日上限 ' + USERS[S.user].limits.daily + ' 点，7 天后恢复', '用量异常');
+        closeDialog();
+        toast('已保存，立即生效');
+        keepScroll = true;
+        render();
+        break;
+      case 'apply-disable': {
+        const input = document.querySelector('[data-dlg="reason"]');
+        const reason = input.value.trim();
+        if (!reason) {
+          input.focus();
+          toast('请填写原因');
+          break;
+        }
+        const u = USERS[S.user];
+        u.status = 'disabled';
+        u.reason = reason;
+        record('停用账号', '用户 ' + u.name, '正常 → 停用', reason);
+        closeDialog();
+        toast('已停用，所有设备已下线');
+        render();
+        break;
+      }
+      case 'enable': {
+        const u = USERS[S.user];
+        u.status = 'active';
+        record('恢复账号', '用户 ' + u.name, '停用 → 正常', '—');
+        toast('已恢复');
+        render();
+        break;
+      }
+      case 'confirm-logout':
+        record('强制下线', '用户 ' + USERS[S.user].name, `${USERS[S.user].devices} 台设备`, '—');
+        toast(`已让 ${USERS[S.user].devices} 台设备下线，模型令牌一并吊销`);
+        break;
+      case 'apply-codes':
+        BATCHES.unshift({ name: '12 月学院讲座', face: dialog.face === 'points' ? '2,000 点 · 90 天' : '个人专业版 · 1 个月', count: 50, used: 0, until: '2026-12-31', by: '林', created: '11-16', on: true });
+        record('生成兑换码', '批次 12 月学院讲座', '50 个', '—');
+        dialog.done = true;
+        render();
+        renderDialog();
+        break;
+      case 'void-batch':
+        BATCHES[d.id].on = false;
+        record('作废兑换码', '批次 ' + BATCHES[d.id].name, `未兑换的 ${BATCHES[d.id].count - BATCHES[d.id].used} 个作废`, '—');
+        toast('未兑换的兑换码已作废');
+        render();
+        break;
+      case 'apply-model': {
+        const target = MODELS.find((m) => m.id === dialog.id);
+        if (target) {
+          target.cost = dialog.draft.cost.map(Number);
+          target.price = dialog.draft.price.map(Number);
+          target.plans = dialog.draft.plans;
+          record('修改模型价格', target.name, `售价 ${target.price.join(' / ')} 点`, '—');
+        }
+        closeDialog();
+        toast('已保存，下一次请求开始生效');
+        render();
+        break;
+      }
+      case 'apply-generic':
+        closeDialog();
+        toast(d.text);
+        break;
+      case 'toggle-model':
+        MODELS[d.id].on = !MODELS[d.id].on;
+        record(MODELS[d.id].on ? '上架模型' : '下架模型', MODELS[d.id].name, '—', '—');
+        keepScroll = true;
+        render();
+        break;
+      case 'toggle-channel':
+        CHANNELS[d.id].on = !CHANNELS[d.id].on;
+        toast(CHANNELS[d.id].on ? '已启用' : '已停用，相关模型改走备用渠道');
+        keepScroll = true;
+        render();
+        break;
+      case 'toast':
+        toast(d.text);
+        break;
+      case 'theme':
+        S.theme = S.theme === 'light' ? 'night' : 'light';
+        keepScroll = true;
+        render();
+        break;
+      case 'client-open':
+        S.client = true;
+        render();
+        break;
+      case 'client-close':
+        S.client = false;
+        render();
+        break;
+      case 'sign-out':
+        S.signedIn = false;
+        render();
+        break;
+      case 'sign-in':
+        S.signedIn = true;
+        render();
+        break;
+    }
+  });
+  document.addEventListener('input', (event) => {
+    const el = event.target;
+    const refocus = (selector, pos) => {
+      const again = document.querySelector(selector);
+      again.focus();
+      again.setSelectionRange(pos, pos);
+    };
+    if (el.dataset.input === 'q') {
+      S.q = el.value;
+      const pos = el.selectionStart;
+      render();
+      refocus('[data-input="q"]', pos);
+    } else if (el.dataset.dlg === 'points') {
+      dialog.points = Number(el.value) || 0;
+      const pos = el.selectionStart;
+      renderDialog();
+      refocus('[data-dlg="points"]', pos);
+    } else if (el.dataset.model) {
+      dialog.draft[el.dataset.model][Number(el.dataset.i)] = el.value;
+      const pos = el.selectionStart;
+      renderDialog();
+      refocus(`[data-model="${el.dataset.model}"][data-i="${el.dataset.i}"]`, pos);
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (dialog) closeDialog();
+    else if (S.client) {
+      S.client = false;
+      render();
+    }
+  });
+  let resizeTimer = 0;
+  addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(drawCharts, 120);
+  });
+
+  render();
+})();
+
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { migrations } from './migrations.mjs';
 
 export const schema = `
 CREATE TABLE IF NOT EXISTS users (
@@ -102,6 +103,31 @@ export function createDb(config) {
 
 export async function initDb(db) {
   await db.query(schema);
+  await migrate(db);
+}
+
+/** Applies the numbered migrations not yet recorded, each in its own transaction. */
+async function migrate(db) {
+  await db.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  for (const migration of migrations) {
+    await withTransaction(db, async (client) => {
+      // Two processes starting together take turns; the second finds the row.
+      await client.query('SELECT pg_advisory_xact_lock(814201)');
+      const done = await client.query('SELECT 1 FROM schema_migrations WHERE id = $1', [
+        migration.id,
+      ]);
+      if (done.rows[0]) return;
+      await client.query(migration.sql);
+      await client.query('INSERT INTO schema_migrations(id, name) VALUES ($1, $2)', [
+        migration.id,
+        migration.name,
+      ]);
+    });
+  }
 }
 
 export async function withTransaction(db, task) {

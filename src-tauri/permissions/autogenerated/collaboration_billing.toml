@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-billing"
+description = "Enables the collaboration_billing command without any pre-configured scope."
+commands.allow = ["collaboration_billing"]
+
+[[permission]]
+identifier = "deny-collaboration-billing"
+description = "Denies the collaboration_billing command without any pre-configured scope."
+commands.deny = ["collaboration_billing"]

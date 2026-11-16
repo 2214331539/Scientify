@@ -90,7 +90,17 @@ import { UsersRound } from 'lucide-react';
 
 type Dialog =
   | { kind: 'project'; project?: Project; mode?: NewProjectMode }
-  | { kind: 'data' | 'profile' | 'search' | 'about' | 'collaboration' | 'shortcuts' | 'models' }
+  | {
+      kind:
+        | 'data'
+        | 'profile'
+        | 'search'
+        | 'about'
+        | 'collaboration'
+        | 'shortcuts'
+        | 'models'
+        | 'account';
+    }
   | null;
 const settingsSection = {
   profile: 'general',
@@ -99,6 +109,7 @@ const settingsSection = {
   collaboration: 'collaboration',
   shortcuts: 'shortcuts',
   models: 'models',
+  account: 'account',
 } as const;
 type Location = {
   workspace: WorkspaceId;
@@ -702,6 +713,14 @@ export function App({
     };
     window.addEventListener('scientify-open-project', open);
     return () => window.removeEventListener('scientify-open-project', open);
+  }, []);
+  // The assistant opens "账号与订阅" when the official models refuse a request.
+  useEffect(() => {
+    const open = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === 'account') setDialog({ kind: 'account' });
+    };
+    window.addEventListener('scientify-open-settings', open);
+    return () => window.removeEventListener('scientify-open-settings', open);
   }, []);
   function returnToProjects(page?: CenterPage) {
     setUI((s) => ({ ...s, projectId: null, page: page ?? s.page }));

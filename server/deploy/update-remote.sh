@@ -9,7 +9,7 @@ stamp=$(date +%Y%m%d-%H%M%S)
 backup=/root/backups/scientify-collab-$stamp
 mkdir -p "$backup"
 
-tar -czf "$backup/server.tgz" -C "$app" src package.json
+tar -czf "$backup/server.tgz" -C "$app" src package.json $([ -d "$app/admin" ] && echo admin)
 runuser -u postgres -- pg_dump -Fc scientify > "$backup/scientify.dump"
 echo "Backed up code and database to $backup"
 
@@ -34,11 +34,12 @@ if ! healthy; then
 fi
 
 echo "Health: $(curl -fsS http://127.0.0.1:8081/v1/health)"
-# The new sign-in routes answer (an empty request is refused with 400, not 404).
-code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
-  -d '{}' http://127.0.0.1:8081/v1/auth/password-login)
-echo "Password sign-in route: HTTP $code (400 expected)"
+# The admin pages answer, and their API refuses a call without a session.
+echo "Admin pages: HTTP $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8081/admin/) (200 expected)"
+echo "Admin API without a session: HTTP $(curl -s -o /dev/null -w '%{http_code}' -H 'x-scientify-admin: 1' http://127.0.0.1:8081/admin/api/me) (401 expected)"
 runuser -u postgres -- psql -d scientify -tAc \
-  "SELECT 'password_hash column: ' || count(*) FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_hash'"
+  "SELECT 'migrations: ' || string_agg(id || ' ' || name, ', ') FROM schema_migrations"
+runuser -u postgres -- psql -d scientify -tAc \
+  "SELECT 'channels: ' || count(*) || ', listed models: ' || (SELECT count(*) FROM models WHERE active) FROM channels"
 rm -f "$upload" /tmp/scientify-collab-update-remote.sh
 echo "Done. Rollback: tar -xzf $backup/server.tgz -C $app && systemctl restart scientify-collab"

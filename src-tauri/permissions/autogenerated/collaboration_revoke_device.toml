@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-revoke-device"
+description = "Enables the collaboration_revoke_device command without any pre-configured scope."
+commands.allow = ["collaboration_revoke_device"]
+
+[[permission]]
+identifier = "deny-collaboration-revoke-device"
+description = "Denies the collaboration_revoke_device command without any pre-configured scope."
+commands.deny = ["collaboration_revoke_device"]

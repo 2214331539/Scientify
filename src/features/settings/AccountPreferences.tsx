@@ -11,8 +11,9 @@ import {
 } from '../../platform/collaboration';
 import { describeError, maskPhone } from '../account/account';
 import { passwordProblem } from '../account/SignInPage';
+import { SubscriptionPreferences } from './SubscriptionPreferences';
 
-/** Settings → 账号: who is signed in, the password, and signing out. */
+/** Settings → 账号与订阅: who is signed in, the password, the plan, and signing out. */
 export function AccountPreferences() {
   const [state, setState] = useState<CollaborationState | null>(null);
   const [hasPassword, setHasPassword] = useState<boolean | undefined>(undefined);
@@ -60,6 +61,7 @@ export function AccountPreferences() {
           {error}
         </p>
       ) : null}
+      {phone ? <SubscriptionPreferences /> : null}
       <footer>
         <Button onClick={() => void signOut()}>{t('退出登录')}</Button>
       </footer>

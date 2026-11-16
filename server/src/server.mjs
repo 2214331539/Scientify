@@ -4,61 +4,33 @@ import crypto from 'node:crypto';
 import { readConfig, assertProductionConfig } from './config.mjs';
 import { createDb, initDb, withTransaction } from './db.mjs';
 import { hashSecret, signToken, verifyToken } from './jwt.mjs';
-import { normalizePhone, sendVerificationCode } from './sms.mjs';
+import { normalizePhone } from './sms.mjs';
 import { deleteObject, objectKey, signedDownloadUrl, signedUploadUrl } from './oss.mjs';
 import { pullEntities, pushEntities } from './sync.mjs';
+import { body, clientAddress, send } from './http.mjs';
+import { caller, requireActive } from './auth.mjs';
+import {
+  authenticateCode,
+  checkPassword,
+  clearPasswordFailures,
+  guardPassword,
+  hashPassword,
+  notePasswordFailure,
+  passwordMatches,
+  sendCode,
+} from './signin.mjs';
+import { handleBilling } from './billing/routes.mjs';
+import { importFromEnvironment } from './billing/models.mjs';
+import { handleAdmin } from './admin/routes.mjs';
+import { startJobs } from './jobs.mjs';
 
-const json = (value) => JSON.stringify(value);
 const now = () => new Date();
 const uuid = () => crypto.randomUUID();
-
-function send(response, status, value, headers = {}) {
-  const body = Buffer.from(typeof value === 'string' ? value : json(value));
-  response.writeHead(status, {
-    'content-type':
-      typeof value === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8',
-    'content-length': body.length,
-    'cache-control': 'no-store',
-    ...headers,
-  });
-  response.end(body);
-}
 
 function cors(response) {
   response.setHeader('access-control-allow-origin', '*');
   response.setHeader('access-control-allow-headers', 'authorization, content-type');
   response.setHeader('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS');
-}
-
-async function body(request, limit = 10 * 1024 * 1024) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of request) {
-    size += chunk.length;
-    if (size > limit) throw Object.assign(new Error('请求体过大。'), { status: 413 });
-    chunks.push(chunk);
-  }
-  if (!size) return {};
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  } catch {
-    throw Object.assign(new Error('请求体不是有效 JSON。'), { status: 400 });
-  }
-}
-
-function bearer(request) {
-  const header = request.headers.authorization ?? '';
-  return header.startsWith('Bearer ') ? header.slice(7) : '';
-}
-
-function authUser(request, config) {
-  try {
-    const payload = verifyToken(bearer(request), config.jwtSecret, config.jwtIssuer);
-    if (payload.tokenType !== 'access') throw new Error('Not an access token');
-    return payload;
-  } catch {
-    throw Object.assign(new Error('登录状态已失效。'), { status: 401 });
-  }
 }
 
 async function member(db, projectId, userId) {
@@ -81,46 +53,6 @@ async function requireMember(db, projectId, userId, write = false) {
   return role;
 }
 
-const codeRequests = new Map();
-const CODE_WINDOW_MS = 10 * 60_000;
-const CODE_REQUESTS_PER_WINDOW = 10;
-
-/** Behind Nginx the client address arrives in X-Real-IP; otherwise use the socket. */
-function clientAddress(request, config) {
-  const forwarded = config.trustProxy ? String(request.headers['x-real-ip'] ?? '') : '';
-  return forwarded || request.socket.remoteAddress || 'unknown';
-}
-
-function limitCodeRequests(address) {
-  const nowMs = Date.now();
-  const recent = (codeRequests.get(address) ?? []).filter((at) => nowMs - at < CODE_WINDOW_MS);
-  if (recent.length >= CODE_REQUESTS_PER_WINDOW) {
-    throw Object.assign(new Error('验证码请求过多，请稍后再试。'), { status: 429 });
-  }
-  recent.push(nowMs);
-  codeRequests.set(address, recent);
-  if (codeRequests.size > 10_000) {
-    for (const [key, times] of codeRequests) {
-      if (times.every((at) => nowMs - at >= CODE_WINDOW_MS)) codeRequests.delete(key);
-    }
-  }
-}
-
-/**
- * A fixed code for test accounts, which receive no SMS. In production it only
- * covers the numbers in DEV_SMS_PHONES; elsewhere it covers every number.
- */
-function usesDevelopmentCode(config, phone) {
-  const { developmentCode, developmentPhones } = config.sms;
-  if (!developmentCode) return false;
-  return developmentPhones.length ? developmentPhones.includes(phone) : !config.production;
-}
-
-function phoneCode(config, phone) {
-  if (usesDevelopmentCode(config, phone)) return config.sms.developmentCode;
-  return String(crypto.randomInt(100000, 1_000_000));
-}
-
 function issueTokens(config, user) {
   const accessToken = signToken(
     { sub: user.id, phone: user.phone, tokenType: 'access' },
@@ -135,64 +67,6 @@ function issueTokens(config, user) {
     config.jwtIssuer,
   );
   return { accessToken, refreshToken };
-}
-
-async function authenticateCode(db, config, phone, code) {
-  const result = await db.query('SELECT * FROM auth_codes WHERE phone = $1', [phone]);
-  const stored = result.rows[0];
-  if (!stored || new Date(stored.expires_at).getTime() < Date.now()) {
-    throw Object.assign(new Error('验证码已过期，请重新获取。'), { status: 400 });
-  }
-  if (stored.attempts >= 5) {
-    throw Object.assign(new Error('验证码尝试次数过多，请重新获取。'), { status: 429 });
-  }
-  const valid = hashSecret(`${config.jwtSecret}:${phone}:${code}`) === stored.code_hash;
-  if (!valid) {
-    await db.query('UPDATE auth_codes SET attempts = attempts + 1 WHERE phone = $1', [phone]);
-    throw Object.assign(new Error('验证码不正确。'), { status: 400 });
-  }
-  await db.query('DELETE FROM auth_codes WHERE phone = $1', [phone]);
-}
-
-const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 32 };
-
-/** Passwords are stored as scrypt hashes with their own salt and parameters. */
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(password, salt, SCRYPT.keylen, SCRYPT);
-  return ['scrypt', SCRYPT.N, SCRYPT.r, SCRYPT.p, salt.toString('base64'), hash.toString('base64')].join('$');
-}
-
-function passwordMatches(password, stored) {
-  const [kind, N, r, p, salt, hash] = String(stored ?? '').split('$');
-  if (kind !== 'scrypt' || !salt || !hash) return false;
-  const expected = Buffer.from(hash, 'base64');
-  const actual = crypto.scryptSync(password, Buffer.from(salt, 'base64'), expected.length, {
-    N: Number(N),
-    r: Number(r),
-    p: Number(p),
-  });
-  return crypto.timingSafeEqual(actual, expected);
-}
-
-/** 8 to 64 characters with at least one letter and one digit. */
-function checkPassword(value) {
-  const password = String(value ?? '');
-  if (password.length < 8 || password.length > 64 || !/[A-Za-z]/.test(password) || !/\d/.test(password))
-    throw Object.assign(new Error('密码需要 8–64 位，同时包含字母和数字。'), { status: 400 });
-  return password;
-}
-
-// Wrong passwords per phone number: ten in fifteen minutes, then a pause.
-const passwordFailures = new Map();
-const PASSWORD_WINDOW_MS = 15 * 60_000;
-const PASSWORD_FAILURES_PER_WINDOW = 10;
-
-function recentFailures(phone) {
-  const nowMs = Date.now();
-  const recent = (passwordFailures.get(phone) ?? []).filter((at) => nowMs - at < PASSWORD_WINDOW_MS);
-  passwordFailures.set(phone, recent);
-  return recent;
 }
 
 async function findOrCreateUser(db, phone) {
@@ -216,19 +90,16 @@ async function login(db, config, phone, code) {
 }
 
 async function passwordLogin(db, config, phone, password) {
-  if (recentFailures(phone).length >= PASSWORD_FAILURES_PER_WINDOW)
-    throw Object.assign(new Error('密码错误次数过多，请 15 分钟后再试，或用验证码登录。'), {
-      status: 429,
-    });
+  guardPassword(phone);
   const result = await db.query('SELECT id, phone, password_hash FROM users WHERE phone = $1', [phone]);
   const user = result.rows[0];
   if (user && !user.password_hash)
     throw Object.assign(new Error('这个账号还没有设置密码，请用验证码登录。'), { status: 400 });
   if (!user || !passwordMatches(String(password ?? ''), user.password_hash)) {
-    recentFailures(phone).push(Date.now());
+    notePasswordFailure(phone);
     throw Object.assign(new Error('手机号或密码不正确。'), { status: 400 });
   }
-  passwordFailures.delete(phone);
+  clearPasswordFailures(phone);
   return startSession(db, config, { id: user.id, phone: user.phone });
 }
 
@@ -261,13 +132,14 @@ async function resetPassword(db, config, phone, code, password) {
     ]);
     await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [user.id]);
   });
-  passwordFailures.delete(phone);
+  clearPasswordFailures(phone);
   return startSession(db, config, user);
 }
 
 /** Joins pending invitations and issues tokens for a signed-in user. */
 async function startSession(db, config, user) {
   const phone = user.phone;
+  await requireActive(db, user.id);
   await withTransaction(db, async (client) => {
     await client.query(
       `INSERT INTO project_members(project_id, user_id, role)
@@ -285,48 +157,6 @@ async function startSession(db, config, user) {
   return { user, ...tokens };
 }
 
-function modelEndpoint(endpoint, suffix) {
-  const url = new URL(endpoint);
-  const base = url.pathname
-    .replace(/\/(?:responses|chat\/completions)\/?$/, '')
-    .replace(/\/+$/, '');
-  url.pathname = `${base}/${suffix}`;
-  return url;
-}
-
-async function proxyOfficialModel(response, config, input, path) {
-  const endpoint =
-    path === '/v1/chat/completions'
-      ? config.officialModel.chatEndpoint || config.officialModel.endpoint
-      : config.officialModel.endpoint;
-  if (!endpoint || !config.officialModel.apiKey) {
-    throw Object.assign(new Error('官方模型服务尚未配置。'), { status: 503 });
-  }
-  const upstream = await fetch(
-    modelEndpoint(endpoint, path.endsWith('responses') ? 'responses' : 'chat/completions'),
-    {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${config.officialModel.apiKey}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...input,
-        model: String(input.model || config.officialModel.defaultModel || '').trim(),
-      }),
-    },
-  );
-  response.writeHead(upstream.status, {
-    'content-type': upstream.headers.get('content-type') ?? 'application/json',
-    'cache-control': 'no-cache',
-    connection: 'keep-alive',
-  });
-  if (upstream.body) {
-    for await (const chunk of upstream.body) response.write(chunk);
-  }
-  response.end();
-}
-
 async function projectBlob(db, projectId, blobId, userId) {
   const result = await db.query(
     'SELECT * FROM blobs WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL',
@@ -337,11 +167,16 @@ async function projectBlob(db, projectId, blobId, userId) {
   return result.rows[0];
 }
 
-async function handle(request, response, { config, db }) {
-  cors(response);
-  if (request.method === 'OPTIONS') return send(response, 204, '');
+async function handle(request, response, context) {
+  const { config, db } = context;
   const url = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`);
   const path = url.pathname.replace(/\/+$/, '') || '/';
+  // The admin pages are same-origin only: no CORS headers for them. They need the
+  // raw path, where "/admin" and "/admin/" differ.
+  if (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))
+    return handleAdmin(request, response, context, url.pathname, url);
+  cors(response);
+  if (request.method === 'OPTIONS') return send(response, 204, '');
   try {
     if (request.method === 'GET' && path === '/v1/health') {
       await db.query('SELECT 1');
@@ -349,27 +184,7 @@ async function handle(request, response, { config, db }) {
     }
     if (request.method === 'POST' && path === '/v1/auth/send-code') {
       const input = await body(request, 16_384);
-      const phone = normalizePhone(input.phone);
-      limitCodeRequests(clientAddress(request, config));
-      const existing = await db.query('SELECT last_sent_at FROM auth_codes WHERE phone = $1', [
-        phone,
-      ]);
-      if (
-        existing.rows[0] &&
-        Date.now() - new Date(existing.rows[0].last_sent_at).getTime() < 60_000
-      ) {
-        throw Object.assign(new Error('验证码发送过于频繁，请稍后再试。'), { status: 429 });
-      }
-      const code = phoneCode(config, phone);
-      const hash = hashSecret(`${config.jwtSecret}:${phone}:${code}`);
-      await db.query(
-        `INSERT INTO auth_codes(phone, code_hash, expires_at, last_sent_at, attempts)
-         VALUES ($1, $2, NOW() + INTERVAL '5 minutes', NOW(), 0)
-         ON CONFLICT (phone) DO UPDATE SET code_hash = EXCLUDED.code_hash,
-           expires_at = EXCLUDED.expires_at, last_sent_at = EXCLUDED.last_sent_at, attempts = 0`,
-        [phone, hash],
-      );
-      if (!usesDevelopmentCode(config, phone)) await sendVerificationCode(config, phone, code);
+      await sendCode(db, config, normalizePhone(input.phone), clientAddress(request, config));
       return send(response, 202, { accepted: true });
     }
     if (request.method === 'POST' && path === '/v1/auth/login') {
@@ -418,6 +233,7 @@ async function handle(request, response, { config, db }) {
         [hashSecret(input.refreshToken)],
       );
       if (!result.rows[0]) throw Object.assign(new Error('刷新令牌已失效。'), { status: 401 });
+      await requireActive(db, result.rows[0].id);
       const tokens = issueTokens(config, result.rows[0]);
       await withTransaction(db, async (client) => {
         // Rotate refresh tokens. A replayed token is rejected after its first use.
@@ -432,7 +248,9 @@ async function handle(request, response, { config, db }) {
       return send(response, 200, { user: result.rows[0], ...tokens });
     }
 
-    const user = authUser(request, config);
+    if (await handleBilling(request, response, context, path, url)) return;
+
+    const user = await caller(request, context);
     if (request.method === 'GET' && path === '/v1/me') {
       const result = await db.query('SELECT password_hash FROM users WHERE id = $1', [user.sub]);
       return send(response, 200, {
@@ -450,12 +268,6 @@ async function handle(request, response, { config, db }) {
         ]);
       }
       return send(response, 200, { ok: true });
-    }
-    if (request.method === 'GET' && path === '/v1/models') {
-      return send(response, 200, {
-        models: config.officialModel.models,
-        defaultModel: config.officialModel.defaultModel,
-      });
     }
     if (request.method === 'POST' && path === '/v1/projects') {
       const input = await body(request, 16_384);
@@ -688,26 +500,19 @@ async function handle(request, response, { config, db }) {
         return send(response, 200, { ok: true });
       }
     }
-    if (
-      request.method === 'POST' &&
-      ['/v1/models/responses', '/v1/responses', '/v1/chat/completions'].includes(path)
-    ) {
-      const input = await body(request, config.officialModel.maxBodyBytes);
-      const model = String(input.model || config.officialModel.defaultModel || '').trim();
-      if (!model) throw Object.assign(new Error('未选择官方模型。'), { status: 400 });
-      return proxyOfficialModel(
-        response,
-        config,
-        { ...input, model },
-        path === '/v1/models/responses' ? '/v1/responses' : path,
-      );
-    }
     return send(response, 404, { error: 'not_found' });
   } catch (error) {
-    const status = Number(error?.status) || (error?.code === '23505' ? 409 : 500);
-    if (status >= 500) console.error(error);
-    return send(response, status, { error: error?.message ?? '服务器内部错误。' });
+    return sendError(response, error);
   }
+}
+
+/** Turns a thrown error into a JSON answer; `code` is set for errors the app tells apart. */
+export function sendError(response, error) {
+  const status = Number(error?.status) || (error?.code === '23505' ? 409 : 500);
+  if (status >= 500) console.error(error);
+  if (response.headersSent) return response.end();
+  const code = typeof error?.code === 'string' && /^[a-z_]+$/.test(error.code) ? error.code : undefined;
+  return send(response, status, { error: error?.message ?? '服务器内部错误。', ...(code ? { code } : {}) });
 }
 
 export function createServer(config, db) {
@@ -722,11 +527,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (config.production) assertProductionConfig(config);
   const db = createDb(config);
   await initDb(db);
+  if (await importFromEnvironment(db, config))
+    console.log('Imported the OFFICIAL_MODEL_* settings as a channel; set prices in /admin to list its models.');
+  const stopJobs = startJobs(db);
   const server = createServer(config, db);
   server.listen(config.port, config.host, () => {
     console.log(`Scientify collaboration server listening on ${config.host}:${config.port}`);
   });
   const close = async () => {
+    stopJobs();
     server.close();
     await db.end();
   };

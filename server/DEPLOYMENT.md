@@ -168,3 +168,34 @@ sudo systemctl daemon-reload && sudo systemctl enable --now acme-renew.timer
 
 Point desktop builds at the service with `SCIENTIFY_COLLAB_ENDPOINT` at build
 time, or change the address under Settings → Collaboration.
+
+## 8. Admin pages and official models
+
+The admin pages ship in `admin/` next to `src/`, and `deploy/update.sh`
+uploads both. Nginx must pass `/admin` to the service: the two `/admin`
+locations in `scientify-8443.conf` and `scientify-site.conf`. Then grant the
+first administrator from the host; the account must already exist. The tool
+runs with the service's own environment file, read by systemd as the service
+reads it:
+
+```bash
+sudo systemd-run --quiet --wait --pipe --uid=scientify --gid=scientify \
+  -p EnvironmentFile=/etc/scientify-collab.env \
+  -p WorkingDirectory=/opt/scientify-collab/server \
+  /usr/bin/node src/admin-cli.mjs grant 13800000000 owner
+```
+
+Sign in at `https://<host>:8443/admin/` with the phone and the password. An
+account without a password, or with a forgotten one, uses 忘记密码 on the
+sign-in page: an SMS code (sent only to administrators) sets a new password,
+which also signs the desktop app out.
+
+Before any model is offered, add a channel (the upstream address and key).
+选择模型 on the channel reads the upstream's `/models` list and adds the
+picked models unlisted; in 新增模型 the upstream field offers the same list
+and fills the ID and name. Then give each model its cost and price per million
+tokens and the plans it is open to, and list it. A model without a price cannot
+be listed. The
+gateway refuses requests with `402 quota_exhausted`, `403 model_not_in_plan`,
+`429 rate_limited` or `daily_limit`, and `403 account_disabled`; the desktop
+app turns these codes into explanations.

@@ -10,12 +10,12 @@ export function connectionProfile(value: AISettings, id: string, name: string): 
   return { ...value, id, name: (name.trim() || value.serviceId || value.model).slice(0, 80) };
 }
 
-/** Read the key this machine holds for a connection; the official service uses the session token. */
+/** Read the key this machine holds for a connection; the official service uses this device's model token. */
 export async function loadConnectionKey(
   value: Pick<AISettings, 'provider' | 'endpoint' | 'serviceId'>,
   credentials: CredentialBackend = nativeCredentials,
 ) {
-  if (value.serviceId === 'scientify') return collaboration.accessToken();
+  if (value.serviceId === 'scientify') return collaboration.modelToken();
   if (credentials === nativeCredentials && !isTauri()) return '';
   return (
     (await credentials.load({ provider: value.provider, endpoint: value.endpoint.trim() })) ?? ''
@@ -30,9 +30,9 @@ export async function storeConnectionKey(
 ) {
   try {
     if (value.serviceId === 'scientify') {
-      // The server access token is short-lived and stays in memory; never
-      // persist it in the provider credential store.
-      await collaboration.accessToken();
+      // The model token stays in memory; never persist it in the provider
+      // credential store.
+      await collaboration.modelToken();
     } else if (key.trim())
       await credentials.save({ provider: value.provider, endpoint: value.endpoint }, key.trim());
     else if (value.provider !== 'ollama') throw new Error(t('请填写 API 密钥。'));

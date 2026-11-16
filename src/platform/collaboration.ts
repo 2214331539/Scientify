@@ -83,6 +83,74 @@ export type ConflictPreview = {
 };
 export type ConflictChoice = 'local' | 'remote' | 'both';
 
+/** The account's plan and points for the official models, from the server. */
+export type BillingSummary = {
+  plan: {
+    id: string;
+    name: string;
+    monthlyPoints: number;
+    storageBytes: number;
+    maxMembers: number | null;
+    historyDays: number;
+  };
+  subscription: { startsAt: string; endsAt: string; source: string } | null;
+  period: { start: string; end: string };
+  balance: number;
+  debt: number;
+  usedThisPeriod: number;
+  usedToday: number;
+  limits: { dailyPoints: number; rpm: number; concurrency: number };
+  grants: {
+    id: string;
+    source: string;
+    label: string;
+    note: string;
+    points: number;
+    left: number;
+    startsAt: string;
+    expiresAt: string;
+  }[];
+  storage: { usedBytes: number; limitBytes: number };
+};
+
+export type BillingUsage = {
+  days: { day: string; points: number; models: Record<string, number> }[];
+  models: { id: string; points: number; requests: number }[];
+};
+
+export type RedeemResult =
+  | { kind: 'points'; points: number }
+  | { kind: 'plan'; plan: string; months: number; endsAt: string };
+
+export type ModelDevice = {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  current: boolean;
+};
+
+/** Error codes the official model gateway answers with, found in an error message. */
+export const officialModelProblems = {
+  quota_exhausted: '官方模型额度已用完',
+  daily_limit: '今天的用量已到单日上限',
+  model_not_in_plan: '当前套餐不包含这个模型',
+  rate_limited: '请求太频繁',
+  account_disabled: '账号已停用',
+  model_token_invalid: '官方模型令牌已失效',
+} as const;
+export type OfficialModelProblem = keyof typeof officialModelProblems;
+
+export function officialModelProblem(
+  message: string | undefined | null,
+): OfficialModelProblem | null {
+  if (!message) return null;
+  for (const code of Object.keys(officialModelProblems) as OfficialModelProblem[])
+    if (message.includes(code)) return code;
+  return null;
+}
+
 export function canEditProject(
   project: { collaborationRole?: unknown } | undefined,
   domain = 'project',
@@ -157,6 +225,27 @@ export const collaboration = {
   },
   accessToken(): Promise<string> {
     return desktop('官方模型只能在 Scientify 桌面应用中使用。', 'collaboration_access_token');
+  },
+  /** This device's token for the official models; `renew` replaces a revoked one. */
+  modelToken(renew = false): Promise<string> {
+    return desktop('官方模型只能在 Scientify 桌面应用中使用。', 'collaboration_model_token', {
+      renew,
+    });
+  },
+  billing(): Promise<BillingSummary> {
+    return desktop(settingsOnly, 'collaboration_billing');
+  },
+  billingUsage(days = 30): Promise<BillingUsage> {
+    return desktop(settingsOnly, 'collaboration_billing_usage', { days });
+  },
+  redeem(code: string): Promise<{ ok: true; result: RedeemResult }> {
+    return desktop(settingsOnly, 'collaboration_redeem', { code });
+  },
+  devices(): Promise<{ devices: ModelDevice[] }> {
+    return desktop(settingsOnly, 'collaboration_devices');
+  },
+  revokeDevice(id: string): Promise<{ ok: true }> {
+    return desktop(settingsOnly, 'collaboration_revoke_device', { id });
   },
   projects(): Promise<{ projects: CollaborationProject[] }> {
     return desktop(settingsOnly, 'collaboration_projects');

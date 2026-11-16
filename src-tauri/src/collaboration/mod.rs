@@ -467,6 +467,7 @@ pub async fn collaboration_logout<R: tauri::Runtime>(
     trusted(&view)?;
     if let Some(auth) = read_auth(&state)? {
         let current = read(&state)?;
+        forget_model_token(&state, &current.endpoint).await;
         let _ = request_json(
             &current.endpoint,
             "/auth/logout",
@@ -503,6 +504,174 @@ pub async fn collaboration_access_token<R: tauri::Runtime>(
         return Ok(auth.access_token);
     }
     fresh_token(&state, &read(&state)?.endpoint, &auth.access_token).await
+}
+
+/// This device's token for the official models: (endpoint, user, token id, token).
+type ModelToken = (String, String, String, String);
+
+/// Model tokens live in memory only. Each launch asks for a new one, which
+/// replaces the device's previous token on the server.
+fn model_token_slot() -> &'static tokio::sync::Mutex<Option<ModelToken>> {
+    static SLOT: OnceLock<tokio::sync::Mutex<Option<ModelToken>>> = OnceLock::new();
+    SLOT.get_or_init(|| tokio::sync::Mutex::new(None))
+}
+
+/// "Windows · LAB-PC" and the like, shown in the account's device list.
+fn device_name() -> String {
+    let system = match std::env::consts::OS {
+        "windows" => "Windows",
+        "macos" => "Mac",
+        "linux" => "Linux",
+        other => other,
+    };
+    let host = std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_default();
+    let host: String = host.trim().chars().take(60).collect();
+    if host.is_empty() {
+        system.into()
+    } else {
+        format!("{system} · {host}")
+    }
+}
+
+/// The token the AI assistant uses for the official models. `renew` asks for a
+/// fresh one, for when the server revoked the old one.
+#[tauri::command]
+pub async fn collaboration_model_token<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    renew: Option<bool>,
+) -> Result<String, String> {
+    trusted(&view)?;
+    let current = snapshot(&state)?;
+    let user_id = current.user_id.clone().ok_or("请先登录协作服务器。")?;
+    let mut slot = model_token_slot().lock().await;
+    if !renew.unwrap_or(false) {
+        if let Some((endpoint, user, _, token)) = slot.as_ref() {
+            if *endpoint == current.endpoint && *user == user_id {
+                return Ok(token.clone());
+            }
+        }
+    }
+    let result = auth_request(
+        &state,
+        &current.endpoint,
+        "/model-tokens",
+        reqwest::Method::POST,
+        Some(json!({"deviceId": current.client_id, "deviceName": device_name()})),
+    )
+    .await?;
+    let token = result["token"]
+        .as_str()
+        .filter(|token| valid_token(token, 200))
+        .ok_or("服务器没有返回官方模型令牌。")?
+        .to_string();
+    let id = result["id"].as_str().unwrap_or_default().to_string();
+    *slot = Some((current.endpoint, user_id, id, token.clone()));
+    Ok(token)
+}
+
+/// Revokes this device's model token, if it has one, when signing out.
+async fn forget_model_token(state: &AppState, endpoint: &str) {
+    let taken = model_token_slot().lock().await.take();
+    if let Some((_, _, id, _)) = taken.filter(|(_, _, id, _)| valid_token(id, 80)) {
+        let path = format!("/model-tokens/{id}");
+        let _ = auth_request(state, endpoint, &path, reqwest::Method::DELETE, None).await;
+    }
+}
+
+/// Plan, points, limits and storage of the signed-in account.
+#[tauri::command]
+pub async fn collaboration_billing<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let endpoint = read(&state)?.endpoint;
+    auth_request(
+        &state,
+        &endpoint,
+        "/billing/summary",
+        reqwest::Method::GET,
+        None,
+    )
+    .await
+}
+
+/// Points per day and per model over the last `days` days.
+#[tauri::command]
+pub async fn collaboration_billing_usage<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    days: u32,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let endpoint = read(&state)?.endpoint;
+    let path = format!("/billing/usage?days={}", days.clamp(1, 90));
+    auth_request(&state, &endpoint, &path, reqwest::Method::GET, None).await
+}
+
+#[tauri::command]
+pub async fn collaboration_redeem<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    code: String,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let code = code.trim();
+    if code.is_empty() || code.len() > 64 {
+        return Err("请输入兑换码。".into());
+    }
+    let endpoint = read(&state)?.endpoint;
+    auth_request(
+        &state,
+        &endpoint,
+        "/billing/redeem",
+        reqwest::Method::POST,
+        Some(json!({"code": code})),
+    )
+    .await
+}
+
+/// Devices that hold a model token for this account.
+#[tauri::command]
+pub async fn collaboration_devices<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let current = snapshot(&state)?;
+    let mut result = auth_request(
+        &state,
+        &current.endpoint,
+        "/model-tokens",
+        reqwest::Method::GET,
+        None,
+    )
+    .await?;
+    if let Some(devices) = result["devices"].as_array_mut() {
+        for device in devices {
+            let this = device["deviceId"].as_str() == Some(current.client_id.as_str());
+            device["current"] = json!(this);
+        }
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn collaboration_revoke_device<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    if !valid_token(&id, 80) {
+        return Err("设备标识无效。".into());
+    }
+    let endpoint = read(&state)?.endpoint;
+    let path = format!("/model-tokens/{id}");
+    auth_request(&state, &endpoint, &path, reqwest::Method::DELETE, None).await
 }
 
 #[tauri::command]
@@ -856,7 +1025,10 @@ pub async fn collaboration_resolve_conflict<R: tauri::Runtime>(
 
 #[cfg(test)]
 mod tests {
-    use super::{content_type_for_path, normalize_endpoint, CollaborationState, DEFAULT_ENDPOINT};
+    use super::{
+        content_type_for_path, device_name, normalize_endpoint, CollaborationState,
+        DEFAULT_ENDPOINT,
+    };
 
     #[test]
     fn endpoint_validation_keeps_a_clean_base_url() {
@@ -892,5 +1064,15 @@ mod tests {
             content_type_for_path("data.bin"),
             "application/octet-stream"
         );
+    }
+
+    #[test]
+    fn device_names_say_the_system_and_stay_short() {
+        let name = device_name();
+        assert!(["Windows", "Mac", "Linux"]
+            .iter()
+            .any(|system| name.starts_with(system)));
+        // The server keeps 120 characters; the host part is cut at 60.
+        assert!(name.chars().count() <= 80);
     }
 }

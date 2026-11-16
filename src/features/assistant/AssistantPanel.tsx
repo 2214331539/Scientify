@@ -41,7 +41,8 @@ import {
   nativeCredentials,
   type CredentialBackend,
 } from '../../platform/credentials';
-import { collaboration } from '../../platform/collaboration';
+import { collaboration, officialModelProblem } from '../../platform/collaboration';
+import { OfficialModelNotice } from './OfficialModelNotice';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { AIProtocol } from '../../domain/workspace';
 import { hasPendingWork, initialAgentSession } from './agent-session';
@@ -390,7 +391,7 @@ export function AssistantPanel({
     async (provider: AIProtocol, endpoint: string, serviceId?: string) => {
       const slot = credentialSlot(provider, endpoint);
       if (serviceId === 'scientify') {
-        const token = await collaboration.accessToken();
+        const token = await collaboration.modelToken();
         keyCache.current.set(slot, token);
         return token;
       }
@@ -1106,6 +1107,58 @@ export function AssistantPanel({
     return () => window.removeEventListener('scientify-new-conversation', onNewConversation);
   }, [conversationActionsDisabled, selectConversation]);
 
+  // Points a turn on the official models used: the balance before and after it.
+  // Turns running at the same time in other conversations are counted together.
+  const pending = agentPending || chatPending;
+  const [turnPoints, setTurnPoints] = useState<{
+    before: number | null;
+    spent?: number;
+    left?: number;
+  }>({
+    before: null,
+  });
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (!officialModel || !isTauri() || pending === wasPending.current) return;
+    wasPending.current = pending;
+    let alive = true;
+    void collaboration
+      .billing()
+      .then(({ balance }) => {
+        if (!alive) return;
+        setTurnPoints((current) =>
+          pending
+            ? { before: balance }
+            : current.before === null
+              ? { before: null, left: balance }
+              : { before: null, spent: Math.max(0, current.before - balance), left: balance },
+        );
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [pending, officialModel]);
+  const shownError =
+    chatTask?.saveError ||
+    chatTask?.error ||
+    activeTask?.saveError ||
+    error ||
+    agentState.error ||
+    conversation.agentRun?.error;
+  const officialProblem = officialModel ? officialModelProblem(shownError) : null;
+  async function reconnectOfficial() {
+    try {
+      const token = await collaboration.modelToken(true);
+      keyCache.current.set(selectedSlot, token);
+      setCredential({ slot: selectedSlot, key: token, stored: true });
+      chatRuntime.forget(scope, conversation.id);
+      setError('');
+    } catch (reason) {
+      setError(safeError(reason));
+    }
+  }
+
   return (
     <Panel
       className="sf-assistant-panel sf-project-assistant"
@@ -1419,6 +1472,16 @@ export function AssistantPanel({
           {t('正在准备材料…')}
         </div>
       ) : null}
+      {officialModel && !pending && turnPoints.left !== undefined && !officialProblem ? (
+        <div className="sf-official-usage" role="status">
+          {turnPoints.spent !== undefined
+            ? t('本轮 {spent} 点 · 剩余 {left} 点', {
+                spent: turnPoints.spent.toLocaleString('en-US'),
+                left: turnPoints.left.toLocaleString('en-US'),
+              })
+            : t('官方模型剩余 {left} 点', { left: turnPoints.left.toLocaleString('en-US') })}
+        </div>
+      ) : null}
       {error ||
       chatTask?.error ||
       chatTask?.saveError ||
@@ -1426,13 +1489,14 @@ export function AssistantPanel({
       activeTask?.saveError ||
       (!activeTask && conversation.agentRun?.error) ? (
         <div className="sf-aux-error" role="alert">
-          {translateError(
-            chatTask?.saveError ||
-              chatTask?.error ||
-              activeTask?.saveError ||
-              error ||
-              agentState.error ||
-              conversation.agentRun?.error,
+          {officialProblem ? (
+            <OfficialModelNotice
+              problem={officialProblem}
+              onChooseModel={openSettings}
+              onReconnect={() => void reconnectOfficial()}
+            />
+          ) : (
+            translateError(shownError)
           )}
           <div>
             {chatTask?.saveError ? (

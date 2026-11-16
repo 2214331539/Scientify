@@ -688,3 +688,28 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+.sf-official-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sf-official-notice strong {
+  color: var(--sf-text-primary);
+  font-weight: 600;
+}
+.sf-official-notice p {
+  margin: 0;
+  color: var(--sf-text-secondary);
+}
+.sf-official-notice > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: -6px;
+}
+.sf-official-usage {
+  padding: 0 14px 4px;
+  color: var(--sf-text-muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}

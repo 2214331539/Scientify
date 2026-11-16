@@ -3872,5 +3872,91 @@
   "图片": ["图片", "Image"],
   "链接到页面": ["链接到页面", "Link to page"],
   "子页面": ["子页面", "Subpage"],
-  "笔记": ["笔记", "Notes"]
+  "笔记": ["笔记", "Notes"],
+  "{date} 到期": ["{date} 到期", "Ends {date}"],
+  "{date} 恢复 {points} 点": ["{date} 恢复 {points} 点", "{points} points again on {date}"],
+  "今天已用 {used} 点，单日上限 {limit} 点，防止对话失控时用光整月的额度。": [
+    "今天已用 {used} 点，单日上限 {limit} 点，防止对话失控时用光整月的额度。",
+    "{used} points used today of a daily limit of {limit}, so a runaway conversation cannot use up the month."
+  ],
+  "使用官方模型的设备": ["使用官方模型的设备", "Devices using the official models"],
+  "兑换": ["兑换", "Redeem"],
+  "兑换码": ["兑换码", "Redeem code"],
+  "剩 {left} 点 · {date} 到期": ["剩 {left} 点 · {date} 到期", "{left} points left · ends {date}"],
+  "同步空间": ["同步空间", "Sync storage"],
+  "官方模型剩余 {left} 点": [
+    "官方模型剩余 {left} 点",
+    "{left} points left for the official models"
+  ],
+  "官方模型额度": ["官方模型额度", "Official model points"],
+  "已兑换 {points} 点。": ["已兑换 {points} 点。", "Redeemed {points} points."],
+  "已开通{plan}，到期日 {date}。": ["已开通{plan}，到期日 {date}。", "{plan} is on until {date}."],
+  "按你拥有的项目计算，加入别人的项目不占你的空间。": [
+    "按你拥有的项目计算，加入别人的项目不占你的空间。",
+    "Counts the projects you own; projects you joined do not use your storage."
+  ],
+  "换一个模型": ["换一个模型", "Choose another model"],
+  "改用自己的密钥": ["改用自己的密钥", "Use my own key"],
+  "本周期已用 {used} / {total} 点": [
+    "本周期已用 {used} / {total} 点",
+    "{used} / {total} points used this period"
+  ],
+  "本轮 {spent} 点 · 剩余 {left} 点": [
+    "本轮 {spent} 点 · 剩余 {left} 点",
+    "This turn {spent} points · {left} left"
+  ],
+  "欠 {debt} 点，下次发放额度时先抵扣。": [
+    "欠 {debt} 点，下次发放额度时先抵扣。",
+    "{debt} points owed; the next grant pays them first."
+  ],
+  "正在读取订阅…": ["正在读取订阅…", "Loading the subscription…"],
+  "每月 1 日恢复 {points} 点": [
+    "每月 1 日恢复 {points} 点",
+    "{points} points again on the 1st of each month"
+  ],
+  "点可用": ["点可用", "points available"],
+  "移除": ["移除", "Remove"],
+  "账号与订阅": ["账号与订阅", "Account & subscription"],
+  "近 30 天每天的官方模型用量": [
+    "近 30 天每天的官方模型用量",
+    "Official model points per day over the last 30 days"
+  ],
+  "近 30 天用量": ["近 30 天用量", "Last 30 days"],
+  "这台电脑": ["这台电脑", "this computer"],
+  "重新连接": ["重新连接", "Reconnect"],
+  "官方模型额度已用完": ["官方模型额度已用完", "Out of official model points"],
+  "这条消息没有发出。可以用兑换码补充额度，等下个周期恢复，或改用自己的模型密钥。": [
+    "这条消息没有发出。可以用兑换码补充额度，等下个周期恢复，或改用自己的模型密钥。",
+    "This message was not sent. Add points with a redeem code, wait for the next period, or use your own model key."
+  ],
+  "今天的用量已到单日上限": ["今天的用量已到单日上限", "Today's daily limit is reached"],
+  "明天 0 点恢复。单日上限防止对话失控时用光整月的额度；也可以改用自己的模型密钥。": [
+    "明天 0 点恢复。单日上限防止对话失控时用光整月的额度；也可以改用自己的模型密钥。",
+    "It resets at midnight. The daily limit keeps a runaway conversation from using up the month; you can also use your own model key."
+  ],
+  "当前套餐不包含这个模型": ["当前套餐不包含这个模型", "Your plan does not include this model"],
+  "换一个模型，或在“账号与订阅”里查看套餐。": [
+    "换一个模型，或在“账号与订阅”里查看套餐。",
+    "Choose another model, or see your plan in Account & subscription."
+  ],
+  "请求太频繁": ["请求太频繁", "Too many requests"],
+  "同时进行的对话太多或请求太快，请稍等再试。": [
+    "同时进行的对话太多或请求太快，请稍等再试。",
+    "Too many conversations at once or requests too fast. Wait a moment and try again."
+  ],
+  "账号已停用": ["账号已停用", "Account disabled"],
+  "无法使用官方模型。如有疑问请联系我们。": [
+    "无法使用官方模型。如有疑问请联系我们。",
+    "The official models are unavailable. Contact us if you have questions."
+  ],
+  "官方模型连接已失效": ["官方模型连接已失效", "Official model connection expired"],
+  "这台电脑的官方模型令牌被移除了，重新连接即可。": [
+    "这台电脑的官方模型令牌被移除了，重新连接即可。",
+    "This computer's official model token was removed. Reconnect to continue."
+  ],
+  "注册赠送": ["注册赠送", "Sign-up gift"],
+  "人工调整": ["人工调整", "Adjustment"],
+  "加油包": ["加油包", "Top-up"],
+  "套餐月度额度": ["套餐月度额度", "Monthly plan points"],
+  "免费版月度额度": ["免费版月度额度", "Monthly free points"]
 }
