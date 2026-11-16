@@ -6,7 +6,7 @@ import { Modal } from '../../components/Modal';
 import { Button, Input, Textarea } from '../../components/primitives';
 import { t, translateError } from '../../i18n';
 import type { WorkspaceStore } from '../../stores/workspace';
-import { collaboration, requestSignIn } from '../../platform/collaboration';
+import { collaboration } from '../../platform/collaboration';
 import { nativeLibrary } from '../../platform/library';
 import { refreshCloud, useCloud } from './cloud';
 import { InviteList, type InviteRole } from './ProjectDialogs';
@@ -43,7 +43,6 @@ export function NewProjectWizard({
   }));
   const [codePath, setCodePath] = useState('');
   const [library, setLibrary] = useState<'later' | 'pick'>('later');
-  const [sync, setSync] = useState(false);
   const [invites, setInvites] = useState<{ phone: string; role: InviteRole }[]>([]);
   const [working, setWorking] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -82,7 +81,8 @@ export function NewProjectWizard({
       });
       if (!saved) return;
       let notice = '';
-      if (team || sync) {
+      // Signed in, a new project syncs to the account like every other.
+      if (team || signedIn) {
         try {
           await collaboration.createProject(name, id);
           for (const invite of invites)
@@ -283,32 +283,7 @@ export function NewProjectWizard({
                 <InviteList invites={invites} onChange={setInvites} disabled={locked} />
                 <small className="muted">{t('未注册的号码会在对方首次登录后加入。')}</small>
               </div>
-            ) : signedIn ? (
-              <label className={`wizard-check${sync ? ' checked' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={sync}
-                  disabled={locked}
-                  onChange={(event) => setSync(event.target.checked)}
-                />
-                <span>
-                  <strong>{t('在多台设备上同步')}</strong>
-                  <small>{t('同步到你登录的其他设备')}</small>
-                </span>
-              </label>
-            ) : (
-              <p className="wizard-check disabled">
-                <span>
-                  <strong>{t('在多台设备上同步')}</strong>
-                  <small>
-                    {t('登录后可用。')}
-                    <Button type="button" variant="ghost" size="sm" onClick={requestSignIn}>
-                      {t('登录')}
-                    </Button>
-                  </small>
-                </span>
-              </p>
-            )}
+            ) : null}
           </div>
         )}
         {error ? (

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-docs-purge"
+description = "Enables the docs_purge command without any pre-configured scope."
+commands.allow = ["docs_purge"]
+
+[[permission]]
+identifier = "deny-docs-purge"
+description = "Denies the docs_purge command without any pre-configured scope."
+commands.deny = ["docs_purge"]

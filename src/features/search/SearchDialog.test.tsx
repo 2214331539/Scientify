@@ -7,6 +7,14 @@ import type { LibraryBackend, LibraryScan } from '../../platform/library';
 import { createWorkspaceStore } from '../../stores/workspace';
 import { createNote } from '../notes/model';
 import { SearchDialog, searchWorkspace } from './SearchDialog';
+import { memoryDocs } from '../../platform/docs';
+import { newPage } from '../../workspaces/docs/model';
+
+const conclusion = () => {
+  const page = newPage({ parent: null, order: 'V', title: '实验结论' });
+  page.blocks = [{ id: 'b', type: 'paragraph', content: [{ text: '检索的主要发现' }] }];
+  return page;
+};
 
 afterEach(cleanup);
 
@@ -30,8 +38,19 @@ function fixture() {
 it('searches actual fields, carries scopes and returns no invented empty-query results', () => {
   const data = fixture();
   expect(searchWorkspace(data, '')).toEqual([]);
-  const results = searchWorkspace(data, '检索');
+  // Project notes are documents now; their hits come from the documents search.
+  const results = searchWorkspace(
+    data,
+    '检索',
+    new Map(),
+    new Map([['p1', [{ id: 'page-1', title: '实验结论', snippet: '检索的主要发现' }]]]),
+  );
   expect(results).toHaveLength(4);
+  expect(results.find((result) => result.title === '实验结论')?.target).toEqual({
+    projectId: 'p1',
+    workspace: 'notes',
+    resourceId: 'page-1',
+  });
   expect(results.find((result) => result.title === '个人想法')?.target).toMatchObject({
     projectId: undefined,
     workspace: 'projects',
@@ -45,7 +64,7 @@ it('searches actual fields, carries scopes and returns no invented empty-query r
   expect(searchWorkspace(data, '未存在的材料')).toEqual([]);
 });
 
-it('navigates a matching saved note with its project and resource identity', async () => {
+it('navigates to a matching document with its project and page', async () => {
   const data = fixture();
   const adapter: WorkspaceBackend = {
     load: async () => ({ workspace: data, directory: '', legacyAvailable: false }),
@@ -61,13 +80,16 @@ it('navigates a matching saved note with its project and resource identity', asy
   const navigate = vi.fn();
   const close = vi.fn();
   const user = userEvent.setup();
-  render(<SearchDialog store={store} onClose={close} onNavigate={navigate} />);
-  await user.type(screen.getByLabelText('搜索项目、文献和笔记'), '主要发现');
-  await user.click(screen.getByRole('button', { name: /实验结论/ }));
+  const page = conclusion();
+  render(
+    <SearchDialog store={store} onClose={close} onNavigate={navigate} docs={memoryDocs([page])} />,
+  );
+  await user.type(screen.getByLabelText('搜索项目、文献和文档'), '主要发现');
+  await user.click(await screen.findByRole('button', { name: /实验结论/ }));
   expect(navigate).toHaveBeenCalledWith({
     projectId: 'p1',
     workspace: 'notes',
-    resourceId: data.records[0].id,
+    resourceId: page.id,
   });
   expect(close).toHaveBeenCalledOnce();
 });
@@ -124,9 +146,10 @@ it('finds PDFs in the literature folder by file name and opens the one picked', 
       onNavigate={navigate}
       projectId="p1"
       library={library}
+      docs={memoryDocs()}
     />,
   );
-  await user.type(screen.getByLabelText('搜索项目、文献和笔记'), 'attention');
+  await user.type(screen.getByLabelText('搜索项目、文献和文档'), 'attention');
   const paper = await screen.findByRole('button', { name: /Attention Is All You Need/ });
   expect(screen.queryByRole('button', { name: /attention-notes/ })).toBeNull();
   expect(library.command).toHaveBeenCalledOnce();

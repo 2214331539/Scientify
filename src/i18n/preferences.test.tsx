@@ -6,6 +6,8 @@ import { emptyWorkspace } from '../domain/workspace';
 import { createWorkspaceStore } from '../stores/workspace';
 import type { WorkspaceBackend } from '../platform/desktop';
 import { browserResearch } from '../platform/browser';
+import { resetBrowserDocs } from '../platform/docs';
+import { resetDocsRuntimes } from '../workspaces/docs/runtime';
 import { preferenceKey, getPreferences, setPreferences } from './preferences';
 import { t, translateError } from './index';
 import catalog from './messages.json';
@@ -113,26 +115,26 @@ it('switches both appearance and language immediately without saving or translat
   expect(document.documentElement.classList.contains('dark')).toBe(true);
 });
 
-it('retains an unsaved note while switching language and keeps status values stable', async () => {
-  const { store, backend } = fixture();
+it('keeps a document being edited while switching language and keeps status values stable', async () => {
+  resetBrowserDocs();
+  resetDocsRuntimes();
+  const { store } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={browserResearch} />);
   await user.click(await screen.findByRole('button', { name: /^Notes/ }));
   await user.click(
     within(screen.getByRole('navigation', { name: '一级导航' })).getByRole('button', {
-      name: '笔记',
+      name: '文档',
     }),
   );
-  await user.click(await screen.findByRole('button', { name: /Saved research/ }));
-  await user.type(screen.getByRole('textbox', { name: '笔记正文' }), ' new draft');
-  const revision = store.getState().data?.revision;
+  // The old note is now a document.
+  const cards = await screen.findAllByRole('button', { name: /Saved research/ }, { timeout: 4000 });
+  await user.click(cards[0]);
+  await user.type(await screen.findByRole('textbox', { name: '页面标题' }), ' draft');
   act(() => setPreferences({ language: 'en' }));
-  expect((screen.getByRole('textbox', { name: 'Note content' }) as HTMLTextAreaElement).value).toBe(
-    '原始材料 new draft',
+  expect((screen.getByRole('textbox', { name: 'Page title' }) as HTMLTextAreaElement).value).toBe(
+    'Saved research draft',
   );
-  expect(store.getState().data?.revision).toBe(revision);
-  expect(store.getState().dirty).toBe(true);
-  expect(backend.save).not.toHaveBeenCalled();
   await user.click(
     within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', {
       name: 'Literature',
@@ -143,12 +145,12 @@ it('retains an unsaved note while switching language and keeps status values sta
   expect(store.getState().data?.papers[0].status).toBe('未读');
   await user.click(
     within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', {
-      name: 'Notes',
+      name: 'Docs',
     }),
   );
-  expect((screen.getByRole('textbox', { name: 'Note content' }) as HTMLTextAreaElement).value).toBe(
-    '原始材料 new draft',
-  );
+  expect(
+    ((await screen.findByRole('textbox', { name: 'Page title' })) as HTMLTextAreaElement).value,
+  ).toBe('Saved research draft');
 });
 
 it('receives a preference change from another window and restores it on mount', async () => {

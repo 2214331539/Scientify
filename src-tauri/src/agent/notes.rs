@@ -49,7 +49,7 @@ pub fn operate(
     let records = data["records"].as_array_mut().ok_or("笔记记录无效。")?;
     if tool == "scientify_list_notes" {
         return Ok(
-            json!({"notes":records.iter().filter(|n| n["project"] == project && n["deletedAt"].is_null()).map(|n| json!({"id":n["id"],"title":n["title"],"updatedAt":n["updatedAt"]})).collect::<Vec<_>>()}),
+            json!({"notes":records.iter().filter(|n| n["project"] == project && n["deletedAt"].is_null() && n["migratedTo"].is_null()).map(|n| json!({"id":n["id"],"title":n["title"],"updatedAt":n["updatedAt"]})).collect::<Vec<_>>()}),
         );
     }
     if tool == "scientify_create_note" {
@@ -66,7 +66,12 @@ pub fn operate(
     let id = args["id"].as_str().ok_or("缺少笔记标识。")?;
     let note = records
         .iter_mut()
-        .find(|n| n["project"] == project && n["id"] == id && n["deletedAt"].is_null())
+        .find(|n| {
+            n["project"] == project
+                && n["id"] == id
+                && n["deletedAt"].is_null()
+                && n["migratedTo"].is_null()
+        })
         .ok_or("笔记不存在或不属于当前项目。")?;
     if tool == "scientify_read_note" {
         if note["body"].as_str().unwrap_or_default().len() > 128 * 1024 {

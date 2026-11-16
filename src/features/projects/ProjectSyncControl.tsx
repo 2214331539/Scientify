@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { Cloud, CloudOff, RefreshCw, AlertCircle, UsersRound } from 'lucide-react';
 import { Modal } from '../../components/Modal';
@@ -10,7 +10,6 @@ import type { WorkspaceStore } from '../../stores/workspace';
 import {
   collaboration,
   canEditProject,
-  requestSignIn,
   requestProjectSync,
   type SyncConflict,
   type ConflictPreview,
@@ -69,11 +68,9 @@ export function ProjectSyncControl({
   const info = sync.info;
   const status = (() => {
     if (!sync.online) return t('离线');
-    if (info?.paused) return t('本机同步已关闭');
     if (sync.error) return t('同步失败');
     if (!sync.account) return t('正在检查同步…');
     if (!sync.account.authenticated) return t('需要登录');
-    if (!sync.account.enabled) return t('同步未启用');
     if (sync.syncing) return t('正在同步…');
     if (info?.lastError) return t('同步失败');
     if (info?.conflicts.length) return t('有冲突');
@@ -93,6 +90,19 @@ export function ProjectSyncControl({
       setBusy(false);
     }
   };
+  // The members are part of what the panel shows, not something to ask for.
+  const signedIn = !!sync.account?.authenticated;
+  useEffect(() => {
+    if (!open || !signedIn) return;
+    let alive = true;
+    void collaboration
+      .members(project.id)
+      .then((result) => alive && setMembers(result.members))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [open, signedIn, project.id]);
   const resolve = (choice: ConflictChoice) =>
     run(async () => {
       if (!comparison || blocked) return;
@@ -218,10 +228,6 @@ export function ProjectSyncControl({
                       ? new Date(info.lastSyncAt).toLocaleString(locale())
                       : t('尚未同步')}
                   </dd>
-                  <dt>{t('等待上传')}</dt>
-                  <dd>{info?.pending ?? '—'}</dd>
-                  <dt>{t('已跟踪内容')}</dt>
-                  <dd>{info?.tracked ?? '—'}</dd>
                 </dl>
                 {!!info?.skipped && (
                   <p role="status">
@@ -237,58 +243,6 @@ export function ProjectSyncControl({
                     })}
                   </p>
                 )}
-                <div className="sync-actions">
-                  <Button
-                    disabled={busy || !sync.online || !sync.account?.authenticated}
-                    onClick={() =>
-                      void run(async () =>
-                        setMembers((await collaboration.members(project.id)).members),
-                      )
-                    }
-                  >
-                    {t('查看成员')}
-                  </Button>
-                  {!sync.account?.authenticated ? (
-                    <Button onClick={requestSignIn}>{t('登录')}</Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      disabled={
-                        busy ||
-                        sync.syncing ||
-                        !sync.online ||
-                        !sync.account.enabled ||
-                        info?.paused
-                      }
-                      onClick={() => void sync.sync()}
-                    >
-                      {t('立即同步')}
-                    </Button>
-                  )}
-                  <Button
-                    disabled={busy || sync.syncing || !info}
-                    onClick={() =>
-                      void run(async () => {
-                        if (
-                          !info?.paused &&
-                          !(await confirmAction(
-                            t(
-                              '关闭此设备上此项目的同步？本机和云端资料都会保留，其他设备继续同步。',
-                            ),
-                          ))
-                        )
-                          return;
-                        await collaboration.setProjectSync(project.id, !!info?.paused);
-                        if (info?.paused) requestProjectSync(project.id);
-                      })
-                    }
-                  >
-                    {t(info?.paused ? '开启本机同步' : '关闭本机同步')}
-                  </Button>
-                </div>
-                <p className="muted">
-                  {t('同步开关只影响当前设备，不删除资料，也不改变团队成员权限。')}
-                </p>
                 {members && (
                   <section>
                     <h3>{t('成员')}</h3>

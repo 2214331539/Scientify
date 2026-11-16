@@ -165,7 +165,7 @@ it.each([
   ['restore', '恢复备份'],
   ['importWorkspace', '导入'],
 ] as const)(
-  '%s replaces an open saved note with the same ID and edits the replacement rather than the stale draft',
+  '%s replaces the workspace while the app is open and later saves start from the replacement',
   async (kind, action) => {
     const initial = emptyWorkspace();
     initial.projects.push({
@@ -227,18 +227,13 @@ it.each([
     const store = createWorkspaceStore(adapter);
     const user = userEvent.setup();
     render(<App store={store} />);
-    await user.click(
-      within(await screen.findByRole('complementary', { name: '全局辅助工具' })).getByRole(
-        'button',
-        { name: /同 ID 笔记/ },
-      ),
+    // The project's old note moves into documents as the project opens.
+    await waitFor(() =>
+      expect((disk.records[0] as { migratedTo?: string }).migratedTo).toBe('note-same-note'),
     );
-    expect((screen.getByRole('textbox', { name: '笔记正文' }) as HTMLTextAreaElement).value).toBe(
-      '恢复前的旧正文',
-    );
-    expect(store.getState().dirty).toBe(false);
+    await waitFor(() => expect(store.getState().dirty).toBe(false));
+    const savesBefore = save.mock.calls.length;
 
-    // Keep the note editor mounted behind the real data dialog while replacing its record.
     await user.click(screen.getByRole('button', { name: '设置' }));
     await user.click(screen.getByRole('button', { name: '数据与备份' }));
     await user.click(
@@ -254,21 +249,15 @@ it.each([
     expect(store.getState().data?.records[0].body).toBe('恢复后的权威正文');
     await user.click(screen.getByRole('button', { name: '关闭弹窗' }));
 
-    // Cache invalidation returns the dock to its list; reopening must use restored content.
-    expect(screen.queryByRole('textbox', { name: '笔记正文' })).toBeNull();
-    await user.click(
-      within(screen.getByRole('complementary', { name: '全局辅助工具' })).getByRole('button', {
-        name: /同 ID 笔记/,
-      }),
-    );
-    expect((screen.getByRole('textbox', { name: '笔记正文' }) as HTMLTextAreaElement).value).toBe(
-      '恢复后的权威正文',
-    );
-    await user.type(screen.getByRole('textbox', { name: '笔记正文' }), '，新的补充');
-    await user.click(screen.getByRole('button', { name: '保存' }));
-    await waitFor(() => expect(store.getState().dirty).toBe(false));
-    expect(save).toHaveBeenCalledOnce();
-    expect(disk.records[0]).toMatchObject({ id: 'same-note', body: '恢复后的权威正文，新的补充' });
-    expect(JSON.stringify(save.mock.calls)).not.toContain('恢复前的旧正文');
+    // The next save builds on the replacement.
+    await act(async () => {
+      await store.getState().update((data) => {
+        data.projects[0].question = '恢复之后的修改';
+      });
+    });
+    await waitFor(() => expect(save.mock.calls.length).toBeGreaterThan(savesBefore));
+    expect(disk.records[0]).toMatchObject({ id: 'same-note', body: '恢复后的权威正文' });
+    expect(disk.projects[0].question).toBe('恢复之后的修改');
+    expect(JSON.stringify(save.mock.calls.slice(savesBefore))).not.toContain('恢复前的旧正文');
   },
 );

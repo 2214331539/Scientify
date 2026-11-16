@@ -144,16 +144,6 @@ export async function reloadMembers(projectId: string) {
   cloudStore.setState((state) => ({ members: { ...state.members, [projectId]: members } }));
 }
 
-/** Sync one project now and show its new state. */
-export async function syncNow(projectId: string) {
-  try {
-    await collaboration.syncProject(projectId);
-  } finally {
-    const state = await collaboration.syncState(projectId).catch(() => undefined);
-    cloudStore.setState((current) => ({ sync: { ...current.sync, [projectId]: state } }));
-  }
-}
-
 /** A cloud project is a team project unless it only has its owner, me, and no local team marker. */
 export function isTeamCloudProject(
   remote: CollaborationProject,

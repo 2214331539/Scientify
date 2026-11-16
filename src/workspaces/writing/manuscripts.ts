@@ -47,6 +47,13 @@ export function manuscriptsOf(project: Project | undefined): Manuscript[] {
   });
 }
 
+/** Folders taken out of writing on purpose, so finding manuscripts does not bring them back. */
+function dismissedOf(project: Project | undefined): string[] {
+  const list = project?.manuscriptsDismissed;
+  return Array.isArray(list) ? list.filter((item): item is string => typeof item === 'string') : [];
+}
+const sameFolder = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
 /** Adds or replaces a manuscript in the project. */
 export async function saveManuscript(store: WorkspaceStore, projectId: string, next: Manuscript) {
   const ok = await store.getState().update((data) => {
@@ -54,6 +61,9 @@ export async function saveManuscript(store: WorkspaceStore, projectId: string, n
     if (!project) throw new Error(t('项目不存在'));
     const list = manuscriptsOf(project).filter((item) => item.id !== next.id);
     project.manuscripts = [...list, next];
+    const dismissed = dismissedOf(project);
+    if (dismissed.some((folder) => sameFolder(folder, next.folder)))
+      project.manuscriptsDismissed = dismissed.filter((folder) => !sameFolder(folder, next.folder));
   });
   if (!ok) throw new Error(store.getState().error || t('保存失败'));
 }
@@ -62,9 +72,97 @@ export async function saveManuscript(store: WorkspaceStore, projectId: string, n
 export async function removeManuscript(store: WorkspaceStore, projectId: string, id: string) {
   const ok = await store.getState().update((data) => {
     const project = data.projects.find((item) => item.id === projectId);
-    if (project) project.manuscripts = manuscriptsOf(project).filter((item) => item.id !== id);
+    if (!project) return;
+    const removed = manuscriptsOf(project).find((item) => item.id === id);
+    project.manuscripts = manuscriptsOf(project).filter((item) => item.id !== id);
+    if (removed) project.manuscriptsDismissed = [...dismissedOf(project), removed.folder];
   });
   if (!ok) throw new Error(store.getState().error || t('保存失败'));
+}
+
+export const manuscriptChoiceKey = (projectId: string) =>
+  `scientify.writing.manuscript.${projectId}`;
+
+/** The manuscript the writing page shows: the one picked last, else the first ('*' is the file view). */
+export function currentManuscript(project: Project | undefined): Manuscript | null {
+  const list = manuscriptsOf(project);
+  let choice = '';
+  try {
+    choice = (project && localStorage.getItem(manuscriptChoiceKey(project.id))) || '';
+  } catch {
+    /* Preferences are optional. */
+  }
+  return choice === '*' ? null : (list.find((item) => item.id === choice) ?? list[0] ?? null);
+}
+
+const NOT_MANUSCRIPTS = /^(\.|node_modules$|__pycache__$|venv$|env$|build$|dist$|target$)/i;
+
+/**
+ * LaTeX folders at the top of the project that are not manuscripts yet: a folder whose own main
+ * document has \documentclass (main.tex first). The writing page adds them by itself, so a paper
+ * the AI wrote or someone copied in shows up without a separate step.
+ */
+export async function findManuscripts(
+  backend: ResearchBackend,
+  project: Project,
+): Promise<Manuscript[]> {
+  const known = [...manuscriptsOf(project).map((item) => item.folder), ...dismissedOf(project)];
+  const folders = new Map<string, string[]>();
+  for (const file of await backend.listFiles(project.id)) {
+    const [folder, name, ...deeper] = file.path.split('/');
+    if (file.kind !== 'file' || deeper.length || !name || !/\.tex$/i.test(name)) continue;
+    if (NOT_MANUSCRIPTS.test(folder) || known.some((item) => sameFolder(item, folder))) continue;
+    folders.set(folder, [...(folders.get(folder) ?? []), name]);
+  }
+  const found: Manuscript[] = [];
+  for (const [folder, names] of folders) {
+    names.sort(
+      (a, b) =>
+        Number(b.toLowerCase() === 'main.tex') - Number(a.toLowerCase() === 'main.tex') ||
+        a.localeCompare(b),
+    );
+    for (const name of names.slice(0, 20)) {
+      const text = await backend
+        .readFile(project.id, `${folder}/${name}`)
+        .then((file) => file.content)
+        .catch(() => '');
+      if (!isMainDocument(text)) continue;
+      found.push({
+        id: crypto.randomUUID(),
+        name: folder,
+        folder,
+        main: name,
+        compiler: detectCompiler(text),
+        engine: 'auto',
+        autoCompile: true,
+        writePdf: false,
+      });
+      break;
+    }
+  }
+  return found;
+}
+
+/** Registers the LaTeX folders `findManuscripts` returns; folders added meanwhile are skipped. */
+export async function adoptManuscripts(
+  store: WorkspaceStore,
+  backend: ResearchBackend,
+  project: Project,
+): Promise<Manuscript[]> {
+  const found = await findManuscripts(backend, project);
+  if (!found.length) return [];
+  const added: Manuscript[] = [];
+  const ok = await store.getState().update((data) => {
+    added.length = 0;
+    const target = data.projects.find((item) => item.id === project.id);
+    if (!target) return;
+    const known = [...manuscriptsOf(target).map((item) => item.folder), ...dismissedOf(target)];
+    for (const item of found)
+      if (!known.some((folder) => sameFolder(folder, item.folder))) added.push(item);
+    if (added.length) target.manuscripts = [...manuscriptsOf(target), ...added];
+  });
+  if (!ok) throw new Error(store.getState().error || t('保存失败'));
+  return added;
 }
 
 export const join = (folder: string, path: string) => (folder ? `${folder}/${path}` : path);

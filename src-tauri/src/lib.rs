@@ -10,6 +10,7 @@ mod browser;
 mod collaboration;
 mod credentials;
 mod data_location;
+mod docs;
 mod translation_window;
 mod tray;
 mod webview_profile;
@@ -376,6 +377,16 @@ pub fn run() {
             writing::writing_import_zip,
             writing::writing_clone,
             writing::writing_export_source,
+            docs::docs_list,
+            docs::docs_read,
+            docs::docs_write,
+            docs::docs_purge,
+            docs::docs_search,
+            docs::docs_history,
+            docs::docs_merge,
+            docs::docs_export,
+            docs::docs_import,
+            docs::docs_agent_respond,
             research::research_import_pdf,
             research::research_read_pdf,
             reader::reader_outline,
@@ -427,6 +438,8 @@ pub fn run() {
             collaboration::collaboration_health,
             collaboration::collaboration_send_code,
             collaboration::collaboration_login,
+            collaboration::collaboration_sign_in,
+            collaboration::collaboration_account,
             collaboration::collaboration_logout,
             collaboration::collaboration_access_token,
             collaboration::collaboration_projects,

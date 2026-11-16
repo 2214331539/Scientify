@@ -7,7 +7,7 @@ import {
   FolderClosed,
   LayoutGrid,
   LogOut,
-  NotebookPen,
+  FileText,
   PenLine,
   Plus,
   Settings,
@@ -21,7 +21,7 @@ import { Button } from '../components/primitives';
 import { Menu, type MenuAnchor } from '../components/primitives/Menu';
 import { confirmAction } from '../components/prompts';
 import { t } from '../i18n';
-import { collaboration, collaborationStateEvent, requestSignIn } from '../platform/collaboration';
+import { collaboration, collaborationStateEvent } from '../platform/collaboration';
 import { browserCommand } from '../platform/browser-pane';
 import { maskPhone } from '../features/account/account';
 import { useCloud } from '../features/projects/cloud';
@@ -147,10 +147,10 @@ export function SidebarFooter({ onSettings }: { onSettings(section: SettingsSect
         aria-haspopup={signedIn ? 'menu' : undefined}
         aria-expanded={signedIn ? menu?.kind === 'account' : undefined}
         aria-label={signedIn ? t('账号 {phone}', { phone }) : t('登录')}
+        // Signed out, the window shows only the account page; the browser preview has no accounts.
+        disabled={!signedIn}
         onClick={(event) =>
-          signedIn
-            ? setMenu({ kind: 'account', anchor: anchorBelow(event.currentTarget, 'top') })
-            : requestSignIn()
+          setMenu({ kind: 'account', anchor: anchorBelow(event.currentTarget, 'top') })
         }
       >
         <span className="sf-avatar">
@@ -296,7 +296,7 @@ export function CenterNavigation({
 
 export const projectModules = [
   { id: 'literature', label: '文献', icon: BookOpen },
-  { id: 'notes', label: '笔记', icon: NotebookPen },
+  { id: 'notes', label: '文档', icon: FileText },
   { id: 'experiments', label: '实验', icon: FlaskConical },
   { id: 'writing', label: '写作', icon: PenLine },
 ] as const satisfies readonly { id: WorkspaceId; label: string; icon: unknown }[];

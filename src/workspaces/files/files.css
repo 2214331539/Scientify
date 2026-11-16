@@ -18,33 +18,65 @@
   padding: 0 6px;
   gap: 2px;
 }
+/* One tab is one rectangle: the name and its close button share the background. */
 .sf-file-tab {
   display: flex;
-  height: 100%;
+  align-items: center;
+  height: 28px;
   max-width: 240px;
   flex-shrink: 0;
   color: var(--sf-text-secondary);
-  min-height: 28px;
-  border-radius: 0;
+  border-radius: var(--sf-radius);
   font-size: 12px;
+  transition: background-color var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-file-tab:hover {
+  background: var(--sf-surface-hover);
 }
 .sf-file-tab.is-active {
-  background: var(--sf-surface-canvas);
+  background: var(--sf-surface-selected);
   color: var(--sf-text-primary);
 }
+.sf-file-tab > .sf-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
 .sf-file-tab > button[role='tab'] {
-  border-radius: 0;
+  height: 100%;
+  min-height: 0;
   white-space: nowrap;
   max-width: 210px;
-  padding-left: 12px;
+  padding: 0 2px 0 10px;
+}
+.sf-file-tab > button[role='tab']:focus-visible {
+  outline-offset: -2px;
 }
 .sf-file-tab > button > span:not(.sf-file-dirty) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sf-file-tab .sf-file-close {
-  padding: 0 6px;
-  border-radius: 0;
+.sf-file-tab > .sf-file-close {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin-right: 4px;
+  padding: 0;
+  border-radius: 4px;
+  opacity: 0;
+}
+.sf-file-tab:hover > .sf-file-close,
+.sf-file-tab.is-active > .sf-file-close,
+.sf-file-tab > .sf-file-close:focus-visible {
+  opacity: 1;
+}
+.sf-file-tab > .sf-file-close:hover:not(:disabled) {
+  background: var(--sf-surface-selected-hover);
+}
+.sf-file-tab > .sf-file-close svg {
+  width: 13px;
+  height: 13px;
 }
 .sf-file-dirty {
   font-size: 9px;

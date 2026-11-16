@@ -2346,22 +2346,13 @@
     "协作服务器用于同步项目成员、文献元数据、PDF、笔记和代码仓库。AI、Python 环境与实验运行仍保留在本机。",
     "The collaboration server syncs project members, literature metadata, PDFs, notes and code repositories. AI, Python environments and experiment runs stay local."
   ],
-  "服务器地址": ["服务器地址", "Server address"],
-  "启用项目协作": ["启用项目协作", "Enable project collaboration"],
   "当前阶段先保存服务器配置；远程登录和同步服务将在服务器接口接入后启用。": [
     "当前阶段先保存服务器配置；远程登录和同步服务将在服务器接口接入后启用。",
     "This stage saves the server configuration. Sign-in and remote sync will activate when the server API is connected."
   ],
-  "连接状态": ["连接状态", "Connection status"],
   "已启用，等待服务器连接": ["已启用，等待服务器连接", "Enabled, waiting for server connection"],
-  "未启用": ["未启用", "Disabled"],
   "待同步变更：{count}": ["待同步变更：{count}", "Pending changes: {count}"],
   "冲突：{count}": ["冲突：{count}", "Conflicts: {count}"],
-  "服务器地址会保存在本地，不会上传 API Key。": [
-    "服务器地址会保存在本地，不会上传 API Key。",
-    "The server address is stored locally. API keys are not uploaded."
-  ],
-  "保存协作设置": ["保存协作设置", "Save collaboration settings"],
   "协作设置只能在 Scientify 桌面应用中使用。": [
     "协作设置只能在 Scientify 桌面应用中使用。",
     "Collaboration settings are available in the Scientify desktop app."
@@ -2410,14 +2401,11 @@
   "远端变更待处理": ["远端变更待处理", "Remote change needs attention"],
   "文献变更": ["文献变更", "Literature change"],
   "打开文献页后重试": ["打开文献页后重试", "Retry by opening the literature page"],
-  "协作登录": ["协作登录", "Collaboration sign-in"],
   "手机号": ["手机号", "Mobile number"],
   "验证码": ["验证码", "Verification code"],
   "获取验证码": ["获取验证码", "Get code"],
   "退出登录": ["退出登录", "Sign out"],
-  "已登录：{phone}": ["已登录：{phone}", "Signed in: {phone}"],
   "已登录": ["已登录", "Signed in"],
-  "已启用，尚未登录": ["已启用，尚未登录", "Enabled, not signed in"],
   "协作项目": ["协作项目", "Collaboration projects"],
   "立即同步": ["立即同步", "Sync now"],
   "登录后还没有可加入的协作项目。": [
@@ -2642,8 +2630,6 @@
   "邀请": ["邀请", "Invite"],
   "成员列表会显示在这里。": ["成员列表会显示在这里。", "The member list will appear here."],
   "登录协作": ["登录协作", "Sign in to collaboration"],
-  "协作服务连接正常。": ["协作服务连接正常。", "Collaboration service is healthy."],
-  "检查连接": ["检查连接", "Check connection"],
   "应用远端变更": ["应用远端变更", "Apply remote changes"],
   "远端变更存在冲突": ["远端变更存在冲突", "Remote change has a conflict"],
   "远端代码变更": ["远端代码变更", "Remote code change"],
@@ -2659,31 +2645,6 @@
   "等待首次同步": ["等待首次同步", "Waiting for first sync"],
   "请输入手机号": ["请输入手机号", "Enter your phone number"],
   "6 位短信验证码": ["6 位短信验证码", "6-digit SMS code"],
-  "正在登录…": ["正在登录…", "Signing in…"],
-  "账号与协作数据在本机和服务端加密传输。": [
-    "账号与协作数据在本机和服务端加密传输。",
-    "Account and collaboration data are encrypted in transit."
-  ],
-  "同一账号，多端继续": ["同一账号，多端继续", "One account, continue anywhere"],
-  "让研究资料和团队进度自然流转": [
-    "让研究资料和团队进度自然流转",
-    "Keep research materials and team progress in sync"
-  ],
-  "多设备同步": ["多设备同步", "Multi-device sync"],
-  "在另一台电脑登录后取回协作项目与进度。": [
-    "在另一台电脑登录后取回协作项目与进度。",
-    "Sign in on another computer to restore collaboration projects and progress."
-  ],
-  "多人协同": ["多人协同", "Team collaboration"],
-  "按所有者、编辑者、审阅者和查看者分配权限。": [
-    "按所有者、编辑者、审阅者和查看者分配权限。",
-    "Assign owner, editor, reviewer and viewer permissions."
-  ],
-  "本地优先": ["本地优先", "Local-first"],
-  "断网时继续工作，恢复连接后自动合并变更。": [
-    "断网时继续工作，恢复连接后自动合并变更。",
-    "Keep working offline and merge changes when the connection returns."
-  ],
   "待注册 · {role}": ["待注册 · {role}", "Pending sign-up · {role}"],
   "云端项目自动同步": ["云端项目自动同步", "Cloud projects sync automatically"],
   "选择要同步的本机项目": ["选择要同步的本机项目", "Choose a local project to sync"],
@@ -2692,23 +2653,10 @@
     "Choose a local project to sync across devices"
   ],
   "开启多设备同步": ["开启多设备同步", "Sync across devices"],
-  "协作服务器在你的多台设备和项目成员之间同步云端项目：文献与笔记、代码文件、项目笔记、实验与运行记录。AI 对话、Python 环境与实验运行仍保留在本机。": [
-    "协作服务器在你的多台设备和项目成员之间同步云端项目：文献与笔记、代码文件、项目笔记、实验与运行记录。AI 对话、Python 环境与实验运行仍保留在本机。",
-    "The collaboration server keeps cloud projects the same on your devices and for project members: literature and notes, code files, project notes, experiments and run records. AI conversations, Python environments and experiment runs stay on this device."
-  ],
-  "登录后，云端项目会在打开时和每 30 秒自动同步，本机保存后也会尽快同步。": [
-    "登录后，云端项目会在打开时和每 30 秒自动同步，本机保存后也会尽快同步。",
-    "Once signed in, cloud projects sync when opened, every 30 seconds, and shortly after you save."
-  ],
-  "云端项目同步": ["云端项目同步", "Cloud project sync"],
   "上次同步：{time}": ["上次同步：{time}", "Last synced: {time}"],
   "尚未同步": ["尚未同步", "Not synced yet"],
   "文献文件夹：{path}": ["文献文件夹：{path}", "Literature folder: {path}"],
   "正在同步…": ["正在同步…", "Syncing…"],
-  "还没有云端项目。在“团队协作空间”中新建项目，或为本机项目开启多设备同步。": [
-    "还没有云端项目。在“团队协作空间”中新建项目，或为本机项目开启多设备同步。",
-    "No cloud projects yet. Create one in Team spaces, or turn on device sync for a local project."
-  ],
   "最近的同步冲突": ["最近的同步冲突", "Recent sync conflicts"],
   "两台设备改了同一内容时两份都会保留：远端版本沿用原名，本机版本另存为冲突副本。": [
     "两台设备改了同一内容时两份都会保留：远端版本沿用原名，本机版本另存为冲突副本。",
@@ -2737,10 +2685,6 @@
   ],
   "返回": ["返回", "Back"],
   "登录 Scientify": ["登录 Scientify", "Sign in to Scientify"],
-  "使用手机号登录。未注册的手机号验证后会自动创建账号。": [
-    "使用手机号登录。未注册的手机号验证后会自动创建账号。",
-    "Sign in with your phone number. A new number gets an account once it is verified."
-  ],
   "请输入正确的 11 位手机号。": [
     "请输入正确的 11 位手机号。",
     "Enter a valid 11-digit phone number."
@@ -2748,11 +2692,6 @@
   "{seconds} 秒后重发": ["{seconds} 秒后重发", "Resend in {seconds}s"],
   "重新获取": ["重新获取", "Resend code"],
   "验证码已发送至 {phone}": ["验证码已发送至 {phone}", "Code sent to {phone}"],
-  "使用自托管协作服务": ["使用自托管协作服务", "Use a self-hosted collaboration service"],
-  "登录成功后，这台设备会使用该地址。": [
-    "登录成功后，这台设备会使用该地址。",
-    "This device uses the address once you sign in."
-  ],
   "无法连接协作服务，请检查网络后重试。": [
     "无法连接协作服务，请检查网络后重试。",
     "Cannot reach the collaboration service. Check your network and try again."
@@ -2781,10 +2720,6 @@
   "未注册的手机号验证后会自动创建账号。": [
     "未注册的手机号验证后会自动创建账号。",
     "A new number gets an account once it is verified."
-  ],
-  "尚未登录。登录后，云端项目会在你的设备之间同步。": [
-    "尚未登录。登录后，云端项目会在你的设备之间同步。",
-    "Not signed in. Once you sign in, cloud projects sync across your devices."
   ],
   "手机号格式无效。": ["手机号格式无效。", "Invalid phone number."],
   "验证码不正确。": ["验证码不正确。", "The verification code is incorrect."],
@@ -2831,7 +2766,6 @@
   "稍后关联": ["稍后关联", "Link later"],
   "选择已有文件夹": ["选择已有文件夹", "Choose an existing folder"],
   "在多台设备上同步": ["在多台设备上同步", "Sync across devices"],
-  "登录后可用。": ["登录后可用。", "Available after signing in."],
   "上一步": ["上一步", "Back"],
   "正在创建…": ["正在创建…", "Creating…"],
   "创建团队项目": ["创建团队项目", "Create team project"],
@@ -2839,7 +2773,6 @@
   "需要登录": ["需要登录", "Sign in required"],
   "需要联网": ["需要联网", "Offline"],
   "编辑信息…": ["编辑信息…", "Edit details…"],
-  "在多台设备上同步…": ["在多台设备上同步…", "Sync across devices…"],
   "共享给团队…": ["共享给团队…", "Share with a team…"],
   "在 Finder 中显示文献文件夹": ["在 Finder 中显示文献文件夹", "Show literature folder in Finder"],
   "在资源管理器中显示文献文件夹": [
@@ -2850,10 +2783,6 @@
   "删除“{name}”？": ["删除“{name}”？", "Delete “{name}”?"],
   "改为归档": ["改为归档", "Archive instead"],
   "项目没有保存，请重试。": ["项目没有保存，请重试。", "The project was not saved. Try again."],
-  "会同步": ["会同步", "Synced"],
-  "不会同步": ["不会同步", "Not synced"],
-  "正在开启…": ["正在开启…", "Turning on…"],
-  "开始同步": ["开始同步", "Start syncing"],
   "角色": ["角色", "Role"],
   "移除 {phone}": ["移除 {phone}", "Remove {phone}"],
   "共享到团队": ["共享到团队", "Share with a team"],
@@ -2876,7 +2805,6 @@
   "运行完成": ["运行完成", "Run finished"],
   "你已加入「{name}」": ["你已加入「{name}」", "You joined “{name}”"],
   "所有者 {phone}": ["所有者 {phone}", "Owner {phone}"],
-  "下载并打开": ["下载并打开", "Download and open"],
   "知道了": ["知道了", "Dismiss"],
   "「{name}」有 {count} 处同步冲突": [
     "「{name}」有 {count} 处同步冲突",
@@ -2902,13 +2830,10 @@
   "书架视图": ["书架视图", "Shelf view"],
   "没有已归档的项目": ["没有已归档的项目", "No archived projects"],
   "项目书架": ["项目书架", "Project shelf"],
-  "下载“{name}”": ["下载“{name}”", "Download “{name}”"],
-  "正在下载…": ["正在下载…", "Downloading…"],
   "未下载 · 在其他设备上": ["未下载 · 在其他设备上", "Not downloaded · On another device"],
   "同步": ["同步", "Sync"],
   "笔记 {notes} · 运行 {runs}": ["笔记 {notes} · 运行 {runs}", "{notes} notes · {runs} runs"],
   "仅本机": ["仅本机", "This computer only"],
-  "未下载": ["未下载", "Not downloaded"],
   "排序方式": ["排序方式", "Sort by"],
   "有需要处理的事项": ["有需要处理的事项", "Needs attention"],
   "无法连接协作服务": ["无法连接协作服务", "Cannot reach the collaboration service"],
@@ -2928,13 +2853,6 @@
   "登录后查看团队项目": ["登录后查看团队项目", "Sign in to see team projects"],
   "搜索团队项目": ["搜索团队项目", "Search team projects"],
   "共享本机项目": ["共享本机项目", "Share a local project"],
-  "无法连接协作服务，显示的是 {time} 的列表。": [
-    "无法连接协作服务，显示的是 {time} 的列表。",
-    "Cannot reach the collaboration service. Showing the list from {time}."
-  ],
-  "无法连接协作服务。": ["无法连接协作服务。", "Cannot reach the collaboration service."],
-  "正在刷新…": ["正在刷新…", "Refreshing…"],
-  "已连接协作服务 · {time}刷新": ["已连接协作服务 · {time}刷新", "Connected · Refreshed {time}"],
   "还没有团队项目": ["还没有团队项目", "No team projects yet"],
   "筛选团队项目": ["筛选团队项目", "Filter team projects"],
   "我创建的": ["我创建的", "Created by me"],
@@ -2944,7 +2862,6 @@
   "本机": ["本机", "This computer"],
   "查看“{name}”": ["查看“{name}”", "View “{name}”"],
   "新加入": ["新加入", "New"],
-  "下载": ["下载", "Download"],
   "没有符合条件的团队项目": ["没有符合条件的团队项目", "No team projects match"],
   "项目详情": ["项目详情", "Project details"],
   "你是所有者": ["你是所有者", "You are the owner"],
@@ -2965,8 +2882,6 @@
   "还没有同步": ["还没有同步", "Not synced yet"],
   "{count} 处": ["{count} 处", "{count}"],
   "错误": ["错误", "Error"],
-  "还没有下载到这台电脑。": ["还没有下载到这台电脑。", "Not downloaded to this computer yet."],
-  "同步完成。": ["同步完成。", "Sync complete."],
   "已退出项目。": ["已退出项目。", "You left the project."],
   "退出项目…": ["退出项目…", "Leave project…"],
   "邀请成员…": ["邀请成员…", "Invite members…"],
@@ -2990,21 +2905,11 @@
     "未注册的号码会在对方首次登录后加入。",
     "Numbers without an account join on their first sign-in."
   ],
-  "同步到你登录的其他设备": ["同步到你登录的其他设备", "Syncs to your other signed-in devices"],
   "将删除笔记 {notes} 条、运行记录 {runs} 条、AI 对话 {chats} 个。": [
     "将删除笔记 {notes} 条、运行记录 {runs} 条、AI 对话 {chats} 个。",
     "This deletes {notes} notes, {runs} runs and {chats} AI conversations."
   ],
   "磁盘上的文件保留。": ["磁盘上的文件保留。", "Files on disk are kept."],
-  "文献、笔记、代码和运行记录": ["文献、笔记、代码和运行记录", "Literature, notes, code and runs"],
-  "AI 对话、模型密钥、终端和 Python 环境": [
-    "AI 对话、模型密钥、终端和 Python 环境",
-    "AI conversations, model keys, terminals and Python environments"
-  ],
-  "其他设备登录同一账号后即可下载。": [
-    "其他设备登录同一账号后即可下载。",
-    "Your other devices can download it after signing in."
-  ],
   "共享后项目移到“团队项目”，你是所有者。": [
     "共享后项目移到“团队项目”，你是所有者。",
     "The project moves to Team projects, with you as owner."
@@ -3014,10 +2919,6 @@
     "This computer's version was kept as a conflict copy"
   ],
   "还没有最近的内容": ["还没有最近的内容", "Nothing recent yet"],
-  "首次打开会下载整个项目。": [
-    "首次打开会下载整个项目。",
-    "The whole project downloads the first time you open it."
-  ],
   "移除 {phone}？对方将不再同步这个项目。": [
     "移除 {phone}？对方将不再同步这个项目。",
     "Remove {phone}? They will stop syncing this project."
@@ -3145,10 +3046,6 @@
     "保留所选版本并移除另一份冲突副本？此更改将在下次同步时上传。",
     "Keep the selected version and remove the other conflict copy? This change will be uploaded on the next sync."
   ],
-  "关闭此设备上此项目的同步？本机和云端资料都会保留，其他设备继续同步。": [
-    "关闭此设备上此项目的同步？本机和云端资料都会保留，其他设备继续同步。",
-    "Turn off sync for this project on this device? Local and cloud content is kept. Other devices continue syncing."
-  ],
   "内容较长，仅预览前 256 KB；保留操作使用完整文件。": [
     "内容较长，仅预览前 256 KB；保留操作使用完整文件。",
     "Preview limited to the first 256 KB. Resolution uses the complete file."
@@ -3158,13 +3055,7 @@
     "右侧是当前已接收的远端版本；如果内容再次变化，需要重新打开对比。",
     "The right side shows the received remote version. Reopen the comparison if either version changes."
   ],
-  "同步开关只影响当前设备，不删除资料，也不改变团队成员权限。": [
-    "同步开关只影响当前设备，不删除资料，也不改变团队成员权限。",
-    "This switch affects only this device. It does not delete content or change member permissions."
-  ],
-  "同步未启用": ["同步未启用", "Sync disabled"],
   "审阅者 · 仅可编辑项目笔记": ["审阅者 · 仅可编辑项目笔记", "Reviewer · Project notes only"],
-  "已跟踪内容": ["已跟踪内容", "Tracked items"],
   "当前角色只允许阅读文献。": [
     "当前角色只允许阅读文献。",
     "Your role allows reading literature only."
@@ -3188,12 +3079,10 @@
   "待处理冲突": ["待处理冲突", "Unresolved conflicts"],
   "有冲突": ["有冲突", "Conflicts"],
   "本机冲突副本": ["本机冲突副本", "Local conflict copy"],
-  "本机同步已关闭": ["本机同步已关闭", "Sync off on this device"],
   "查看对比": ["查看对比", "Compare versions"],
   "查看者 · 只读": ["查看者 · 只读", "Viewer · Read only"],
   "此版本不存在": ["此版本不存在", "This version does not exist"],
   "没有待处理冲突": ["没有待处理冲突", "No unresolved conflicts"],
-  "等待上传": ["等待上传", "Pending upload"],
   "等待同步": ["等待同步", "Pending sync"],
   "请先保存草稿并结束此项目的 AI 任务，再处理冲突。": [
     "请先保存草稿并结束此项目的 AI 任务，再处理冲突。",
@@ -3203,13 +3092,10 @@
   "远端版本": ["远端版本", "Remote version"],
   "项目同步": ["项目同步", "Project sync"],
   "项目同步：{status}": ["项目同步：{status}", "Project sync: {status}"],
-  "开启本机同步": ["开启本机同步", "Enable sync on this device"],
-  "关闭本机同步": ["关闭本机同步", "Turn off sync on this device"],
   "保留本机": ["保留本机", "Keep local"],
   "保留远端": ["保留远端", "Keep remote"],
   "两份都保留": ["两份都保留", "Keep both"],
   "正在检查同步…": ["正在检查同步…", "Checking sync…"],
-  "查看成员": ["查看成员", "View members"],
   "待注册": ["待注册", "Registration pending"],
   "部分内容未同步": ["部分内容未同步", "Some items were not synced"],
   "上次同步跳过 {count} 项（例如超过 200 MB 的文件）。": [
@@ -3240,8 +3126,6 @@
     "在项目里显示或收起右侧的 AI 助手。",
     "Show or hide the AI assistant on the right inside a project."
   ],
-  "在其他设备上": ["在其他设备上", "On other devices"],
-  "下载到这台电脑": ["下载到这台电脑", "Download to this computer"],
   "全部论文": ["全部论文", "All papers"],
   "还没有打开文献文件夹": ["还没有打开文献文件夹", "No library folder is open"],
   "没有符合条件的文献": ["没有符合条件的文献", "No matching documents"],
@@ -3721,5 +3605,272 @@
   ],
   "以后都用内置引擎": ["以后都用内置引擎", "Always use the built-in engine"],
   "用内置引擎下载并编译": ["用内置引擎下载并编译", "Download with the built-in engine and compile"],
-  "重新下载": ["重新下载", "Download again"]
+  "重新下载": ["重新下载", "Download again"],
+  "还没有云端项目。本机的项目会自动同步到这个账号。": [
+    "还没有云端项目。本机的项目会自动同步到这个账号。",
+    "No cloud projects yet. Projects on this computer sync to this account automatically."
+  ],
+  "密码需要 8–64 位。": ["密码需要 8–64 位。", "The password needs 8–64 characters."],
+  "密码需要同时包含字母和数字。": [
+    "密码需要同时包含字母和数字。",
+    "The password needs both letters and digits."
+  ],
+  "两次输入的密码不一致。": ["两次输入的密码不一致。", "The passwords do not match."],
+  "注册 Scientify": ["注册 Scientify", "Sign up for Scientify"],
+  "找回密码": ["找回密码", "Reset password"],
+  "注册": ["注册", "Sign up"],
+  "重置密码并登录": ["重置密码并登录", "Reset password and sign in"],
+  "登录方式": ["登录方式", "Sign-in method"],
+  "验证码登录": ["验证码登录", "SMS code"],
+  "密码登录": ["密码登录", "Password"],
+  "用手机号注册，并设置登录密码。": [
+    "用手机号注册，并设置登录密码。",
+    "Sign up with your phone number and set a password."
+  ],
+  "验证手机号后设置新密码。": [
+    "验证手机号后设置新密码。",
+    "Verify your phone number, then set a new password."
+  ],
+  "登录需要在 Scientify 桌面应用中使用。": [
+    "登录需要在 Scientify 桌面应用中使用。",
+    "Signing in needs the Scientify desktop app."
+  ],
+  "新密码": ["新密码", "New password"],
+  "密码": ["密码", "Password"],
+  "忘记密码？": ["忘记密码？", "Forgot password?"],
+  "请输入密码": ["请输入密码", "Enter your password"],
+  "8–64 位，包含字母和数字": ["8–64 位，包含字母和数字", "8–64 characters with letters and digits"],
+  "隐藏密码": ["隐藏密码", "Hide password"],
+  "显示密码": ["显示密码", "Show password"],
+  "确认密码": ["确认密码", "Confirm password"],
+  "再输入一次": ["再输入一次", "Enter it again"],
+  "还没有账号？": ["还没有账号？", "No account yet?"],
+  "已有账号？": ["已有账号？", "Already have an account?"],
+  "返回登录": ["返回登录", "Back to sign in"],
+  "当前离线，恢复网络后会自动同步。": [
+    "当前离线，恢复网络后会自动同步。",
+    "Offline. Syncing resumes when the connection is back."
+  ],
+  "正在同步到这台电脑。": ["正在同步到这台电脑。", "Syncing to this computer."],
+  "退出登录？这台电脑上的资料会保留，重新登录后继续同步。": [
+    "退出登录？这台电脑上的资料会保留，重新登录后继续同步。",
+    "Sign out? Your files stay on this computer and sync again when you sign back in."
+  ],
+  "已设置": ["已设置", "Set"],
+  "未设置": ["未设置", "Not set"],
+  "设置密码": ["设置密码", "Set password"],
+  "修改密码": ["修改密码", "Change password"],
+  "请输入验证码。": ["请输入验证码。", "Enter the verification code."],
+  "验证码会发送到 {phone}。": ["验证码会发送到 {phone}。", "The code goes to {phone}."],
+  "验证码会发送到 {phone}。改密码后，其他设备需要重新登录。": [
+    "验证码会发送到 {phone}。改密码后，其他设备需要重新登录。",
+    "The code goes to {phone}. After the change, your other computers need to sign in again."
+  ],
+  "还没有团队项目。在“团队项目”里新建，或把自己的项目共享给团队。": [
+    "还没有团队项目。在“团队项目”里新建，或把自己的项目共享给团队。",
+    "No team projects yet. Create one under Team projects, or share one of your projects."
+  ],
+  "你是{role}": ["你是{role}", "You are {role}"],
+  "待加入": ["待加入", "Invited"],
+  "正在载入成员…": ["正在载入成员…", "Loading members…"],
+  "密码错误次数过多，请 15 分钟后再试，或用验证码登录。": [
+    "密码错误次数过多，请 15 分钟后再试，或用验证码登录。",
+    "Too many wrong passwords. Try again in 15 minutes, or sign in with an SMS code."
+  ],
+  "这个账号还没有设置密码，请用验证码登录。": [
+    "这个账号还没有设置密码，请用验证码登录。",
+    "This account has no password yet. Sign in with an SMS code."
+  ],
+  "手机号或密码不正确。": ["手机号或密码不正确。", "The phone number or password is wrong."],
+  "这个手机号已经注册，请直接登录。": [
+    "这个手机号已经注册，请直接登录。",
+    "This number is already registered. Please sign in."
+  ],
+  "这个手机号还没有注册。": ["这个手机号还没有注册。", "This number is not registered yet."],
+  "密码需要 8–64 位，同时包含字母和数字。": [
+    "密码需要 8–64 位，同时包含字母和数字。",
+    "The password needs 8–64 characters with both letters and digits."
+  ],
+  "登录方式无效。": ["登录方式无效。", "This sign-in method is not supported."],
+  "文档尚未保存，请重试后退出。": [
+    "文档尚未保存，请重试后退出。",
+    "Documents are not saved yet. Try again before quitting."
+  ],
+  "文档": ["文档", "Docs"],
+  "请求新建文档": ["请求新建文档", "Wants to create a document"],
+  "请求修改文档": ["请求修改文档", "Wants to edit a document"],
+  "无标题": ["无标题", "Untitled"],
+  "搜索项目、文献和文档": ["搜索项目、文献和文档", "Search projects, papers and docs"],
+  "搜索论文、文档，或跳转": ["搜索论文、文档，或跳转", "Search papers and docs, or jump"],
+  "搜索项目、论文和文档": ["搜索项目、论文和文档", "Search projects, papers and docs"],
+  "最近的文档": ["最近的文档", "Recent docs"],
+  "删除的页面连同子页面保留 {days} 天。": [
+    "删除的页面连同子页面保留 {days} 天。",
+    "Deleted pages and their subpages are kept for {days} days."
+  ],
+  "含 {count} 个子页面": ["含 {count} 个子页面", "with {count} subpages"],
+  "彻底删除“{title}”？之后不能恢复。": [
+    "彻底删除“{title}”？之后不能恢复。",
+    "Delete “{title}” for good? This cannot be undone."
+  ],
+  "把“{title}”移动到": ["把“{title}”移动到", "Move “{title}” to"],
+  "搜索页面": ["搜索页面", "Search pages"],
+  "顶层": ["顶层", "Top level"],
+  "历史记录": ["历史记录", "History"],
+  "这台电脑每 10 分钟有修改时留一个版本，保留 30 天。": [
+    "这台电脑每 10 分钟有修改时留一个版本，保留 30 天。",
+    "This computer keeps a version every 10 minutes while a page changes, for 30 days."
+  ],
+  "还没有历史版本": ["还没有历史版本", "No versions yet"],
+  "恢复到这个版本？当前内容会先留一个版本。": [
+    "恢复到这个版本？当前内容会先留一个版本。",
+    "Restore this version? The current content is kept as a version first."
+  ],
+  "没有可以插入的内容": ["没有可以插入的内容", "Nothing to insert"],
+  "选择图标": ["选择图标", "Choose an icon"],
+  "移除图标": ["移除图标", "Remove icon"],
+  "收起": ["收起", "Collapse"],
+  "展开": ["展开", "Expand"],
+  "页面名称": ["页面名称", "Page name"],
+  "更多": ["更多", "More"],
+  "新建子页面": ["新建子页面", "New subpage"],
+  "搜索文档": ["搜索文档", "Search docs"],
+  "搜索结果": ["搜索结果", "Search results"],
+  "没有找到": ["没有找到", "Nothing found"],
+  "最近": ["最近", "Recent"],
+  "页面": ["页面", "Pages"],
+  "新建页面": ["新建页面", "New page"],
+  "还没有页面": ["还没有页面", "No pages yet"],
+  "页面菜单": ["页面菜单", "Page menu"],
+  "从模板新建…": ["从模板新建…", "New from template…"],
+  "导入 Markdown…": ["导入 Markdown…", "Import Markdown…"],
+  "已移到回收站（含 {count} 个子页面）": [
+    "已移到回收站（含 {count} 个子页面）",
+    "Moved to the recycle bin (with {count} subpages)"
+  ],
+  "插入项目文件": ["插入项目文件", "Insert a project file"],
+  "插入论文笔记": ["插入论文笔记", "Insert paper notes"],
+  "插入论文": ["插入论文", "Insert a paper"],
+  "从模板新建": ["从模板新建", "New from template"],
+  "导入 Markdown": ["导入 Markdown", "Import Markdown"],
+  "最近编辑": ["最近编辑", "Recently edited"],
+  "还没有文档。新建一页，或从模板开始。": [
+    "还没有文档。新建一页，或从模板开始。",
+    "No documents yet. Create a page, or start from a template."
+  ],
+  "尾号 {digits}": ["尾号 {digits}", "…{digits}"],
+  "返回页面列表": ["返回页面列表", "Back to pages"],
+  "页面路径": ["页面路径", "Page path"],
+  "更换图标": ["更换图标", "Change icon"],
+  "添加图标": ["添加图标", "Add icon"],
+  "页面标题": ["页面标题", "Page title"],
+  "目录": ["目录", "Contents"],
+  "标准宽度": ["标准宽度", "Standard width"],
+  "全宽": ["全宽", "Full width"],
+  "导出 Markdown": ["导出 Markdown", "Export Markdown"],
+  "导出 PDF": ["导出 PDF", "Export PDF"],
+  "移动到…": ["移动到…", "Move to…"],
+  "创建副本": ["创建副本", "Duplicate"],
+  "把“{title}”和它的子页面移到回收站？": [
+    "把“{title}”和它的子页面移到回收站？",
+    "Move “{title}” and its subpages to the recycle bin?"
+  ],
+  "来源：": ["来源：", "Sources: "],
+  "以前的笔记都在这里。": ["以前的笔记都在这里。", "Your earlier notes are here."],
+  "参会": ["参会", "Attendees"],
+  "议题": ["议题", "Agenda"],
+  "结论": ["结论", "Conclusions"],
+  "待办": ["待办", "To-do"],
+  "目的：": ["目的：", "Goal: "],
+  "结果与分析": ["结果与分析", "Results and analysis"],
+  "问题": ["问题", "Question"],
+  "方法对比": ["方法对比", "Methods compared"],
+  "方法": ["方法", "Method"],
+  "数据": ["数据", "Data"],
+  "本周进展": ["本周进展", "This week"],
+  "遇到的问题": ["遇到的问题", "Problems"],
+  "下周计划": ["下周计划", "Next week"],
+  "{month} 月 {day} 日组会": ["{month} 月 {day} 日组会", "Group meeting {month}/{day}"],
+  "不能把页面移到它自己的子页面里。": [
+    "不能把页面移到它自己的子页面里。",
+    "A page cannot move into its own subpage."
+  ],
+  "{title} 副本": ["{title} 副本", "{title} copy"],
+  "输入链接地址": ["输入链接地址", "Link address"],
+  "在下方插入": ["在下方插入", "Insert below"],
+  "拖动移动，点击打开菜单": ["拖动移动，点击打开菜单", "Drag to move, click for the menu"],
+  "块菜单": ["块菜单", "Block menu"],
+  "转换成": ["转换成", "Turn into"],
+  "颜色": ["颜色", "Color"],
+  "问 AI": ["问 AI", "Ask AI"],
+  "文字颜色": ["文字颜色", "Text color"],
+  "背景色": ["背景色", "Background"],
+  "编辑公式（LaTeX）": ["编辑公式（LaTeX）", "Edit formula (LaTeX)"],
+  "折叠块标题": ["折叠块标题", "Toggle title"],
+  "输入 / 插入块，@ 提及成员或页面": [
+    "输入 / 插入块，@ 提及成员或页面",
+    "Type / for blocks, @ for members or pages"
+  ],
+  "输入 LaTeX 公式": ["输入 LaTeX 公式", "Enter a LaTeX formula"],
+  "没有匹配的块": ["没有匹配的块", "No matching block"],
+  "没有找到成员或页面": ["没有找到成员或页面", "No member or page found"],
+  "没有找到页面": ["没有找到页面", "No page found"],
+  "同步时两边都改了上面这一块，这里是{from}": [
+    "同步时两边都改了上面这一块，这里是{from}",
+    "Both sides changed the block above while syncing; this is {from}"
+  ],
+  "另一份": ["另一份", "the other copy"],
+  "用这一版": ["用这一版", "Use this version"],
+  "用上面那版": ["用上面那版", "Use the one above"],
+  "两版都留": ["两版都留", "Keep both"],
+  "图片不在这台电脑上": ["图片不在这台电脑上", "The image is not on this computer"],
+  "正在读取图片…": ["正在读取图片…", "Loading image…"],
+  "添加说明": ["添加说明", "Add a caption"],
+  "论文笔记：{title}": ["论文笔记：{title}", "Paper notes: {title}"],
+  "这篇论文还没有笔记": ["这篇论文还没有笔记", "This paper has no notes yet"],
+  "代码语言": ["代码语言", "Code language"],
+  "复制代码": ["复制代码", "Copy code"],
+  "这台电脑上的版本": ["这台电脑上的版本", "the version on this computer"],
+  "空白页": ["空白页", "Blank page"],
+  "从空白开始": ["从空白开始", "Start from scratch"],
+  "组会纪要": ["组会纪要", "Meeting notes"],
+  "参会、议题、结论、待办": ["参会、议题、结论、待办", "Attendees, agenda, conclusions, to-dos"],
+  "实验记录": ["实验记录", "Experiment log"],
+  "目的、设置、运行、结果": ["目的、设置、运行、结果", "Goal, setup, runs, results"],
+  "论文调研": ["论文调研", "Literature survey"],
+  "问题、方法对比、论文": ["问题、方法对比、论文", "Question, methods compared, papers"],
+  "周报": ["周报", "Weekly report"],
+  "进展、问题、下周计划": ["进展、问题、下周计划", "Progress, problems, next week"],
+  "高亮块": ["高亮块", "Callout"],
+  "代码": ["代码", "Code"],
+  "下划线": ["下划线", "Underline"],
+  "删除线": ["删除线", "Strikethrough"],
+  "行内代码": ["行内代码", "Inline code"],
+  "灰色": ["灰色", "Gray"],
+  "红色": ["红色", "Red"],
+  "橙色": ["橙色", "Orange"],
+  "黄色": ["黄色", "Yellow"],
+  "绿色": ["绿色", "Green"],
+  "蓝色": ["蓝色", "Blue"],
+  "紫色": ["紫色", "Purple"],
+  "无背景": ["无背景", "No background"],
+  "灰色背景": ["灰色背景", "Gray background"],
+  "红色背景": ["红色背景", "Red background"],
+  "黄色背景": ["黄色背景", "Yellow background"],
+  "绿色背景": ["绿色背景", "Green background"],
+  "蓝色背景": ["蓝色背景", "Blue background"],
+  "研究": ["研究", "Research"],
+  "基础": ["基础", "Basic"],
+  "论文": ["论文", "Paper"],
+  "标题 1": ["标题 1", "Heading 1"],
+  "标题 2": ["标题 2", "Heading 2"],
+  "标题 3": ["标题 3", "Heading 3"],
+  "无序列表": ["无序列表", "Bulleted list"],
+  "有序列表": ["有序列表", "Numbered list"],
+  "折叠块": ["折叠块", "Toggle"],
+  "公式": ["公式", "Formula"],
+  "图片": ["图片", "Image"],
+  "链接到页面": ["链接到页面", "Link to page"],
+  "子页面": ["子页面", "Subpage"],
+  "笔记": ["笔记", "Notes"]
 }

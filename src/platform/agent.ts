@@ -9,6 +9,14 @@ import type { AIProtocol } from '../domain/workspace';
 /** The inbox domain belongs to chats outside any project. */
 export type AgentDomain = 'literature' | 'code' | 'inbox';
 export type PermissionMode = 'ask' | 'full';
+/** Where a turn is sent from; the native side turns it into the folder the turn works in. */
+export type TurnPlace = {
+  page: WorkspaceId;
+  experimentId?: string;
+  manuscriptId?: string;
+  /** The open file, as the page names it. */
+  path?: string;
+};
 export interface AgentSkillRef {
   name: string;
   path: string;
@@ -116,6 +124,7 @@ export const APPROVAL_METHODS = [
   'item/permissions/requestApproval',
   'scientify/git/requestApproval',
   'scientify/notes/requestApproval',
+  'scientify/docs/requestApproval',
 ] as const;
 
 export type ApprovalMethod = (typeof APPROVAL_METHODS)[number];
@@ -127,6 +136,7 @@ export type ApprovalRequest = Extract<AgentEvent, { kind: 'request' }> & {
 export const HOST_APPROVAL_METHODS: ReadonlySet<ApprovalMethod> = new Set([
   'scientify/git/requestApproval',
   'scientify/notes/requestApproval',
+  'scientify/docs/requestApproval',
 ]);
 
 export function isApprovalRequest(event: AgentEvent): event is ApprovalRequest {
@@ -198,6 +208,7 @@ export interface AgentBackend {
     images?: { mimeType: string; data: string }[];
     permission?: PermissionMode;
     skills?: AgentSkillRef[];
+    place?: TurnPlace;
   }): Promise<TurnHandle>;
   steer?(request: {
     projectId: string;

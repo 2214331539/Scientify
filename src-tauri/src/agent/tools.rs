@@ -21,7 +21,11 @@ pub fn instructions(
     }
     if matches!(domain, "literature" | "code" | "inbox") {
         text.push_str("用户附加的文件已保存在本机，<attached-file> 里的 path 是完整路径，按需读取全文：PDF 用 scientify_read_paper（path 填这个完整路径），其他文件用你自己的方式读取。");
-        text.push_str("用户要求把内容保存为笔记时，新建用 scientify_create_note，修改已有笔记先 scientify_read_note 再 scientify_write_note；不在磁盘上另写 Markdown 文件代替项目笔记。本会话没有 scientify_create_note 时，请用户新建会话。");
+    }
+    if domain == "inbox" {
+        text.push_str("用户要求把内容保存为笔记时，新建用 scientify_create_note，修改已有笔记先 scientify_read_note 再 scientify_write_note；不在磁盘上另写 Markdown 文件代替笔记。");
+    } else if matches!(domain, "literature" | "code") {
+        text.push_str("项目文档（团队知识库，原来的项目笔记）用 scientify_list_docs、scientify_read_doc、scientify_create_doc、scientify_update_doc 读写，内容是 Markdown，[[页面标题]] 链接其他页面；用户要求整理、保存成文档或修改某页时用它们，不在磁盘上另写 Markdown 文件代替文档。改已有页面先读取，再按块替换或插入。本会话没有这些工具时（旧对话只有 scientify_create_note 等笔记工具），请用户新建会话。");
     }
     if paper_tools {
         text.push_str("读 PDF 优先用 scientify_read_paper，它更快，也不产生文件；它读不了时（比如扫描件）可以用你自己的办法，但不要往文献目录里写临时文件。<current-material> 里的“论文文件”是当前打开的论文，可直接传给 scientify_read_paper；其他论文先用 scientify_list_papers 查看，未打开的论文也能读取。scientify_read_paper 每次最多 8 页，继续时传返回的 nextCursor 页码、页内偏移和 expectedVersion。用户问整篇论文（总结、方法、实验、结论、贡献、局限等）时，从第 1 页连续读到 truncated 为 false 再回答，不能只根据当前页作答；只问某个细节时可以先用 scientify_search_paper 定位。truncated 表示未读完，不得假称读取或检索了全文。");
@@ -68,7 +72,12 @@ pub fn specifications_for(domain: &str) -> Value {
     };
     if matches!(domain, "literature" | "code" | "inbox") {
         tools.extend(papers::specifications());
+    }
+    // Project chats keep documents; inbox chats, outside any project, keep notes.
+    if domain == "inbox" {
         tools.extend(notes::specifications());
+    } else if matches!(domain, "literature" | "code") {
+        tools.extend(docs::specifications());
     }
     // The embedded browser belongs to the project window.
     if domain == "inbox" {
@@ -325,9 +334,13 @@ pub fn dispatch(
     tauri::async_runtime::spawn_blocking(move || {
         if event["params"]["tool"] == "scientify_git_action"
             || notes::writes(&event["params"]["tool"])
+            || docs::writes(&event["params"]["tool"])
         {
             let note = notes::writes(&event["params"]["tool"]);
-            let queued = if note {
+            let doc = docs::writes(&event["params"]["tool"]);
+            let queued = if doc {
+                docs::queue(&app, &project, &domain, &conversation, &event)
+            } else if note {
                 notes::queue(&app, &project, &domain, &conversation, &event)
             } else {
                 queue_git(&app, &project, &domain, &conversation, &event)
@@ -335,7 +348,16 @@ pub fn dispatch(
             match queued {
                 Ok(automatic) => {
                     if let Some(pending) = automatic {
-                        let result = if note {
+                        let result = if doc {
+                            docs::complete(
+                                &app,
+                                &project,
+                                &domain,
+                                &conversation,
+                                pending,
+                                &json!({"decision":"accept"}),
+                            )
+                        } else if note {
                             notes::complete(
                                 &app,
                                 &project,
@@ -423,6 +445,9 @@ pub fn dispatch(
                 })
             } else {
                 match tool {
+                    tool if docs::handles(tool) => {
+                        docs::operate(&app, &project, tool, &params["arguments"])
+                    }
                     "scientify_list_notes" | "scientify_read_note" => notes::operate(
                         &app.state::<AppState>().storage,
                         &project,

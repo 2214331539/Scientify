@@ -1,94 +1,68 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { useEffect, useId, useRef, useState } from 'react';
-import {
-  ArrowLeft,
-  ChevronDown,
-  Cloud,
-  History,
-  LoaderCircle,
-  ShieldCheck,
-  UsersRound,
-} from 'lucide-react';
+import { Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { Button, Input } from '../../components/primitives';
 import { BrandMark } from '../../components/layout/BrandMark';
 import { WindowControls } from '../../components/layout/WindowControls';
 import { t } from '../../i18n';
-import { browserLayout } from '../../platform/browser-pane';
-import { collaboration, collaborationStateEvent } from '../../platform/collaboration';
+import {
+  collaboration,
+  collaborationStateEvent,
+  type SignInMode,
+} from '../../platform/collaboration';
 import { describeError, isPhone, maskPhone, normalizePhone } from './account';
 import './sign-in.css';
 
 /** The server lets one number ask for a new code once a minute. */
 const RESEND_SECONDS = 60;
+const methodKey = 'scientify.sign-in.method';
 
-type Busy = 'code' | 'login' | 'server' | null;
+type View = 'login' | 'register' | 'reset';
+type Method = 'code' | 'password';
+
+/** 8 to 64 characters with at least one letter and one digit, as the server requires. */
+export function passwordProblem(password: string) {
+  if (password.length < 8 || password.length > 64) return t('密码需要 8–64 位。');
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return t('密码需要同时包含字母和数字。');
+  return '';
+}
 
 /**
- * Full-window sign-in with a phone number and an SMS code. It covers whatever
- * is open, including settings, and closes itself once the account signs in.
+ * The account page: Scientify shows only this while nobody is signed in, at first launch and
+ * after signing out. Sign in by SMS code or password, register, or reset a forgotten password.
  */
-export function SignInPage({ onClose }: { onClose(): void }) {
+export function SignInPage() {
   const native = isTauri();
-  const ref = useRef<HTMLDialogElement>(null);
-  const codeRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const phoneId = useId();
-  const phoneHintId = useId();
   const codeId = useId();
-  const serverId = useId();
-  // Captured before the phone field takes focus, so closing returns to the trigger.
-  const [trigger] = useState(() =>
-    document.activeElement instanceof HTMLElement ? document.activeElement : null,
+  const passwordId = useId();
+  const confirmId = useId();
+  const codeRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const [view, setView] = useState<View>('login');
+  const [method, setMethod] = useState<Method>(() =>
+    localStorage.getItem(methodKey) === 'password' ? 'password' : 'code',
   );
   const [endpoint, setEndpoint] = useState('');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [visible, setVisible] = useState(false);
   const [sentTo, setSentTo] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [checkPhone, setCheckPhone] = useState(false);
-  const [busy, setBusy] = useState<Busy>(null);
+  const [busy, setBusy] = useState<'code' | 'submit' | null>(null);
   const [error, setError] = useState('');
-  const [server, setServer] = useState<{ ok: boolean; text: string } | null>(null);
-  const close = useRef(onClose);
-  close.current = onClose;
-
-  useEffect(() => {
-    const dialog = ref.current!;
-    let active = true;
-    const show = () => {
-      dialog.showModal();
-      dialog.querySelector<HTMLElement>('[data-autofocus="true"]')?.focus({ preventScroll: true });
-    };
-    // Native browser panes sit above the page, so hide them first as Modal does.
-    if (native)
-      void browserLayout({ op: 'hideAll' })
-        .catch(() => {})
-        .then(() => {
-          if (active) show();
-        });
-    else show();
-    return () => {
-      active = false;
-      dialog.close();
-      queueMicrotask(() => {
-        if (trigger?.isConnected) trigger.focus({ preventScroll: true });
-      });
-    };
-  }, [native, trigger]);
 
   useEffect(() => {
     if (!native) return;
     let active = true;
     collaboration
       .status()
-      .then((state) => {
-        if (!active) return;
-        if (state.authenticated) close.current();
-        else setEndpoint(state.endpoint);
-      })
-      .catch((reason) => {
-        if (active) setError(describeError(reason));
-      });
+      .then((state) => active && setEndpoint(state.endpoint))
+      .catch((reason) => active && setError(describeError(reason)));
     return () => {
       active = false;
     };
@@ -104,6 +78,23 @@ export function SignInPage({ onClose }: { onClose(): void }) {
   const phoneError = checkPhone && !isPhone(phone) ? t('请输入正确的 11 位手机号。') : '';
   // A different number may ask for its own code straight away.
   const waiting = countdown > 0 && number === sentTo;
+  const needsCode = view !== 'login' || method === 'code';
+  const needsPassword = view !== 'login' || method === 'password';
+  const choosing = view !== 'login';
+  const disabled = !native || !!busy;
+
+  function go(next: View) {
+    setView(next);
+    setCode('');
+    setPassword('');
+    setConfirm('');
+    setError('');
+  }
+  function choose(next: Method) {
+    setMethod(next);
+    localStorage.setItem(methodKey, next);
+    setError('');
+  }
 
   async function sendCode() {
     setCheckPhone(true);
@@ -122,154 +113,113 @@ export function SignInPage({ onClose }: { onClose(): void }) {
     }
   }
 
-  async function signIn() {
+  async function submit() {
     setCheckPhone(true);
     if (!isPhone(phone) || busy) return;
-    if (!code) {
-      codeRef.current?.focus();
-      return;
+    if (needsCode && !code) return codeRef.current?.focus();
+    if (needsPassword && !password) return passwordRef.current?.focus();
+    if (choosing) {
+      const problem = passwordProblem(password);
+      if (problem) return setError(problem);
+      if (password !== confirm) return setError(t('两次输入的密码不一致。'));
     }
-    setBusy('login');
+    setBusy('submit');
     setError('');
+    const mode: SignInMode = view === 'login' ? method : view;
     try {
-      await collaboration.login(endpoint, number, code);
+      await collaboration.signIn(endpoint, mode, number, {
+        ...(needsCode ? { code } : {}),
+        ...(needsPassword ? { password } : {}),
+      });
     } catch (reason) {
       setError(describeError(reason));
       setBusy(null);
       return;
     }
     window.dispatchEvent(new Event(collaborationStateEvent));
-    onClose();
   }
 
-  async function checkServer() {
-    if (busy || !endpoint.trim()) return;
-    setBusy('server');
-    setServer(null);
-    try {
-      await collaboration.health(endpoint);
-      setServer({ ok: true, text: t('协作服务连接正常。') });
-    } catch (reason) {
-      setServer({ ok: false, text: describeError(reason) });
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  function leave() {
-    if (busy !== 'login') onClose();
-  }
-
+  const title =
+    view === 'register'
+      ? t('注册 Scientify')
+      : view === 'reset'
+        ? t('找回密码')
+        : t('登录 Scientify');
+  const action =
+    view === 'register' ? t('注册') : view === 'reset' ? t('重置密码并登录') : t('登录');
   return (
-    <dialog
-      ref={ref}
-      className="sign-in-page"
-      data-native-overlay="true"
-      aria-labelledby={titleId}
-      onCancel={(event) => {
-        event.preventDefault();
-        leave();
-      }}
-    >
+    <main className="sign-in-page" aria-labelledby={titleId}>
       <header className="sign-in-topbar" data-tauri-drag-region>
-        <Button
-          variant="ghost"
-          className="sign-in-back"
-          disabled={busy === 'login'}
-          onClick={leave}
-        >
-          <ArrowLeft />
-          {t('返回')}
-        </Button>
+        <span className="sign-in-brand" data-tauri-drag-region>
+          <BrandMark />
+          Scientify
+        </span>
         <span className="spacer" data-tauri-drag-region />
         <WindowControls />
       </header>
-      <div className="sign-in-body">
-        <aside className="sign-in-intro">
-          <div className="sign-in-brand">
-            <BrandMark />
-            <span>Scientify</span>
-          </div>
-          <div className="sign-in-pitch">
-            <p>{t('同一账号，多端继续')}</p>
-            <h2>{t('让研究资料和团队进度自然流转')}</h2>
-          </div>
-          <ul className="sign-in-benefits">
-            <li>
-              <History aria-hidden="true" />
-              <span>
-                <strong>{t('多设备同步')}</strong>
-                <small>{t('在另一台电脑登录后取回协作项目与进度。')}</small>
-              </span>
-            </li>
-            <li>
-              <UsersRound aria-hidden="true" />
-              <span>
-                <strong>{t('多人协同')}</strong>
-                <small>{t('按所有者、编辑者、审阅者和查看者分配权限。')}</small>
-              </span>
-            </li>
-            <li>
-              <Cloud aria-hidden="true" />
-              <span>
-                <strong>{t('本地优先')}</strong>
-                <small>{t('断网时继续工作，恢复连接后自动合并变更。')}</small>
-              </span>
-            </li>
-          </ul>
-        </aside>
-        <div className="sign-in-main">
-          <form
-            className="sign-in-form"
-            noValidate
-            onSubmit={(event) => {
-              event.preventDefault();
-              void signIn();
-            }}
-          >
-            <header>
-              <h1 id={titleId}>{t('登录 Scientify')}</h1>
-              <p>{t('使用手机号登录。未注册的手机号验证后会自动创建账号。')}</p>
-            </header>
-            {native ? null : (
-              <p className="sign-in-error" role="alert">
-                {t('登录和协作同步需要在 Scientify 桌面应用中使用。')}
-              </p>
-            )}
-            <div className="sign-in-field">
-              <label htmlFor={phoneId}>{t('手机号')}</label>
-              <div className="sign-in-phone" data-invalid={phoneError ? 'true' : undefined}>
-                <span aria-hidden="true">+86</span>
-                <Input
-                  id={phoneId}
-                  autoFocus
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel-national"
-                  maxLength={16}
-                  value={phone}
-                  placeholder={t('请输入手机号')}
-                  disabled={!native || !!busy}
-                  aria-invalid={phoneError ? true : undefined}
-                  aria-describedby={phoneError ? phoneHintId : undefined}
-                  onChange={(event) => setPhone(event.target.value)}
-                  onBlur={() => {
-                    if (phone.trim()) setCheckPhone(true);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter') return;
-                    event.preventDefault();
-                    if (sentTo && number === sentTo) codeRef.current?.focus();
-                    else void sendCode();
-                  }}
-                />
-              </div>
-              {phoneError ? (
-                <small id={phoneHintId} className="sign-in-hint" data-tone="error">
-                  {phoneError}
-                </small>
-              ) : null}
+      <div className="sign-in-main">
+        <form
+          className="sign-in-form"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <h1 id={titleId}>{title}</h1>
+          {view === 'login' ? (
+            <div className="sign-in-tabs" role="tablist" aria-label={t('登录方式')}>
+              {(['code', 'password'] as const).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  role="tab"
+                  aria-selected={method === item}
+                  disabled={!!busy}
+                  onClick={() => choose(item)}
+                >
+                  {item === 'code' ? t('验证码登录') : t('密码登录')}
+                </button>
+              ))}
             </div>
+          ) : (
+            <p className="sign-in-lead">
+              {view === 'register'
+                ? t('用手机号注册，并设置登录密码。')
+                : t('验证手机号后设置新密码。')}
+            </p>
+          )}
+          {native ? null : (
+            <p className="sign-in-error" role="alert">
+              {t('登录需要在 Scientify 桌面应用中使用。')}
+            </p>
+          )}
+          <div className="sign-in-field">
+            <label htmlFor={phoneId}>{t('手机号')}</label>
+            <div className="sign-in-phone" data-invalid={phoneError ? 'true' : undefined}>
+              <span aria-hidden="true">+86</span>
+              <Input
+                id={phoneId}
+                autoFocus
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                maxLength={16}
+                value={phone}
+                placeholder={t('请输入手机号')}
+                disabled={disabled}
+                aria-invalid={phoneError ? true : undefined}
+                onChange={(event) => setPhone(event.target.value)}
+                onBlur={() => phone.trim() && setCheckPhone(true)}
+              />
+            </div>
+            {phoneError ? (
+              <small className="sign-in-hint" data-tone="error">
+                {phoneError}
+              </small>
+            ) : null}
+          </div>
+          {needsCode ? (
             <div className="sign-in-field">
               <label htmlFor={codeId}>{t('验证码')}</label>
               <div className="sign-in-code">
@@ -281,13 +231,13 @@ export function SignInPage({ onClose }: { onClose(): void }) {
                   maxLength={8}
                   value={code}
                   placeholder={t('6 位短信验证码')}
-                  disabled={!native || busy === 'login'}
+                  disabled={!native || busy === 'submit'}
                   onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
                 />
                 <Button
                   type="button"
                   className="sign-in-send"
-                  disabled={!native || !!busy || waiting || !phone.trim()}
+                  disabled={disabled || waiting || !phone.trim()}
                   onClick={() => void sendCode()}
                 >
                   {busy === 'code' ? <LoaderCircle className="is-spinning" /> : null}
@@ -299,67 +249,112 @@ export function SignInPage({ onClose }: { onClose(): void }) {
                 </Button>
               </div>
             </div>
-            {error ? (
-              <p className="sign-in-error" role="alert">
-                {error}
-              </p>
-            ) : sentTo ? (
-              <p className="sign-in-hint" role="status">
-                {t('验证码已发送至 {phone}', { phone: maskPhone(sentTo) })}
-              </p>
-            ) : null}
-            <Button
-              type="submit"
-              variant="primary"
-              className="sign-in-submit"
-              disabled={!native || !!busy || !phone.trim() || !code}
-            >
-              {busy === 'login' ? <LoaderCircle className="is-spinning" /> : null}
-              {busy === 'login' ? t('正在登录…') : t('登录')}
-            </Button>
-            <p className="sign-in-footnote">
-              <ShieldCheck aria-hidden="true" />
-              {t('账号与协作数据在本机和服务端加密传输。')}
-            </p>
-          </form>
-          <details className="sign-in-server">
-            <summary>
-              <ChevronDown aria-hidden="true" />
-              {t('使用自托管协作服务')}
-            </summary>
+          ) : null}
+          {needsPassword ? (
             <div className="sign-in-field">
-              <label htmlFor={serverId}>{t('服务器地址')}</label>
-              <div className="sign-in-code">
+              <span className="sign-in-label-row">
+                <label htmlFor={passwordId}>{view === 'reset' ? t('新密码') : t('密码')}</label>
+                {view === 'login' ? (
+                  <button
+                    type="button"
+                    className="sign-in-link"
+                    disabled={!!busy}
+                    onClick={() => go('reset')}
+                  >
+                    {t('忘记密码？')}
+                  </button>
+                ) : null}
+              </span>
+              <div className="sign-in-password">
                 <Input
-                  id={serverId}
-                  value={endpoint}
-                  placeholder="https://collab.example.com"
-                  disabled={!native || !!busy}
-                  onChange={(event) => {
-                    setEndpoint(event.target.value);
-                    setServer(null);
-                  }}
+                  ref={passwordRef}
+                  id={passwordId}
+                  type={visible ? 'text' : 'password'}
+                  autoComplete={view === 'login' ? 'current-password' : 'new-password'}
+                  maxLength={64}
+                  value={password}
+                  placeholder={view === 'login' ? t('请输入密码') : t('8–64 位，包含字母和数字')}
+                  disabled={!native || busy === 'submit'}
+                  onChange={(event) => setPassword(event.target.value)}
                 />
                 <Button
                   type="button"
-                  className="sign-in-send"
-                  disabled={!native || !!busy || !endpoint.trim()}
-                  onClick={() => void checkServer()}
+                  variant="ghost"
+                  iconOnly
+                  aria-label={visible ? t('隐藏密码') : t('显示密码')}
+                  onClick={() => setVisible(!visible)}
                 >
-                  {busy === 'server' ? <LoaderCircle className="is-spinning" /> : null}
-                  {t('检查连接')}
+                  {visible ? <EyeOff /> : <Eye />}
                 </Button>
               </div>
-              <small
-                className="sign-in-hint"
-                data-tone={server && !server.ok ? 'error' : undefined}
-              >
-                {server ? server.text : t('登录成功后，这台设备会使用该地址。')}
-              </small>
             </div>
-          </details>
-        </div>
+          ) : null}
+          {choosing ? (
+            <div className="sign-in-field">
+              <label htmlFor={confirmId}>{t('确认密码')}</label>
+              <Input
+                id={confirmId}
+                type={visible ? 'text' : 'password'}
+                autoComplete="new-password"
+                maxLength={64}
+                value={confirm}
+                placeholder={t('再输入一次')}
+                disabled={!native || busy === 'submit'}
+                onChange={(event) => setConfirm(event.target.value)}
+              />
+            </div>
+          ) : null}
+          {error ? (
+            <p className="sign-in-error" role="alert">
+              {error}
+            </p>
+          ) : sentTo && needsCode ? (
+            <p className="sign-in-hint" role="status">
+              {t('验证码已发送至 {phone}', { phone: maskPhone(sentTo) })}
+            </p>
+          ) : null}
+          <Button type="submit" variant="primary" className="sign-in-submit" disabled={disabled}>
+            {busy === 'submit' ? <LoaderCircle className="is-spinning" /> : null}
+            {action}
+          </Button>
+          <p className="sign-in-switch">
+            {view === 'login' ? (
+              <>
+                {t('还没有账号？')}
+                <button
+                  type="button"
+                  className="sign-in-link"
+                  disabled={!!busy}
+                  onClick={() => go('register')}
+                >
+                  {t('注册')}
+                </button>
+              </>
+            ) : view === 'register' ? (
+              <>
+                {t('已有账号？')}
+                <button
+                  type="button"
+                  className="sign-in-link"
+                  disabled={!!busy}
+                  onClick={() => go('login')}
+                >
+                  {t('登录')}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="sign-in-link"
+                disabled={!!busy}
+                onClick={() => go('login')}
+              >
+                {t('返回登录')}
+              </button>
+            )}
+          </p>
+        </form>
       </div>
-    </dialog>
+    </main>
   );
 }

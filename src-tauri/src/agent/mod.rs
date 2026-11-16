@@ -1,10 +1,12 @@
 //! Local Codex runtime. A conversation owns its thread, command lock and process.
 //! Native tasks outlive panels. Slow I/O only runs on Tauri's blocking pool.
 mod config;
+mod docs;
 pub(crate) mod execution;
 pub(crate) mod materials;
 pub(crate) mod notes;
 pub(crate) mod papers;
+mod place;
 pub(crate) mod process;
 mod protocol;
 #[cfg(windows)]
@@ -859,6 +861,7 @@ pub async fn agent_start_turn(
     images: Option<Vec<ImageInput>>,
     permission: Option<PermissionMode>,
     skills: Option<Vec<skills::SkillRef>>,
+    place: Option<place::TurnPlace>,
 ) -> Result<TurnHandle, String> {
     super::library::trusted(&view)?;
     crate::collaboration::permissions::require_write(
@@ -866,15 +869,24 @@ pub async fn agent_start_turn(
         &project_id,
         "code",
     )?;
-    blocking(move || with_entry(&app,&project_id,&domain,&conversation_id,|entry| {
+    blocking(move || {
+    let around = if project_id == INBOX { None } else { Some(place::surroundings(&app, &project_id)?) };
+    with_entry(&app,&project_id,&domain,&conversation_id,|entry| {
         entry.validate(&thread_id)?;
         let mut input = turn_input(&text, images.unwrap_or_default())?;
         if entry.active_turn.is_some() { return Err("此会话已有任务正在运行。".into()); }
         let permission = permission.unwrap_or_default();
-        let root = std::path::Path::new(&entry.handle.cwd);
+        // The turn works where the person is; tools, skills and the lease stay with the chat's folder.
+        let bound = std::path::Path::new(&entry.handle.cwd);
+        let state = app.state::<AppState>();
+        let plan = around.as_ref().filter(|_| entry.handle.domain != "inbox").map(|around| {
+            place::plan(around, &entry.handle, place.as_ref(), |path| crate::git::protect_internal_data(&state.storage, path).is_err())
+        });
+        let root = plan.as_ref().map_or(bound, |plan| plan.root.as_path());
         let scratch = scratch::Scratch::new(&app.state::<crate::data_location::DataLocation>().container, &project_id, &conversation_id)?;
+        if let Some(plan) = &plan { input.push(json!({"type":"text","text":plan.context,"text_elements":[]})); }
         input.push(json!({"type":"text","text":scratch.instruction(),"text_elements":[]}));
-        let input = skills::append(&mut entry.session, root, input, skills.unwrap_or_default())?;
+        let input = skills::append(&mut entry.session, bound, input, skills.unwrap_or_default())?;
         if permission == PermissionMode::Ask { execution::prepare(&mut entry.session, root)?; }
         entry.permission = permission;
         entry.handle.sandbox = if permission == PermissionMode::Full { "dangerFullAccess" } else { "workspaceWrite" }.into();
@@ -886,7 +898,7 @@ pub async fn agent_start_turn(
         entry.active_turn = Some("starting".into());
         let sandbox = if permission == PermissionMode::Full { permission.sandbox(root) } else { execution::policy(root, Some(scratch.path())) };
         entry.scratch = Some(scratch);
-        let response = match entry.session.call("turn/start",json!({"threadId":thread_id,"approvalPolicy":permission.approval_policy(),"sandboxPolicy":sandbox,"input":input}),TURN_BUDGET) {
+        let response = match entry.session.call("turn/start",json!({"threadId":thread_id,"cwd":execution::canonical_path(root),"approvalPolicy":permission.approval_policy(),"sandboxPolicy":sandbox,"input":input}),TURN_BUDGET) {
             Ok(response) => response,
             Err(error) => {
                 // The request may have reached Codex. Stop this process rather than
@@ -907,7 +919,7 @@ pub async fn agent_start_turn(
         let status = response["turn"]["status"].clone();
         if matches!(status.as_str(), Some("completed" | "failed" | "interrupted")) { entry.active_turn=None; entry.lease=None; entry.scratch=None; }
         Ok(TurnHandle { turn_id:id,status,events:entry.collect()? })
-    })).await
+    })}).await
 }
 #[tauri::command]
 pub async fn agent_steer<R: tauri::Runtime>(
@@ -1018,7 +1030,9 @@ pub async fn agent_respond(
             Ok(None)
         })?;
         if let Some(event) = pending {
-            if notes::writes(&event["params"]["tool"]) {
+            if docs::writes(&event["params"]["tool"]) {
+                docs::complete(&app, &project_id, &domain, &conversation_id, event, &result)?;
+            } else if notes::writes(&event["params"]["tool"]) {
                 notes::complete(&app, &project_id, &domain, &conversation_id, event, &result)?;
             } else {
                 tools::complete_git(&app, &project_id, &domain, &conversation_id, event, &result)?;
@@ -1316,7 +1330,7 @@ mod tests {
         let new_code = thread_plan(dir.path(), "model", "code", None);
         assert_eq!(new_code.method, "thread/start");
         assert!(new_code.managed_runs && new_code.git_tools);
-        // Runs and Git (7), papers (3), notes (4) and browser (4).
+        // Runs and Git (7), papers (3), documents (4) and browser (4).
         assert_eq!(
             new_code.params["dynamicTools"].as_array().unwrap().len(),
             18
@@ -1343,20 +1357,27 @@ mod tests {
                 || *name == "scientify_list_papers"
                 || matches!(
                     *name,
-                    "scientify_list_notes"
-                        | "scientify_read_note"
-                        | "scientify_write_note"
-                        | "scientify_create_note"
+                    "scientify_list_docs"
+                        | "scientify_read_doc"
+                        | "scientify_create_doc"
+                        | "scientify_update_doc"
                 )));
         for name in [
-            "scientify_list_notes",
-            "scientify_read_note",
-            "scientify_write_note",
-            "scientify_create_note",
+            "scientify_list_docs",
+            "scientify_read_doc",
+            "scientify_create_doc",
+            "scientify_update_doc",
         ] {
             assert!(names.contains(&name));
         }
         assert_eq!(names.len(), 11);
+        // Chats outside a project keep notes.
+        let inbox = thread_plan(dir.path(), "model", "inbox", None);
+        assert!(inbox.params["dynamicTools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|tool| tool["name"] == "scientify_create_note"));
         assert!(literature.paper_tools);
     }
 

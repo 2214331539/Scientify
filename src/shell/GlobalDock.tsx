@@ -7,7 +7,9 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Bot, NotebookPen, X } from 'lucide-react';
+import { Bot, FileText, X } from 'lucide-react';
+import { useStore } from 'zustand';
+import { DocsWorkspace } from '../workspaces/docs/DocsWorkspace';
 import { Button } from '../components/primitives';
 import type { WorkContext } from '../domain/context';
 import type { ResearchBackend } from '../platform/research';
@@ -49,6 +51,7 @@ function AuxiliarySession({
   markDirty,
   split,
   onNoteContext,
+  onTool,
 }: {
   tool: 'assistant' | 'notes';
   scope: string;
@@ -59,7 +62,12 @@ function AuxiliarySession({
   markDirty: (source: string, dirty: boolean) => void;
   split?: boolean;
   onNoteContext?: (context: WorkContext) => void;
+  onTool(tool: 'assistant' | 'notes'): void;
 }) {
+  // Projects keep documents here; chats outside a project keep their notes.
+  const project = useStore(store, (state) =>
+    state.data?.projects.find((item) => item.id === scope),
+  );
   const dirty = useCallback(
     (value: boolean) => markDirty(`${tool}:${scope}`, value),
     [markDirty, scope, tool],
@@ -73,6 +81,15 @@ function AuxiliarySession({
           scope={scope}
           context={context}
           onDirtyChange={dirty}
+        />
+      ) : project ? (
+        <DocsWorkspace
+          mode="dock"
+          project={project}
+          store={store}
+          backend={backend}
+          onContext={() => {}}
+          onTool={onTool}
         />
       ) : (
         <NotesPanel
@@ -189,6 +206,7 @@ export function GlobalDock({
         markDirty={markDirty}
         split={current === 'notes' && notesWorkspaceActive && sessionScope === scope}
         onNoteContext={notesWorkspaceActive ? onNoteContext : undefined}
+        onTool={onToolChange}
       />
     ));
   return (
@@ -222,8 +240,8 @@ export function GlobalDock({
             aria-pressed={tool === 'notes'}
             onClick={() => onToolChange('notes')}
           >
-            <NotebookPen size={14} />
-            {t('Notes')}
+            <FileText size={14} />
+            {t('文档')}
           </Button>
         </div>
         <Button variant="ghost" size="sm" iconOnly aria-label={t('收起辅助栏')} onClick={onClose}>

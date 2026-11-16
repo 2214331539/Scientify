@@ -5,6 +5,7 @@ import type {
   AgentConnection,
   AgentDomain,
   AgentSkillRef,
+  TurnPlace,
 } from '../../platform/agent';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { t } from '../../i18n';
@@ -43,6 +44,8 @@ export interface AgentTask {
   recovered: ChatMessage[];
 }
 const keyOf = (project: string, id: string) => `${project}:${id}`;
+/** Fired on the window with the project id when an AI turn ends. */
+export const agentFinishedEvent = 'scientify-agent-finished';
 const runtimes = new WeakMap<WorkspaceStore, Map<AgentBackend, AgentRuntime>>();
 export function getAgentRuntime(store: WorkspaceStore, agent: AgentBackend): AgentRuntime {
   let backends = runtimes.get(store);
@@ -233,6 +236,7 @@ export class AgentRuntime {
     context?: ContextSnapshot,
     attachments: ChatAttachment[] = [],
     skills: AgentSkillRef[] = [],
+    place?: TurnPlace,
   ) {
     if (this.deleting.has(keyOf(seed.project, seed.id))) return false;
     const existing = this.get(seed.project, seed.id);
@@ -344,6 +348,7 @@ export class AgentRuntime {
         previous + selected + text + material + attachmentMaterial(attachments),
         images,
         skills,
+        place,
       );
     }
     task.starting = false;
@@ -458,6 +463,9 @@ export class AgentRuntime {
   }
   private async finish(task: AgentTask) {
     if (task.saving || task.steering || task.saveError || task.finished) return;
+    // The turn may have written files: open editors and file trees read them again.
+    if (typeof window !== 'undefined')
+      window.dispatchEvent(new CustomEvent(agentFinishedEvent, { detail: task.projectId }));
     await this.persist(task, true);
   }
   async retrySave(task: AgentTask) {

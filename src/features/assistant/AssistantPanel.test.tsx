@@ -1440,3 +1440,99 @@ it('runs the agent in the inbox and gives it attached files by path', async () =
   );
   expect(await screen.findByText('paper.pdf')).toBeTruthy();
 });
+
+it('tells every turn which page it is sent from, also in a chat started on another page', async () => {
+  const data = emptyWorkspace();
+  data.projects.push({
+    id: 'p1',
+    name: 'project',
+    question: '',
+    createdAt: '',
+    space: 'personal',
+    manuscripts: [
+      {
+        id: 'm1',
+        name: 'Paper',
+        folder: 'paper',
+        main: 'main.tex',
+        compiler: 'pdflatex',
+        engine: 'auto',
+        autoCompile: true,
+        writePdf: false,
+      },
+    ],
+  });
+  data.settings.model.model = 'fixture';
+  const store = createWorkspaceStore({
+    load: async () => ({ workspace: data, directory: 'test', legacyAvailable: false }),
+    save: async (value: Workspace) => value,
+  } as unknown as WorkspaceBackend);
+  await store.getState().load();
+  const agent: AgentBackend = {
+    status: vi.fn(),
+    handshake: vi.fn(),
+    domains: vi.fn(async () => []),
+    context: vi.fn(async (request) => ({
+      root: request.workspaceRoot ?? 'C:/papers',
+      materials: [],
+      warnings: [],
+    })),
+    startThread: vi.fn(async (projectId, domain, connection, options) => ({
+      threadId: options.conversationId,
+      conversationId: options.conversationId,
+      projectId,
+      domain,
+      cwd: options.workspaceRoot ?? 'C:/papers',
+      model: connection.model,
+      modelProvider: 'scientify',
+      instructionSources: [],
+      paperTools: true,
+    })),
+    startTurn: vi.fn(async () => ({ turnId: 'turn1', status: 'completed', events: [] })),
+    events: vi.fn(async () => []),
+    respond: vi.fn(),
+    interrupt: vi.fn(),
+    release: vi.fn(),
+  };
+  const runtime = getAgentRuntime(store, agent);
+  const props = { store, backend: {} as ResearchBackend, agent, scope: 'p1', context };
+  const view = render(<AssistantPanel {...props} />);
+  const user = userEvent.setup();
+  try {
+    await user.type(screen.getByLabelText('向 AI 提问'), 'read paper');
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    await waitFor(() => expect(agent.startTurn).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(agent.startTurn).mock.calls[0][0]).toMatchObject({
+      domain: 'literature',
+      place: { page: 'literature', experimentId: 'p1' },
+    });
+    await waitFor(() => expect(store.getState().data!.sessions[0].agentStatus).toBe('completed'));
+    view.rerender(
+      <AssistantPanel
+        {...props}
+        context={{
+          projectId: 'p1',
+          workspace: 'writing',
+          title: 'main.tex',
+          path: 'paper/main.tex',
+          text: '\documentclass{article}',
+        }}
+      />,
+    );
+    await user.type(screen.getByLabelText('向 AI 提问'), 'write the introduction');
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    await waitFor(() => expect(agent.startTurn).toHaveBeenCalledTimes(2));
+    const second = vi.mocked(agent.startTurn).mock.calls[1][0];
+    expect(second.domain).toBe('literature');
+    expect(second.place).toEqual({
+      page: 'writing',
+      experimentId: 'p1',
+      manuscriptId: 'm1',
+      path: 'paper/main.tex',
+    });
+    expect(second.text).toContain('paper/main.tex');
+    expect(second.text).not.toContain('当前会话工作区');
+  } finally {
+    await act(async () => runtime.dispose());
+  }
+});

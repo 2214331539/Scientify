@@ -22,6 +22,8 @@ export type CollaborationProject = {
   changeSeq?: number;
 };
 
+export type SignInMode = 'code' | 'password' | 'register' | 'reset';
+
 export type CollaborationMember = {
   id: string;
   phone: string;
@@ -93,13 +95,6 @@ export function canEditProject(
 
 export const collaborationStateEvent = 'scientify-collaboration-state-changed';
 export const projectSyncRequestEvent = 'scientify-project-sync-request';
-export const signInRequestEvent = 'scientify-sign-in-request';
-
-/** Ask the window to show the sign-in page, from wherever sign-in is offered. */
-export function requestSignIn(): void {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new Event(signInRequestEvent));
-}
 
 /**
  * Ask the open window to sync a project soon. Sync finds changes by scanning
@@ -138,6 +133,24 @@ export const collaboration = {
   },
   login(endpoint: string, phone: string, code: string): Promise<CollaborationState> {
     return desktop(settingsOnly, 'collaboration_login', { endpoint, phone, code });
+  },
+  /** Sign in by SMS code or password, register, or reset the password; each ends signed in. */
+  signIn(
+    endpoint: string,
+    mode: SignInMode,
+    phone: string,
+    secrets: { code?: string; password?: string },
+  ): Promise<CollaborationState> {
+    return desktop(settingsOnly, 'collaboration_sign_in', {
+      endpoint,
+      mode,
+      phone,
+      code: secrets.code ?? null,
+      password: secrets.password ?? null,
+    });
+  },
+  account(): Promise<{ id: string; phone: string; hasPassword?: boolean }> {
+    return desktop(settingsOnly, 'collaboration_account');
   },
   logout(): Promise<CollaborationState> {
     return desktop(settingsOnly, 'collaboration_logout');

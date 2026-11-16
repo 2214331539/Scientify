@@ -99,10 +99,13 @@ it('switches experiment configurations and files while preserving the previous d
   }
   const user = userEvent.setup();
   render(<Harness />);
-  await waitFor(() =>
-    expect(
-      (screen.getByRole('textbox', { name: '代码编辑' }) as HTMLTextAreaElement).value,
-    ).toContain('"A"'),
+  // The first render of the whole workbench can take over a second when every suite runs at once.
+  await waitFor(
+    () =>
+      expect(
+        (screen.getByRole('textbox', { name: '代码编辑' }) as HTMLTextAreaElement).value,
+      ).toContain('"A"'),
+    { timeout: 5000 },
   );
   await user.type(screen.getByRole('textbox', { name: '代码编辑' }), '# A draft');
   await user.click(screen.getByRole('button', { name: /^代码文件夹/ }));

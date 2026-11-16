@@ -19,14 +19,12 @@ import { Menu, menuAnchor, type MenuAnchor } from '../../components/primitives/M
 import { ViewTransition } from '../../components/workspace/ViewTransition';
 import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
-import { collaboration, type CollaborationProject } from '../../platform/collaboration';
 import { nativeLibrary } from '../../platform/library';
-import { classifyCloud, refreshCloud, useCloud, type CloudEntry } from './cloud';
+import { useCloud } from './cloud';
 import { ProjectActions, type ProjectAction } from './ProjectActions';
-import { DeleteProjectDialog, ShareProjectDialog, SyncProjectDialog } from './ProjectDialogs';
+import { DeleteProjectDialog, ShareProjectDialog } from './ProjectDialogs';
 import { CenterEmpty, CenterHeader, MiniCover, ProjectCoverArt } from './ProjectCover';
 import {
-  colorForId,
   coverColor,
   filterProjects,
   lastActive,
@@ -62,25 +60,20 @@ function writeSetting(key: string, value: string) {
   }
 }
 
-type Dialog =
-  | { kind: 'delete'; project: Project }
-  | { kind: 'sync'; project: Project }
-  | { kind: 'share'; project: Project };
+type Dialog = { kind: 'delete'; project: Project } | { kind: 'share'; project: Project };
 
-/** “我的项目”: personal projects on this device, plus my synced projects that live elsewhere. */
+/** “我的项目”: my own projects; signed in, the ones from my other computers arrive by themselves. */
 export function ProjectLibrary({
   store,
   onOpen,
   onNew,
   onEdit,
-  onOpenRemote,
   onShared,
 }: {
   store: WorkspaceStore;
   onOpen(id: string): void;
   onNew(): void;
   onEdit(project: Project): void;
-  onOpenRemote(project: CollaborationProject, team: boolean): Promise<void>;
   onShared(id: string): void;
 }) {
   const data = useStore(store, (s) => s.data)!;
@@ -98,22 +91,15 @@ export function ProjectLibrary({
   const [sortMenu, setSortMenu] = useState<MenuAnchor | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [error, setError] = useState('');
-  const [downloading, setDownloading] = useState<string | null>(null);
   const opened = useMemo(readOpened, [data]);
   const signedIn = !!cloud.state?.authenticated;
   const mine = personalProjects(data);
-  const { elsewhere } = classifyCloud(cloud, data.projects);
   const counts = {
     all: mine.filter((p) => !p.archived).length,
     archived: mine.filter((p) => p.archived).length,
   };
   const projects = sortProjects(filterProjects(mine, filter, query), sort, opened);
-  const term = query.trim().toLocaleLowerCase();
-  const remote =
-    filter === 'all'
-      ? elsewhere.filter((entry) => entry.remote.name.toLocaleLowerCase().includes(term))
-      : [];
-  const total = projects.length + remote.length;
+  const total = projects.length;
   function choose(next: 'grid' | 'list') {
     setView(next);
     writeSetting('scientify.projects.view', next);
@@ -127,17 +113,6 @@ export function ProjectLibrary({
       }
     });
   }
-  async function download(entry: CloudEntry) {
-    setDownloading(entry.remote.id);
-    setError('');
-    try {
-      await onOpenRemote(entry.remote, false);
-    } catch (reason) {
-      setError(translateError(String(reason instanceof Error ? reason.message : reason)));
-    } finally {
-      setDownloading(null);
-    }
-  }
   function act(project: Project, action: ProjectAction) {
     setContext(null);
     setError('');
@@ -147,13 +122,7 @@ export function ProjectLibrary({
     else if (action === 'delete') {
       store.getState().clearMessage();
       setDialog({ kind: 'delete', project });
-    } else if (action === 'sync') setDialog({ kind: 'sync', project });
-    else if (action === 'share') setDialog({ kind: 'share', project });
-    else if (action === 'syncNow')
-      void collaboration
-        .syncProject(project.id)
-        .then(() => refreshCloud(store.getState().data?.projects ?? []))
-        .catch((reason) => setError(translateError(String(reason))));
+    } else if (action === 'share') setDialog({ kind: 'share', project });
     else if (action === 'reveal')
       void nativeLibrary
         .external(project.id, '', false)
@@ -221,7 +190,7 @@ export function ProjectLibrary({
       {label}
     </Button>
   );
-  const emptyAll = !mine.length && !elsewhere.length;
+  const emptyAll = !mine.length;
   return (
     <section className="center-page" aria-label={t('我的项目')}>
       <CenterHeader title={t('我的项目')}>
@@ -416,57 +385,12 @@ export function ProjectLibrary({
                           </tr>
                         );
                       })}
-                      {remote.map((entry) => (
-                        <tr key={entry.remote.id} className="remote">
-                          <td>
-                            <button
-                              type="button"
-                              className="center-row-open"
-                              aria-label={t('下载“{name}”', { name: entry.remote.name })}
-                              disabled={busy || !!downloading || !cloud.reachable}
-                              onClick={() => void download(entry)}
-                            >
-                              <MiniCover color={colorForId(entry.remote.id)} />
-                              <span>
-                                <strong>
-                                  <span>{entry.remote.name}</span>
-                                </strong>
-                              </span>
-                            </button>
-                          </td>
-                          <td className="wide-only muted">{t('未下载')}</td>
-                          <td className="muted">{relativeTime(entry.remote.updatedAt)}</td>
-                          <td />
-                        </tr>
-                      ))}
                     </tbody>
                   </table>
                 </div>
               )}
             </ViewTransition>
           )}
-          {view === 'grid' && remote.length ? (
-            <section className="center-section" aria-label={t('在其他设备上')}>
-              <h2>{t('在其他设备上')}</h2>
-              <ul className="project-elsewhere">
-                {remote.map((entry) => (
-                  <li key={entry.remote.id}>
-                    <MiniCover color={colorForId(entry.remote.id)} />
-                    <strong>{entry.remote.name}</strong>
-                    <small>{relativeTime(entry.remote.updatedAt)}</small>
-                    <Button
-                      size="sm"
-                      aria-label={t('下载“{name}”', { name: entry.remote.name })}
-                      disabled={busy || !!downloading || !cloud.reachable}
-                      onClick={() => void download(entry)}
-                    >
-                      {downloading === entry.remote.id ? t('正在下载…') : t('下载到这台电脑')}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
         </div>
       )}
       <Menu
@@ -513,9 +437,6 @@ export function ProjectLibrary({
             void toggle(project, 'archived');
           }}
         />
-      ) : null}
-      {dialog?.kind === 'sync' ? (
-        <SyncProjectDialog store={store} project={dialog.project} onClose={() => setDialog(null)} />
       ) : null}
       {dialog?.kind === 'share' ? (
         <ShareProjectDialog

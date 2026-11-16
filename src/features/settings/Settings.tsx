@@ -19,8 +19,10 @@ import {
   Languages,
   Palette,
   Settings,
+  UserRound,
 } from 'lucide-react';
 import { ShortcutsSettings } from './ShortcutsSettings';
+import { AccountPreferences } from './AccountPreferences';
 import { CollaborationPreferences } from './CollaborationPreferences';
 import { ModelPreferences } from './ModelPreferences';
 import type { ResearchBackend } from '../../platform/research';
@@ -194,6 +196,7 @@ export function SettingsDialog({
     | 'models'
     | 'shortcuts'
     | 'translation'
+    | 'account'
     | 'collaboration'
     | 'data'
     | 'about';
@@ -237,6 +240,7 @@ export function SettingsDialog({
     { id: 'models', label: t('AI 模型'), icon: Bot },
     { id: 'shortcuts', label: t('快捷键'), icon: Keyboard },
     { id: 'translation', label: t('翻译'), icon: Languages },
+    { id: 'account', label: t('账号'), icon: UserRound },
     { id: 'collaboration', label: t('协作'), icon: Cloud },
     { id: 'data', label: t('数据与备份'), icon: Database },
     { id: 'about', label: t('关于 Scientify'), icon: CircleHelp },
@@ -332,6 +336,9 @@ export function SettingsDialog({
         </section>
         <section hidden={section !== 'translation'} aria-label={t('翻译')}>
           <TranslationPreferences />
+        </section>
+        <section hidden={section !== 'account'} aria-label={t('账号')}>
+          {section === 'account' ? <AccountPreferences /> : null}
         </section>
         <section hidden={section !== 'collaboration'} aria-label={t('协作')}>
           <CollaborationPreferences store={store} />

@@ -10,6 +10,7 @@ import {
   type ApprovalDecision,
   type ApprovalRequest,
   type ThreadHandle,
+  type TurnPlace,
 } from '../../platform/agent';
 import { t } from '../../i18n';
 import { errorMessage } from '../../domain/errors';
@@ -218,6 +219,7 @@ export class AgentSession {
     text: string,
     images?: { mimeType: string; data: string }[],
     skills?: AgentSkillRef[],
+    place?: TurnPlace,
   ): Promise<boolean> {
     if (!this.snapshot.threadId || hasPendingWork(this.snapshot)) return false;
     this.starting = true;
@@ -240,6 +242,7 @@ export class AgentSession {
         text,
         ...(images?.length ? { images } : {}),
         ...(skills?.length ? { skills } : {}),
+        ...(place ? { place } : {}),
       });
       if (!turn.turnId) throw new Error(t('Agent 返回了空 turn 标识。'));
       this.set({ turnId: turn.turnId });

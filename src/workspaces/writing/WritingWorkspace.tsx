@@ -83,7 +83,9 @@ import { PdfPreview } from './PdfPreview';
 import {
   compilerLabel,
   createManuscript,
+  adoptManuscripts,
   join,
+  manuscriptChoiceKey,
   manuscriptFromImport,
   manuscriptsOf,
   removeManuscript,
@@ -219,7 +221,7 @@ export function WritingWorkspace({
     state.data?.projects.find((item) => item.id === project.id),
   );
   const manuscripts = manuscriptsOf(live ?? project);
-  const choiceKey = `scientify.writing.manuscript.${project.id}`;
+  const choiceKey = manuscriptChoiceKey(project.id);
   const [choice, setChoice] = useState(() => remembered(choiceKey, ''));
   // '' picks the first manuscript; '*' is the plain project files view (Markdown and others).
   const manuscript =
@@ -230,6 +232,18 @@ export function WritingWorkspace({
     setChoice(id);
     remember(choiceKey, id);
   };
+  const choiceRef = useRef(choice);
+  choiceRef.current = choice;
+  // A file of a manuscript opened from the project files view goes to that manuscript,
+  // where it compiles and shows the PDF.
+  const folders = manuscripts.map((item) => `${item.id}\n${item.folder}`).join('\n');
+  useEffect(() => {
+    if (choice !== '*' || !activePath) return;
+    const owner = manuscripts.find(
+      (item) => item.folder && activePath.startsWith(item.folder + '/'),
+    );
+    if (owner) choose(owner.id);
+  }, [activePath, choice, folders]); // `folders` stands for `manuscripts`
   const [side, setSide] = useState<Side>('files');
   const [layout, setLayoutState] = useState(() => remembered('scientify.writing.layout', 'split'));
   const setLayout = (value: string) => {
@@ -268,6 +282,48 @@ export function WritingWorkspace({
     if (target === keyRef.current) setBuildState(next);
   };
   const files = useManuscriptFiles(backend, project.id, manuscript?.folder ?? null, revision);
+  // LaTeX folders that appear in the project (written by the AI, copied in) become manuscripts.
+  useEffect(() => {
+    if (readOnly) return;
+    let alive = true;
+    let running = false;
+    let again = false;
+    const look = async () => {
+      if (running) {
+        again = true;
+        return;
+      }
+      running = true;
+      try {
+        do {
+          again = false;
+          const current = store.getState().data?.projects.find((item) => item.id === project.id);
+          const added = current && alive ? await adoptManuscripts(store, backend, current) : [];
+          // A paper that just appeared is shown rather than the plain file view.
+          if (added.length && alive && choiceRef.current === '*') {
+            setChoice(added[0].id);
+            remember(manuscriptChoiceKey(project.id), added[0].id);
+          }
+        } while (again && alive);
+      } catch {
+        /* Only a convenience: the manuscript menu still adds folders by hand. */
+      } finally {
+        running = false;
+      }
+    };
+    const changed = (event: Event) => {
+      if ((event as CustomEvent).detail === project.id) void look();
+    };
+    const focused = () => void look();
+    void look();
+    window.addEventListener('scientify-project-files-changed', changed);
+    window.addEventListener('focus', focused);
+    return () => {
+      alive = false;
+      window.removeEventListener('scientify-project-files-changed', changed);
+      window.removeEventListener('focus', focused);
+    };
+  }, [backend, project.id, readOnly, store]);
   useEffect(() => {
     if (!writingApi.available()) return;
     void writingApi
@@ -366,6 +422,12 @@ export function WritingWorkspace({
     window.addEventListener('online', retry);
     return () => window.removeEventListener('online', retry);
   }, [notice?.kind]);
+  // Like Overleaf, a manuscript shows its PDF when opened: the first visit compiles it.
+  useEffect(() => {
+    if (!key || !viewActive || !tex || builds.has(key) || !writingApi.available()) return;
+    if (!manuscript?.autoCompile || (!tex.local && !tex.builtin)) return;
+    void compileRef.current();
+  }, [key, viewActive, tex, manuscript?.autoCompile]);
   const pendingSave = useRef<number | undefined>(undefined);
   function onSaved(path: string) {
     setRevision((value) => value + 1);

@@ -9,7 +9,7 @@ import {
   CornerDownLeft,
   FlaskConical,
   FolderKanban,
-  NotebookPen,
+  FileText,
   PenLine,
   Search,
   type LucideIcon,
@@ -18,6 +18,8 @@ import type { Workspace } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { Modal } from '../../components/Modal';
 import { nativeLibrary, type LibraryBackend, type LibraryEntry } from '../../platform/library';
+import { appDocs, type DocHit, type DocsBackend } from '../../platform/docs';
+import type { PageSummary } from '../../workspaces/docs/model';
 import { relativeTime } from '../projects/model';
 import './search.css';
 
@@ -42,6 +44,8 @@ type SearchResult = {
 
 /** PDFs in each project's literature folder, by project id. */
 export type LibraryFiles = Map<string, LibraryEntry[]>;
+/** Matching documents in each project, by project id. */
+export type DocHits = Map<string, DocHit[]>;
 
 function excerpt(text: string, term: string) {
   const index = text.toLocaleLowerCase().indexOf(term);
@@ -59,6 +63,7 @@ export function searchWorkspace(
   data: Workspace | null,
   query: string,
   libraries: LibraryFiles = new Map(),
+  docHits: DocHits = new Map(),
 ): SearchResult[] {
   const term = query.trim().toLocaleLowerCase();
   if (!data || !term) return [];
@@ -107,8 +112,23 @@ export function searchWorkspace(
       });
     }
   }
+  for (const [projectId, hits] of docHits) {
+    const project = projects.get(projectId);
+    if (!project) continue;
+    for (const hit of hits)
+      results.push({
+        id: `${projectId}:${hit.id}`,
+        kind: 'note',
+        title: hit.title || t('无标题'),
+        excerpt: hit.snippet,
+        scope: project.name,
+        target: { projectId, workspace: 'notes', resourceId: hit.id },
+      });
+  }
   for (const note of data.records) {
-    if (isTrashed(note) || !matches(`${note.title} ${note.body}`)) continue;
+    // Project notes became documents; only notes outside projects remain.
+    if (note.project !== '__inbox__' || isTrashed(note) || !matches(`${note.title} ${note.body}`))
+      continue;
     const personal = note.project === '__inbox__';
     const project = projects.get(note.project);
     results.push({
@@ -126,7 +146,7 @@ export function searchWorkspace(
 
 const modules: { workspace: SearchTarget['workspace']; label: string; Icon: LucideIcon }[] = [
   { workspace: 'literature', label: '文献', Icon: BookOpen },
-  { workspace: 'notes', label: '笔记', Icon: NotebookPen },
+  { workspace: 'notes', label: '文档', Icon: FileText },
   { workspace: 'experiments', label: '实验', Icon: FlaskConical },
   { workspace: 'writing', label: '写作', Icon: PenLine },
 ];
@@ -163,6 +183,7 @@ export function SearchDialog({
   onNavigate,
   projectId,
   library = nativeLibrary,
+  docs = appDocs(),
 }: {
   store: WorkspaceStore;
   onClose: () => void;
@@ -170,11 +191,66 @@ export function SearchDialog({
   /** Inside a project, its literature folder is searched; otherwise every project's. */
   projectId?: string;
   library?: LibraryBackend;
+  docs?: DocsBackend;
 }) {
   const data = useStore(store, (state) => state.data);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const [libraries, setLibraries] = useState<LibraryFiles | null>(null);
+  const [docHits, setDocHits] = useState<DocHits>(new Map());
+  const [recentDocs, setRecentDocs] = useState<PageSummary[]>([]);
+  // Documents are searched on disk, in this project or in every open one.
+  const projectIds = (
+    projectId
+      ? [projectId]
+      : (data?.projects ?? []).filter((project) => !project.archived).map((project) => project.id)
+  ).join('\n');
+  useEffect(() => {
+    const term = deferredQuery.trim();
+    if (!term || !docs.available()) {
+      setDocHits(new Map());
+      return;
+    }
+    let active = true;
+    const timer = setTimeout(() => {
+      void Promise.all(
+        projectIds
+          .split('\n')
+          .filter(Boolean)
+          .map((id) =>
+            docs
+              .search(id, term)
+              .then((hits) => [id, (hits ?? []).slice(0, 20)] as const)
+              .catch(() => [id, []] as const),
+          ),
+      ).then((found) => {
+        if (active) setDocHits(new Map(found.map(([id, hits]) => [id, [...hits]])));
+      });
+    }, 150);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [deferredQuery, docs, projectIds]);
+  useEffect(() => {
+    if (!projectId || !docs.available()) return;
+    let active = true;
+    docs
+      .list(projectId)
+      .then((pages) => {
+        if (active)
+          setRecentDocs(
+            (pages ?? [])
+              .filter((page) => !page.deletedAt)
+              .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+              .slice(0, 5),
+          );
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [docs, projectId]);
   const [opening, setOpening] = useState('');
   const [error, setError] = useState('');
   const typed = !!query.trim();
@@ -199,7 +275,7 @@ export function SearchDialog({
       active = false;
     };
   }, [typed, libraries, data, projectId, library]);
-  const results = searchWorkspace(data, deferredQuery, libraries ?? undefined);
+  const results = searchWorkspace(data, deferredQuery, libraries ?? undefined, docHits);
   async function open(result: SearchResult) {
     if (!result.path || !result.target.projectId) {
       onNavigate(result.target);
@@ -226,15 +302,9 @@ export function SearchDialog({
   const groups = [
     { kind: 'project' as const, title: t('项目'), Icon: FolderKanban },
     { kind: 'paper' as const, title: t('文献'), Icon: BookOpen },
-    { kind: 'note' as const, title: t('笔记'), Icon: NotebookPen },
+    { kind: 'note' as const, title: t('文档'), Icon: FileText },
   ];
   // Before typing: where the user can go next.
-  const recentNotes = projectId
-    ? (data?.records ?? [])
-        .filter((note) => note.project === projectId && !isTrashed(note))
-        .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
-        .slice(0, 5)
-    : [];
   const recentProjects = projectId
     ? []
     : (data?.projects ?? [])
@@ -275,8 +345,8 @@ export function SearchDialog({
           <Search size={18} />
           <Input
             autoFocus
-            aria-label={t('搜索项目、文献和笔记')}
-            placeholder={projectId ? t('搜索论文、笔记，或跳转') : t('搜索项目、论文和笔记')}
+            aria-label={t('搜索项目、文献和文档')}
+            placeholder={projectId ? t('搜索论文、文档，或跳转') : t('搜索项目、论文和文档')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -302,17 +372,17 @@ export function SearchDialog({
                     )}
                   </ResourceList>
                 </div>
-                {recentNotes.length ? (
+                {recentDocs.length ? (
                   <div className="sf-search-group">
-                    <h3>{t('最近的笔记')}</h3>
-                    <ResourceList label={t('最近的笔记')}>
-                      {recentNotes.map((note) =>
+                    <h3>{t('最近的文档')}</h3>
+                    <ResourceList label={t('最近的文档')}>
+                      {recentDocs.map((page) =>
                         row(
-                          note.id,
-                          NotebookPen,
-                          note.title || t('未命名笔记'),
-                          relativeTime(note.updatedAt),
-                          () => go(noteTarget(note, false)),
+                          page.id,
+                          FileText,
+                          page.title || t('无标题'),
+                          relativeTime(page.updatedAt),
+                          () => go({ projectId, workspace: 'notes', resourceId: page.id }),
                         ),
                       )}
                     </ResourceList>

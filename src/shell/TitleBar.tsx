@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, NotebookPen, PanelLeft, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, PanelLeft, Search, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '../components/primitives';
 import { BrandMark } from '../components/layout/BrandMark';
@@ -125,13 +125,13 @@ export function TitleBar({
                 id="notes-toggle"
                 variant="ghost"
                 className="sf-titlebar-tool"
-                aria-label={t('研究笔记')}
+                aria-label={t('文档')}
                 aria-pressed={dock.open && dock.tool === 'notes'}
                 disabled={!ready}
                 onClick={() => dock.onTool('notes')}
               >
-                <NotebookPen />
-                <span>{t('笔记')}</span>
+                <FileText />
+                <span>{t('文档')}</span>
               </Button>
             ) : null}
             <Button

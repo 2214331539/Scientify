@@ -26,10 +26,12 @@ import {
 } from '../features/projects/model';
 import {
   classifyCloud,
+  cloudStore,
   isNewCloudProject,
   refreshCloud,
   useCloud,
 } from '../features/projects/cloud';
+import { changedProjects, reconcileAccount, syncAccount } from '../features/projects/accountSync';
 import { purgeExpiredNotes } from '../features/notes/model';
 import { SettingsDialog } from '../features/settings/Settings';
 import { SearchDialog, type SearchTarget } from '../features/search/SearchDialog';
@@ -44,6 +46,11 @@ import { endBackgroundTasks, useDevelopmentRuntime } from '../workspaces/experim
 import { clearCodeRoot, selectExperiment } from '../workspaces/experiments/code-context';
 import { sameCodeRoot } from '../workspaces/experiments/catalog';
 import { GlobalDock } from '../shell/GlobalDock';
+import { DocsWorkspace } from '../workspaces/docs/DocsWorkspace';
+import { docsRuntime, flushDocs } from '../workspaces/docs/runtime';
+import { migrateNotes } from '../workspaces/docs/migrate';
+import { appDocs } from '../platform/docs';
+import { listenDocsAgent } from '../workspaces/docs/agent';
 import { ResizeHandle } from '../shell/ResizeHandle';
 import {
   getFileRuntime,
@@ -51,7 +58,9 @@ import {
   hasUnsavedFileChanges,
   invalidateProjectFileSessions,
   notifyFileRuntime,
+  refreshProjectSessions,
 } from '../editor/sessions';
+import { agentFinishedEvent } from '../features/assistant/agent-runtime';
 import type { Project } from '../domain/workspace';
 import type { WorkContext, WorkspaceId } from '../domain/context';
 import { workspaceStore, type WorkspaceStore } from '../stores/workspace';
@@ -62,7 +71,6 @@ import {
   canEditProject,
   collaborationStateEvent,
   isSyncedProject,
-  signInRequestEvent,
   type CollaborationProject,
 } from '../platform/collaboration';
 import { SignInPage } from '../features/account/SignInPage';
@@ -244,6 +252,10 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend) {
             store.setState({ error: t('论文笔记尚未保存，请重试或处理冲突后退出。') });
             return;
           }
+          if (!(await flushDocs())) {
+            store.setState({ error: t('文档尚未保存，请重试后退出。') });
+            return;
+          }
           if (
             !store.getState().dirty ||
             (await confirmAction(t('仍有未保存的内容。确认放弃这些修改并退出？')))
@@ -325,16 +337,9 @@ export function App({
     title: t('项目管理'),
   });
   const [pendingNote, setPendingNote] = useState<{ scope: string; id: string } | null>(null);
-  const [signingIn, setSigningIn] = useState(false);
   const notesLayerRef = useRef<HTMLElement>(null);
   const [notesPlacement, setNotesPlacement] = useState(false);
   useCloseProtection(store, backend);
-  // Every sign-in entry asks for the same page; it opens over any dialog.
-  useEffect(() => {
-    const open = () => setSigningIn(true);
-    window.addEventListener(signInRequestEvent, open);
-    return () => window.removeEventListener(signInRequestEvent, open);
-  }, []);
   useEffect(() => {
     if (!epoch || store.getState().dirty) return;
     const runtime = getFileRuntime(backend);
@@ -344,8 +349,17 @@ export function App({
     notifyFileRuntime(backend);
   }, [epoch, backend, store]);
   useEffect(() => {
+    // Files the AI wrote show up in open editors and file trees when its turn ends.
+    const finished = (event: Event) =>
+      void refreshProjectSessions(backend, (event as CustomEvent<string>).detail);
+    window.addEventListener(agentFinishedEvent, finished);
+    return () => window.removeEventListener(agentFinishedEvent, finished);
+  }, [backend]);
+  useEffect(() => {
     void store.getState().load();
   }, [store]);
+  // The AI's document tools are answered by this window.
+  useEffect(() => listenDocsAgent(), []);
   useEffect(() => {
     try {
       localStorage.setItem(sessionKey, JSON.stringify(ui));
@@ -366,7 +380,7 @@ export function App({
     if (phase === 'ready') void purgeExpiredNotes(store);
   }, [phase, store]);
   // The project center keeps the cloud list fresh: on open, after sign-in changes,
-  // when the window comes back into focus, and every two minutes.
+  // when the window comes back into focus, and every minute.
   const cloud = useCloud();
   const cloudWatched = phase === 'ready';
   useEffect(() => {
@@ -382,13 +396,41 @@ export function App({
     refresh(true);
     window.addEventListener(collaborationStateEvent, forced);
     window.addEventListener('focus', focused);
-    const timer = window.setInterval(forced, 120_000);
+    const timer = window.setInterval(forced, 60_000);
     return () => {
       window.removeEventListener(collaborationStateEvent, forced);
       window.removeEventListener('focus', focused);
       window.clearInterval(timer);
     };
   }, [cloudWatched, store]);
+  // One account, the same projects on every computer: after each refresh this computer's
+  // projects are linked to the account and mine from elsewhere added. A project changed on
+  // another computer syncs at the next refresh; every five minutes (and right after linking)
+  // all of them sync, which also sends what changed here in projects that are not open.
+  const openProjectId = useRef<string | null>(null);
+  openProjectId.current = ui.projectId;
+  const accountSyncedAt = useRef(0);
+  useEffect(() => {
+    if (!cloudWatched || !cloud.fetchedAt || !cloud.state?.authenticated || !cloud.reachable)
+      return;
+    let alive = true;
+    const snapshot = cloudStore.getState();
+    void reconcileAccount(store, snapshot).then((linked) => {
+      if (!alive) return;
+      const full = linked.length > 0 || Date.now() - accountSyncedAt.current >= 300_000;
+      const changed = changedProjects(snapshot, store.getState().data?.projects ?? []);
+      if (!full && !changed.length) return;
+      if (full) accountSyncedAt.current = Date.now();
+      void syncAccount(store, {
+        skip: openProjectId.current,
+        only: full ? undefined : changed,
+        snapshot,
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [cloud.fetchedAt, cloud.reachable, cloud.state?.authenticated, cloudWatched, store]);
   useEffect(() => {
     const onResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', onResize);
@@ -440,6 +482,13 @@ export function App({
     });
   }, [data]);
   const project = data?.projects.find((p) => p.id === ui.projectId);
+  // A project's old notes become documents as soon as it opens, so search finds them.
+  const openedProject = phase === 'ready' ? project?.id : undefined;
+  useEffect(() => {
+    if (!openedProject) return;
+    const docs = appDocs();
+    void migrateNotes(store, docs, openedProject, docsRuntime(docs, openedProject)).catch(() => {});
+  }, [openedProject, store]);
   const location = project ? (ui.locations[project.id] ?? locationDefault) : locationDefault;
   const workspace = projectModules.some((w) => w.id === location.workspace)
     ? location.workspace
@@ -760,7 +809,11 @@ export function App({
             paperId: w === 'literature' ? (source.resourceId ?? null) : null,
             paths: run
               ? (s.locations[source.projectId!]?.paths ?? {})
-              : { ...(s.locations[source.projectId!]?.paths ?? {}), [w]: source.path ?? null },
+              : {
+                  ...(s.locations[source.projectId!]?.paths ?? {}),
+                  // A document is opened by its page id.
+                  [w]: w === 'notes' ? (source.resourceId ?? null) : (source.path ?? null),
+                },
           },
         },
       }));
@@ -856,7 +909,8 @@ export function App({
       (!entry.local && entry.remote.role !== 'owner' && isNewCloudProject(entry.remote.id)) ||
       !!entry.sync?.conflicts.length,
   );
-  const notesWorkspace = !!ready && !!project && workspace === 'notes';
+  // The old notes page lived inside the right-hand panel; documents are a normal module.
+  const notesWorkspace = false;
   if (notesWorkspace && !notesPlacement) setNotesPlacement(true);
   const inlineDockOpen =
     ui.dockOpen && windowWidth > 900 && (!notesWorkspace || ui.dock !== 'notes');
@@ -896,7 +950,6 @@ export function App({
         onOpen={openProject}
         onNew={() => openDialog({ kind: 'project' })}
         onEdit={(p) => openDialog({ kind: 'project', project: p })}
-        onOpenRemote={openRemoteProject}
         onShared={() => showPage('team')}
       />
     ) : (
@@ -930,7 +983,18 @@ export function App({
       }
       onContext={receiveContext}
     />
-  ) : workspace === 'notes' ? null : workspace === 'experiments' ? (
+  ) : workspace === 'notes' ? (
+    <DocsWorkspace
+      key={project.id}
+      project={project}
+      store={store}
+      backend={backend}
+      activePage={location.paths?.notes}
+      onOpenPage={openFile}
+      onContext={receiveContext}
+      onTool={openTool}
+    />
+  ) : workspace === 'experiments' ? (
     <ExperimentWorkspace
       key={project.id}
       project={project}
@@ -1008,7 +1072,6 @@ export function App({
         <ViewTransition
           key={`${epoch}:${project?.id ?? 'launcher'}:${phase}`}
           viewKey={project ? workspace : ui.page}
-          external={project ? { key: 'notes', ref: notesLayerRef } : undefined}
           onSettled={() => {
             if (!notesWorkspace) setNotesPlacement(false);
           }}
@@ -1049,6 +1112,16 @@ export function App({
         <span>{t('共享')}</span>
       </Button>
     ) : undefined;
+  // Signed out, Scientify is only the account page: at first launch and after signing out.
+  // The browser preview has no accounts and stays open.
+  if (
+    cloudWatched &&
+    isTauri() &&
+    windowMode !== 'browser' &&
+    cloud.state &&
+    !cloud.state.authenticated
+  )
+    return <SignInPage />;
   return (
     <AppFrame
       rightWidth={rightWidth}
@@ -1081,7 +1154,7 @@ export function App({
               ? {
                   tool: ui.dock,
                   open: ui.dockOpen,
-                  notesAvailable: !notesWorkspace,
+                  notesAvailable: workspace !== 'notes',
                   onTool: toggleTool,
                 }
               : undefined
@@ -1151,7 +1224,6 @@ export function App({
               {...(project ? { projectId: project.id } : {})}
             />
           ) : null}
-          {signingIn ? <SignInPage onClose={() => setSigningIn(false)} /> : null}
           {sharing && data ? (
             <ShareProjectDialog
               store={store}

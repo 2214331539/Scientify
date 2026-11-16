@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-docs-agent-respond"
+description = "Enables the docs_agent_respond command without any pre-configured scope."
+commands.allow = ["docs_agent_respond"]
+
+[[permission]]
+identifier = "deny-docs-agent-respond"
+description = "Denies the docs_agent_respond command without any pre-configured scope."
+commands.deny = ["docs_agent_respond"]

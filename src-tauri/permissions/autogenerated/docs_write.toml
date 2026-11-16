@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-docs-write"
+description = "Enables the docs_write command without any pre-configured scope."
+commands.allow = ["docs_write"]
+
+[[permission]]
+identifier = "deny-docs-write"
+description = "Denies the docs_write command without any pre-configured scope."
+commands.deny = ["docs_write"]

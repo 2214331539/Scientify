@@ -13,6 +13,8 @@ import { AssistantConversations, type AssistantMenu } from './AssistantConversat
 import { AssistantTranscript } from './AssistantTranscript';
 import { getFileRuntime, reloadDirectorySessions } from '../../editor/sessions';
 import { codeContext } from '../../workspaces/experiments/code-context';
+import { experimentsFor } from '../../workspaces/experiments/catalog';
+import { currentManuscript } from '../../workspaces/writing/manuscripts';
 import { Menu } from '../../components/primitives/Menu';
 import { PERSONAL_SCOPE } from '../notes/model';
 import { Modal } from '../../components/Modal';
@@ -31,6 +33,7 @@ import {
   type AgentSkillListing,
   type AgentSkillRef,
   type PermissionMode,
+  type TurnPlace,
 } from '../../platform/agent';
 import type { ResearchBackend } from '../../platform/research';
 import {
@@ -796,6 +799,7 @@ export function AssistantPanel({
       snapshot,
       submittedAttachments,
       submittedSkills,
+      turnPlace(),
     );
     if (sent === false) {
       if (cleared) restorePrompt(sendingId, text);
@@ -806,6 +810,30 @@ export function AssistantPanel({
       setAttachments((current) => current?.filter((item) => !submittedAttachments.includes(item)));
       setSelectedSkills((current) => current.filter((item) => !submittedSkills.includes(item)));
     }
+  }
+
+  /** The page this message is sent from; the turn works in that page's folder. */
+  function turnPlace(): TurnPlace | undefined {
+    if (scope === PERSONAL_SCOPE || context.projectId !== scope || context.workspace === 'projects')
+      return undefined;
+    const experiments = experimentsFor(data, scope).filter((item) => !item.archived);
+    const chosen = context.experimentId ?? selectedExperimentId;
+    const experiment = experiments.find((item) => item.id === chosen) ?? experiments[0];
+    const manuscript =
+      context.workspace === 'writing'
+        ? currentManuscript(data?.projects.find((item) => item.id === scope))
+        : null;
+    const path = !includeContext
+      ? undefined
+      : context.workspace === 'literature'
+        ? context.paperPath
+        : context.path;
+    return {
+      page: context.workspace,
+      ...(experiment ? { experimentId: experiment.id } : {}),
+      ...(manuscript ? { manuscriptId: manuscript.id } : {}),
+      ...(path ? { path } : {}),
+    };
   }
 
   async function captureContext(boundRoot?: string) {
@@ -820,6 +848,14 @@ export function AssistantPanel({
           domainForWorkspace(context.workspace) === domain ||
           // Code chats can read papers too, so the open paper stays in their context.
           (domain === 'code' && context.workspace === 'literature'));
+    if (!matches && !context.browser && context.projectId === scope) {
+      // A page outside this chat's folder is still described; the turn works in its folder
+      // (see turnPlace) and the agent reads the files itself.
+      const page = { ...context };
+      delete page.workspaceRoot;
+      delete page.experimentId;
+      return freezeContext(page);
+    }
     const visible = matches ? freezeContext(context) : undefined;
     if (!agent.context || !agentProject || (agent === nativeAgent && !isTauri())) return visible;
     const discovered = await agent.context({

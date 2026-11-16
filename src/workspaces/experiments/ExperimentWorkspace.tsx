@@ -34,6 +34,7 @@ import type { WorkContext } from '../../domain/context';
 import type { ResearchBackend } from '../../platform/research';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { getFileRuntime, getFileSession } from '../../editor/sessions';
+import { manuscriptsOf } from '../writing/manuscripts';
 import {
   FileResources,
   FileWorkspace,
@@ -145,6 +146,13 @@ export function ExperimentWorkspace({
   const experimentId = useStore(codeContext, (state) => state.experiments[project.id]);
   const catalog = experimentsFor(data, project.id).filter((item) => !item.archived);
   const experiment = catalog.find((item) => item.id === experimentId) ?? catalog[0];
+  // The default experiment is the project folder itself; its manuscripts belong to writing.
+  const manuscriptFolders =
+    experiment?.source === 'project'
+      ? manuscriptsOf(data?.projects.find((item) => item.id === project.id) ?? project)
+          .map((item) => item.folder)
+          .filter(Boolean)
+      : [];
   const code = useCodeWorkspace(project, experiment);
   const git = useGitActions({ projectId: project.id, backend, store, code });
   const development = useDevelopment();
@@ -670,6 +678,7 @@ export function ExperimentWorkspace({
               onOpen={openPath}
               workspaceRoot={root}
               createRequest={createRequest}
+              hide={manuscriptFolders}
             />
           </div>
           <div hidden={side !== 'search'} className="sf-code-resource-content">

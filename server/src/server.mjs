@@ -154,21 +154,120 @@ async function authenticateCode(db, config, phone, code) {
   await db.query('DELETE FROM auth_codes WHERE phone = $1', [phone]);
 }
 
+const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 32 };
+
+/** Passwords are stored as scrypt hashes with their own salt and parameters. */
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(password, salt, SCRYPT.keylen, SCRYPT);
+  return ['scrypt', SCRYPT.N, SCRYPT.r, SCRYPT.p, salt.toString('base64'), hash.toString('base64')].join('$');
+}
+
+function passwordMatches(password, stored) {
+  const [kind, N, r, p, salt, hash] = String(stored ?? '').split('$');
+  if (kind !== 'scrypt' || !salt || !hash) return false;
+  const expected = Buffer.from(hash, 'base64');
+  const actual = crypto.scryptSync(password, Buffer.from(salt, 'base64'), expected.length, {
+    N: Number(N),
+    r: Number(r),
+    p: Number(p),
+  });
+  return crypto.timingSafeEqual(actual, expected);
+}
+
+/** 8 to 64 characters with at least one letter and one digit. */
+function checkPassword(value) {
+  const password = String(value ?? '');
+  if (password.length < 8 || password.length > 64 || !/[A-Za-z]/.test(password) || !/\d/.test(password))
+    throw Object.assign(new Error('密码需要 8–64 位，同时包含字母和数字。'), { status: 400 });
+  return password;
+}
+
+// Wrong passwords per phone number: ten in fifteen minutes, then a pause.
+const passwordFailures = new Map();
+const PASSWORD_WINDOW_MS = 15 * 60_000;
+const PASSWORD_FAILURES_PER_WINDOW = 10;
+
+function recentFailures(phone) {
+  const nowMs = Date.now();
+  const recent = (passwordFailures.get(phone) ?? []).filter((at) => nowMs - at < PASSWORD_WINDOW_MS);
+  passwordFailures.set(phone, recent);
+  return recent;
+}
+
+async function findOrCreateUser(db, phone) {
+  const existing = await db.query('SELECT id, phone FROM users WHERE phone = $1', [phone]);
+  if (existing.rows[0]) return existing.rows[0];
+  const inserted = await db.query(
+    `INSERT INTO users(id, phone) VALUES ($1, $2)
+     ON CONFLICT (phone) DO NOTHING RETURNING id, phone`,
+    [uuid(), phone],
+  );
+  const user =
+    inserted.rows[0] ??
+    (await db.query('SELECT id, phone FROM users WHERE phone = $1', [phone])).rows[0];
+  if (!user) throw Object.assign(new Error('账号创建失败，请重试。'), { status: 500 });
+  return user;
+}
+
 async function login(db, config, phone, code) {
   await authenticateCode(db, config, phone, code);
-  const existing = await db.query('SELECT id, phone FROM users WHERE phone = $1', [phone]);
-  let user = existing.rows[0];
-  if (!user) {
-    const inserted = await db.query(
-      `INSERT INTO users(id, phone) VALUES ($1, $2)
-       ON CONFLICT (phone) DO NOTHING RETURNING id, phone`,
-      [uuid(), phone],
-    );
-    user =
-      inserted.rows[0] ??
-      (await db.query('SELECT id, phone FROM users WHERE phone = $1', [phone])).rows[0];
-    if (!user) throw Object.assign(new Error('账号创建失败，请重试。'), { status: 500 });
+  return startSession(db, config, await findOrCreateUser(db, phone));
+}
+
+async function passwordLogin(db, config, phone, password) {
+  if (recentFailures(phone).length >= PASSWORD_FAILURES_PER_WINDOW)
+    throw Object.assign(new Error('密码错误次数过多，请 15 分钟后再试，或用验证码登录。'), {
+      status: 429,
+    });
+  const result = await db.query('SELECT id, phone, password_hash FROM users WHERE phone = $1', [phone]);
+  const user = result.rows[0];
+  if (user && !user.password_hash)
+    throw Object.assign(new Error('这个账号还没有设置密码，请用验证码登录。'), { status: 400 });
+  if (!user || !passwordMatches(String(password ?? ''), user.password_hash)) {
+    recentFailures(phone).push(Date.now());
+    throw Object.assign(new Error('手机号或密码不正确。'), { status: 400 });
   }
+  passwordFailures.delete(phone);
+  return startSession(db, config, { id: user.id, phone: user.phone });
+}
+
+/** Creates an account with a password; a number that only signed in by SMS gets its password. */
+async function register(db, config, phone, code, password) {
+  const secret = hashPassword(checkPassword(password));
+  await authenticateCode(db, config, phone, code);
+  const existing = await db.query('SELECT password_hash FROM users WHERE phone = $1', [phone]);
+  if (existing.rows[0]?.password_hash)
+    throw Object.assign(new Error('这个手机号已经注册，请直接登录。'), { status: 409 });
+  const user = await findOrCreateUser(db, phone);
+  await db.query('UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1', [
+    user.id,
+    secret,
+  ]);
+  return startSession(db, config, user);
+}
+
+/** A new password signs out every other device. */
+async function resetPassword(db, config, phone, code, password) {
+  const secret = hashPassword(checkPassword(password));
+  await authenticateCode(db, config, phone, code);
+  const result = await db.query('SELECT id, phone FROM users WHERE phone = $1', [phone]);
+  const user = result.rows[0];
+  if (!user) throw Object.assign(new Error('这个手机号还没有注册。'), { status: 404 });
+  await withTransaction(db, async (client) => {
+    await client.query('UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1', [
+      user.id,
+      secret,
+    ]);
+    await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [user.id]);
+  });
+  passwordFailures.delete(phone);
+  return startSession(db, config, user);
+}
+
+/** Joins pending invitations and issues tokens for a signed-in user. */
+async function startSession(db, config, user) {
+  const phone = user.phone;
   await withTransaction(db, async (client) => {
     await client.query(
       `INSERT INTO project_members(project_id, user_id, role)
@@ -283,6 +382,32 @@ async function handle(request, response, { config, db }) {
       );
       return send(response, 200, result);
     }
+    if (request.method === 'POST' && path === '/v1/auth/password-login') {
+      const input = await body(request, 16_384);
+      return send(
+        response,
+        200,
+        await passwordLogin(db, config, normalizePhone(input.phone), input.password),
+      );
+    }
+    if (request.method === 'POST' && path === '/v1/auth/register') {
+      const input = await body(request, 16_384);
+      const phone = normalizePhone(input.phone);
+      return send(
+        response,
+        200,
+        await register(db, config, phone, String(input.code ?? '').trim(), input.password),
+      );
+    }
+    if (request.method === 'POST' && path === '/v1/auth/reset-password') {
+      const input = await body(request, 16_384);
+      const phone = normalizePhone(input.phone);
+      return send(
+        response,
+        200,
+        await resetPassword(db, config, phone, String(input.code ?? '').trim(), input.password),
+      );
+    }
     if (request.method === 'POST' && path === '/v1/auth/refresh') {
       const input = await body(request, 16_384);
       const payload = verifyToken(input.refreshToken, config.jwtSecret, config.jwtIssuer);
@@ -309,7 +434,12 @@ async function handle(request, response, { config, db }) {
 
     const user = authUser(request, config);
     if (request.method === 'GET' && path === '/v1/me') {
-      return send(response, 200, { id: user.sub, phone: user.phone });
+      const result = await db.query('SELECT password_hash FROM users WHERE id = $1', [user.sub]);
+      return send(response, 200, {
+        id: user.sub,
+        phone: user.phone,
+        hasPassword: !!result.rows[0]?.password_hash,
+      });
     }
     if (request.method === 'POST' && path === '/v1/auth/logout') {
       const input = await body(request, 16_384);

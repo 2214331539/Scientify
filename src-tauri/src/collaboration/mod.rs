@@ -375,6 +375,63 @@ pub async fn collaboration_login<R: tauri::Runtime>(
         Some(json!({"phone": phone.trim(), "code": code.trim()})),
     )
     .await?;
+    signed_in(&state, endpoint, &result)
+}
+
+/// Signs in by SMS code or password, registers, or resets the password; all four end signed in.
+#[tauri::command]
+pub async fn collaboration_sign_in<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    endpoint: String,
+    mode: String,
+    phone: String,
+    code: Option<String>,
+    password: Option<String>,
+) -> Result<CollaborationState, String> {
+    trusted(&view)?;
+    let endpoint = normalize_endpoint(&endpoint)?;
+    let phone = phone.trim();
+    let code = code.unwrap_or_default();
+    let code = code.trim();
+    let password = password.unwrap_or_default();
+    let (path, body) = match mode.as_str() {
+        "code" => ("/auth/login", json!({"phone": phone, "code": code})),
+        "password" => (
+            "/auth/password-login",
+            json!({"phone": phone, "password": password}),
+        ),
+        "register" => (
+            "/auth/register",
+            json!({"phone": phone, "code": code, "password": password}),
+        ),
+        "reset" => (
+            "/auth/reset-password",
+            json!({"phone": phone, "code": code, "password": password}),
+        ),
+        _ => return Err("登录方式无效。".into()),
+    };
+    let result = request_json(&endpoint, path, reqwest::Method::POST, None, Some(body)).await?;
+    signed_in(&state, endpoint, &result)
+}
+
+/// The signed-in account as the server knows it, including whether it has a password.
+#[tauri::command]
+pub async fn collaboration_account<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let endpoint = read(&state)?.endpoint;
+    auth_request(&state, &endpoint, "/me", reqwest::Method::GET, None).await
+}
+
+/// Keeps the tokens of a sign-in response and turns collaboration on.
+fn signed_in(
+    state: &AppState,
+    endpoint: String,
+    result: &Value,
+) -> Result<CollaborationState, String> {
     let user = result.get("user").ok_or("登录响应缺少用户信息。")?;
     let auth = AuthTokens {
         access_token: result["accessToken"]
@@ -394,12 +451,12 @@ pub async fn collaboration_login<R: tauri::Runtime>(
             .ok_or("登录响应缺少手机号。")?
             .to_string(),
     };
-    write_auth(&state, &auth)?;
-    let mut current = read(&state)?;
+    write_auth(state, &auth)?;
+    let mut current = read(state)?;
     current.endpoint = endpoint;
     current.enabled = true;
-    write(&state, &current)?;
-    snapshot(&state)
+    write(state, &current)?;
+    snapshot(state)
 }
 
 #[tauri::command]

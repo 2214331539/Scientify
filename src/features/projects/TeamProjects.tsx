@@ -9,12 +9,9 @@ import {
   CloudDownload,
   CloudOff,
   FolderOpen,
-  Info,
   Lock,
-  LogIn,
   MoreHorizontal,
   Plus,
-  RefreshCw,
   Search,
   Star,
   TriangleAlert,
@@ -31,7 +28,6 @@ import { t, translateError } from '../../i18n';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
   collaboration,
-  requestSignIn,
   type CollaborationMember,
   type CollaborationProject,
 } from '../../platform/collaboration';
@@ -44,7 +40,6 @@ import {
   markCloudSeen,
   refreshCloud,
   reloadMembers,
-  syncNow,
   useCloud,
   type CloudEntry,
 } from './cloud';
@@ -61,7 +56,7 @@ import { colorForId, coverColor, relativeTime } from './model';
 type Filter = 'all' | 'own' | 'shared';
 
 function statusOf(entry: CloudEntry, reachable: boolean) {
-  if (!entry.local) return { tone: 'muted', icon: <CloudDownload />, label: t('未下载') };
+  if (!entry.local) return { tone: 'muted', icon: <CloudDownload />, label: t('等待同步') };
   if (!reachable) return { tone: 'muted', icon: <CloudOff />, label: t('离线') };
   if (entry.sync?.conflicts.length)
     return {
@@ -152,16 +147,7 @@ export function TeamProjects({
       <section className="center-page" aria-label={t('团队项目')}>
         <CenterHeader title={t('团队项目')} />
         <div className="center-scroll">
-          <CenterEmpty
-            icon={<UsersRound />}
-            title={t('登录后查看团队项目')}
-            actions={
-              <Button variant="primary" onClick={requestSignIn}>
-                <LogIn />
-                {t('登录')}
-              </Button>
-            }
-          />
+          <CenterEmpty icon={<UsersRound />} title={t('登录后查看团队项目')} />
         </div>
       </section>
     );
@@ -190,37 +176,13 @@ export function TeamProjects({
       </Button>
     </CenterHeader>
   );
+  // Syncing runs by itself; the page only speaks up when it cannot.
   const status = offline ? (
     <p className="center-connection off" role="status">
       <CloudOff />
-      <span>
-        {cloud.fetchedAt
-          ? t('无法连接协作服务，显示的是 {time} 的列表。', { time: relativeTime(cloud.fetchedAt) })
-          : t('无法连接协作服务。')}
-      </span>
-      <Button variant="ghost" size="sm" onClick={() => void refreshCloud(data.projects)}>
-        {t('重试')}
-      </Button>
+      <span>{t('当前离线，恢复网络后会自动同步。')}</span>
     </p>
-  ) : (
-    <p className="center-connection" role="status">
-      <i className="center-sync-dot" />
-      <span>
-        {cloud.loading
-          ? t('正在刷新…')
-          : t('已连接协作服务 · {time}刷新', { time: relativeTime(cloud.fetchedAt) })}
-      </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={cloud.loading}
-        onClick={() => void refreshCloud(data.projects)}
-      >
-        <RefreshCw />
-        {t('刷新')}
-      </Button>
-    </p>
-  );
+  ) : null;
   const shareDialog = sharing ? (
     <ShareProjectDialog
       store={store}
@@ -375,7 +337,7 @@ export function TeamProjects({
                             disabled={busy || !!working || (!entry.local && offline)}
                             onClick={() => void open(entry)}
                           >
-                            {entry.local ? t('打开') : t('下载')}
+                            {t('打开')}
                           </Button>
                         </td>
                       </tr>
@@ -423,8 +385,8 @@ export function TeamProjects({
                 disabled={busy || !!working || (!selected.local && offline)}
                 onClick={() => void open(selected)}
               >
-                {selected.local ? <ArrowUpRight /> : <CloudDownload />}
-                {selected.local ? t('打开项目') : t('下载并打开')}
+                <ArrowUpRight />
+                {t('打开项目')}
               </Button>
               <Button
                 iconOnly
@@ -442,12 +404,6 @@ export function TeamProjects({
                 <MoreHorizontal />
               </Button>
             </div>
-            {!selected.local ? (
-              <p className="team-note">
-                <Info />
-                <span>{t('首次打开会下载整个项目。')}</span>
-              </p>
-            ) : null}
             {selected.local?.question ? (
               <section className="team-section">
                 <h3>{t('研究问题')}</h3>
@@ -621,23 +577,8 @@ export function TeamProjects({
                   ) : null}
                 </dl>
               ) : (
-                <p className="muted">{t('还没有下载到这台电脑。')}</p>
+                <p className="muted">{t('正在同步到这台电脑。')}</p>
               )}
-              {selected.local ? (
-                <Button
-                  size="sm"
-                  disabled={offline || !!working}
-                  onClick={() =>
-                    void run(`sync:${selected.remote.id}`, async () => {
-                      await syncNow(selected.remote.id);
-                      setNotice(t('同步完成。'));
-                    })
-                  }
-                >
-                  <RefreshCw />
-                  {working === `sync:${selected.remote.id}` ? t('正在同步…') : t('立即同步')}
-                </Button>
-              ) : null}
             </section>
             {owner ? null : (
               <footer className="team-detail-footer">
@@ -681,18 +622,6 @@ export function TeamProjects({
       <Menu anchor={menu} label={t('更多操作')} onClose={() => setMenu(null)}>
         {selected ? (
           <>
-            <Button
-              role="menuitem"
-              variant="ghost"
-              disabled={!selected.local || offline || !!working}
-              onClick={() => {
-                setMenu(null);
-                void run(`sync:${selected.remote.id}`, () => syncNow(selected.remote.id));
-              }}
-            >
-              <RefreshCw />
-              {t('立即同步')}
-            </Button>
             <Button
               role="menuitem"
               variant="ghost"

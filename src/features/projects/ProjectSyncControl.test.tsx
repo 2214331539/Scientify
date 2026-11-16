@@ -77,18 +77,6 @@ async function fixture(role = 'owner') {
   return { store, save };
 }
 
-it('disables and resumes only this device without removing the project or its role', async () => {
-  const { store } = await fixture();
-  const user = userEvent.setup();
-  render(<ProjectSyncControl project={project} store={store} />);
-  await user.click(await screen.findByRole('button', { name: '项目同步：等待同步' }));
-  await user.click(screen.getByRole('button', { name: '关闭本机同步' }));
-  await waitFor(() => expect(collaboration.setProjectSync).toHaveBeenCalledWith('p', false));
-  await user.click(await screen.findByRole('button', { name: '开启本机同步' }));
-  await waitFor(() => expect(collaboration.setProjectSync).toHaveBeenLastCalledWith('p', true));
-  expect(store.getState().data?.projects[0].collaborationRole).toBe('owner');
-});
-
 it('compares two versions and sends the preview token with the selected resolution', async () => {
   info.conflicts = [conflict];
   const { store } = await fixture();
@@ -104,18 +92,20 @@ it('compares two versions and sends the preview token with the selected resoluti
   );
 });
 
-it('keeps a failed sync visible even when the subsequent local status read succeeds', async () => {
+it('syncs by itself and shows failures and members with no buttons to press', async () => {
   vi.spyOn(collaboration, 'syncProject').mockRejectedValue(new Error('测试连接中断'));
+  vi.spyOn(collaboration, 'members').mockResolvedValue({
+    members: [{ id: 'u', phone: '18200000000', role: 'owner' }],
+  });
   const { store } = await fixture();
   const user = userEvent.setup();
-  render(<ProjectSyncControl project={project} store={store} />);
-  await user.click(await screen.findByRole('button', { name: '项目同步：等待同步' }));
-  await user.click(screen.getByRole('button', { name: '立即同步' }));
-  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('测试连接中断'));
-  expect(screen.getByRole('button', { name: '项目同步：同步失败' })).toBeTruthy();
-  await user.click(screen.getByRole('button', { name: '关闭本机同步' }));
-  expect(await screen.findByRole('button', { name: '项目同步：本机同步已关闭' })).toBeTruthy();
+  render(<ProjectSyncControl project={project} store={store} automatic />);
+  await user.click(await screen.findByRole('button', { name: '项目同步：同步失败' }));
   expect(screen.getByRole('alert').textContent).toContain('测试连接中断');
+  expect(screen.queryByRole('button', { name: '立即同步' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /本机同步/ })).toBeNull();
+  expect(await screen.findByText('我')).toBeTruthy();
+  expect(store.getState().data?.projects[0].collaborationRole).toBe('owner');
 });
 
 it('keeps drafts safe by disabling conflict resolution while anything is unsaved', async () => {

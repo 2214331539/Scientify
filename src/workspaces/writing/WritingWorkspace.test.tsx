@@ -10,7 +10,16 @@ import type { FileSession } from '../../editor/sessions';
 import { completionAt } from '../../editor/latex';
 import { writingApi, type CompileResult } from '../../platform/writing';
 import { WritingWorkspace } from './WritingWorkspace';
-import { createManuscript, folderName, manuscriptsOf, TEMPLATES } from './manuscripts';
+import {
+  createManuscript,
+  findManuscripts,
+  folderName,
+  manuscriptsOf,
+  removeManuscript,
+  saveManuscript,
+  TEMPLATES,
+  type Manuscript,
+} from './manuscripts';
 
 vi.mock('../../components/prompts', () => ({ confirmAction: vi.fn(async () => true) }));
 vi.mock('../../editor/CodeEditor', () => ({
@@ -105,9 +114,9 @@ const compileButton = async () =>
     button.classList.contains('sf-writing-compile-main'),
   )!;
 
-async function setup(manuscripts: unknown[] = [paper]) {
+async function setup(manuscripts: unknown[] = [paper], extra: Record<string, unknown> = {}) {
   const data = emptyWorkspace();
-  data.projects = [{ ...project, manuscripts }];
+  data.projects = [{ ...project, manuscripts, ...extra }];
   const persistence = {
     load: async () => ({ workspace: data, directory: '', legacyAvailable: false }),
     save: vi.fn(async (d: typeof data) => d),
@@ -165,8 +174,40 @@ async function setup(manuscripts: unknown[] = [paper]) {
   return { store, backend, onOpen };
 }
 
+it('lists a LaTeX folder that appears in the project as a manuscript', async () => {
+  const { store } = await setup([]);
+  expect(await screen.findByRole('button', { name: '稿件：paper' })).toBeTruthy();
+  expect(manuscriptsOf(store.getState().data!.projects[0])).toEqual([
+    expect.objectContaining({ name: 'paper', folder: 'paper', main: 'main.tex' }),
+  ]);
+});
+
+it('shows a paper that appears while the project files view is open', async () => {
+  localStorage.setItem('scientify.writing.manuscript.p1', '*');
+  await setup([]);
+  expect(await screen.findByRole('button', { name: '稿件：paper' })).toBeTruthy();
+  expect(localStorage.getItem('scientify.writing.manuscript.p1')).not.toBe('*');
+});
+
+it('compiles a manuscript the first time it is opened and shows the PDF beside the source', async () => {
+  vi.mocked(writingApi.compile).mockResolvedValue(result({}));
+  await setup([{ ...paper, id: 'first-visit' }]);
+  expect(await screen.findByRole('document', { name: 'PDF' })).toBeTruthy();
+  expect(writingApi.compile).toHaveBeenCalledOnce();
+});
+
+it('keeps a manuscript taken out of writing out until it is added again', async () => {
+  const { store, backend } = await setup();
+  const live = () => store.getState().data!.projects[0];
+  await removeManuscript(store, 'p1', 'm1');
+  expect(live().manuscriptsDismissed).toEqual(['paper']);
+  expect(await findManuscripts(backend, live())).toEqual([]);
+  await saveManuscript(store, 'p1', paper as Manuscript);
+  expect(live().manuscriptsDismissed).toEqual([]);
+});
+
 it('creates a manuscript from a template and opens its main document', async () => {
-  const { store, backend, onOpen } = await setup([]);
+  const { store, backend, onOpen } = await setup([], { manuscriptsDismissed: ['paper'] });
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: '新建稿件…' }));
   const dialog = screen.getByRole('dialog', { name: '新建稿件' });
@@ -240,9 +281,9 @@ it('switches to the bundled engine when local TeX lacks a package', async () => 
   vi.mocked(writingApi.compile)
     .mockResolvedValueOnce(result({ status: 'failed', pdf: false, log: MISSING }))
     .mockResolvedValue(result({ bundled: true, engine: '内置引擎 Tectonic 0.17.0' }));
+  // Opening a manuscript that was never compiled compiles it.
   const { store } = await setup([{ ...paper, id: 'switch' }]);
   const user = userEvent.setup();
-  await user.click(await compileButton());
   const notice = await screen.findByRole('status');
   expect(notice.textContent).toContain('本机 TeX 缺少 nicematrix.sty，已改用内置引擎编译');
   await waitFor(() => expect(writingApi.compile).toHaveBeenCalledTimes(2));
@@ -261,7 +302,6 @@ it('offers the bundled engine when the chosen TeX lacks a package', async () => 
     .mockResolvedValue(result({ bundled: true }));
   await setup([{ ...paper, id: 'local', engine: 'local' }]);
   const user = userEvent.setup();
-  await user.click(await compileButton());
   const notice = await screen.findByRole('status');
   expect(notice.textContent).toContain('本机 TeX 缺少 nicematrix.sty');
   expect(writingApi.compile).toHaveBeenCalledTimes(1);
@@ -283,8 +323,6 @@ it('downloads missing packages again as soon as the computer is back online', as
     )
     .mockResolvedValue(result({ bundled: true }));
   await setup([{ ...paper, id: 'offline' }]);
-  const user = userEvent.setup();
-  await user.click(await compileButton());
   const notice = await screen.findByRole('status');
   expect(notice.textContent).toContain('nicematrix.sty 需要联网下载');
   expect(within(notice).getByRole('button', { name: '重新下载' })).toBeTruthy();
@@ -314,7 +352,7 @@ it('imports a downloaded Overleaf zip as a manuscript', async () => {
     folder: 'My Paper',
     files: ['refs.bib', 'sections/intro.tex', 'main.tex'],
   });
-  const { store, onOpen } = await setup([]);
+  const { store, onOpen } = await setup([], { manuscriptsDismissed: ['paper'] });
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: '从 Overleaf 导入…' }));
   await user.click(screen.getByRole('button', { name: '选择 zip…' }));
@@ -333,7 +371,7 @@ it('imports a downloaded Overleaf zip as a manuscript', async () => {
 
 it('clones an Overleaf project by Git with its token', async () => {
   vi.mocked(writingApi.clone).mockResolvedValue({ folder: 'Thesis', files: ['main.tex'] });
-  const { store, onOpen } = await setup([]);
+  const { store, onOpen } = await setup([], { manuscriptsDismissed: ['paper'] });
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: '从 Overleaf 导入…' }));
   const dialog = screen.getByRole('dialog', { name: '从 Overleaf 导入' });

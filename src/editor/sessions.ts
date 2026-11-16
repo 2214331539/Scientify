@@ -240,6 +240,25 @@ export async function reloadDirectorySessions(
   );
   window.dispatchEvent(new CustomEvent('scientify-project-files-changed', { detail: projectId }));
 }
+/** Reads a project's open files again where they changed on disk; edits in progress are kept. */
+export async function refreshProjectSessions(backend: FileBackend, projectId: string) {
+  const clean = (session: FileSession) =>
+    session.getSnapshot().phase === 'ready' && !session.getSnapshot().dirty;
+  await Promise.allSettled(
+    [...getFileRuntime(backend).sessions.values()]
+      .filter((session) => session.projectId === projectId && clean(session))
+      .map(async (session) => {
+        const file = await backend.readFile(
+          projectId,
+          session.path,
+          ...(session.workspaceRoot ? [session.workspaceRoot] : []),
+        );
+        if (file.version !== session.getSnapshot().version && clean(session))
+          await session.reloadDiscardingEdits();
+      }),
+  );
+  window.dispatchEvent(new CustomEvent('scientify-project-files-changed', { detail: projectId }));
+}
 export function hasUnsavedFileChanges(backend: FileBackend) {
   return [...getFileRuntime(backend).sessions.values()].some(
     (session) => session.getSnapshot().dirty,

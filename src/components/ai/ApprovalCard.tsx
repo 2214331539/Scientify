@@ -36,6 +36,14 @@ function describe(event: ApprovalRequest): {
       target: text(params.command),
     };
   }
+  if (event.method === 'scientify/docs/requestApproval') {
+    return {
+      icon: FileWarning,
+      title: params.action === 'create' ? t('请求新建文档') : t('请求修改文档'),
+      detail: text(params.reason),
+      target: text(params.command),
+    };
+  }
   if (event.method === 'scientify/notes/requestApproval') {
     return {
       icon: FileWarning,

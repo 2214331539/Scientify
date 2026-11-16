@@ -11,6 +11,8 @@ export const DOMAINS = {
   library: 'file',
   code: 'file',
   asset: 'file',
+  // Document pages, one JSON file each.
+  doc: 'file',
 };
 
 const RECORD_ID = /^[A-Za-z0-9_-]{1,80}$/;

@@ -49,7 +49,16 @@ const CODE_SKIP: &[&str] = &[
     ".tox",
 ];
 /// Project fields that follow it to other devices; folders and shelf settings stay local.
-const PROJECT_FIELDS: &[&str] = &["name", "question", "color", "description"];
+const PROJECT_FIELDS: &[&str] = &[
+    "name",
+    "question",
+    "color",
+    "description",
+    "manuscripts",
+    "manuscriptsDismissed",
+];
+/// Fields older versions do not send: project info without them leaves them as they are.
+const PROJECT_FIELDS_ADDED: &[&str] = &["manuscripts", "manuscriptsDismissed"];
 /// Experiment fields that only make sense on this device.
 const EXPERIMENT_LOCAL: &[&str] = &["python", "root"];
 
@@ -58,6 +67,8 @@ pub(crate) enum Domain {
     Library,
     Code,
     Asset,
+    /// Document pages (`workspace/docs/<project>`), merged block by block when both sides change.
+    Doc,
     Project,
     Record,
     Experiment,
@@ -65,10 +76,11 @@ pub(crate) enum Domain {
 }
 
 impl Domain {
-    const ALL: [Domain; 7] = [
+    const ALL: [Domain; 8] = [
         Domain::Library,
         Domain::Code,
         Domain::Asset,
+        Domain::Doc,
         Domain::Project,
         Domain::Record,
         Domain::Experiment,
@@ -79,6 +91,7 @@ impl Domain {
             Domain::Library => "library",
             Domain::Code => "code",
             Domain::Asset => "asset",
+            Domain::Doc => "doc",
             Domain::Project => "project",
             Domain::Record => "record",
             Domain::Experiment => "experiment",
@@ -89,7 +102,10 @@ impl Domain {
         Self::ALL.into_iter().find(|domain| domain.name() == value)
     }
     fn is_file(self) -> bool {
-        matches!(self, Domain::Library | Domain::Code | Domain::Asset)
+        matches!(
+            self,
+            Domain::Library | Domain::Code | Domain::Asset | Domain::Doc
+        )
     }
     fn collection(self) -> Option<&'static str> {
         match self {
@@ -264,6 +280,24 @@ pub(crate) struct Page {
     has_more: bool,
 }
 
+/// Puts file content at a presigned OSS address. OSS refuses an upload without Content-Length
+/// (HTTP 411), and an empty body goes out without one unless it is set: empty files such as a
+/// new train.py.
+async fn put_blob(url: &str, bytes: Vec<u8>, content_type: &str) -> Result<(), String> {
+    let response = reqwest::Client::new()
+        .put(url)
+        .header("content-type", content_type)
+        .header(reqwest::header::CONTENT_LENGTH, bytes.len())
+        .body(bytes)
+        .send()
+        .await
+        .map_err(|error| format!("OSS 上传失败：{error}"))?;
+    if !response.status().is_success() {
+        return Err(format!("OSS 上传失败（HTTP {}）。", response.status()));
+    }
+    Ok(())
+}
+
 /// The server, over HTTP in the app and in memory in tests.
 pub(crate) enum Remote<'a> {
     Http {
@@ -349,16 +383,7 @@ impl Remote<'_> {
                 let url = presign["uploadUrl"]
                     .as_str()
                     .ok_or("服务器没有返回 OSS 上传地址。")?;
-                let response = reqwest::Client::new()
-                    .put(url)
-                    .header("content-type", content_type)
-                    .body(bytes)
-                    .send()
-                    .await
-                    .map_err(|error| format!("OSS 上传失败：{error}"))?;
-                if !response.status().is_success() {
-                    return Err(format!("OSS 上传失败（HTTP {}）。", response.status()));
-                }
+                put_blob(url, bytes, content_type).await?;
                 super::auth_request(
                     state,
                     endpoint,
@@ -518,6 +543,10 @@ fn include(domain: Domain, rel: &str, name: &str, dir: bool) -> bool {
             }
         }
         Domain::Asset => !name.starts_with('.'),
+        // One file per page, nothing in subfolders.
+        Domain::Doc => {
+            !dir && !rel.contains('/') && !name.starts_with('.') && lower.ends_with(".json")
+        }
         _ => false,
     }
 }
@@ -745,7 +774,7 @@ fn apply_action(data: &mut Value, project: &str, action: &RecordAction) -> Resul
             for field in PROJECT_FIELDS {
                 match content.get(*field).filter(|value| !value.is_null()) {
                     Some(value) => target[*field] = value.clone(),
-                    None if *field != "name" => {
+                    None if *field != "name" && !PROJECT_FIELDS_ADDED.contains(field) => {
                         if let Some(fields) = target.as_object_mut() {
                             fields.remove(*field);
                         }
@@ -994,6 +1023,7 @@ pub(crate) async fn sync(
         Domain::Asset,
         device.data().join("note-assets").join(project),
     );
+    roots.insert(Domain::Doc, crate::docs::folder(device.data(), project)?);
     rebase_moved_roots(&mut state, &roots);
 
     // 1. Everything the server changed since this device last caught up.
@@ -1040,6 +1070,8 @@ pub(crate) async fn sync(
         .collect();
     let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S-%f").to_string();
     let mut downloads: Vec<(String, Value)> = Vec::new();
+    // Pages changed on both sides: this side's bytes, merged after the download.
+    let mut doc_merges: Vec<(String, Vec<u8>)> = Vec::new();
     let mut records: Vec<RecordAction> = Vec::new();
     let mut record_keys: Vec<(String, u64)> = Vec::new();
     let mut pushes: Vec<(String, u64)> = Vec::new();
@@ -1099,7 +1131,18 @@ pub(crate) async fn sync(
                     && !(base.is_none() && matches!(domain, Domain::Project | Domain::Experiment))
                     && (domain.is_file() || can_push(domain));
                 if domain.is_file() {
-                    if conflict {
+                    if conflict && domain == Domain::Doc {
+                        if let Some(Item::File { path: file, .. }) = here {
+                            match fs::read(file) {
+                                Ok(bytes) => doc_merges.push((item_key.clone(), bytes)),
+                                Err(_) => {
+                                    defer(&entity, &mut deferred_from);
+                                    outcome.deferred += 1;
+                                    continue;
+                                }
+                            }
+                        }
+                    } else if conflict {
                         let root = &roots[&domain];
                         let copy = conflict_name(path, &device.device_id, &stamp);
                         let from = target(root, path);
@@ -1236,6 +1279,58 @@ pub(crate) async fn sync(
     }
     if !library_paths.is_empty() {
         device.library.invalidate_fingerprints(&library_paths);
+    }
+
+    // 4b. Pages both sides changed: merge them block by block and send the result back.
+    for (item_key, mine) in doc_merges {
+        let (_, path) = split_key(&item_key).unwrap();
+        let Some(revision) = state.entries.get(&item_key).map(|entry| entry.revision) else {
+            continue;
+        };
+        let file = target(&roots[&Domain::Doc], path);
+        let merged = match fs::read(&file) {
+            // Deleted elsewhere: an edit made here wins over the deletion.
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Some((mine, 0)),
+            Err(_) => None,
+            Ok(theirs) => match (
+                serde_json::from_slice::<Value>(&mine),
+                serde_json::from_slice::<Value>(&theirs),
+            ) {
+                (Ok(local_page), Ok(remote_page)) => {
+                    let base = doc_base(device.data(), project, path);
+                    let (page, conflicts) =
+                        crate::docs::merge(base.as_ref(), &local_page, &remote_page);
+                    serde_json::to_vec(&page)
+                        .ok()
+                        .map(|bytes| (bytes, conflicts))
+                }
+                _ => None,
+            },
+        };
+        let Some((bytes, _conflicts)) = merged else {
+            outcome
+                .errors
+                .push(format!("{path}：文档合并失败，保留了服务端版本。"));
+            continue;
+        };
+        match write_file(&file, &bytes) {
+            Ok(written) => {
+                local.insert(
+                    item_key.clone(),
+                    Item::File {
+                        path: file,
+                        hash: written.hash.unwrap_or_default(),
+                        size: written.size,
+                        modified: written.modified,
+                    },
+                );
+                outcome.changed.insert(Domain::Doc.name());
+                if can_push(Domain::Doc) {
+                    pushes.push((item_key, revision));
+                }
+            }
+            Err(error) => outcome.errors.push(format!("{path}：{error}")),
+        }
     }
 
     // 5. Apply remote record changes in one save.
@@ -1385,8 +1480,47 @@ pub(crate) async fn sync(
             state.roots.insert(domain.name().to_string(), root_id(root));
         }
     }
+    keep_doc_bases(device.data(), project, &roots[&Domain::Doc], &state);
     save_state(device.data(), project, &state)?;
     Ok(outcome)
+}
+
+// ---------- Document bases ----------
+// The last version of each page this device agreed on with the server, for three-way merges.
+fn doc_base_dir(data: &Path, project: &str) -> PathBuf {
+    data.join("collaboration").join("doc-base").join(project)
+}
+fn doc_base(data: &Path, project: &str, path: &str) -> Option<Value> {
+    if !valid_path(path) || path.contains('/') {
+        return None;
+    }
+    let bytes = fs::read(doc_base_dir(data, project).join(path)).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+/// Copies every page whose content matches what the server has as the new base.
+fn keep_doc_bases(data: &Path, project: &str, root: &Path, state: &ProjectSync) {
+    let dir = doc_base_dir(data, project);
+    for (item_key, entry) in &state.entries {
+        let Some((Domain::Doc, path)) = split_key(item_key) else {
+            continue;
+        };
+        if path.contains('/') || !valid_path(path) {
+            continue;
+        }
+        let base = dir.join(path);
+        let Some(hash) = &entry.hash else {
+            let _ = fs::remove_file(&base);
+            continue;
+        };
+        let same = |file: &Path| {
+            fs::read(file).is_ok_and(|bytes| format!("{:x}", Sha256::digest(&bytes)) == *hash)
+        };
+        let current = target(root, path);
+        if !same(&base) && same(&current) {
+            let _ = fs::create_dir_all(&dir);
+            let _ = fs::copy(&current, &base);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1511,6 +1645,45 @@ mod tests {
     use scientify_core::workspace;
 
     const PROJECT: &str = "project-shared-01";
+
+    #[tokio::test]
+    async fn empty_files_upload_with_a_content_length() {
+        use std::io::{BufRead, BufReader, Write};
+        // Answers like OSS: an upload without Content-Length is refused with 411.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut headers = Vec::new();
+            loop {
+                let mut line = String::new();
+                if reader.read_line(&mut line).unwrap() == 0 || line == "\r\n" {
+                    break;
+                }
+                headers.push(line.trim().to_ascii_lowercase());
+            }
+            let status = if headers.iter().any(|header| header == "content-length: 0") {
+                "200 OK"
+            } else {
+                "411 Length Required"
+            };
+            write!(
+                &stream,
+                "HTTP/1.1 {status}\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
+            )
+            .unwrap();
+            headers
+        });
+        put_blob(
+            &format!("http://{address}/blob"),
+            Vec::new(),
+            "text/x-python",
+        )
+        .await
+        .unwrap();
+        assert!(server.join().unwrap()[0].starts_with("put /blob"));
+    }
 
     /// One simulated device: its own data folder, documents folder and stores.
     struct Machine {
@@ -1865,6 +2038,48 @@ mod tests {
     }
 
     #[test]
+    fn manuscripts_follow_the_project_and_older_devices_do_not_drop_them() {
+        let project = json!({"id": PROJECT, "name": "P", "question": "q", "path": "D:/local",
+            "manuscripts": [{"id": "m", "folder": "paper", "main": "main.tex"}],
+            "manuscriptsDismissed": ["old"]});
+        let meta = project_meta(&project);
+        assert_eq!(meta["manuscripts"][0]["folder"], "paper");
+        assert_eq!(meta["manuscriptsDismissed"], json!(["old"]));
+        assert!(meta.get("path").is_none());
+
+        let mut data = json!({"projects": [project]});
+        // Project info from a version that does not know about manuscripts.
+        let older = json!({"name": "Renamed", "question": "q"});
+        apply_action(
+            &mut data,
+            PROJECT,
+            &RecordAction::Put {
+                domain: Domain::Project,
+                id: "meta".into(),
+                content: older,
+            },
+        )
+        .unwrap();
+        assert_eq!(data["projects"][0]["name"], "Renamed");
+        assert_eq!(data["projects"][0]["manuscripts"][0]["id"], "m");
+        assert_eq!(data["projects"][0]["manuscriptsDismissed"], json!(["old"]));
+
+        let newer = json!({"name": "Renamed", "manuscripts": []});
+        apply_action(
+            &mut data,
+            PROJECT,
+            &RecordAction::Put {
+                domain: Domain::Project,
+                id: "meta".into(),
+                content: newer,
+            },
+        )
+        .unwrap();
+        assert_eq!(data["projects"][0]["manuscripts"], json!([]));
+        assert!(data["projects"][0].get("question").is_none());
+    }
+
+    #[test]
     fn record_hashes_ignore_key_order() {
         let left = json!({"b": 1, "a": {"y": [1, {"d": 2, "c": 3}], "x": "s"}});
         let right = json!({"a": {"x": "s", "y": [1, {"c": 3, "d": 2}]}, "b": 1});
@@ -1882,6 +2097,58 @@ mod tests {
             conflict_name("README", "dev", "t"),
             "README (冲突副本 dev t)"
         );
+    }
+
+    #[tokio::test]
+    async fn two_devices_editing_one_document_keep_both_edits() {
+        let server = memory::Server::default();
+        let a = Machine::new("a", "owner");
+        let b = Machine::new("b", "owner");
+        let page = |blocks: &[(&str, &str)]| {
+            json!({"schema": 1, "id": "page-1", "title": "组会", "parent": null, "order": "V",
+                "createdAt": "", "updatedAt": "", "blocks": blocks.iter().map(|(id, text)|
+                    json!({"id": id, "type": "paragraph", "content": [{"text": text}]})).collect::<Vec<_>>()})
+            .to_string()
+        };
+        let texts = |dir: &Path| -> Vec<String> {
+            let page: Value =
+                serde_json::from_slice(&fs::read(dir.join("page-1.json")).unwrap()).unwrap();
+            page["blocks"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|block| block["content"][0]["text"].as_str().unwrap().to_owned())
+                .collect()
+        };
+        let docs_a = crate::docs::folder(a.storage.directory(), PROJECT).unwrap();
+        let docs_b = crate::docs::folder(b.storage.directory(), PROJECT).unwrap();
+        a.sync(&server).await;
+        write(
+            docs_a.join("page-1.json"),
+            &page(&[("x", "一"), ("y", "二")]),
+        );
+        assert!(a.sync(&server).await.errors.is_empty());
+        let received = b.sync(&server).await;
+        assert!(received.errors.is_empty(), "{:?}", received.errors);
+        assert_eq!(texts(&docs_b), ["一", "二"]);
+
+        // Each side edits a different paragraph before syncing again.
+        write(
+            docs_a.join("page-1.json"),
+            &page(&[("x", "一·A"), ("y", "二")]),
+        );
+        write(
+            docs_b.join("page-1.json"),
+            &page(&[("x", "一"), ("y", "二·B")]),
+        );
+        assert!(a.sync(&server).await.errors.is_empty());
+        let merged = b.sync(&server).await;
+        assert!(merged.errors.is_empty(), "{:?}", merged.errors);
+        assert_eq!(texts(&docs_b), ["一·A", "二·B"]);
+        assert!(a.sync(&server).await.errors.is_empty());
+        assert_eq!(texts(&docs_a), ["一·A", "二·B"]);
+        // No conflict copies of pages.
+        assert_eq!(fs::read_dir(&docs_b).unwrap().count(), 1);
     }
 
     #[tokio::test]

@@ -765,6 +765,7 @@ export function FileResources({
   changes,
   createRequest,
   folder,
+  hide,
 }: {
   project: Project;
   backend: ResearchBackend;
@@ -779,6 +780,8 @@ export function FileResources({
   createRequest?: CreateRequest;
   /** Shows only this project-relative folder, with every file in it ('' is the whole project). */
   folder?: string;
+  /** Folders that belong to another page, such as manuscripts inside the project folder. */
+  hide?: string[];
 }) {
   const editable = canEditProject(project, 'code');
   const scoped = folder !== undefined;
@@ -898,11 +901,13 @@ export function FileResources({
     }
   }
   // In a folder view, the tree is built from paths inside it and its ids get the folder back.
+  const outside = (path: string) =>
+    !!hide?.some((item) => path === item || path.startsWith(item + '/'));
   const shown = scoped
     ? files
         .filter((file) => file.path.startsWith(prefix) && file.path !== folder)
         .map((file) => ({ ...file, path: file.path.slice(prefix.length) }))
-    : files;
+    : files.filter((file) => !outside(file.path));
   const tree = createTree(shown, scoped ? 'files' : mode, search);
   const status = new Map(changes?.map((change) => [change.path, change.status]));
   const changedFolders = new Set(

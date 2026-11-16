@@ -110,7 +110,8 @@ it('creates a project in two steps from an empty project list', async () => {
   await user.type(dialog.getByLabelText('研究问题'), '剪枝会不会加剧幻觉？');
   await user.click(dialog.getByRole('button', { name: '下一步' }));
   expect(dialog.getByRole('list', { name: /第 2 步/ })).toBeTruthy();
-  expect(dialog.getByText('登录后可用。')).toBeTruthy();
+  // Signed in, a new project syncs to the account by itself; there is no per-project switch.
+  expect(dialog.queryByText('在多台设备上同步')).toBeNull();
   await user.click(dialog.getByRole('button', { name: '上一步' }));
   expect((dialog.getByLabelText('项目名称') as HTMLInputElement).value).toBe('视觉剪枝');
   await user.click(dialog.getByRole('button', { name: '下一步' }));

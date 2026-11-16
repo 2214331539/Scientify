@@ -92,7 +92,7 @@ export function Notifications({
       network: true,
       actions: [
         {
-          label: t('下载并打开'),
+          label: t('打开'),
           primary: true,
           run: () => {
             setError('');

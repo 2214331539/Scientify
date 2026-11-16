@@ -167,7 +167,7 @@ it('remembers the code view after opening a changed file and leaving the workspa
   );
   await user.click(within(screen.getByRole('main')).getByLabelText('打开文件'));
   expect(screen.getByRole('tab', { name: 'paper.md' }).getAttribute('aria-selected')).toBe('true');
-  await user.click(moduleButton(t('Notes')));
+  await user.click(moduleButton(t('文档')));
   await user.click(moduleButton(t('Experiments')));
   expect(screen.getByRole('tab', { name: 'paper.md' }).getAttribute('aria-selected')).toBe('true');
   expect(
@@ -371,14 +371,9 @@ it('opens the exact experiment source, remembers selection, and opens a recent n
   expect(JSON.parse(localStorage.getItem('scientify.ui.v2')!).locations.p1.runId).toBe('r-old');
   await user.click(screen.getByRole('button', { name: /Latest result/ }));
   expect(JSON.parse(localStorage.getItem('scientify.ui.v2')!).locations.p1.runId).toBe('r-new');
-  await user.click(moduleButton(t('Notes')));
-  await user.click(screen.getByRole('button', { name: /Insight note/ }));
-  expect(((await screen.findByLabelText('笔记标题')) as HTMLInputElement).value).toBe(
-    'Insight note',
-  );
-  expect((screen.getByLabelText('笔记正文') as HTMLTextAreaElement).value).toBe(
-    'Keep the useful conclusion.',
-  );
+  // Notes became documents; the documents module opens in their place.
+  await user.click(moduleButton(t('文档')));
+  expect(await screen.findByRole('heading', { name: '文档' })).toBeTruthy();
   await user.click(moduleButton(t('Experiments')));
   expect(await screen.findByRole('heading', { name: 'Latest result' })).toBeTruthy();
 });
