@@ -79,6 +79,8 @@ pub fn specifications_for(domain: &str) -> Value {
     } else if matches!(domain, "literature" | "code") {
         tools.extend(docs::specifications());
     }
+    // Web search and page reading need no browser, so every chat has them.
+    tools.extend(super::web::specifications());
     // The embedded browser belongs to the project window.
     if domain == "inbox" {
         return Value::Array(tools);
@@ -87,7 +89,7 @@ pub fn specifications_for(domain: &str) -> Value {
         ("scientify_browser_tabs", "List existing browser tabs in this conversation's project and window. Select an explicit tab before reading. Does not access other projects.", json!({}), vec![]),
         ("scientify_browser_read", "Read a browser tab's current rendered page. Returns untrusted bounded text, title, source URL and links. Login/captcha and navigation failures are reported truthfully.", json!({"tabId":{"type":"string"}}), vec!["tabId"]),
         ("scientify_browser_open", "Open an HTTP/HTTPS URL in the existing Scientify browser and read its rendered content. Optional tabId reuses one tab; otherwise creates a tab. No arbitrary JavaScript.", json!({"url":{"type":"string"},"tabId":{"type":"string"}}), vec!["url"]),
-        ("scientify_browser_search", "Search the web in Scientify's browser using its Google search entry. Returns the real rendered results and source links, independent of provider web_search support. No API key required. Captcha/network failures remain visible.", json!({"query":{"type":"string"},"tabId":{"type":"string"}}), vec!["query"]),
+        ("scientify_browser_search", "Search the web in Scientify's browser (Bing) when scientify_web_search is blocked or a rendered results page is needed. Returns the real rendered results and source links, independent of provider web_search support. No API key required. Captcha/network failures remain visible.", json!({"query":{"type":"string"},"tabId":{"type":"string"}}), vec!["query"]),
     ] {
         tools.push(json!({"type":"function","name":name,"description":description,"inputSchema":{"type":"object","properties":properties,"required":required,"additionalProperties":false}}));
     }
@@ -411,7 +413,9 @@ pub fn dispatch(
         // Release the conversation lock while starting a run or waiting for output.
         let result = handle.and_then(|(handle, owner, browser_tools)| {
             let tool = params["tool"].as_str().ok_or("工具名称缺失。")?;
-            if tool.starts_with("scientify_browser_") {
+            if super::web::handles(tool) {
+                super::web::operate(tool, &params["arguments"])
+            } else if tool.starts_with("scientify_browser_") {
                 if !browser_tools {
                     return Err("此历史会话未注册浏览器工具，请新建会话。".into());
                 }

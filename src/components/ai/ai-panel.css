@@ -713,3 +713,83 @@
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
+/* The Agent's plan for this turn, ticked off as it goes. */
+.sf-ai-plan {
+  margin-block: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  font-size: 12px;
+}
+.sf-ai-plan header {
+  margin-bottom: 4px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.sf-ai-plan ol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sf-ai-plan li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--sf-text-secondary);
+}
+.sf-ai-plan li svg {
+  flex: none;
+  margin-top: 2px;
+}
+.sf-ai-plan li.is-completed {
+  color: var(--sf-text-muted);
+  text-decoration: line-through;
+}
+.sf-ai-plan li.is-completed svg {
+  color: var(--sf-status-success);
+}
+.sf-ai-plan li.is-inProgress {
+  color: var(--sf-text-primary);
+}
+/* What the turn changed, file by file. */
+.sf-ai-diff summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sf-ai-diff-add {
+  color: var(--sf-status-success);
+}
+.sf-ai-diff-del {
+  color: var(--sf-status-danger);
+}
+.sf-ai-diff-file {
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.sf-ai-diff-file summary code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--sf-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-ai-diff-file pre {
+  max-height: 280px;
+  margin: 0 0 6px;
+  font-size: 11px;
+  white-space: pre;
+  overflow: auto;
+}
+.sf-ai-diff-file pre .is-add {
+  background: color-mix(in srgb, var(--sf-status-success) 12%, transparent);
+}
+.sf-ai-diff-file pre .is-del {
+  background: color-mix(in srgb, var(--sf-status-danger) 12%, transparent);
+}
+.sf-ai-diff-file pre .is-hunk {
+  color: var(--sf-status-info);
+}

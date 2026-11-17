@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from 'zustand';
-import { Bell, CircleX, FlaskConical, TriangleAlert, UserPlus } from 'lucide-react';
+import { Bell, CircleArrowUp, CircleX, FlaskConical, TriangleAlert, UserPlus } from 'lucide-react';
 import { Button } from '../components/primitives';
 import { Popover } from '../components/primitives/Popover';
 import { t } from '../i18n';
@@ -15,6 +15,13 @@ import {
   useCloud,
 } from '../features/projects/cloud';
 import { relativeTime } from '../features/projects/model';
+import {
+  dismissUpdate,
+  downloadUpdate,
+  installUpdate,
+  useUpdate,
+} from '../features/update/updater';
+import { downloadShare } from '../features/update/UpdatePanel';
 import './notifications.css';
 
 const dismissedKey = 'scientify.home.dismissed';
@@ -59,6 +66,7 @@ export function Notifications({
   const data = useStore(store, (s) => s.data);
   const busy = useStore(store, (s) => s.busy);
   const cloud = useCloud();
+  const update = useUpdate();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [dismissed, setDismissed] = useState(readDismissed);
   const [error, setError] = useState('');
@@ -74,6 +82,50 @@ export function Notifications({
     }
   }
   const items: Item[] = [];
+  if (
+    ['available', 'downloading', 'ready'].includes(update.phase) &&
+    !update.dismissed &&
+    update.version
+  ) {
+    const share = downloadShare(update);
+    const about = () => {
+      close();
+      window.dispatchEvent(new CustomEvent('scientify-open-settings', { detail: 'about' }));
+    };
+    items.push({
+      key: `update:${update.version}`,
+      tone: 'info',
+      icon: <CircleArrowUp />,
+      title:
+        update.phase === 'ready'
+          ? t('新版本 {version} 已下载', { version: update.version })
+          : t('新版本 {version} 可用', { version: update.version }),
+      detail:
+        update.phase === 'downloading'
+          ? share === null
+            ? t('正在后台下载')
+            : t('正在后台下载：{share}%', { share })
+          : (update.notes?.split('\n')[0] ?? t('重启后完成更新，项目和数据不受影响')),
+      actions:
+        update.phase === 'ready'
+          ? [
+              {
+                label: t('重启以完成更新'),
+                primary: true,
+                run: () => (close(), void installUpdate()),
+              },
+              { label: t('更新内容'), run: about },
+              { label: t('稍后'), run: dismissUpdate },
+            ]
+          : update.phase === 'available'
+            ? [
+                { label: t('下载更新'), primary: true, run: () => void downloadUpdate() },
+                { label: t('更新内容'), run: about },
+                { label: t('稍后'), run: dismissUpdate },
+              ]
+            : [{ label: t('更新内容'), run: about }],
+    });
+  }
   for (const entry of classifyCloud(cloud, data.projects).team) {
     if (entry.local || entry.remote.role === 'owner' || !isNewCloudProject(entry.remote.id))
       continue;

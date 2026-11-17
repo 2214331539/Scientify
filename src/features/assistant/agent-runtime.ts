@@ -446,6 +446,8 @@ export class AgentRuntime {
             operations: task.state.operations
               .slice(-20)
               .map((op) => ({ ...op, output: op.output.slice(-4000) })),
+            ...(task.state.plan.length ? { plan: task.state.plan } : {}),
+            ...(task.state.diff ? { diff: task.state.diff.slice(0, 60_000) } : {}),
           },
         });
     });

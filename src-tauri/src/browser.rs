@@ -136,7 +136,7 @@ pub fn resolve_address(raw: &str) -> Result<Option<tauri::Url>, String> {
     .iter()
     .any(|prefix| lower.starts_with(prefix))
     {
-        let mut url = tauri::Url::parse("https://www.google.com/search").unwrap();
+        let mut url = tauri::Url::parse("https://cn.bing.com/search").unwrap();
         url.query_pairs_mut().append_pair("q", text);
         return Ok(Some(url));
     }
@@ -180,7 +180,7 @@ pub fn resolve_address(raw: &str) -> Result<Option<tauri::Url>, String> {
         }) {
             return Err("仅允许 HTTP 或 HTTPS 网页。".into());
         }
-        let mut u = tauri::Url::parse("https://www.google.com/search").unwrap();
+        let mut u = tauri::Url::parse("https://cn.bing.com/search").unwrap();
         u.query_pairs_mut().append_pair("q", text);
         u
     };
@@ -1023,7 +1023,7 @@ mod tests {
                 .unwrap()
                 .unwrap()
                 .host_str(),
-            Some("www.google.com")
+            Some("cn.bing.com")
         );
         for query in ["continual learning", "site:arxiv.org 持续学习"] {
             let url = resolve_address(query).unwrap().unwrap();

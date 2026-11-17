@@ -165,7 +165,10 @@ async fn request_json(
         .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|error| error.to_string())?;
-    let mut request = client.request(method, url);
+    // The service asks apps below its minimum version to update (server client-policy.mjs).
+    let mut request = client
+        .request(method, url)
+        .header("x-scientify-version", env!("CARGO_PKG_VERSION"));
     if let Some(token) = token {
         request = request.bearer_auth(token);
     }

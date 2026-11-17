@@ -17,6 +17,8 @@ import { errorMessage } from '../../domain/errors';
 
 export type AgentPhase = 'idle' | 'opening' | 'running' | 'waiting' | 'stopping';
 export type AgentOperation = { id: string; label: string; status: string; output: string };
+/** A step of the plan the engine keeps for this turn: pending, inProgress or completed. */
+export type AgentPlanStep = { step: string; status: string };
 export interface AgentSessionSnapshot {
   phase: AgentPhase;
   threadId: string | null;
@@ -28,6 +30,9 @@ export interface AgentSessionSnapshot {
   cwd: string | null;
   outcome: 'completed' | 'failed' | 'interrupted' | null;
   operations: AgentOperation[];
+  plan: AgentPlanStep[];
+  /** The turn's file changes so far, as a unified diff. */
+  diff: string;
   unsupportedRequests: string[];
 }
 export const initialAgentSession: AgentSessionSnapshot = {
@@ -41,6 +46,8 @@ export const initialAgentSession: AgentSessionSnapshot = {
   cwd: null,
   outcome: null,
   operations: [],
+  plan: [],
+  diff: '',
   unsupportedRequests: [],
 };
 export function mergeApprovals(
@@ -65,6 +72,33 @@ const object = (value: unknown): Record<string, any> =>
   value && typeof value === 'object' ? (value as Record<string, any>) : {};
 const terminal = (value: unknown): value is 'completed' | 'failed' | 'interrupted' =>
   ['completed', 'failed', 'interrupted'].includes(String(value));
+
+/** Scientify's own tools in words, with what they were asked: "搜索网页：…". */
+export function describeTool(item: Record<string, any>): string | null {
+  if (item.type !== 'dynamicToolCall' || typeof item.tool !== 'string') return null;
+  let args: Record<string, any> = {};
+  try {
+    args = object(typeof item.arguments === 'string' ? JSON.parse(item.arguments) : item.arguments);
+  } catch {
+    /* Arguments still streaming in. */
+  }
+  const query = String(args.query ?? '');
+  const url = String(args.url ?? '');
+  switch (item.tool) {
+    case 'scientify_web_search':
+      return t('搜索网页：{query}', { query });
+    case 'scientify_browser_search':
+      return t('在浏览器中搜索：{query}', { query });
+    case 'scientify_web_fetch':
+      return t('阅读网页：{url}', { url });
+    case 'scientify_browser_open':
+      return t('打开网页：{url}', { url });
+    case 'scientify_search_papers':
+      return t('检索论文：{query}', { query });
+    default:
+      return null;
+  }
+}
 
 /** One conversation's protocol state. The application runtime owns its lifetime. */
 export class AgentSession {
@@ -166,12 +200,14 @@ export class AgentSession {
             'dynamicToolCall',
           ].includes(item.type)
         ) {
-          const label = String(
-            item.command ??
-              item.tool ??
-              item.query ??
-              (item.changes?.map((c: any) => c.path).join(', ') || item.type),
-          );
+          const label =
+            describeTool(item) ??
+            String(
+              item.command ??
+                item.tool ??
+                item.query ??
+                (item.changes?.map((c: any) => c.path).join(', ') || item.type),
+            );
           const operation = {
             id: String(item.id),
             label,
@@ -191,6 +227,16 @@ export class AgentSession {
           ].slice(-100);
         }
       }
+      if (event.method === 'turn/plan/updated' && Array.isArray(p.plan))
+        state.plan = p.plan
+          .map((entry: unknown) => object(entry))
+          .filter((entry: Record<string, any>) => entry.step)
+          .map((entry: Record<string, any>) => ({
+            step: String(entry.step),
+            status: String(entry.status ?? 'pending'),
+          }));
+      if (event.method === 'turn/diff/updated' && typeof p.diff === 'string')
+        state.diff = p.diff.slice(0, 200_000);
       if (event.method === 'item/commandExecution/outputDelta') {
         state.operations = state.operations.map((op) =>
           op.id === p.itemId
@@ -233,6 +279,8 @@ export class AgentSession {
       outcome: null,
       approvals: [],
       operations: [],
+      plan: [],
+      diff: '',
       unsupportedRequests: [],
     });
     try {

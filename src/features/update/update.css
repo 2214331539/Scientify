@@ -1,0 +1,43 @@
+/* Settings → 关于: update status under the version. */
+.sf-update {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(420px, 100%);
+  margin-top: 12px;
+}
+.sf-update-status {
+  margin: 0;
+  font-size: 13px;
+}
+.sf-update-progress {
+  width: 100%;
+  height: 4px;
+  accent-color: var(--sf-accent);
+}
+.sf-update-notes {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  text-align: left;
+  font-size: 12px;
+}
+.sf-update-notes p {
+  margin: 4px 0 0;
+  white-space: pre-line;
+}
+.sf-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.sf-update-auto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}

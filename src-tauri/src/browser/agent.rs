@@ -69,8 +69,8 @@ pub(crate) fn operate(
                 if input.query.trim().is_empty() || input.query.len() > 1000 {
                     return Err("搜索词为空或过长。".into());
                 }
-                let mut url = tauri::Url::parse("https://www.google.com/search")
-                    .map_err(|e| e.to_string())?;
+                let mut url =
+                    tauri::Url::parse("https://cn.bing.com/search").map_err(|e| e.to_string())?;
                 url.query_pairs_mut().append_pair("q", input.query.trim());
                 (input.tab_id, url)
             };

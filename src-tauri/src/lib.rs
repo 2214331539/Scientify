@@ -13,6 +13,7 @@ mod data_location;
 mod docs;
 mod translation_window;
 mod tray;
+mod updates;
 mod webview_profile;
 mod yita;
 pub use data_location::migrate_offline as migrate_storage_offline;
@@ -244,6 +245,8 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(browser::BrowserState::default())
         .manage(translation_window::WindowState::default())
         .manage(yita::YitaState::default())
@@ -340,6 +343,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            updates::updates_configured,
+            updates::updates_prepare,
             library::library_choose,
             library::library_command,
             library::library_open,

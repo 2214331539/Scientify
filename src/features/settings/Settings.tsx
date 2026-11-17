@@ -26,6 +26,7 @@ import { AccountPreferences } from './AccountPreferences';
 import { CollaborationPreferences } from './CollaborationPreferences';
 import { ModelPreferences } from './ModelPreferences';
 import type { ResearchBackend } from '../../platform/research';
+import { UpdatePanel } from '../update/UpdatePanel';
 import './settings.css';
 
 function TranslationPreferences() {
@@ -352,6 +353,7 @@ export function SettingsDialog({
             <h3>Scientify</h3>
             <p>{t('文献、笔记、实验和写作，在一个本地工作区里。')}</p>
             {version ? <span className="settings-version">{version}</span> : null}
+            <UpdatePanel />
           </div>
         </section>
       </div>

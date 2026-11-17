@@ -23,6 +23,7 @@ import { handleBilling } from './billing/routes.mjs';
 import { importFromEnvironment } from './billing/models.mjs';
 import { handleAdmin } from './admin/routes.mjs';
 import { startJobs } from './jobs.mjs';
+import { clientPolicy, requireSupportedClient } from './client-policy.mjs';
 
 const now = () => new Date();
 const uuid = () => crypto.randomUUID();
@@ -182,6 +183,9 @@ async function handle(request, response, context) {
       await db.query('SELECT 1');
       return send(response, 200, { ok: true, service: 'scientify-collaboration', database: 'ok' });
     }
+    if (request.method === 'GET' && path === '/v1/client-policy')
+      return send(response, 200, clientPolicy(config));
+    requireSupportedClient(request, config);
     if (request.method === 'POST' && path === '/v1/auth/send-code') {
       const input = await body(request, 16_384);
       await sendCode(db, config, normalizePhone(input.phone), clientAddress(request, config));

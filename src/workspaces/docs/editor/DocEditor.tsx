@@ -18,7 +18,6 @@ import {
   Palette,
   Plus,
   Quote,
-  Sparkles,
   Strikethrough,
   Trash2,
   Type,
@@ -30,6 +29,7 @@ import { t } from '../../../i18n';
 import { pageFromEditor, pageToEditor } from '../convert';
 import type { Block } from '../model';
 import { DocEnvContext, type DocEnv } from './env';
+import { Mascot } from '../../../components/ai/Mascot';
 import { docExtensions } from './extensions';
 
 export const TEXT_COLORS: [string, string | null][] = [
@@ -281,7 +281,7 @@ export function DocEditor({
                   setMenu(null);
                 }}
               >
-                <Sparkles size={14} />
+                <Mascot size={14} />
                 {t('问 AI')}
               </button>
             ) : null}
@@ -405,7 +405,7 @@ export function DocEditor({
           </button>
           <span className="doc-toolbar-sep" />
           <button type="button" className="doc-toolbar-ai" onClick={() => onAsk(selectedText())}>
-            <Sparkles size={13} />
+            <Mascot size={14} />
             {t('问 AI')}
           </button>
         </BubbleMenu>

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import { openBrowserSource } from '../../platform/browser-pane';
-import { ChevronRight, LoaderCircle, Sparkles } from 'lucide-react';
+import { ChevronRight, LoaderCircle } from 'lucide-react';
+import { Mascot } from '../../components/ai/Mascot';
 import { ApprovalCard } from '../../components/ai/ApprovalCard';
 import { ChatMessageView } from '../../components/ai/ChatMessageView';
 import { Button } from '../../components/primitives';
@@ -12,6 +12,7 @@ import type { AgentTask } from './agent-runtime';
 import type { ChatTask } from './chat-runtime';
 import type { Conversation } from './model';
 import { AssistantRuns } from './AssistantRuns';
+import { PlanList, TurnDiff } from './TurnDetails';
 
 interface Props {
   scope: string;
@@ -42,17 +43,21 @@ export function AssistantTranscript({
   const messagesRef = useRef<HTMLDivElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const agentState = activeTask?.state ?? initialAgentSession;
-  const [linkError, setLinkError] = useState('');
+  // The page opens over the current module (App), so the answer stays in view.
   const openLink = useCallback(
-    (url: string) => {
-      setLinkError('');
-      void openBrowserSource(scope, url).catch((error) => setLinkError(String(error)));
-    },
+    (url: string) =>
+      window.dispatchEvent(
+        new CustomEvent('scientify-preview-url', { detail: { projectId: scope, url } }),
+      ),
     [scope],
   );
   const onOpenLink = isTauri() && scope !== '__inbox__' ? openLink : undefined;
   const chatPending = !!chatTask?.pending;
   const operations = activeTask?.state.operations ?? conversation.agentRun?.operations ?? [];
+  const plan = activeTask?.state.plan ?? conversation.agentRun?.plan ?? [];
+  const diff = activeTask ? activeTask.state.diff : (conversation.agentRun?.diff ?? '');
+  // What the Agent is doing right now, e.g. "搜索网页：…".
+  const current = [...operations].reverse().find((op) => op.status === 'inProgress');
   useEffect(() => {
     const pane = messagesRef.current;
     if (pane && pinnedToBottom.current) pane.scrollTop = pane.scrollHeight;
@@ -90,7 +95,7 @@ export function AssistantTranscript({
         <AssistantRuns key={conversation.id} projectId={scope} conversationId={conversation.id} />
         {!conversation.messages.length ? (
           <div className="sf-ai-conversation-empty">
-            <Sparkles size={22} strokeWidth={1.5} aria-hidden="true" />
+            <Mascot size={56} shadow />
             {t('提问，或直接描述要在当前工作区完成的任务')}
           </div>
         ) : (
@@ -126,24 +131,20 @@ export function AssistantTranscript({
         ) : null}
         {chatPending ? (
           <div className="sf-ai-progress" role="status">
-            <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
+            <Mascot size={18} mood="thinking" />
             <span>{chatTask.stopping ? t('正在中止…') : t('正在回答…')}</span>
           </div>
         ) : null}
-        {linkError ? (
-          <div className="sf-aux-error" role="alert">
-            {linkError}
-          </div>
-        ) : null}
+        <PlanList plan={plan} />
         {agentPending && !agentState.approvals.length ? (
           <div className="sf-ai-progress sf-ai-agent-progress" role="status">
-            <LoaderCircle className="sf-ai-spinner" size={14} aria-hidden="true" />
+            <Mascot size={18} mood={current ? 'working' : 'thinking'} />
             <span>
               {agentState.phase === 'stopping'
                 ? t('正在中止…')
                 : activeTask?.starting
                   ? t('正在连接 Agent…')
-                  : t('Agent 正在工作…')}
+                  : (current?.label ?? t('Agent 正在工作…'))}
             </span>
           </div>
         ) : null}
@@ -181,6 +182,7 @@ export function AssistantTranscript({
             ))}
           </details>
         ) : null}
+        {diff ? <TurnDiff diff={diff} /> : null}
         {agentState.unsupportedRequests.length ? (
           <div role="alert" className="sf-aux-error">
             {t('此任务需要当前界面尚未支持的交互，请中止后重试。')}

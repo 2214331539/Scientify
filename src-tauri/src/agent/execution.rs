@@ -15,13 +15,15 @@ pub(crate) fn canonical_path(path: &Path) -> PathBuf {
     crate::local_process::process_path(&path.canonicalize().unwrap_or_else(|_| path.to_path_buf()))
 }
 
+/// Writes stay inside the project (and the turn's scratch folder); the network is
+/// open, so installing packages and cloning repositories work in "询问" too.
 pub fn policy(root: &Path, artifacts: Option<&Path>) -> Value {
     let mut roots = vec![canonical_path(root)];
     if let Some(path) = artifacts {
         roots.push(canonical_path(path));
     }
     json!({"type":"workspaceWrite", "writableRoots":roots,
-        "networkAccess":false,"excludeTmpdirEnvVar":false,"excludeSlashTmp":false})
+        "networkAccess":true,"excludeTmpdirEnvVar":false,"excludeSlashTmp":false})
 }
 
 pub fn gate(home: &Path) -> Arc<Mutex<()>> {

@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { targetInfo } from './platform.mjs';
 
@@ -21,6 +29,25 @@ const digest = createHash('sha256')
   .update(readFileSync(join(directory, name)))
   .digest('hex');
 writeFileSync(join(directory, `SHA256SUMS_${label}.txt`), `${digest}  ${name}\n`);
+// The update package and its signature, when built by scripts/build-release.mjs:
+// on Windows the installer itself, on macOS the app as a .tar.gz.
+const update = mac
+  ? {
+      file: 'target/release/bundle/macos/Scientify.app.tar.gz',
+      name: `Scientify_${version}_${label}.app.tar.gz`,
+    }
+  : { file: join(source, installers[0]), name };
+// The .app.tar.gz has no version in its name: only take one from this build.
+const fresh = (file) =>
+  Math.abs(statSync(file).mtimeMs - statSync(join(source, installers[0])).mtimeMs) < 30 * 60_000;
+if (existsSync(`${update.file}.sig`) && fresh(`${update.file}.sig`)) {
+  if (mac) cpSync(update.file, join(directory, update.name));
+  cpSync(`${update.file}.sig`, join(directory, `${update.name}.sig`));
+  console.log(`Update package staged: ${update.name}`);
+} else
+  console.log(
+    'No update signature: build with scripts/build-release.mjs to offer it as an update.',
+  );
 cpSync(
   'src-tauri/release-resources/licenses/THIRD_PARTY_LICENSES.txt',
   join(directory, `THIRD_PARTY_LICENSES_${label}.txt`),

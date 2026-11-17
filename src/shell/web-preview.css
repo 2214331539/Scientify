@@ -1,0 +1,36 @@
+/* A web page opened from an AI answer, laid over the module's center. */
+.workspace-content {
+  position: relative;
+}
+.sf-web-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: var(--sf-surface-canvas);
+}
+.sf-web-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.sf-web-preview-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--sf-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-web-preview-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}

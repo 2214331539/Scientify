@@ -1,4 +1,65 @@
 {
+  "网页预览": ["网页预览", "Web preview"],
+  "在文献页打开": ["在文献页打开", "Open in Literature"],
+  "关闭预览": ["关闭预览", "Close preview"],
+  "执行计划": ["执行计划", "Plan"],
+  "计划": ["计划", "Plan"],
+  "待做": ["待做", "To do"],
+  "本轮改动 · {count} 个文件": ["本轮改动 · {count} 个文件", "Changes this turn · {count} files"],
+  "搜索网页：{query}": ["搜索网页：{query}", "Searching the web: {query}"],
+  "在浏览器中搜索：{query}": ["在浏览器中搜索：{query}", "Searching in the browser: {query}"],
+  "阅读网页：{url}": ["阅读网页：{url}", "Reading: {url}"],
+  "打开网页：{url}": ["打开网页：{url}", "Opening: {url}"],
+  "检索论文：{query}": ["检索论文：{query}", "Searching papers: {query}"],
+  "新版本的安装包还在准备中，请稍后再试。": [
+    "新版本的安装包还在准备中，请稍后再试。",
+    "The new version's package is not ready yet. Try again later."
+  ],
+  "安装包签名校验失败，已停止更新。": [
+    "安装包签名校验失败，已停止更新。",
+    "The package's signature did not verify, so the update was stopped."
+  ],
+  "连不上更新服务器，请检查网络后重试。": [
+    "连不上更新服务器，请检查网络后重试。",
+    "Could not reach the update server. Check your network and try again."
+  ],
+  "更新失败：{reason}": ["更新失败：{reason}", "Update failed: {reason}"],
+  "开发版不检查更新。": ["开发版不检查更新。", "Development builds don't check for updates."],
+  "正在检查更新…": ["正在检查更新…", "Checking for updates…"],
+  "已是最新版本": ["已是最新版本", "You're up to date"],
+  "新版本 {version} 可用": ["新版本 {version} 可用", "Version {version} is available"],
+  "正在下载 {version}…": ["正在下载 {version}…", "Downloading {version}…"],
+  "正在下载 {version}：{share}%": [
+    "正在下载 {version}：{share}%",
+    "Downloading {version}: {share}%"
+  ],
+  "{version} 已下载，重启后完成更新": [
+    "{version} 已下载，重启后完成更新",
+    "{version} is downloaded; restart to finish updating"
+  ],
+  "正在安装，Scientify 会自动重启…": [
+    "正在安装，Scientify 会自动重启…",
+    "Installing; Scientify will restart by itself…"
+  ],
+  "更新内容": ["更新内容", "What's new"],
+  "重启以完成更新": ["重启以完成更新", "Restart to update"],
+  "立即更新": ["立即更新", "Update now"],
+  "只下载": ["只下载", "Download only"],
+  "跳过这个版本": ["跳过这个版本", "Skip this version"],
+  "检查更新": ["检查更新", "Check for updates"],
+  "有新版本时自动在后台下载": [
+    "有新版本时自动在后台下载",
+    "Download new versions in the background"
+  ],
+  "新版本 {version} 已下载": ["新版本 {version} 已下载", "Version {version} is downloaded"],
+  "正在后台下载": ["正在后台下载", "Downloading in the background"],
+  "正在后台下载：{share}%": ["正在后台下载：{share}%", "Downloading in the background: {share}%"],
+  "重启后完成更新，项目和数据不受影响": [
+    "重启后完成更新，项目和数据不受影响",
+    "Restart to finish; your projects and data stay as they are"
+  ],
+  "下载更新": ["下载更新", "Download update"],
+  "稍后": ["稍后", "Later"],
   "目录已在其他窗口更新，请重新载入。": [
     "目录已在其他窗口更新，请重新载入。",
     "The outline changed in another window. Reload it before saving."

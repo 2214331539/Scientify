@@ -29,6 +29,9 @@ export function readConfig(env = process.env) {
     modelKeySecret: optional(env, 'MODEL_KEY_SECRET'),
     // Static files of the admin pages, served at /admin.
     adminDir: optional(env, 'ADMIN_DIR'),
+    // App versions below the minimum are asked to update (client-policy.mjs).
+    minClientVersion: optional(env, 'MIN_CLIENT_VERSION'),
+    recommendedClientVersion: optional(env, 'RECOMMENDED_CLIENT_VERSION'),
     jwtIssuer: optional(env, 'JWT_ISSUER') || 'scientify-collaboration',
     accessTokenTtl: integer(env.ACCESS_TOKEN_TTL_SECONDS, 900, 60, 86_400),
     refreshTokenTtl: integer(env.REFRESH_TOKEN_TTL_SECONDS, 2_592_000, 600, 31_536_000),

@@ -116,5 +116,25 @@
   "cargo:objc2-web-kit@0.3.2": {
     "source": "https://github.com/madsmtm/objc2/blob/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md",
     "file": "objc2-LICENSE.md"
+  },
+  "cargo:fxhash@0.2.1": {
+    "file": "Apache-2.0.txt",
+    "source": "https://github.com/cbreeden/fxhash",
+    "licenseSource": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  "cargo:mac@0.1.1": {
+    "file": "Apache-2.0.txt",
+    "source": "https://github.com/reem/rust-mac",
+    "licenseSource": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  "cargo:match_token@0.35.0": {
+    "file": "Apache-2.0.txt",
+    "source": "https://github.com/servo/html5ever/tree/main/match_token",
+    "licenseSource": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  "cargo:selectors@0.31.0": {
+    "source": "https://github.com/servo/stylo/tree/main/selectors",
+    "licenseSource": "https://www.mozilla.org/media/MPL/2.0/index.txt",
+    "file": "MPL-2.0.txt"
   }
 }

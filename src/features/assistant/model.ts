@@ -55,6 +55,9 @@ export type Conversation = Entity & {
     completedAt?: string;
     error: string | null;
     operations: { id: string; label: string; status: string; output: string }[];
+    plan?: { step: string; status: string }[];
+    /** The turn's file changes, as a unified diff (capped). */
+    diff?: string;
   };
 };
 export type AISettings = ModelSettings;

@@ -38,7 +38,13 @@ import { SearchDialog, type SearchTarget } from '../features/search/SearchDialog
 import { LocalLiterature } from '../workspaces/literature/LocalLiterature';
 import { nativeLibrary, noteFiles } from '../platform/library';
 import { flushPaperNotes, notesDirty, notesPending } from '../workspaces/literature/local-session';
-import { browserLayout } from '../platform/browser-pane';
+import {
+  browserCommand,
+  browserLayout,
+  openBrowserSource,
+  type BrowserTab,
+} from '../platform/browser-pane';
+import { WebPreview, type WebPreviewTarget } from '../shell/WebPreview';
 import { installPaperService } from '../platform/paper-service';
 import { ExperimentWorkspace } from '../workspaces/experiments/ExperimentWorkspace';
 import { useExecutions } from '../workspaces/experiments/runtime';
@@ -77,6 +83,7 @@ import { SignInPage } from '../features/account/SignInPage';
 import { AppFrame } from '../shell/AppFrame';
 import { TitleBar, type Crumb } from '../shell/TitleBar';
 import { Notifications } from '../shell/Notifications';
+import { setExitGuard, startUpdateChecks } from '../features/update/updater';
 import {
   CenterNavigation,
   ProjectNavigation,
@@ -245,40 +252,51 @@ function useCloseProtection(store: WorkspaceStore, backend: ResearchBackend) {
     let closing = false;
     const cleanups: (() => void)[] = [];
     if (isTauri()) {
-      const requestClose = async () => {
-        if (closing) return;
+      // Saves what can be saved and asks about the rest; true when the app may quit.
+      // Installing an update goes through it too.
+      const readyToExit = async (): Promise<boolean> => {
+        if (closing) return false;
         const { busy } = store.getState();
-        if (busy || hasPendingFileOperations(backend)) return;
+        if (busy || hasPendingFileOperations(backend)) return false;
         if (Object.keys(store.getState().agentTasks).length) {
           closing = true;
           const blocked = await endBackgroundTasks(store).finally(() => (closing = false));
           if (blocked !== null) {
             if (blocked) store.setState({ error: translateError(blocked) });
-            return;
+            return false;
           }
         }
         closing = true;
         try {
           if (!(await flushPaperNotes())) {
             store.setState({ error: t('论文笔记尚未保存，请重试或处理冲突后退出。') });
-            return;
+            return false;
           }
           if (!(await flushDocs())) {
             store.setState({ error: t('文档尚未保存，请重试后退出。') });
-            return;
+            return false;
           }
-          if (
+          return (
             !store.getState().dirty ||
             (await confirmAction(t('仍有未保存的内容。确认放弃这些修改并退出？')))
-          ) {
-            await getCurrentWindow().destroy();
-          }
+          );
         } catch (error) {
           store.setState({ error: translateError(String(error)) });
+          return false;
         } finally {
           closing = false;
         }
       };
+      const requestClose = async () => {
+        if (!(await readyToExit())) return;
+        try {
+          await getCurrentWindow().destroy();
+        } catch (error) {
+          store.setState({ error: translateError(String(error)) });
+        }
+      };
+      setExitGuard(readyToExit);
+      cleanups.push(() => setExitGuard(null));
       const register = (ready: Promise<() => void>) =>
         void ready
           .then((unlisten) => {
@@ -325,6 +343,7 @@ export function App({
     if (windowMode === 'browser') return;
     return installPaperService((reason) => store.setState({ error: String(reason) }));
   }, [windowMode, store]);
+  useEffect(() => (windowMode === 'main' ? startUpdateChecks() : undefined), [windowMode]);
   const preferences = usePreferences();
   const epoch = useStore(store, (s) => s.epoch);
   const data = useStore(store, (s) => s.data),
@@ -504,6 +523,30 @@ export function App({
   const workspace = projectModules.some((w) => w.id === location.workspace)
     ? location.workspace
     : 'literature';
+  // Links in AI answers open over the current module; in literature, as its own tab.
+  const [preview, setPreview] = useState<WebPreviewTarget | null>(null);
+  useEffect(() => setPreview(null), [project?.id, workspace]);
+  useEffect(() => {
+    const open = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId: string; url: string }>).detail;
+      if (!detail?.projectId || !detail.url) return;
+      if (workspace === 'literature' || detail.projectId !== project?.id) {
+        void openBrowserSource(detail.projectId, detail.url).catch((error) =>
+          store.setState({ error: translateError(String(error)) }),
+        );
+        return;
+      }
+      void browserCommand<BrowserTab>({
+        op: 'openUrl',
+        project_id: detail.projectId,
+        address: detail.url,
+      })
+        .then((tab) => setPreview({ projectId: detail.projectId, tabId: tab.id, url: detail.url }))
+        .catch((error) => store.setState({ error: translateError(String(error)) }));
+    };
+    window.addEventListener('scientify-preview-url', open);
+    return () => window.removeEventListener('scientify-preview-url', open);
+  }, [project?.id, workspace, store]);
   const view = secondary[workspace].some((v) => v.id === location.view)
     ? location.view
     : (secondary[workspace][0]?.id ?? '');
@@ -717,7 +760,8 @@ export function App({
   // The assistant opens "账号与订阅" when the official models refuse a request.
   useEffect(() => {
     const open = (event: Event) => {
-      if ((event as CustomEvent<string>).detail === 'account') setDialog({ kind: 'account' });
+      const detail = (event as CustomEvent<string>).detail;
+      if (detail === 'account' || detail === 'about') setDialog({ kind: detail });
     };
     window.addEventListener('scientify-open-settings', open);
     return () => window.removeEventListener('scientify-open-settings', open);
@@ -1097,6 +1141,18 @@ export function App({
         >
           {content}
         </ViewTransition>
+        {preview && project && preview.projectId === project.id ? (
+          <WebPreview
+            target={preview}
+            onClose={() => setPreview(null)}
+            onKeep={(url) => {
+              setPreview(null);
+              void openBrowserSource(project.id, url).catch((error) =>
+                store.setState({ error: translateError(String(error)) }),
+              );
+            }}
+          />
+        ) : null}
       </div>
     </main>
   );

@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, FileText, PanelLeft, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, PanelLeft, Search } from 'lucide-react';
+import { Mascot } from '../components/ai/Mascot';
 import type { ReactNode } from 'react';
 import { Button } from '../components/primitives';
 import { BrandMark } from '../components/layout/BrandMark';
@@ -143,7 +144,7 @@ export function TitleBar({
               disabled={!ready}
               onClick={() => dock.onTool('assistant')}
             >
-              <Sparkles />
+              <Mascot size={16} />
               <span>AI</span>
             </Button>
           </>

@@ -7,7 +7,8 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Bot, FileText, X } from 'lucide-react';
+import { FileText, X } from 'lucide-react';
+import { Mascot } from '../components/ai/Mascot';
 import { useStore } from 'zustand';
 import { DocsWorkspace } from '../workspaces/docs/DocsWorkspace';
 import { Button } from '../components/primitives';
@@ -231,7 +232,7 @@ export function GlobalDock({
             aria-pressed={tool === 'assistant'}
             onClick={() => onToolChange('assistant')}
           >
-            <Bot size={14} />
+            <Mascot size={14} />
             {t('AI Assistant')}
           </Button>
           <Button
