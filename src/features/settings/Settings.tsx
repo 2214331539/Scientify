@@ -27,6 +27,7 @@ import { CollaborationPreferences } from './CollaborationPreferences';
 import { ModelPreferences } from './ModelPreferences';
 import type { ResearchBackend } from '../../platform/research';
 import { UpdatePanel } from '../update/UpdatePanel';
+import { AssistantInstructions } from './AssistantInstructions';
 import './settings.css';
 
 function TranslationPreferences() {
@@ -331,6 +332,7 @@ export function SettingsDialog({
         </section>
         <section hidden={section !== 'models'} aria-label={t('AI 模型')}>
           <ModelPreferences store={store} {...(backend ? { backend } : {})} />
+          <AssistantInstructions store={store} />
         </section>
         <section hidden={section !== 'shortcuts'} aria-label={t('快捷键')}>
           <ShortcutsSettings store={store} onDirtyChange={setShortcutsDirty} />

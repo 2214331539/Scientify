@@ -60,6 +60,7 @@ import {
   freezeContext,
   newConversation,
   persistConversation,
+  instructionsText,
   requestMessages,
   type AISettings,
   type ChatAttachment,
@@ -646,7 +647,13 @@ export function AssistantPanel({
       provider: settings.provider,
       model: settings.model,
       ...(apiKey ? { apiKey } : {}),
-      messages: requestMessages(value),
+      messages: requestMessages(
+        value,
+        instructionsText(
+          store.getState().data?.settings.assistantInstructions,
+          store.getState().data?.projects.find((item) => item.id === scope)?.aiInstructions,
+        ),
+      ),
     });
     if (activeConversationId.current === value.id) {
       setUnsaved(!sent && !!chatRuntime.get(scope, value.id)?.saveError);

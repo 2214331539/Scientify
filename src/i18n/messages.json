@@ -1,4 +1,18 @@
 {
+  "自定义指令": ["自定义指令", "Custom instructions"],
+  "希望 AI 了解你什么、怎样回答。例如研究方向、常用语言和工具、回答的详略。对新对话生效。": [
+    "希望 AI 了解你什么、怎样回答。例如研究方向、常用语言和工具、回答的详略。对新对话生效。",
+    "What the AI should know about you and how it should answer: your research area, languages and tools, how detailed to be. Applies to new chats."
+  ],
+  "例如：我做视频理解方向，代码用 PyTorch；回答先给结论，引用给出论文链接。": [
+    "例如：我做视频理解方向，代码用 PyTorch；回答先给结论，引用给出论文链接。",
+    "For example: I work on video understanding with PyTorch; lead with the conclusion and link the papers you cite."
+  ],
+  "给 AI 的项目说明": ["给 AI 的项目说明", "Notes for the AI"],
+  "例如：数据集在哪、评测指标怎么算、结果表的格式。AI 在这个项目的新对话里都会参考。": [
+    "例如：数据集在哪、评测指标怎么算、结果表的格式。AI 在这个项目的新对话里都会参考。",
+    "For example: where the datasets are, how metrics are computed, the format of result tables. New chats in this project use them."
+  ],
   "文件预览": ["文件预览", "File preview"],
   "用系统程序打开": ["用系统程序打开", "Open with system app"],
   "网页文件在浏览器里打开，图表和交互才能正常显示。": [

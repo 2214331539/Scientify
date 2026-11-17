@@ -35,6 +35,8 @@ export type Project = Entity & {
   color?: string;
   archived?: boolean;
   favorite?: boolean;
+  /** What the assistant should know about this project (its custom instructions). */
+  aiInstructions?: string;
 };
 export type ResearchRecord = Entity & {
   project: string;

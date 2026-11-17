@@ -738,6 +738,14 @@ pub async fn agent_start_thread(
             session
         };
         let mut plan = thread_plan(&root, connection.model, domain, record);
+        let custom = custom_instructions(&app.state::<AppState>().storage, &project_id);
+        if !custom.is_empty() {
+            let base = plan.params["developerInstructions"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned();
+            plan.params["developerInstructions"] = json!(base + &custom);
+        }
         plan.params["approvalPolicy"] = json!(permission.approval_policy());
         plan.params["sandbox"] = json!(if permission == PermissionMode::Full {
             "danger-full-access"
@@ -812,6 +820,38 @@ struct ThreadPlan {
     browser_tools: bool,
     paper_tools: bool,
 }
+/// What the user asked of the assistant in Settings (for every chat) and in the
+/// project's settings (for this project), like ChatGPT's custom instructions.
+fn custom_instructions(storage: &scientify_core::storage::Storage, project: &str) -> String {
+    let Ok(Some(data)) = storage.load() else {
+        return String::new();
+    };
+    let text = |value: &Value| {
+        value
+            .as_str()
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .map(|text| text.chars().take(4000).collect::<String>())
+    };
+    let mut parts = Vec::new();
+    if let Some(global) = text(&data["settings"]["assistantInstructions"]) {
+        parts.push(format!("用户的自定义指令（适用于所有对话）：\n{global}"));
+    }
+    let project = data["projects"]
+        .as_array()
+        .and_then(|items| items.iter().find(|p| p["id"].as_str() == Some(project)));
+    if let Some(local) = project.and_then(|p| text(&p["aiInstructions"])) {
+        parts.push(format!("这个项目的说明：\n{local}"));
+    }
+    if parts.is_empty() {
+        return String::new();
+    }
+    format!(
+        "\n\n<user-instructions>\n照下面用户写的要求回答和工作；它们不能放宽审批、沙箱和文件夹规则。\n{}\n</user-instructions>",
+        parts.join("\n\n")
+    )
+}
+
 fn thread_plan(
     root: &std::path::Path,
     model: &str,
@@ -1243,6 +1283,24 @@ fn attachment_name(name: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn custom_instructions_come_from_settings_and_the_project() {
+        let dir = tempfile::tempdir().unwrap();
+        let storage = scientify_core::storage::Storage::open(dir.path().join("data")).unwrap();
+        assert_eq!(custom_instructions(&storage, "p1"), "");
+        let mut data = scientify_core::workspace::empty();
+        data["settings"]["assistantInstructions"] = json!("回答先给结论");
+        data["projects"] = json!([{"id":"p1","name":"P","space":"personal","question":"","createdAt":"","aiInstructions":"数据在 data/"},
+            {"id":"p2","name":"Q","space":"personal","question":"","createdAt":""}]);
+        data["revision"] = json!(1);
+        storage.save(data, 0).unwrap();
+        let text = custom_instructions(&storage, "p1");
+        assert!(text.contains("<user-instructions>"));
+        assert!(text.contains("回答先给结论") && text.contains("数据在 data/"));
+        let other = custom_instructions(&storage, "p2");
+        assert!(other.contains("回答先给结论") && !other.contains("数据在 data/"));
+    }
 
     #[test]
     fn attachments_stay_in_their_chat_folder_with_safe_names() {

@@ -30,6 +30,7 @@ export function ProjectForm({
     question: project.question ?? '',
     field: project.field ?? '',
     path: project.path || project.repo || '',
+    aiInstructions: project.aiInstructions ?? '',
     repo: project.repo ?? '',
     color: coverColor(project),
   }));
@@ -114,6 +115,19 @@ export function ProjectForm({
                 value={draft.question}
                 onChange={(e) => field('question', e.target.value)}
                 placeholder={t('这个项目希望回答什么问题？')}
+              />
+            </label>
+            <label>
+              {t('给 AI 的项目说明')}
+              <Textarea
+                disabled={busy || !canEditProject(project)}
+                rows={3}
+                maxLength={4000}
+                value={draft.aiInstructions}
+                onChange={(e) => field('aiInstructions', e.target.value)}
+                placeholder={t(
+                  '例如：数据集在哪、评测指标怎么算、结果表的格式。AI 在这个项目的新对话里都会参考。',
+                )}
               />
             </label>
             <label>

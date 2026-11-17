@@ -56,9 +56,10 @@ const PROJECT_FIELDS: &[&str] = &[
     "description",
     "manuscripts",
     "manuscriptsDismissed",
+    "aiInstructions",
 ];
 /// Fields older versions do not send: project info without them leaves them as they are.
-const PROJECT_FIELDS_ADDED: &[&str] = &["manuscripts", "manuscriptsDismissed"];
+const PROJECT_FIELDS_ADDED: &[&str] = &["manuscripts", "manuscriptsDismissed", "aiInstructions"];
 /// Experiment fields that only make sense on this device.
 const EXPERIMENT_LOCAL: &[&str] = &["python", "root"];
 

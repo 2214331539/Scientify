@@ -45,3 +45,14 @@ it('keeps image attachments as multimodal parts in the provider request', () => 
     ],
   });
 });
+
+it('adds the custom instructions to the quick chat', async () => {
+  const { instructionsText, requestMessages } = await import('./model');
+  expect(instructionsText('  ', undefined)).toBe('');
+  const text = instructionsText('回答先给结论', '数据在 data/');
+  expect(text).toContain('回答先给结论');
+  expect(text).toContain('数据在 data/');
+  const session = { messages: [] } as unknown as Parameters<typeof requestMessages>[0];
+  expect(requestMessages(session, text)[0].content).toContain('<user-instructions>');
+  expect(requestMessages(session)[0].content).not.toContain('<user-instructions>');
+});

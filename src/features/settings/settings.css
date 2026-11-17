@@ -620,3 +620,21 @@ section > .settings-section-heading:first-child {
   gap: 8px;
   max-width: 360px;
 }
+/* Settings → AI 模型: the assistant's custom instructions. */
+.settings-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.settings-instructions h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.settings-instructions p {
+  margin: 0;
+  font-size: 12px;
+}
