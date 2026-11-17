@@ -965,3 +965,15 @@
   color: var(--sf-text-secondary);
   font-size: 12px;
 }
+/* Searching past chats in the history menu. */
+.sf-ai-session-search {
+  width: calc(100% - 12px);
+  margin: 4px 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--sf-border-control);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-canvas);
+  color: var(--sf-text-primary);
+  font: inherit;
+  font-size: 12px;
+}

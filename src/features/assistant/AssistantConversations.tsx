@@ -44,6 +44,19 @@ export function AssistantConversations({
   onDelete,
 }: Props) {
   const [action, setAction] = useState<{ id: string; anchor: MenuAnchor } | null>(null);
+  // Finds past chats by title or by what was said in them.
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
+  const matches = (item: Workspace['sessions'][number]) =>
+    !needle ||
+    String(item.title ?? '')
+      .toLowerCase()
+      .includes(needle) ||
+    (Array.isArray(item.messages) &&
+      item.messages.some(
+        (message: { text?: unknown }) =>
+          typeof message?.text === 'string' && message.text.toLowerCase().includes(needle),
+      ));
   const backgroundTasks = [...runtime.tasks.values(), ...chatRuntime.tasks.values()].filter(
     (task) =>
       task.projectId === scope &&
@@ -141,8 +154,20 @@ export function AssistantConversations({
           <Plus size={14} />
           {t('新建 AI 对话')}
         </Button>
+        {history.length > 6 ? (
+          <input
+            className="sf-ai-session-search"
+            type="search"
+            value={query}
+            placeholder={t('搜索对话')}
+            aria-label={t('搜索对话')}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => event.stopPropagation()}
+          />
+        ) : null}
         <div className="sf-ai-session-list">
           {[...history]
+            .filter(matches)
             .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
             .map((item) => {
               const task = runtime.get(scope, item.id);
