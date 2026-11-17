@@ -395,6 +395,17 @@ export class AgentSession {
     this.polling = work();
     return this.polling;
   }
+  /** Forgets the turn `turnId` and everything after it, so a question can be asked again. */
+  async revert(turnId: string): Promise<boolean> {
+    const { threadId } = this.snapshot;
+    if (!threadId || !this.agent.revertTurn || hasPendingWork(this.snapshot)) return false;
+    try {
+      await this.agent.revertTurn({ ...this.binding, threadId, beforeTurnId: turnId });
+      return true;
+    } catch {
+      return false;
+    }
+  }
   async interrupt(): Promise<boolean> {
     const { threadId, turnId } = this.snapshot;
     if (

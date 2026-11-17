@@ -952,3 +952,16 @@
 .sf-ai-file.is-delete svg {
   color: var(--sf-status-danger);
 }
+/* Editing a question that will replace it and the answers after it. */
+.sf-ai-replacing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 12px 6px;
+  padding: 4px 4px 4px 10px;
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-sunken);
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}

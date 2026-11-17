@@ -1081,6 +1081,35 @@ pub async fn agent_interrupt(
     })
     .await
 }
+/// Drops a turn and everything after it from the thread's history, so a question
+/// can be asked again (regenerate) or replaced (edit). Files stay as they are.
+#[tauri::command]
+pub async fn agent_revert(
+    app: tauri::AppHandle,
+    view: tauri::Webview,
+    project_id: String,
+    domain: String,
+    conversation_id: String,
+    thread_id: String,
+    before_turn_id: String,
+) -> Result<(), String> {
+    super::library::trusted(&view)?;
+    blocking(move || {
+        with_entry(&app, &project_id, &domain, &conversation_id, |entry| {
+            entry.validate(&thread_id)?;
+            if entry.active_turn.is_some() {
+                return Err("任务进行中，结束后再重新生成。".into());
+            }
+            entry.session.call(
+                "thread/revert",
+                json!({"threadId":thread_id,"beforeTurnId":before_turn_id}),
+                THREAD_BUDGET,
+            )?;
+            Ok(())
+        })
+    })
+    .await
+}
 #[tauri::command]
 pub async fn agent_respond(
     app: tauri::AppHandle,

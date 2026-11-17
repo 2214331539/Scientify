@@ -10,7 +10,7 @@ import { t } from '../../i18n';
 import { initialAgentSession } from './agent-session';
 import type { AgentTask } from './agent-runtime';
 import type { ChatTask } from './chat-runtime';
-import type { Conversation } from './model';
+import type { ChatMessage, Conversation } from './model';
 import { AssistantRuns } from './AssistantRuns';
 import { PlanList, Thinking, TurnDiff, TurnFiles } from './TurnDetails';
 import { locateFile, nativeResearch } from '../../platform/research';
@@ -38,6 +38,9 @@ interface Props {
   pinnedToBottom: RefObject<boolean>;
   onSetupSandbox?: () => void;
   onDecide(approval: ApprovalRequest, decision: ApprovalDecision): Promise<void>;
+  /** Ask the last question again, or put it back in the composer to change it. */
+  onRegenerate?(message: ChatMessage): void;
+  onEdit?(message: ChatMessage): void;
 }
 
 /** Message rendering owns scroll-following, while task actions stay in the panel. */
@@ -52,6 +55,8 @@ export function AssistantTranscript({
   pinnedToBottom,
   onSetupSandbox,
   onDecide,
+  onRegenerate,
+  onEdit,
 }: Props) {
   const messagesRef = useRef<HTMLDivElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -83,6 +88,10 @@ export function AssistantTranscript({
     [scope],
   );
   const chatPending = !!chatTask?.pending;
+  // Only the last exchange can be asked again, and only when nothing is running.
+  const lastQuestion = conversation.messages.map((item) => item.role).lastIndexOf('user');
+  const lastAnswer = conversation.messages.length - 1;
+  const idle = !agentPending && !chatPending && !busy && lastQuestion >= 0;
   const operations = activeTask?.state.operations ?? conversation.agentRun?.operations ?? [];
   const plan = activeTask?.state.plan ?? conversation.agentRun?.plan ?? [];
   const diff = activeTask ? activeTask.state.diff : (conversation.agentRun?.diff ?? '');
@@ -131,9 +140,19 @@ export function AssistantTranscript({
             {t('提问，或直接描述要在当前工作区完成的任务')}
           </div>
         ) : (
-          conversation.messages.map((message) => (
+          conversation.messages.map((message, index) => (
             <ChatMessageView
               key={message.id}
+              onRegenerate={
+                onRegenerate && idle && message.role === 'assistant' && index === lastAnswer
+                  ? () => onRegenerate(conversation.messages[lastQuestion])
+                  : undefined
+              }
+              onEdit={
+                onEdit && idle && message.role === 'user' && index === lastQuestion
+                  ? () => onEdit(message)
+                  : undefined
+              }
               role={message.role}
               text={message.text}
               attachments={message.attachments}

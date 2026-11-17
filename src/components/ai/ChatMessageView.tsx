@@ -1,5 +1,5 @@
 import { memo, useDeferredValue, useEffect, useRef, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, Pencil, RotateCcw } from 'lucide-react';
 import { t } from '../../i18n';
 import { usePreferences } from '../../i18n/preferences';
 import { Markdown } from '../../features/notes/Markdown';
@@ -23,6 +23,8 @@ export const ChatMessageView = memo(function ChatMessageView({
   onOpenLink,
   onOpenFile,
   loadImage,
+  onRegenerate,
+  onEdit,
 }: {
   role: 'user' | 'assistant';
   text: string;
@@ -35,6 +37,10 @@ export const ChatMessageView = memo(function ChatMessageView({
   /** Local files named in an answer open in the center; pictures show inline. */
   onOpenFile?: (path: string) => void;
   loadImage?: (path: string) => Promise<Blob | null>;
+  /** Ask the question behind this answer again. */
+  onRegenerate?: () => void;
+  /** Put this question back in the composer to change it. */
+  onEdit?: () => void;
 }) {
   usePreferences();
   const displayedText = useDeferredValue(text);
@@ -132,6 +138,32 @@ export const ChatMessageView = memo(function ChatMessageView({
         >
           {copyState === 'copied' ? <Check size={13} /> : <Copy size={13} />}
         </Button>
+        {onRegenerate ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            type="button"
+            aria-label={t('重新生成')}
+            tooltip={t('重新生成')}
+            onClick={onRegenerate}
+          >
+            <RotateCcw size={13} />
+          </Button>
+        ) : null}
+        {onEdit ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            type="button"
+            aria-label={t('编辑问题')}
+            tooltip={t('编辑问题')}
+            onClick={onEdit}
+          >
+            <Pencil size={13} />
+          </Button>
+        ) : null}
       </div>
       <span className="sr-only" role="status">
         {feedback}

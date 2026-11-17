@@ -20,6 +20,8 @@ export type ChatAttachment = {
   path?: string;
 };
 export type ChatMessage = {
+  /** The engine turn this question started, so it can be asked again or replaced. */
+  turnId?: string;
   id: string;
   role: 'user' | 'assistant';
   text: string;

@@ -61,3 +61,19 @@ it('reports clipboard failure locally and allows retry without changing the mess
   expect(copy).toHaveBeenCalledTimes(2);
   expect(screen.getByRole('status').textContent).toBe('已复制');
 });
+
+it('offers regenerate on the last answer and edit on the last question', async () => {
+  const user = userEvent.setup();
+  const onRegenerate = vi.fn();
+  const onEdit = vi.fn();
+  const { unmount } = render(
+    <ChatMessageView role="assistant" text="答案" onRegenerate={onRegenerate} />,
+  );
+  await user.click(screen.getByRole('button', { name: '重新生成' }));
+  expect(onRegenerate).toHaveBeenCalledOnce();
+  unmount();
+  render(<ChatMessageView role="user" text="问题" onEdit={onEdit} />);
+  await user.click(screen.getByRole('button', { name: '编辑问题' }));
+  expect(onEdit).toHaveBeenCalledOnce();
+  expect(screen.queryByRole('button', { name: '重新生成' })).toBeNull();
+});

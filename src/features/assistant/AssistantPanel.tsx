@@ -216,6 +216,9 @@ export function AssistantPanel({
     drafts.current.set(activeConversationId.current, value);
     updatePrompt(value);
   }
+  // Regenerate and edit ask a question again: it and everything after it are replaced.
+  const [replacing, setReplacing] = useState<string | null>(null);
+  const submitReplacement = useRef(false);
   function attachImages(files: File[]) {
     if (files.length + attachmentValues.current.length + pendingAttachments.current > 4) {
       setError(t('每条消息最多附带 4 个文件。'));
@@ -809,7 +812,9 @@ export function AssistantPanel({
       submittedAttachments,
       submittedSkills,
       turnPlace(),
+      replacing ?? undefined,
     );
+    if (sent !== false) setReplacing(null);
     if (sent === false) {
       if (cleared) restorePrompt(sendingId, text);
       if (activeConversationId.current === sendingId) {
@@ -968,15 +973,30 @@ export function AssistantPanel({
       title: conversation.messages.length
         ? conversation.title
         : prompt.trim().slice(0, 36) || submittedAttachments[0]?.name || t('新对话'),
-      messages: [...conversation.messages, message],
+      messages: [
+        ...(replacing && conversation.messages.some((item) => item.id === replacing)
+          ? conversation.messages.slice(
+              0,
+              conversation.messages.findIndex((item) => item.id === replacing),
+            )
+          : conversation.messages),
+        message,
+      ],
       context: [...conversation.context, ...(snapshot ? [snapshot] : [])],
       updatedAt: new Date().toISOString(),
     };
     setConversation(next);
     if (drafts.current.get(sendingId)?.trim() === message.text) setPrompt('');
     setAttachments((current) => current?.filter((item) => !submittedAttachments.includes(item)));
+    setReplacing(null);
     await runRequest(next);
   }
+  // Regenerate: the question is back in the composer; send it once React has it.
+  useEffect(() => {
+    if (!submitReplacement.current || !replacing || !prompt.trim()) return;
+    submitReplacement.current = false;
+    void submitMessage();
+  }, [prompt, replacing]);
 
   function selectConversation(
     id: string,
@@ -985,6 +1005,7 @@ export function AssistantPanel({
   ) {
     if (conversationActionsDisabled) return;
     pinnedToBottom.current = true;
+    setReplacing(null);
     const existing = store
       .getState()
       .data?.sessions.find((item) => item.id === id && item.project === scope);
@@ -1382,6 +1403,16 @@ export function AssistantPanel({
       <AssistantTranscript
         scope={scope}
         conversation={conversation}
+        onRegenerate={(message) => {
+          setReplacing(message.id);
+          setPrompt(message.text);
+          submitReplacement.current = true;
+        }}
+        onEdit={(message) => {
+          setReplacing(message.id);
+          setPrompt(message.text);
+          composerRef.current?.focus();
+        }}
         activeTask={activeTask}
         chatTask={chatTask}
         agentPending={agentPending}
@@ -1554,6 +1585,21 @@ export function AssistantPanel({
               </Button>
             ) : null}
           </div>
+        </div>
+      ) : null}
+      {replacing && !submitReplacement.current ? (
+        <div className="sf-ai-replacing" role="status">
+          <span>{t('正在修改这条问题，发送后会替换它和之后的回答。')}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setReplacing(null);
+              setPrompt('');
+            }}
+          >
+            {t('取消')}
+          </Button>
         </div>
       ) : null}
       <AssistantComposer

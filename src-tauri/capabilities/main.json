@@ -79,6 +79,7 @@
     "allow-agent-start-turn",
     "allow-agent-steer",
     "allow-agent-interrupt",
+    "allow-agent-revert",
     "allow-agent-events",
     "allow-agent-release",
     "allow-agent-respond",

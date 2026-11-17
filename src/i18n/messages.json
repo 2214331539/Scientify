@@ -1,4 +1,10 @@
 {
+  "重新生成": ["重新生成", "Regenerate"],
+  "编辑问题": ["编辑问题", "Edit question"],
+  "正在修改这条问题，发送后会替换它和之后的回答。": [
+    "正在修改这条问题，发送后会替换它和之后的回答。",
+    "Editing this question. Sending replaces it and the answers after it."
+  ],
   "只读": ["只读", "Read only"],
   "只读文件、检索和回答；不改文件，也不执行会写入的命令。": [
     "只读文件、检索和回答；不改文件，也不执行会写入的命令。",

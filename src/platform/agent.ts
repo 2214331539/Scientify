@@ -239,6 +239,14 @@ export interface AgentBackend {
     threadId: string;
     turnId: string;
   }): Promise<void>;
+  /** Drops a turn and the ones after it from the thread's history (files stay). */
+  revertTurn?(request: {
+    projectId: string;
+    domain: AgentDomain;
+    conversationId: string;
+    threadId: string;
+    beforeTurnId: string;
+  }): Promise<void>;
   events(
     projectId: string,
     domain: AgentDomain,
@@ -295,6 +303,8 @@ export const nativeAgent: AgentBackend = {
   steer: (request) => command('agent_steer', { ...request }),
   interrupt: ({ projectId, domain, conversationId, threadId, turnId }) =>
     command('agent_interrupt', { projectId, domain, conversationId, threadId, turnId }),
+  revertTurn: ({ projectId, domain, conversationId, threadId, beforeTurnId }) =>
+    command('agent_revert', { projectId, domain, conversationId, threadId, beforeTurnId }),
   events: (projectId, domain, conversationId, threadId) =>
     command('agent_events', { projectId, domain, conversationId, threadId }),
   release: (projectId, domain, conversationId) =>

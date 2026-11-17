@@ -99,6 +99,7 @@ fn main() {
             "agent_start_turn",
             "agent_steer",
             "agent_interrupt",
+            "agent_revert",
             "agent_events",
             "agent_respond",
             "agent_release",

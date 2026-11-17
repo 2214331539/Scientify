@@ -237,8 +237,13 @@ export class AgentRuntime {
     attachments: ChatAttachment[] = [],
     skills: AgentSkillRef[] = [],
     place?: TurnPlace,
+    /** Ask again from this question on: it and everything after it are replaced. */
+    replaceFrom?: string,
   ) {
     if (this.deleting.has(keyOf(seed.project, seed.id))) return false;
+    const replaced = replaceFrom
+      ? seed.messages.find((item) => item.id === replaceFrom)
+      : undefined;
     const existing = this.get(seed.project, seed.id);
     if (existing && (this.pending(existing) || existing.saveError)) return false;
     if (seed.agentDomain && seed.agentDomain !== domain) return false;
@@ -271,6 +276,10 @@ export class AgentRuntime {
         data.sessions.push(entry);
       }
       const chat = asConversation(entry);
+      if (replaceFrom) {
+        const index = chat.messages.findIndex((item) => item.id === replaceFrom);
+        if (index >= 0) chat.messages = chat.messages.slice(0, index);
+      }
       if (!chat.messages.length)
         chat.title = text.trim().slice(0, 36) || attachments[0]?.name || t('新对话');
       chat.messages.push(message);
@@ -341,6 +350,8 @@ export class AgentRuntime {
               },
             )}\n</translation-material>\n\n`
           : '';
+      // The engine forgets the replaced turns too; chats from before turns were recorded keep them.
+      if (replaced?.turnId) await task.session.revert(replaced.turnId);
       const images = attachments
         .filter((item) => item.mimeType.startsWith('image/'))
         .map(({ mimeType, data }) => ({ mimeType, data }));
@@ -350,6 +361,17 @@ export class AgentRuntime {
         skills,
         place,
       );
+      const turnId = task.state.turnId;
+      if (turnId)
+        await this.store.getState().update((data) => {
+          const entry = data.sessions.find(
+            (item) => item.id === seed.id && item.project === seed.project,
+          );
+          if (entry)
+            entry.messages = asConversation(entry).messages.map((item) =>
+              item.id === message.id ? { ...item, turnId } : item,
+            );
+        });
     }
     task.starting = false;
     if (task.state.phase === 'idle') await this.finish(task);
