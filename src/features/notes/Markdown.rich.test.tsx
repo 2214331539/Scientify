@@ -33,7 +33,10 @@ it('opens local files from answers and shows the pictures the AI made', async ()
   );
   await user.click(screen.getByText('结果表'));
   expect(onOpenFile).toHaveBeenLastCalledWith('/data/ai/results.csv');
-  await user.click(screen.getByText('/data/code/train.py'));
+  // Paths show as the file's name, with the full path on hover.
+  const chip = screen.getByRole('button', { name: 'train.py' });
+  expect(chip.getAttribute('title')).toBe('/data/code/train.py');
+  await user.click(chip);
   expect(onOpenFile).toHaveBeenLastCalledWith('/data/code/train.py');
   await waitFor(() => expect(screen.getByAltText('精度曲线')).toBeTruthy());
   expect(loadImage).toHaveBeenCalledWith('/data/ai/curve.png');

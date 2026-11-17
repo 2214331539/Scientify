@@ -977,3 +977,44 @@
   font: inherit;
   font-size: 12px;
 }
+/* Links and files in the assistant's answers: coloured like links, not like text. */
+.sf-chat-assistant .sf-markdown a {
+  color: var(--sf-link);
+  text-decoration: none;
+}
+.sf-chat-assistant .sf-markdown a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sf-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin: 0 1px;
+  padding: 1px 7px 1px 5px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--sf-link-soft);
+  color: var(--sf-link);
+  font: inherit;
+  font-size: 0.95em;
+  line-height: 1.6;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+.sf-file-chip:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sf-file-chip:disabled {
+  cursor: default;
+}
+.sf-file-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-file-chip svg {
+  flex: none;
+}

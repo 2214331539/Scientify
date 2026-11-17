@@ -39,6 +39,9 @@
   --sf-border-control: rgb(24 24 27 / 14%);
   --sf-border-hover: rgb(24 24 27 / 26%);
   --sf-accent: #18181b;
+  /* Links and files in answers stand out from the text, as in ChatGPT. */
+  --sf-link: #1f63d6;
+  --sf-link-soft: rgb(31 99 214 / 9%);
   --sf-accent-hover: #3f3f46;
   --sf-accent-soft: rgb(24 24 27 / 6%);
   --sf-on-accent: #ffffff;
@@ -85,6 +88,8 @@
   --sf-border-control: rgb(60 46 26 / 17%);
   --sf-border-hover: rgb(60 46 26 / 28%);
   --sf-accent: #23466f;
+  --sf-link: #1f5bb8;
+  --sf-link-soft: rgb(31 91 184 / 9%);
   --sf-accent-hover: #1b3757;
   --sf-accent-soft: rgb(35 70 111 / 8%);
   --sf-status-info: #23466f;
@@ -114,6 +119,8 @@
   --sf-border-control: rgb(255 255 255 / 14%);
   --sf-border-hover: rgb(255 255 255 / 24%);
   --sf-accent: #ededef;
+  --sf-link: #8ab4ff;
+  --sf-link-soft: rgb(138 180 255 / 12%);
   --sf-accent-hover: #ffffff;
   --sf-accent-soft: rgb(255 255 255 / 7%);
   --sf-on-accent: #111113;

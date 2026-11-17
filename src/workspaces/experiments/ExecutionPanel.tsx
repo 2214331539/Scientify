@@ -8,6 +8,7 @@ import type { ResearchFile } from '../../platform/research';
 import { experimentApi, experimentOutput, type Execution } from './runtime';
 import { statusLabel } from './status';
 import { errorMessage } from '../../domain/errors';
+import { displayPath } from '../../platform/os';
 
 export function ExecutionPanel({
   run,
@@ -140,7 +141,7 @@ export function ExecutionPanel({
             <code>{JSON.stringify(run.configuration.args)}</code>
           </dd>
           <dt>{t('工作目录')}</dt>
-          <dd>{run.directory}</dd>
+          <dd>{displayPath(String(run.directory ?? ''))}</dd>
           <dt>Worktree</dt>
           <dd>{run.workspaceRoot || run.source?.workspaceRoot || t('未记录')}</dd>
           <dt>{t('分支')}</dt>

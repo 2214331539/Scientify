@@ -42,7 +42,7 @@ import {
   type CustomTab,
 } from '../files/FileWorkspace';
 import { t, translateError } from '../../i18n';
-import { operatingSystem } from '../../platform/os';
+import { displayPath, operatingSystem } from '../../platform/os';
 import { GitWorkspace, type GitView } from './GitWorkspace';
 import { CodeSearch, type SearchHit } from './CodeSearch';
 import { clearCodeRoot, codeContext, selectExperiment, useCodeWorkspace } from './code-context';
@@ -752,7 +752,7 @@ export function ExperimentWorkspace({
               onClick={() => pick(item)}
             >
               <span>{item.name}</span>
-              <small>{item.root}</small>
+              <small>{displayPath(item.root)}</small>
             </Button>
           ))}
         </section>

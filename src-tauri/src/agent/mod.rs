@@ -891,7 +891,7 @@ fn thread_plan(
         "此历史会话没有浏览器宿主工具；需要用浏览器打开网页时，请告知用户新建会话，保留当前历史，不调用未注册工具。"
     };
     // The answer view opens linked local files in the center and shows local images inline.
-    let answer_instructions = "本机文件：回答里提到你创建或修改的文件时，写成 Markdown 链接，地址用绝对路径并放在尖括号里，例如 [结果表](<绝对路径/results.csv>)，用户点了会在中间打开；生成的图片（图表、示意图）保存成 PNG 或 SVG 后用 ![图的说明](<绝对路径/figure.png>) 嵌进回答，用户能直接看到。画图默认用 matplotlib 存成 PNG；交互式图表另存 HTML，并在回答里给出链接。代码块标明语言。";
+    let answer_instructions = "本机文件：回答里提到你创建或修改的文件时，只写成以文件名为文字的 Markdown 链接，地址用绝对路径并放在尖括号里，例如 [results.csv](<绝对路径/results.csv>)，用户点了会在中间打开；不要另外贴出完整路径、file:// 地址或“文件路径：”一行，也不要把路径放进代码块；生成的图片（图表、示意图）保存成 PNG 或 SVG 后用 ![图的说明](<绝对路径/figure.png>) 嵌进回答，用户能直接看到。画图默认用 matplotlib 存成 PNG；交互式图表另存 HTML，并在回答里给出链接。代码块标明语言。";
     let mut params = json!({"cwd":root,"model":model,"modelProvider":"scientify","approvalPolicy":"on-request","sandbox":"workspace-write","developerInstructions":tools::instructions(domain, managed_runs, git_tools, paper_tools) + web_instructions + answer_instructions + browser_instructions});
     let method = if let Some(binding) = resumable {
         // Codex resumes the original tool registry along with the thread history.

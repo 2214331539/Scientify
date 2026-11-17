@@ -85,6 +85,10 @@ pub struct BrowserTab {
     pub can_forward: bool,
     pub http_status: Option<u16>,
     pub error: Option<String>,
+    /// For a project file opened in the center (an HTML report): the folder its
+    /// page may load from, so its scripts, styles and pictures work but nothing else does.
+    #[serde(skip)]
+    pub folder: Option<std::path::PathBuf>,
 }
 #[derive(Default)]
 pub struct BrowserState(pub Mutex<HashMap<String, BrowserTab>>);
@@ -102,15 +106,38 @@ pub struct Bounds {
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
 pub enum Request {
-    Open { project_id: String },
-    OpenUrl { project_id: String, address: String },
-    Navigate { id: String, address: String },
-    Action { id: String, action: String },
-    Layout { id: String, bounds: Bounds },
-    Close { id: String },
+    Open {
+        project_id: String,
+    },
+    OpenUrl {
+        project_id: String,
+        address: String,
+    },
+    /// A project file (an HTML report the assistant made) in a tab of its own.
+    OpenFile {
+        project_id: String,
+        path: String,
+    },
+    Navigate {
+        id: String,
+        address: String,
+    },
+    Action {
+        id: String,
+        action: String,
+    },
+    Layout {
+        id: String,
+        bounds: Bounds,
+    },
+    Close {
+        id: String,
+    },
     HideAll,
     Snapshot,
-    External { address: String },
+    External {
+        address: String,
+    },
 }
 
 pub fn resolve_address(raw: &str) -> Result<Option<tauri::Url>, String> {
@@ -188,6 +215,21 @@ pub fn resolve_address(raw: &str) -> Result<Option<tauri::Url>, String> {
         return Err("该地址不允许在内嵌浏览器中打开。".into());
     }
     Ok(Some(url))
+}
+/// A local page of a project file tab may load files from its own folder only.
+fn local_allowed(app: &tauri::AppHandle, id: &str, url: &tauri::Url) -> bool {
+    if url.scheme() != "file" {
+        return false;
+    }
+    let Ok(path) = url.to_file_path() else {
+        return false;
+    };
+    app.state::<BrowserState>()
+        .0
+        .lock()
+        .ok()
+        .and_then(|tabs| tabs.get(id).and_then(|tab| tab.folder.clone()))
+        .is_some_and(|folder| path.starts_with(folder))
 }
 pub fn allowed(url: &tauri::Url) -> bool {
     matches!(url.scheme(), "http" | "https")
@@ -268,6 +310,7 @@ pub(crate) fn create_tab(
         can_forward: false,
         http_status: None,
         error: None,
+        folder: None,
     };
     tabs.insert(tab.id.clone(), tab.clone());
     Ok(tab)
@@ -315,7 +358,7 @@ pub(crate) fn navigate(
         }
         let blocked = if !ready.load(Ordering::Acquire) {
             Some("网页保护未能启用，已停止加载。")
-        } else if !allowed(url) {
+        } else if !allowed(url) && !local_allowed(&a, &id, url) {
             Some("已阻止非网页或应用内部地址。")
         } else {
             None
@@ -340,7 +383,7 @@ pub(crate) fn navigate(
     })
     .on_page_load(|view, event| {
         trace(format!("page {:?} {}", event.event(), event.url()));
-        if allowed(event.url()) {
+        if allowed(event.url()) || local_allowed(view.app_handle(), view.label(), event.url()) {
             update(view.app_handle(), view.label(), |t| {
                 t.url = event.url().to_string();
                 t.loading = matches!(event.event(), tauri::webview::PageLoadEvent::Started);
@@ -875,6 +918,21 @@ pub async fn browser_command(
         Request::Open { project_id } => {
             let tab = create_tab(&app, &owner, &project_id)?;
             Ok(serde_json::to_value(tab).unwrap())
+        }
+        Request::OpenFile { project_id, path } => {
+            let state = app.state::<crate::AppState>();
+            let file =
+                crate::research::project_file(&state.storage, &state.files, &project_id, &path)?
+                    .ok_or("只能打开项目文件夹里的文件。")?;
+            let url = tauri::Url::from_file_path(&file).map_err(|_| "文件路径无效。")?;
+            let tab = create_tab(&app, &owner, &project_id)?;
+            update(&app, &tab.id, |t| {
+                t.folder = file.parent().map(std::path::Path::to_path_buf);
+                t.url = url.to_string();
+            });
+            let tab = get(&app, &owner, &tab.id)?;
+            navigate(&app, &tab, url)?;
+            Ok(serde_json::to_value(get(&app, &owner, &tab.id)?).map_err(|e| e.to_string())?)
         }
         Request::OpenUrl {
             project_id,

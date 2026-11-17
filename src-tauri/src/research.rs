@@ -259,6 +259,16 @@ fn locate(
     Ok(None)
 }
 
+/// A file of the project's folders, for the browser to open; `None` outside them.
+pub(crate) fn project_file(
+    storage: &Storage,
+    files: &ResearchFiles,
+    project: &str,
+    path: &str,
+) -> Result<Option<PathBuf>, String> {
+    Ok(locate(storage, files, project, path)?.map(|(file, _)| file))
+}
+
 /// Where a file named in an AI answer lives among the project's folders, so the
 /// center can preview it; `None` for files elsewhere (or missing).
 #[tauri::command]

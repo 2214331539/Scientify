@@ -1,4 +1,22 @@
 {
+  "这个 Word 文件无法预览，可以用系统程序打开。": [
+    "这个 Word 文件无法预览，可以用系统程序打开。",
+    "This Word file can't be previewed. Open it with the system app."
+  ],
+  "这个演示文稿无法预览，可以用系统程序打开。": [
+    "这个演示文稿无法预览，可以用系统程序打开。",
+    "This presentation can't be previewed. Open it with the system app."
+  ],
+  "演示文稿里没有幻灯片": ["演示文稿里没有幻灯片", "The presentation has no slides"],
+  "按页显示文字和图片，版式以系统程序打开为准。": [
+    "按页显示文字和图片，版式以系统程序打开为准。",
+    "Each slide's text and pictures; open it with the system app for the exact layout."
+  ],
+  "第 {n} 页": ["第 {n} 页", "Slide {n}"],
+  "这种格式不能在应用里预览。": [
+    "这种格式不能在应用里预览。",
+    "This format can't be previewed in the app."
+  ],
   "搜索对话": ["搜索对话", "Search chats"],
   "重新生成": ["重新生成", "Regenerate"],
   "编辑问题": ["编辑问题", "Edit question"],

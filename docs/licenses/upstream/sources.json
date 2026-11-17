@@ -136,5 +136,9 @@
     "source": "https://github.com/servo/stylo/tree/main/selectors",
     "licenseSource": "https://www.mozilla.org/media/MPL/2.0/index.txt",
     "file": "MPL-2.0.txt"
+  },
+  "npm:isarray@1.0.0": {
+    "file": "isarray-1.0.0.txt",
+    "source": "https://github.com/juliangruber/isarray/blob/v1.0.0/README.md"
   }
 }

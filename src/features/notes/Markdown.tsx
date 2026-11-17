@@ -4,6 +4,21 @@ import remarkGfm from 'remark-gfm';
 import { Button } from '../../components/primitives';
 import { CodeBlock, hastText } from '../../components/ai/CodeBlock';
 import { LocalImage } from '../../components/ai/LocalImage';
+import { FileChip } from '../../components/ai/FileChip';
+import { Children, isValidElement, type ReactNode } from 'react';
+
+/** The text inside a link's children. */
+function plainText(node: ReactNode): string {
+  return Children.toArray(node)
+    .map((child) =>
+      typeof child === 'string' || typeof child === 'number'
+        ? String(child)
+        : isValidElement<{ children?: ReactNode }>(child)
+          ? plainText(child.props.children)
+          : '',
+    )
+    .join('');
+}
 import { mathRemarkPlugins, mathRehypePlugins, normalizeMathDelimiters } from './math';
 
 const remarkPlugins = [remarkGfm, ...mathRemarkPlugins];
@@ -81,18 +96,22 @@ export function Markdown({
                     .map(String)
                     .find((name) => name.startsWith('language-'))
                     ?.slice('language-'.length);
-                  return <CodeBlock code={hastText(code).replace(/\n$/, '')} language={language} />;
+                  const text = hastText(code).replace(/\n$/, '');
+                  // A block holding nothing but a file path is a file, not code.
+                  const path = !text.includes('\n') ? localPath(text.trim()) : null;
+                  if (path && PATH_CODE.test(path.replace(/^\\\\\?\\/, '')))
+                    return (
+                      <p>
+                        <FileChip path={path} onOpen={onOpenFile} />
+                      </p>
+                    );
+                  return <CodeBlock code={text} language={language} />;
                 },
                 code: ({ children: text, className }) => {
-                  const value = typeof text === 'string' ? text : '';
-                  return onOpenFile && !className && PATH_CODE.test(value) ? (
-                    <button
-                      type="button"
-                      className="sf-path-link"
-                      onClick={() => onOpenFile(value)}
-                    >
-                      <code>{value}</code>
-                    </button>
+                  const value = typeof text === 'string' ? text.trim() : '';
+                  const path = !className ? localPath(value) : null;
+                  return path && PATH_CODE.test(path.replace(/^\\\\\?\\/, '')) ? (
+                    <FileChip path={path} onOpen={onOpenFile} />
                   ) : (
                     <code className={className}>{text}</code>
                   );
@@ -126,23 +145,20 @@ export function Markdown({
                 </Button>
               );
             const path = rich && href ? localPath(href) : null;
+            // A local file shows as its name with an icon, never as a raw path.
+            if (path) return <FileChip path={path} label={plainText(label)} onOpen={onOpenFile} />;
             return (
               <a
                 href={href}
                 target="_blank"
                 rel="noreferrer"
                 onClick={
-                  path && onOpenFile
+                  onLink && /^https?:\/\//i.test(href ?? '')
                     ? (event) => {
                         event.preventDefault();
-                        onOpenFile(path);
+                        onLink(href!);
                       }
-                    : onLink && /^https?:\/\//i.test(href ?? '')
-                      ? (event) => {
-                          event.preventDefault();
-                          onLink(href!);
-                        }
-                      : undefined
+                    : undefined
                 }
               >
                 {label}

@@ -56,3 +56,69 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* Word documents rendered in the center. */
+.sf-docx {
+  min-height: 100%;
+  background: var(--sf-surface-sunken);
+}
+.sf-docx .docx-wrapper {
+  padding: 24px;
+  background: transparent;
+}
+.sf-docx .docx-wrapper > section.docx {
+  margin-bottom: 24px;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 12%);
+}
+/* PowerPoint decks as their slides. */
+.sf-slides {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+}
+.sf-slides-note {
+  margin: 0;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.sf-slide {
+  position: relative;
+  min-height: 200px;
+  padding: 24px 28px 24px 52px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-raised);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+}
+.sf-slide-number {
+  position: absolute;
+  top: 24px;
+  left: 18px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.sf-slide h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.sf-slide ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+.sf-slide-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.sf-slide-images img {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 4px;
+  object-fit: contain;
+}
