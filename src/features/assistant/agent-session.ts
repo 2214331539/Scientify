@@ -19,6 +19,8 @@ export type AgentPhase = 'idle' | 'opening' | 'running' | 'waiting' | 'stopping'
 export type AgentOperation = { id: string; label: string; status: string; output: string };
 /** A step of the plan the engine keeps for this turn: pending, inProgress or completed. */
 export type AgentPlanStep = { step: string; status: string };
+/** A file the turn created, changed or deleted. */
+export type AgentFile = { path: string; kind: 'add' | 'update' | 'delete' };
 export interface AgentSessionSnapshot {
   phase: AgentPhase;
   threadId: string | null;
@@ -33,6 +35,12 @@ export interface AgentSessionSnapshot {
   plan: AgentPlanStep[];
   /** The turn's file changes so far, as a unified diff. */
   diff: string;
+  /** What the model says it is thinking (reasoning summaries), when it says. */
+  reasoning: string;
+  /** When it started thinking, and how long it thought before answering. */
+  thinkingSince: number | null;
+  thoughtMs: number | null;
+  files: AgentFile[];
   unsupportedRequests: string[];
 }
 export const initialAgentSession: AgentSessionSnapshot = {
@@ -48,6 +56,10 @@ export const initialAgentSession: AgentSessionSnapshot = {
   operations: [],
   plan: [],
   diff: '',
+  reasoning: '',
+  thinkingSince: null,
+  thoughtMs: null,
+  files: [],
   unsupportedRequests: [],
 };
 export function mergeApprovals(
@@ -180,7 +192,44 @@ export class AgentSession {
         continue;
       }
       if (event.method === 'turn/started' && !state.turnId) state.turnId = turn.id ?? null;
+      if (
+        (event.method === 'item/started' && p.item?.type === 'reasoning') ||
+        event.method === 'item/reasoning/summaryTextDelta' ||
+        event.method === 'item/reasoning/textDelta'
+      )
+        state.thinkingSince ??= Date.now();
+      if (event.method === 'item/reasoning/summaryTextDelta')
+        state.reasoning = (state.reasoning + String(p.delta ?? '')).slice(-20_000);
+      if (event.method === 'item/reasoning/summaryPartAdded' && state.reasoning)
+        state.reasoning += '\n\n';
+      if (event.method === 'item/completed' && p.item?.type === 'reasoning') {
+        const summary = Array.isArray(p.item.summary) ? p.item.summary.join('\n\n') : '';
+        if (summary && !state.reasoning.includes(summary))
+          state.reasoning = [state.reasoning, summary].filter(Boolean).join('\n\n').slice(-20_000);
+        if (state.thinkingSince) state.thoughtMs = Date.now() - state.thinkingSince;
+      }
+      if (
+        event.method === 'item/completed' &&
+        p.item?.type === 'fileChange' &&
+        p.item.status === 'completed'
+      ) {
+        for (const change of Array.isArray(p.item.changes) ? p.item.changes : []) {
+          const kind: AgentFile['kind'] =
+            change?.kind?.type === 'add'
+              ? 'add'
+              : change?.kind?.type === 'delete'
+                ? 'delete'
+                : 'update';
+          const path = String(change?.kind?.move_path ?? change?.path ?? '');
+          if (!path) continue;
+          state.files = [...state.files.filter((file) => file.path !== path), { path, kind }].slice(
+            -50,
+          );
+        }
+      }
       if (event.method === 'item/agentMessage/delta') {
+        if (state.thinkingSince && state.thoughtMs === null)
+          state.thoughtMs = Date.now() - state.thinkingSince;
         const id = String(p.itemId ?? 'answer');
         this.textItems.set(id, (this.textItems.get(id) ?? '') + String(p.delta ?? ''));
         state.agentText = [...this.textItems.values()].join('\n\n');
@@ -281,6 +330,10 @@ export class AgentSession {
       operations: [],
       plan: [],
       diff: '',
+      reasoning: '',
+      thinkingSince: null,
+      thoughtMs: null,
+      files: [],
       unsupportedRequests: [],
     });
     try {

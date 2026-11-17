@@ -164,3 +164,11 @@ export function withWorkspaceRoot(backend: ResearchBackend, root: string): Resea
       ((projectId, path, workspaceRoot) => createDirectory(projectId, path, workspaceRoot ?? root)),
   };
 }
+
+/** Where a file lives among the project's folders, to preview it; null outside them. */
+export const locateFile = (projectId: string, path: string) =>
+  invoke<{ root: string; path: string } | null>('research_locate', { projectId, path });
+
+/** Opens a project file with the system's program for it. */
+export const openWithSystem = (projectId: string, path: string) =>
+  invoke<void>('research_open_system', { projectId, path });

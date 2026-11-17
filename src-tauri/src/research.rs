@@ -190,6 +190,117 @@ pub struct ProjectFolders {
     workspace: String,
 }
 
+/// The folders of a project that file previews may read: each experiment's code,
+/// the writing folder, the AI workspace and the project's code folder, most
+/// specific first.
+fn project_places(
+    storage: &Storage,
+    files: &ResearchFiles,
+    project: &str,
+) -> Result<Vec<PathBuf>, String> {
+    let mut places = Vec::new();
+    if let Some(data) = storage.load()? {
+        for experiment in data["experiments"].as_array().into_iter().flatten() {
+            if experiment["project"].as_str() == Some(project) && experiment["archived"] != true {
+                if let Ok(root) =
+                    crate::experiments::catalog::root_of(storage, files, &data, experiment)
+                {
+                    places.push(root);
+                }
+            }
+        }
+    }
+    places.push(writing_root(storage, files, project)?);
+    places.push(ai_root(storage, project)?);
+    places.push(project_root(storage, files, project)?);
+    Ok(places
+        .into_iter()
+        .filter_map(|place| place.canonicalize().ok())
+        .collect())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocatedFile {
+    /// The project folder holding it, to pass as `workspaceRoot`.
+    root: String,
+    /// Its path inside that folder, with `/`.
+    path: String,
+}
+
+fn locate(
+    storage: &Storage,
+    files: &ResearchFiles,
+    project: &str,
+    path: &str,
+) -> Result<Option<(PathBuf, LocatedFile)>, String> {
+    let Ok(file) = PathBuf::from(path.trim()).canonicalize() else {
+        return Ok(None);
+    };
+    if !file.is_file() {
+        return Ok(None);
+    }
+    for root in project_places(storage, files, project)? {
+        if let Ok(relative) = file.strip_prefix(&root) {
+            let path = relative
+                .components()
+                .map(|part| part.as_os_str().to_string_lossy())
+                .collect::<Vec<_>>()
+                .join("/");
+            return Ok(Some((
+                file.clone(),
+                LocatedFile {
+                    root: root.display().to_string(),
+                    path,
+                },
+            )));
+        }
+    }
+    Ok(None)
+}
+
+/// Where a file named in an AI answer lives among the project's folders, so the
+/// center can preview it; `None` for files elsewhere (or missing).
+#[tauri::command]
+pub async fn research_locate(
+    state: State<'_, AppState>,
+    project_id: String,
+    path: String,
+) -> Result<Option<LocatedFile>, String> {
+    let (storage, files) = (state.storage.clone(), state.files.clone());
+    tauri::async_runtime::spawn_blocking(move || {
+        Ok(locate(&storage, &files, &project_id, &path)?.map(|(_, located)| located))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Opens a project file with the system's program for it (an HTML report in the
+/// browser, say). Only files in the project's folders.
+#[tauri::command]
+pub async fn research_open_system(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    project_id: String,
+    path: String,
+) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let (storage, files) = (state.storage.clone(), state.files.clone());
+    let file = tauri::async_runtime::spawn_blocking(move || {
+        locate(&storage, &files, &project_id, &path)?
+            .map(|(file, _)| file)
+            .ok_or_else(|| "只能打开项目文件夹里的文件。".to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    let shown = crate::local_process::process_path(&file)
+        .display()
+        .to_string();
+    app.opener()
+        .open_path(shown, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 /// The project's four places, for the writing page and project settings.
 #[tauri::command]
 pub async fn project_folders(
@@ -762,6 +873,36 @@ mod tests {
         let papers = temp.path().join("papers");
         std::fs::create_dir_all(&papers).unwrap();
         assert!(check_literature(&storage, &files, "p1", &papers).is_ok());
+    }
+
+    #[test]
+    fn files_named_in_answers_are_found_only_in_the_projects_folders() {
+        let temp = tempfile::tempdir().unwrap();
+        let (storage, files) = project(temp.path(), serde_json::json!({}));
+        let ai = ai_root(&storage, "p1").unwrap();
+        std::fs::create_dir_all(ai.join("figures")).unwrap();
+        std::fs::write(ai.join("figures/curve.png"), b"png").unwrap();
+        let found = locate(
+            &storage,
+            &files,
+            "p1",
+            &ai.join("figures/curve.png").display().to_string(),
+        )
+        .unwrap()
+        .unwrap()
+        .1;
+        assert_eq!(found.path, "figures/curve.png");
+        assert_eq!(PathBuf::from(&found.root), ai);
+        let outside = temp.path().join("secret.txt");
+        std::fs::write(&outside, b"x").unwrap();
+        assert!(
+            locate(&storage, &files, "p1", &outside.display().to_string())
+                .unwrap()
+                .is_none()
+        );
+        assert!(locate(&storage, &files, "p1", "relative/path.txt")
+            .unwrap()
+            .is_none());
     }
 
     #[test]

@@ -35,6 +35,10 @@ it('copies the original Markdown including code via keyboard and reports success
   render(<ChatMessageView role="assistant" text={text} />);
   const message = screen.getByRole('article', { name: '助手消息' });
   expect(within(message).getByText('结论').tagName).toBe('STRONG');
+  // The code block has its own copy button and a language label.
+  expect(within(message).getByText('python')).toBeTruthy();
+  await user.tab();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: '复制代码' }));
   await user.tab();
   expect(document.activeElement).toBe(screen.getByRole('button', { name: '复制消息' }));
   await user.keyboard('{Enter}');

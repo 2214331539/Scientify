@@ -1,4 +1,12 @@
-import { Check, ChevronRight, Circle, LoaderCircle } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  Circle,
+  FileMinus,
+  FilePen,
+  FilePlus,
+  LoaderCircle,
+} from 'lucide-react';
 import { t } from '../../i18n';
 import type { AgentPlanStep } from './agent-session';
 
@@ -94,5 +102,77 @@ export function TurnDiff({ diff }: { diff: string }) {
         </details>
       ))}
     </details>
+  );
+}
+
+/** "已思考 N 秒": what the model thought, when it shares it; open while it is thinking. */
+export function Thinking({
+  reasoning,
+  thinkingSince,
+  thoughtMs,
+}: {
+  reasoning?: string;
+  thinkingSince?: number | null;
+  thoughtMs?: number | null;
+}) {
+  if (!reasoning && !thinkingSince && !thoughtMs) return null;
+  const done = typeof thoughtMs === 'number';
+  const label = done
+    ? t('已思考 {seconds} 秒', { seconds: Math.max(1, Math.round(thoughtMs / 1000)) })
+    : t('正在思考…');
+  if (!reasoning) return <div className="sf-ai-thinking is-bare">{label}</div>;
+  return (
+    <details className="sf-ai-thinking" open={!done}>
+      <summary className="sf-disclosure">
+        <ChevronRight size={13} aria-hidden="true" />
+        {label}
+      </summary>
+      <div className="sf-ai-thinking-text">{reasoning}</div>
+    </details>
+  );
+}
+
+const FILE_KINDS = { add: '新建', update: '修改', delete: '删除' } as const;
+
+/** The files this turn created, changed or deleted; click one to see it in the center. */
+export function TurnFiles({
+  files,
+  cwd,
+  onOpen,
+}: {
+  files: { path: string; kind: keyof typeof FILE_KINDS }[];
+  cwd?: string | null;
+  onOpen?(path: string): void;
+}) {
+  if (!files.length) return null;
+  const absolute = (path: string) =>
+    /^(?:[a-z]:[\\/]|\\\\|\/)/i.test(path) || !cwd ? path : `${cwd.replace(/[\\/]+$/, '')}/${path}`;
+  return (
+    <div className="sf-ai-files" aria-label={t('本轮文件')}>
+      {files.map((file) => {
+        const name = file.path.split(/[\\/]/).at(-1) ?? file.path;
+        const path = absolute(file.path);
+        return (
+          <button
+            key={file.path}
+            type="button"
+            className={`sf-ai-file is-${file.kind}`}
+            title={path}
+            disabled={file.kind === 'delete' || !onOpen}
+            onClick={() => onOpen?.(path)}
+          >
+            {file.kind === 'add' ? (
+              <FilePlus size={13} aria-hidden="true" />
+            ) : file.kind === 'delete' ? (
+              <FileMinus size={13} aria-hidden="true" />
+            ) : (
+              <FilePen size={13} aria-hidden="true" />
+            )}
+            <span>{name}</span>
+            <small>{t(FILE_KINDS[file.kind])}</small>
+          </button>
+        );
+      })}
+    </div>
   );
 }

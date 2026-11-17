@@ -45,6 +45,8 @@ import {
   type BrowserTab,
 } from '../platform/browser-pane';
 import { WebPreview, type WebPreviewTarget } from '../shell/WebPreview';
+import { FilePreview, type FilePreviewTarget } from '../shell/FilePreview';
+import { locateFile } from '../platform/research';
 import { installPaperService } from '../platform/paper-service';
 import { ExperimentWorkspace } from '../workspaces/experiments/ExperimentWorkspace';
 import { useExecutions } from '../workspaces/experiments/runtime';
@@ -525,7 +527,32 @@ export function App({
     : 'literature';
   // Links in AI answers open over the current module; in literature, as its own tab.
   const [preview, setPreview] = useState<WebPreviewTarget | null>(null);
-  useEffect(() => setPreview(null), [project?.id, workspace]);
+  const [filePreview, setFilePreview] = useState<FilePreviewTarget | null>(null);
+  useEffect(() => {
+    setPreview(null);
+    setFilePreview(null);
+  }, [project?.id, workspace]);
+  // Files named in AI answers (absolute paths) open over the current module too.
+  useEffect(() => {
+    const open = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId: string; path: string }>).detail;
+      if (!detail?.projectId || !detail.path) return;
+      void locateFile(detail.projectId, detail.path)
+        .then((located) => {
+          if (!located) {
+            store.setState({
+              error: t('只能预览项目文件夹里的文件：{path}', { path: detail.path }),
+            });
+            return;
+          }
+          setPreview(null);
+          setFilePreview({ projectId: detail.projectId, ...located });
+        })
+        .catch((error) => store.setState({ error: translateError(String(error)) }));
+    };
+    window.addEventListener('scientify-preview-file', open);
+    return () => window.removeEventListener('scientify-preview-file', open);
+  }, [store]);
   useEffect(() => {
     const open = (event: Event) => {
       const detail = (event as CustomEvent<{ projectId: string; url: string }>).detail;
@@ -541,7 +568,10 @@ export function App({
         project_id: detail.projectId,
         address: detail.url,
       })
-        .then((tab) => setPreview({ projectId: detail.projectId, tabId: tab.id, url: detail.url }))
+        .then((tab) => {
+          setFilePreview(null);
+          setPreview({ projectId: detail.projectId, tabId: tab.id, url: detail.url });
+        })
         .catch((error) => store.setState({ error: translateError(String(error)) }));
     };
     window.addEventListener('scientify-preview-url', open);
@@ -1141,6 +1171,9 @@ export function App({
         >
           {content}
         </ViewTransition>
+        {filePreview && project && filePreview.projectId === project.id ? (
+          <FilePreview target={filePreview} onClose={() => setFilePreview(null)} />
+        ) : null}
         {preview && project && preview.projectId === project.id ? (
           <WebPreview
             target={preview}

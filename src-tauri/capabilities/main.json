@@ -33,6 +33,8 @@
     "allow-research-read-binary",
     "allow-research-reveal",
     "allow-project-folders",
+    "allow-research-locate",
+    "allow-research-open-system",
     "allow-writing-tex-status",
     "allow-writing-compile",
     "allow-writing-cancel",

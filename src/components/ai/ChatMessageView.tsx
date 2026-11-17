@@ -21,6 +21,8 @@ export const ChatMessageView = memo(function ChatMessageView({
   skills = [],
   context,
   onOpenLink,
+  onOpenFile,
+  loadImage,
 }: {
   role: 'user' | 'assistant';
   text: string;
@@ -30,6 +32,9 @@ export const ChatMessageView = memo(function ChatMessageView({
   skills?: AgentSkillRef[];
   context?: ContextSnapshot;
   onOpenLink?: (url: string) => void;
+  /** Local files named in an answer open in the center; pictures show inline. */
+  onOpenFile?: (path: string) => void;
+  loadImage?: (path: string) => Promise<Blob | null>;
 }) {
   usePreferences();
   const displayedText = useDeferredValue(text);
@@ -101,7 +106,14 @@ export const ChatMessageView = memo(function ChatMessageView({
           )}
         </div>
       ) : null}
-      <Markdown onLink={onOpenLink}>{streaming ? displayedText : text}</Markdown>
+      <Markdown
+        onLink={onOpenLink}
+        rich={role === 'assistant'}
+        onOpenFile={onOpenFile}
+        loadImage={loadImage}
+      >
+        {streaming ? displayedText : text}
+      </Markdown>
       {context && role === 'user' ? (
         <details className="sf-ai-context-excerpt">
           <summary>{t('本轮材料来源')}</summary>

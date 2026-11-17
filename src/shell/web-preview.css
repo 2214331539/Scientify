@@ -34,3 +34,25 @@
   display: flex;
   flex-direction: column;
 }
+/* A project file shown over the center (FilePreview). */
+.sf-file-preview {
+  overflow: auto;
+}
+.sf-file-preview .sf-file-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--sf-text-secondary);
+}
+.sf-file-text {
+  margin: 0;
+  padding: 16px 20px;
+  font:
+    12px/1.6 'Cascadia Code',
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

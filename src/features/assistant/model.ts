@@ -58,6 +58,9 @@ export type Conversation = Entity & {
     plan?: { step: string; status: string }[];
     /** The turn's file changes, as a unified diff (capped). */
     diff?: string;
+    reasoning?: string;
+    thoughtMs?: number;
+    files?: { path: string; kind: 'add' | 'update' | 'delete' }[];
   };
 };
 export type AISettings = ModelSettings;

@@ -12,7 +12,20 @@ import type { AgentTask } from './agent-runtime';
 import type { ChatTask } from './chat-runtime';
 import type { Conversation } from './model';
 import { AssistantRuns } from './AssistantRuns';
-import { PlanList, TurnDiff } from './TurnDetails';
+import { PlanList, Thinking, TurnDiff, TurnFiles } from './TurnDetails';
+import { locateFile, nativeResearch } from '../../platform/research';
+
+const IMAGE_TYPES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  bmp: 'image/bmp',
+};
+const imageType = (path: string) =>
+  IMAGE_TYPES[path.split('.').at(-1)?.toLowerCase() ?? ''] ?? 'application/octet-stream';
 
 interface Props {
   scope: string;
@@ -52,10 +65,29 @@ export function AssistantTranscript({
     [scope],
   );
   const onOpenLink = isTauri() && scope !== '__inbox__' ? openLink : undefined;
+  const local = isTauri() && scope !== '__inbox__';
+  const onOpenFile = useCallback(
+    (path: string) =>
+      window.dispatchEvent(
+        new CustomEvent('scientify-preview-file', { detail: { projectId: scope, path } }),
+      ),
+    [scope],
+  );
+  const loadImage = useCallback(
+    async (path: string) => {
+      const located = await locateFile(scope, path);
+      if (!located || !nativeResearch.readBinary) return null;
+      const bytes = await nativeResearch.readBinary(scope, located.path, located.root);
+      return new Blob([new Uint8Array(bytes)], { type: imageType(path) });
+    },
+    [scope],
+  );
   const chatPending = !!chatTask?.pending;
   const operations = activeTask?.state.operations ?? conversation.agentRun?.operations ?? [];
   const plan = activeTask?.state.plan ?? conversation.agentRun?.plan ?? [];
   const diff = activeTask ? activeTask.state.diff : (conversation.agentRun?.diff ?? '');
+  const files = activeTask?.state.files ?? conversation.agentRun?.files ?? [];
+  const cwd = activeTask?.state.cwd ?? conversation.agentCwd ?? null;
   // What the Agent is doing right now, e.g. "搜索网页：…".
   const current = [...operations].reverse().find((op) => op.status === 'inProgress');
   useEffect(() => {
@@ -108,9 +140,23 @@ export function AssistantTranscript({
               skills={message.skills}
               context={message.context}
               onOpenLink={onOpenLink}
+              onOpenFile={local ? onOpenFile : undefined}
+              loadImage={local ? loadImage : undefined}
             />
           ))
         )}
+        {activeTask ? (
+          <Thinking
+            reasoning={agentState.reasoning}
+            thinkingSince={agentState.thinkingSince}
+            thoughtMs={agentState.thoughtMs}
+          />
+        ) : conversation.messages.length ? (
+          <Thinking
+            reasoning={conversation.agentRun?.reasoning}
+            thoughtMs={conversation.agentRun?.thoughtMs}
+          />
+        ) : null}
         {agentState.agentText &&
         !conversation.messages.some((message) => message.id === activeTask?.answerId) ? (
           <ChatMessageView
@@ -118,6 +164,8 @@ export function AssistantTranscript({
             text={agentState.agentText}
             streaming={agentPending}
             onOpenLink={onOpenLink}
+            onOpenFile={local ? onOpenFile : undefined}
+            loadImage={local ? loadImage : undefined}
           />
         ) : null}
         {chatTask?.text &&
@@ -136,6 +184,7 @@ export function AssistantTranscript({
           </div>
         ) : null}
         <PlanList plan={plan} />
+        <TurnFiles files={files} cwd={cwd} onOpen={local ? onOpenFile : undefined} />
         {agentPending && !agentState.approvals.length ? (
           <div className="sf-ai-progress sf-ai-agent-progress" role="status">
             <Mascot size={18} mood={current ? 'working' : 'thinking'} />

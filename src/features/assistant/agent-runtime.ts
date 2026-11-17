@@ -448,6 +448,9 @@ export class AgentRuntime {
               .map((op) => ({ ...op, output: op.output.slice(-4000) })),
             ...(task.state.plan.length ? { plan: task.state.plan } : {}),
             ...(task.state.diff ? { diff: task.state.diff.slice(0, 60_000) } : {}),
+            ...(task.state.reasoning ? { reasoning: task.state.reasoning.slice(-8_000) } : {}),
+            ...(task.state.thoughtMs ? { thoughtMs: task.state.thoughtMs } : {}),
+            ...(task.state.files.length ? { files: task.state.files } : {}),
           },
         });
     });

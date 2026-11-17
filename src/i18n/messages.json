@@ -1,4 +1,21 @@
 {
+  "文件预览": ["文件预览", "File preview"],
+  "用系统程序打开": ["用系统程序打开", "Open with system app"],
+  "网页文件在浏览器里打开，图表和交互才能正常显示。": [
+    "网页文件在浏览器里打开，图表和交互才能正常显示。",
+    "Web pages open in your browser so their charts and interactions work."
+  ],
+  "在浏览器中打开": ["在浏览器中打开", "Open in browser"],
+  "只能预览项目文件夹里的文件：{path}": [
+    "只能预览项目文件夹里的文件：{path}",
+    "Only files in the project's folders can be previewed: {path}"
+  ],
+  "在中间打开": ["在中间打开", "Open in the center"],
+  "已思考 {seconds} 秒": ["已思考 {seconds} 秒", "Thought for {seconds}s"],
+  "正在思考…": ["正在思考…", "Thinking…"],
+  "本轮文件": ["本轮文件", "Files this turn"],
+  "新建": ["新建", "New"],
+  "修改": ["修改", "Changed"],
   "代码文件夹不能和文献文件夹相同或互相包含，请另选一个文件夹。": [
     "代码文件夹不能和文献文件夹相同或互相包含，请另选一个文件夹。",
     "The code folder can't be the literature folder or contain it, or sit inside it. Choose another folder."

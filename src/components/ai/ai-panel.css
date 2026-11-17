@@ -793,3 +793,162 @@
 .sf-ai-diff-file pre .is-hunk {
   color: var(--sf-status-info);
 }
+/* Code in answers: language, copy button, highlighting (CodeBlock.tsx). */
+.sf-code-block {
+  margin: 8px 0;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  overflow: hidden;
+  background: var(--sf-surface-sunken);
+}
+.sf-code-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 6px 3px 10px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.sf-code-block-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.sf-code-block-head button:hover {
+  background: var(--sf-surface-hover);
+  color: var(--sf-text-primary);
+}
+.sf-markdown .sf-code-block pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.55;
+}
+.sf-code-block .hljs-comment,
+.sf-code-block .hljs-quote {
+  color: var(--sf-syntax-comment);
+  font-style: italic;
+}
+.sf-code-block .hljs-keyword,
+.sf-code-block .hljs-selector-tag,
+.sf-code-block .hljs-built_in,
+.sf-code-block .hljs-literal {
+  color: var(--sf-syntax-keyword);
+}
+.sf-code-block .hljs-string,
+.sf-code-block .hljs-attr,
+.sf-code-block .hljs-template-variable {
+  color: var(--sf-syntax-string);
+}
+.sf-code-block .hljs-number,
+.sf-code-block .hljs-symbol {
+  color: var(--sf-syntax-number);
+}
+.sf-code-block .hljs-title,
+.sf-code-block .hljs-function,
+.sf-code-block .hljs-section {
+  color: var(--sf-syntax-function);
+}
+/* A file path in an answer, opened in the center. */
+.sf-path-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sf-accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+/* A picture the AI made, inline in its answer. */
+.sf-chat-image {
+  display: block;
+  max-width: 100%;
+  margin: 8px 0;
+  padding: 0;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  overflow: hidden;
+  background: var(--sf-surface-canvas);
+  cursor: zoom-in;
+}
+.sf-chat-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+}
+.sf-chat-image.is-loading {
+  width: 220px;
+  height: 140px;
+  background: var(--sf-surface-sunken);
+  cursor: default;
+}
+/* "已思考 N 秒" and what the model thought. */
+.sf-ai-thinking {
+  margin: 6px 0;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.sf-ai-thinking summary {
+  cursor: pointer;
+  padding-block: 3px;
+}
+.sf-ai-thinking-text {
+  margin: 4px 0 6px 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--sf-border-subtle);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+/* The files a turn created, changed or deleted. */
+.sf-ai-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.sf-ai-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-raised);
+  color: var(--sf-text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sf-ai-file:hover:not(:disabled) {
+  background: var(--sf-surface-hover);
+}
+.sf-ai-file:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.sf-ai-file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-ai-file small {
+  color: var(--sf-text-muted);
+}
+.sf-ai-file.is-add svg {
+  color: var(--sf-status-success);
+}
+.sf-ai-file.is-delete svg {
+  color: var(--sf-status-danger);
+}
