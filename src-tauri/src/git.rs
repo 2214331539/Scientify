@@ -230,6 +230,12 @@ pub(crate) fn resolve(
     if let Some(selected) = selected {
         let requested = canonical(selected)?;
         protect_internal_data(storage, &requested)?;
+        // The writing folder and the AI workspace are the project's too.
+        if research::writing_root(storage, files, project).is_ok_and(|root| root == requested)
+            || research::ai_root(storage, project).is_ok_and(|root| root == requested)
+        {
+            return Ok(requested);
+        }
         let data = storage.load()?.ok_or("项目不存在。")?;
         for experiment in data["experiments"].as_array().ok_or("实验列表无效。")? {
             if experiment["project"] == project {

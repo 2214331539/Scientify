@@ -5,6 +5,7 @@
 // from before the header (0.3.0-alpha.5 and older) are let through.
 
 import { fail } from './http.mjs';
+import { DOMAINS } from './sync.mjs';
 
 function parse(version) {
   const [core, pre = ''] = String(version).trim().replace(/^v/, '').split('-', 2);
@@ -26,10 +27,12 @@ export function compareVersions(a, b) {
   return Math.sign(x.pre.localeCompare(y.pre, 'en', { numeric: true }));
 }
 
+/** Also lists the sync types this server takes, so apps only send ones it knows. */
 export function clientPolicy(config) {
   return {
     minimum: config.minClientVersion || null,
     recommended: config.recommendedClientVersion || null,
+    syncDomains: Object.keys(DOMAINS),
   };
 }
 

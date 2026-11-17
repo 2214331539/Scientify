@@ -420,7 +420,7 @@ fn codex_home<R: tauri::Runtime>(
     Ok(home)
 }
 fn resolve_root<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
+    _app: &tauri::AppHandle<R>,
     state: &AppState,
     project_id: &str,
     domain: &str,
@@ -438,16 +438,13 @@ fn resolve_root<R: tauri::Runtime>(
         .as_array()
         .and_then(|items| items.iter().find(|p| p["id"].as_str() == Some(project_id)))
         .ok_or("项目不存在。")?;
+    // Chats started on the literature page work in the AI workspace, never among the papers.
     if domain == "literature" {
-        return app
-            .state::<super::library::LibraryState>()
-            .service
-            .root(project_id)?
-            .ok_or_else(|| "请先在文献库打开本地文件夹。".to_string());
+        return crate::research::ai_root(&state.storage, project_id);
     }
     state
         .files
-        .project_root(project_id, project["path"].as_str())
+        .project_root(project_id, crate::research::configured_root(project))
 }
 
 fn conversation_root<R: tauri::Runtime>(
@@ -472,6 +469,19 @@ fn conversation_root<R: tauri::Runtime>(
     }
     .canonicalize()
     .map_err(|e| e.to_string())?;
+    // Literature chats from before the AI workspace stay bound to the literature folder;
+    // their turns still work in the AI workspace (place.rs).
+    let legacy = domain == "literature"
+        && bound.as_ref().is_some_and(|bound| {
+            app.state::<super::library::LibraryState>()
+                .service
+                .root(project)
+                .ok()
+                .flatten()
+                .and_then(|l| l.canonicalize().ok())
+                .is_some_and(|l| *bound == l)
+        });
+    let root = if legacy { bound.clone().unwrap() } else { root };
     if bound.is_some_and(|p| p != root) {
         return Err("会话绑定目录已变化，请新建会话。".into());
     }
@@ -908,7 +918,12 @@ pub async fn agent_start_turn(
         entry.lease = Some(lease);
         entry.has_turns = true;
         entry.active_turn = Some("starting".into());
-        let sandbox = if permission == PermissionMode::Full { permission.sandbox(root) } else { execution::policy(root, Some(scratch.path())) };
+        let sandbox = if permission == PermissionMode::Full { permission.sandbox(root) } else {
+            match &plan {
+                Some(plan) => execution::policy_for(plan.writable.iter().map(PathBuf::as_path).chain([root, scratch.path()])),
+                None => execution::policy(root, Some(scratch.path())),
+            }
+        };
         entry.scratch = Some(scratch);
         let response = match entry.session.call("turn/start",json!({"threadId":thread_id,"cwd":execution::canonical_path(root),"approvalPolicy":permission.approval_policy(),"sandboxPolicy":sandbox,"input":input}),TURN_BUDGET) {
             Ok(response) => response,

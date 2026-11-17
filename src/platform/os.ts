@@ -22,3 +22,14 @@ export function platformClass() {
 export function displayPath(path: string) {
   return path.replace(/^\\\\\?\\UNC\\/, '\\\\').replace(/^\\\\\?\\/, '');
 }
+
+/** Whether two folders are the same or one holds the other (Windows ignores case). */
+export function sameOrInside(a: string, b: string) {
+  const windows = /^[a-z]:|^\\\\/i.test(displayPath(a));
+  const plain = (path: string) => {
+    const folder = displayPath(path).replace(/\\/g, '/').replace(/\/+$/, '');
+    return `${windows ? folder.toLowerCase() : folder}/`;
+  };
+  const [x, y] = [plain(a), plain(b)];
+  return x.startsWith(y) || y.startsWith(x);
+}

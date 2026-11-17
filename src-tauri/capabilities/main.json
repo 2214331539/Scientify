@@ -32,6 +32,7 @@
     "allow-research-create-directory",
     "allow-research-read-binary",
     "allow-research-reveal",
+    "allow-project-folders",
     "allow-writing-tex-status",
     "allow-writing-compile",
     "allow-writing-cancel",

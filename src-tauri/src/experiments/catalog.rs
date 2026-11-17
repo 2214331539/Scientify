@@ -59,6 +59,13 @@ fn check_overlap(
             }
         }
     }
+    // Code never shares a folder with papers.
+    if crate::research::literature_roots(storage)
+        .iter()
+        .any(|literature| crate::research::overlaps(root, literature))
+    {
+        return Err("代码文件夹不能和文献文件夹相同或互相包含，请选择独立目录。".into());
+    }
     Ok(())
 }
 

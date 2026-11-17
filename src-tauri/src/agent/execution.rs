@@ -18,11 +18,19 @@ pub(crate) fn canonical_path(path: &Path) -> PathBuf {
 /// Writes stay inside the project (and the turn's scratch folder); the network is
 /// open, so installing packages and cloning repositories work in "询问" too.
 pub fn policy(root: &Path, artifacts: Option<&Path>) -> Value {
-    let mut roots = vec![canonical_path(root)];
-    if let Some(path) = artifacts {
-        roots.push(canonical_path(path));
+    policy_for(std::iter::once(root).chain(artifacts))
+}
+
+/// The same, writable in several folders: a turn's AI workspace, code and manuscripts.
+pub fn policy_for<'a>(roots: impl IntoIterator<Item = &'a Path>) -> Value {
+    let mut writable: Vec<PathBuf> = Vec::new();
+    for root in roots {
+        let root = canonical_path(root);
+        if !writable.contains(&root) {
+            writable.push(root);
+        }
     }
-    json!({"type":"workspaceWrite", "writableRoots":roots,
+    json!({"type":"workspaceWrite", "writableRoots":writable,
         "networkAccess":true,"excludeTmpdirEnvVar":false,"excludeSlashTmp":false})
 }
 

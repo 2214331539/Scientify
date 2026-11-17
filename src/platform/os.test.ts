@@ -32,3 +32,13 @@ it('shows Windows paths without the long-path prefix', () => {
   expect(displayPath(String.raw`\\?\UNC\server\share\code`)).toBe(String.raw`\\server\share\code`);
   expect(displayPath('/home/researcher/code')).toBe('/home/researcher/code');
 });
+
+it('tells when two folders are the same or nested', async () => {
+  const { sameOrInside } = await import('./os');
+  expect(sameOrInside('D:\\AScience\\Proactive', 'd:\\ascience\\proactive\\')).toBe(true);
+  expect(sameOrInside('D:\\AScience\\Proactive\\code', '\\\\?\\D:\\AScience\\Proactive')).toBe(
+    true,
+  );
+  expect(sameOrInside('D:\\AScience\\Proactive', 'D:\\AScience\\Proactive2')).toBe(false);
+  expect(sameOrInside('/Users/a/papers', '/Users/a/code')).toBe(false);
+});

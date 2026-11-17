@@ -27,6 +27,199 @@ pub(crate) fn project_root(
     files.project_root(id, configured_root(project))
 }
 
+// A project's four places are kept apart: the literature folder the user picks,
+// the code folder (`project_root`), the writing folder for manuscripts and the
+// AI workspace where the assistant puts what it makes. The last two live in
+// Scientify's data next to the default code folder, as `projects/<kind>-<id>`.
+fn managed_root(storage: &Storage, kind: &str, id: &str) -> Result<PathBuf, String> {
+    if !scientify_core::workspace::valid_id(id) {
+        return Err("项目标识无效。".into());
+    }
+    Ok(storage
+        .directory()
+        .join("projects")
+        .join(format!("{kind}-{id}")))
+}
+
+/// The AI workspace: the assistant works and leaves what it makes here unless told otherwise.
+pub(crate) fn ai_root(storage: &Storage, id: &str) -> Result<PathBuf, String> {
+    let root = managed_root(storage, "ai", id)?;
+    std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+    root.canonicalize().map_err(|e| e.to_string())
+}
+
+/// The writing folder, where manuscripts live. The first time, manuscripts that
+/// were registered inside the code folder move here (copied when the code folder
+/// is the user's own, so nothing of theirs disappears).
+pub(crate) fn writing_root(
+    storage: &Storage,
+    files: &ResearchFiles,
+    id: &str,
+) -> Result<PathBuf, String> {
+    let root = managed_root(storage, "writing", id)?;
+    if !root.exists() {
+        std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+        if let Err(error) = adopt_manuscripts(storage, files, id, &root) {
+            eprintln!("Scientify 稿件迁到写作文件夹失败：{error}");
+        }
+    }
+    root.canonicalize().map_err(|e| e.to_string())
+}
+
+fn adopt_manuscripts(
+    storage: &Storage,
+    files: &ResearchFiles,
+    id: &str,
+    writing: &std::path::Path,
+) -> Result<(), String> {
+    let data = storage.load()?.ok_or("工作区尚未载入。")?;
+    let Some(project) = data["projects"]
+        .as_array()
+        .and_then(|ps| ps.iter().find(|p| p["id"].as_str() == Some(id)))
+    else {
+        return Ok(());
+    };
+    let code = files.project_root(id, configured_root(project))?;
+    let managed = configured_root(project).is_none();
+    for manuscript in project["manuscripts"].as_array().into_iter().flatten() {
+        let Some(folder) = manuscript["folder"].as_str().filter(|f| !f.is_empty()) else {
+            continue;
+        };
+        let relative = std::path::Path::new(folder);
+        if !relative
+            .components()
+            .all(|part| matches!(part, std::path::Component::Normal(_)))
+        {
+            continue;
+        }
+        let (from, to) = (code.join(relative), writing.join(relative));
+        if !from.is_dir() || to.exists() {
+            continue;
+        }
+        if let Some(parent) = to.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        if managed {
+            std::fs::rename(&from, &to).map_err(|e| e.to_string())?;
+        } else {
+            copy_tree(&from, &to)?;
+        }
+    }
+    Ok(())
+}
+
+fn copy_tree(from: &std::path::Path, to: &std::path::Path) -> Result<(), String> {
+    std::fs::create_dir_all(to).map_err(|e| e.to_string())?;
+    for entry in std::fs::read_dir(from).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let kind = entry.file_type().map_err(|e| e.to_string())?;
+        let target = to.join(entry.file_name());
+        if kind.is_dir() {
+            copy_tree(&entry.path(), &target)?;
+        } else if kind.is_file() {
+            std::fs::copy(entry.path(), target).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+/// Whether two folders are the same or one holds the other.
+pub(crate) fn overlaps(a: &std::path::Path, b: &std::path::Path) -> bool {
+    let a = a.canonicalize().unwrap_or_else(|_| a.to_path_buf());
+    let b = b.canonicalize().unwrap_or_else(|_| b.to_path_buf());
+    a.starts_with(&b) || b.starts_with(&a)
+}
+
+/// Every project's literature folder, as `library::LocalLibrary` records them.
+pub(crate) fn literature_roots(storage: &Storage) -> Vec<PathBuf> {
+    std::fs::read(storage.directory().join("literature-roots.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .and_then(|roots| roots.as_object().cloned())
+        .map(|roots| {
+            roots
+                .values()
+                .filter_map(|path| path.as_str().map(PathBuf::from))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Refuses a literature folder that is, holds or sits in the project's code,
+/// writing or AI folder, or any experiment's code folder.
+pub(crate) fn check_literature(
+    storage: &Storage,
+    files: &ResearchFiles,
+    project: &str,
+    literature: &std::path::Path,
+) -> Result<(), String> {
+    let mut taken = vec![
+        ("代码文件夹", project_root(storage, files, project)?),
+        ("写作文件夹", writing_root(storage, files, project)?),
+        ("AI 工作区", ai_root(storage, project)?),
+    ];
+    if let Some(data) = storage.load()? {
+        for experiment in data["experiments"].as_array().into_iter().flatten() {
+            if experiment["archived"] == true {
+                continue;
+            }
+            if let Ok(root) =
+                crate::experiments::catalog::root_of(storage, files, &data, experiment)
+            {
+                taken.push(("实验代码文件夹", root));
+            }
+        }
+    }
+    for (name, root) in taken {
+        if overlaps(literature, &root) {
+            return Err(format!(
+                "文献文件夹不能和{name}（{}）相同或互相包含，请另选一个只放文献的文件夹。",
+                crate::local_process::process_path(&root).display()
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFolders {
+    literature: Option<String>,
+    code: String,
+    writing: String,
+    workspace: String,
+}
+
+/// The project's four places, for the writing page and project settings.
+#[tauri::command]
+pub async fn project_folders(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<ProjectFolders, String> {
+    let (storage, files) = (state.storage.clone(), state.files.clone());
+    let literature = tauri::Manager::state::<crate::library::LibraryState>(&app)
+        .service
+        .root(&project_id)
+        .ok()
+        .flatten();
+    tauri::async_runtime::spawn_blocking(move || {
+        let show = |path: PathBuf| {
+            crate::local_process::process_path(&path)
+                .display()
+                .to_string()
+        };
+        Ok(ProjectFolders {
+            literature: literature.map(show),
+            code: show(project_root(&storage, &files, &project_id)?),
+            writing: show(writing_root(&storage, &files, &project_id)?),
+            workspace: show(ai_root(&storage, &project_id)?),
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 pub async fn research_list_files(
     state: State<'_, AppState>,
@@ -509,6 +702,68 @@ pub async fn research_git_diff(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn project(temp: &std::path::Path, extra: serde_json::Value) -> (Storage, ResearchFiles) {
+        let storage = Storage::open(temp.join("data")).unwrap();
+        let mut data = scientify_core::workspace::empty();
+        let mut project = serde_json::json!({"id":"p1","name":"P","space":"personal","question":"","createdAt":"",
+            "manuscripts":[{"id":"m1","name":"ICLR","folder":"paper","main":"main.tex"}]});
+        for (key, value) in extra.as_object().unwrap() {
+            project[key] = value.clone();
+        }
+        data["projects"] = serde_json::json!([project]);
+        data["revision"] = serde_json::json!(1);
+        storage.save(data, 0).unwrap();
+        let files = ResearchFiles::new(storage.directory().to_path_buf());
+        (storage, files)
+    }
+
+    #[test]
+    fn manuscripts_move_out_of_the_default_code_folder_into_the_writing_folder() {
+        let temp = tempfile::tempdir().unwrap();
+        let (storage, files) = project(temp.path(), serde_json::json!({}));
+        let code = project_root(&storage, &files, "p1").unwrap();
+        std::fs::create_dir_all(code.join("paper")).unwrap();
+        std::fs::write(code.join("paper/main.tex"), "\\documentclass{article}").unwrap();
+        std::fs::write(code.join("train.py"), "print(1)").unwrap();
+        let writing = writing_root(&storage, &files, "p1").unwrap();
+        assert!(writing.join("paper/main.tex").is_file());
+        assert!(!code.join("paper").exists());
+        assert!(code.join("train.py").is_file());
+        let ai = ai_root(&storage, "p1").unwrap();
+        for (a, b) in [(&code, &writing), (&code, &ai), (&writing, &ai)] {
+            assert!(!overlaps(a, b), "{} {}", a.display(), b.display());
+        }
+    }
+
+    #[test]
+    fn manuscripts_in_the_users_own_code_folder_are_copied_not_moved() {
+        let temp = tempfile::tempdir().unwrap();
+        let own = temp.path().join("repo");
+        std::fs::create_dir_all(own.join("paper")).unwrap();
+        std::fs::write(own.join("paper/main.tex"), "x").unwrap();
+        let (storage, files) = project(temp.path(), serde_json::json!({"path": own}));
+        let writing = writing_root(&storage, &files, "p1").unwrap();
+        assert!(writing.join("paper/main.tex").is_file());
+        assert!(own.join("paper/main.tex").is_file());
+    }
+
+    #[test]
+    fn a_literature_folder_never_shares_the_code_writing_or_ai_folder() {
+        let temp = tempfile::tempdir().unwrap();
+        let own = temp.path().join("research");
+        std::fs::create_dir_all(own.join("papers")).unwrap();
+        let (storage, files) = project(temp.path(), serde_json::json!({"path": own}));
+        assert!(check_literature(&storage, &files, "p1", &own).is_err());
+        assert!(check_literature(&storage, &files, "p1", &own.join("papers")).is_err());
+        assert!(check_literature(&storage, &files, "p1", temp.path()).is_err());
+        let ai = ai_root(&storage, "p1").unwrap();
+        assert!(check_literature(&storage, &files, "p1", &ai).is_err());
+        let papers = temp.path().join("papers");
+        std::fs::create_dir_all(&papers).unwrap();
+        assert!(check_literature(&storage, &files, "p1", &papers).is_ok());
+    }
+
     #[test]
     fn parses_git_spaces_and_rename_records() {
         let changes = parse_git(b" M chapter one.md\0R  new.md\0old.md\0?? draft.py\0").unwrap();

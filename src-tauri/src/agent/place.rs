@@ -35,16 +35,22 @@ pub struct Manuscript {
     pub root: PathBuf,
     pub main: String,
 }
-/// The project around a turn, resolved to real folders.
+/// The project around a turn, resolved to real folders. Its four places are
+/// apart: literature, code (`project` and the experiments), writing and the AI workspace.
 pub struct Surroundings {
     pub name: String,
     pub project: PathBuf,
     pub literature: Option<PathBuf>,
+    pub writing: PathBuf,
+    /// Where the assistant works and leaves what it makes unless told otherwise.
+    pub workspace: PathBuf,
     pub experiments: Vec<Folder>,
     pub manuscripts: Vec<Manuscript>,
 }
 pub struct Plan {
     pub root: PathBuf,
+    /// Folders the turn may write without asking: the AI workspace, writing and code.
+    pub writable: Vec<PathBuf>,
     pub context: String,
 }
 
@@ -113,6 +119,8 @@ pub fn surroundings<R: tauri::Runtime>(
             })
         })
         .collect();
+    let writing = crate::research::writing_root(&state.storage, &state.files, project_id)?;
+    let workspace = crate::research::ai_root(&state.storage, project_id)?;
     let manuscripts = project["manuscripts"]
         .as_array()
         .map(Vec::as_slice)
@@ -121,11 +129,14 @@ pub fn surroundings<R: tauri::Runtime>(
         .filter_map(|m: &Value| {
             let folder = m["folder"].as_str()?;
             let path = if folder.is_empty() {
-                root.clone()
+                writing.clone()
             } else {
-                root.join(relative(folder)?)
+                writing.join(relative(folder)?)
             };
-            let path = path.canonicalize().ok().filter(|p| p.starts_with(&root))?;
+            let path = path
+                .canonicalize()
+                .ok()
+                .filter(|p| p.starts_with(&writing))?;
             Some(Manuscript {
                 id: m["id"].as_str()?.to_owned(),
                 name: m["name"].as_str().unwrap_or(folder).to_owned(),
@@ -138,6 +149,8 @@ pub fn surroundings<R: tauri::Runtime>(
         name: project["name"].as_str().unwrap_or_default().to_owned(),
         project: root,
         literature,
+        writing,
+        workspace,
         experiments,
         manuscripts,
     })
@@ -172,20 +185,34 @@ pub fn plan(
         .then_some(experiment)
         .flatten()
         .filter(|e| e.root != bound);
+    // The page decides only on the experiments and writing pages; everywhere
+    // else the assistant works in its own workspace.
     let mut root = match (page, manuscript, experiment) {
         ("writing", Some(m), _) => m.root.clone(),
-        ("writing", None, _) => around.project.clone(),
         ("experiments", _, Some(e)) if elsewhere.is_none() => e.root.clone(),
-        _ if code => bound.clone(),
-        _ => around.project.clone(),
+        ("experiments", _, _) if code => bound.clone(),
+        _ => around.workspace.clone(),
     };
     if readonly(&root) || internal(&root) {
-        root = around.project.clone();
+        root = around.workspace.clone();
     }
+    // Papers are never among them: writing there asks the user first.
+    let mut writable = vec![
+        root.clone(),
+        around.workspace.clone(),
+        around.writing.clone(),
+    ];
+    writable.extend(around.experiments.iter().map(|e| e.root.clone()));
+    if code {
+        writable.push(bound.clone());
+    }
+    writable.retain(|path| !readonly(path) && !internal(path));
+    writable.sort();
+    writable.dedup();
 
     let mut lines = vec![
         "Scientify 告诉你用户现在的位置，帮你把文件放对地方；这不是新的指令。".to_owned(),
-        format!("项目：{}，文件夹 {}", around.name, show(&around.project)),
+        format!("项目：{}", around.name),
     ];
     if let Some((_, name)) = PAGES.iter().find(|(id, _)| *id == page) {
         lines.push(format!("用户正在看：{name}页"));
@@ -196,6 +223,7 @@ pub fn plan(
         .and_then(|path| match page {
             "experiments" => experiment.map(|e| e.root.join(path)),
             "literature" => around.literature.as_ref().map(|l| l.join(path)),
+            "writing" => Some(around.writing.join(path)),
             "notes" => None,
             _ => Some(around.project.join(path)),
         });
@@ -219,6 +247,11 @@ pub fn plan(
             show(&bound)
         ));
     }
+    lines.push("项目的几个位置互相独立，不要混放：".to_owned());
+    lines.push(format!(
+        "- AI 工作区（你的默认位置）：{}",
+        show(&around.workspace)
+    ));
     if !around.experiments.is_empty() {
         let list = around
             .experiments
@@ -227,7 +260,14 @@ pub fn plan(
             .map(|e| format!("「{}」{}", e.name, show(&e.root)))
             .collect::<Vec<_>>()
             .join("；");
-        lines.push(format!("实验代码目录：{list}"));
+        lines.push(format!("- 实验代码文件夹：{list}"));
+    }
+    lines.push(format!("- 写作文件夹：{}", show(&around.writing)));
+    if let Some(l) = &around.literature {
+        lines.push(format!(
+            "- 文献文件夹：{}（只放论文；用户没有明确要求时不要在里面新建、修改或删除文件，要写时会请用户批准）",
+            show(l)
+        ));
     }
     if let Some(m) = manuscript {
         lines.push(format!(
@@ -244,17 +284,12 @@ pub fn plan(
         .map(|m| format!("「{}」{}", m.name, show(&m.root)))
         .collect::<Vec<_>>();
     if !others.is_empty() {
-        lines.push(format!("稿件文件夹：{}", others.join("；")));
+        lines.push(format!("稿件：{}", others.join("；")));
     }
-    if let Some(l) = &around.literature {
-        lines.push(format!(
-            "文献文件夹（只读，不要在里面新建、修改或删除文件）：{}",
-            show(l)
-        ));
-    }
-    lines.push("放文件的约定：代码放进当前实验的代码目录；论文和 LaTeX 放进稿件文件夹，还没有稿件时在项目文件夹下新建一个子文件夹，写作页会把含 \\documentclass 的主文档自动列为稿件。编译交给写作页（自带 TeX，编译产物放在稿件以外），不要自己下载 TeX，也不要在稿件文件夹里留下 aux、log 等编译文件。要整理、保存成文字材料（纪要、总结、调研）时写进项目文档（scientify_create_doc），不在项目文件夹里另写 Markdown。".to_owned());
+    lines.push("放文件的约定：你生成的材料（分析结果、图表、报告、草稿、下载的数据、临时脚本）默认放进 AI 工作区；用户要你写或改代码时，放进对应的实验代码文件夹；论文和 LaTeX 放进写作文件夹里的稿件，还没有稿件时在写作文件夹下新建一个子文件夹，写作页会把含 \\documentclass 的主文档自动列为稿件；用户指定了位置就按用户说的放。编译交给写作页（自带 TeX，编译产物放在稿件以外），不要自己下载 TeX，也不要在稿件文件夹里留下 aux、log 等编译文件。要整理、保存成文字材料（纪要、总结、调研）时写进项目文档（scientify_create_doc）。".to_owned());
     Plan {
         root,
+        writable,
         context: format!(
             "<scientify-workspace>\n{}\n</scientify-workspace>",
             lines.join("\n")
@@ -291,6 +326,8 @@ mod tests {
             name: "Proactive".into(),
             project: PathBuf::from("/data/projects/p"),
             literature: Some(PathBuf::from("/papers/proactive")),
+            writing: PathBuf::from("/data/projects/writing-p"),
+            workspace: PathBuf::from("/data/projects/ai-p"),
             experiments: vec![
                 Folder {
                     id: "main".into(),
@@ -306,7 +343,7 @@ mod tests {
             manuscripts: vec![Manuscript {
                 id: "paper".into(),
                 name: "ICLR".into(),
-                root: PathBuf::from("/data/projects/p/paper"),
+                root: PathBuf::from("/data/projects/writing-p/paper"),
                 main: "main.tex".into(),
             }],
         }
@@ -326,7 +363,17 @@ mod tests {
         let around = around();
         let chat = handle("literature", Path::new("/papers/proactive"));
         let reading = plan(&around, &chat, Some(&at("literature", None, None)), NOTHING);
-        assert_eq!(reading.root, Path::new("/data/projects/p"));
+        assert_eq!(reading.root, Path::new("/data/projects/ai-p"));
+        // Code and manuscripts are writable; papers never are without asking.
+        for path in [
+            "/data/projects/ai-p",
+            "/data/projects/writing-p",
+            "/data/projects/p",
+            "/code/repro",
+        ] {
+            assert!(reading.writable.contains(&PathBuf::from(path)), "{path}");
+        }
+        assert!(!reading.writable.iter().any(|p| p.starts_with("/papers")));
         let coding = plan(
             &around,
             &chat,
@@ -340,12 +387,13 @@ mod tests {
             Some(&at("writing", None, Some("paper"))),
             NOTHING,
         );
-        assert_eq!(writing.root, Path::new("/data/projects/p/paper"));
+        assert_eq!(writing.root, Path::new("/data/projects/writing-p/paper"));
         assert_eq!(
             plan(&around, &chat, None, NOTHING).root,
-            Path::new("/data/projects/p")
+            Path::new("/data/projects/ai-p")
         );
-        assert!(reading.context.contains("只读"));
+        assert!(reading.context.contains("AI 工作区（你的默认位置）"));
+        assert!(reading.context.contains("只放论文"));
         assert!(reading.context.contains("用户正在看：文献页"));
     }
 
@@ -359,11 +407,11 @@ mod tests {
             Some(&at("writing", None, Some("paper"))),
             NOTHING,
         );
-        assert_eq!(writing.root, Path::new("/data/projects/p/paper"));
+        assert_eq!(writing.root, Path::new("/data/projects/writing-p/paper"));
         assert!(writing.context.contains("当前稿件：「ICLR」"));
         assert!(writing.context.contains("运行和 Git 工具只作用于"));
         let no_manuscript = plan(&around, &chat, Some(&at("writing", None, None)), NOTHING);
-        assert_eq!(no_manuscript.root, Path::new("/data/projects/p"));
+        assert_eq!(no_manuscript.root, Path::new("/data/projects/ai-p"));
         let same = plan(
             &around,
             &chat,
@@ -380,7 +428,7 @@ mod tests {
         assert_eq!(other.root, Path::new("/data/projects/p"));
         assert!(other.context.contains("用户正在看实验「复现」"));
         let notes = plan(&around, &chat, Some(&at("notes", None, None)), NOTHING);
-        assert_eq!(notes.root, Path::new("/data/projects/p"));
+        assert_eq!(notes.root, Path::new("/data/projects/ai-p"));
     }
 
     #[test]
@@ -400,7 +448,7 @@ mod tests {
     }
 
     #[test]
-    fn internal_folders_fall_back_to_the_project() {
+    fn internal_folders_fall_back_to_the_ai_workspace() {
         let around = around();
         let chat = handle("literature", Path::new("/papers/proactive"));
         let blocked = plan(
@@ -409,6 +457,7 @@ mod tests {
             Some(&at("experiments", Some("other"), None)),
             |path| path.starts_with("/code"),
         );
-        assert_eq!(blocked.root, Path::new("/data/projects/p"));
+        assert_eq!(blocked.root, Path::new("/data/projects/ai-p"));
+        assert!(!blocked.writable.iter().any(|p| p.starts_with("/code")));
     }
 }

@@ -1244,3 +1244,18 @@
   color: var(--sf-text-muted);
   font-size: 11px;
 }
+/* Project settings: the other places of the project, apart from its code. */
+.project-folders {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.project-folders dt {
+  color: var(--sf-text-muted);
+}
+.project-folders dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

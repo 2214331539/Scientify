@@ -373,6 +373,7 @@ pub fn run() {
             research::research_create_directory,
             research::research_read_binary,
             research::research_reveal,
+            research::project_folders,
             writing::writing_tex_status,
             writing::writing_compile,
             writing::writing_cancel,

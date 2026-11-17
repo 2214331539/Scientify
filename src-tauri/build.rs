@@ -37,6 +37,7 @@ fn main() {
             "research_create_directory",
             "research_read_binary",
             "research_reveal",
+            "project_folders",
             "writing_tex_status",
             "writing_compile",
             "writing_cancel",

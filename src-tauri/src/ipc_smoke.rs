@@ -106,10 +106,10 @@ fn assistant_context_obeys_generated_acl_and_reads_only_the_bound_library_and_no
             .unwrap()
             .iter()
             .any(|m| m["text"] == "linked-note-fixture"));
-        assert_eq!(
-            value["root"],
-            root.canonicalize().unwrap().display().to_string()
-        );
+        // New literature chats work in the project's AI workspace, never among the papers.
+        let bound = value["root"].as_str().unwrap();
+        assert!(bound.ends_with("ai-papers-project"), "{bound}");
+        assert_ne!(bound, root.canonicalize().unwrap().display().to_string());
         assert!(invoke(&window, "agent_context", body, "https://untrusted.example").is_err());
         assert!(invoke(&window, "agent_context", json!({"request":{"projectId":"other-project","domain":"literature","conversationId":"chat1"}}), origin).is_err());
         assert!(invoke(&window, "agent_context", json!({"request":{"projectId":"papers-project","domain":"literature","conversationId":"chat1","workspaceRoot":temp.path()}}), origin).is_err());

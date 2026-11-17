@@ -1,4 +1,11 @@
 {
+  "代码文件夹不能和文献文件夹相同或互相包含，请另选一个文件夹。": [
+    "代码文件夹不能和文献文件夹相同或互相包含，请另选一个文件夹。",
+    "The code folder can't be the literature folder or contain it, or sit inside it. Choose another folder."
+  ],
+  "尚未打开": ["尚未打开", "Not opened yet"],
+  "写作文件夹": ["写作文件夹", "Writing folder"],
+  "AI 工作区": ["AI 工作区", "AI workspace"],
   "网页预览": ["网页预览", "Web preview"],
   "在文献页打开": ["在文献页打开", "Open in Literature"],
   "关闭预览": ["关闭预览", "Close preview"],

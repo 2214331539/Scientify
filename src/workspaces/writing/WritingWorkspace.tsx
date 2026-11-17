@@ -38,7 +38,8 @@ import { useActiveView } from '../../components/workspace/ViewTransition';
 import { confirmAction } from '../../components/prompts';
 import type { WorkContext } from '../../domain/context';
 import type { Project } from '../../domain/workspace';
-import type { ResearchBackend } from '../../platform/research';
+import { isTauri } from '@tauri-apps/api/core';
+import { projectFolders, withWorkspaceRoot, type ResearchBackend } from '../../platform/research';
 import {
   writingApi,
   type CompileResult,
@@ -197,14 +198,7 @@ function useManuscriptFiles(
  * The writing module as a local Overleaf: a manuscript's files and outline on the left, its
  * LaTeX source and the compiled PDF side by side, the log in place of the PDF when asked.
  */
-export function WritingWorkspace({
-  project,
-  store,
-  backend,
-  activePath,
-  onOpen,
-  onContext,
-}: {
+type WritingProps = {
   project: Project;
   store: WorkspaceStore;
   backend: ResearchBackend;
@@ -213,7 +207,58 @@ export function WritingWorkspace({
   activePath: string | null | undefined;
   onOpen(path: string | null): void;
   onContext(context: WorkContext): void;
-}) {
+};
+
+// Each project's writing folder, once asked.
+const writingRoots = new Map<string, string>();
+
+/**
+ * Manuscripts live in the project's writing folder, apart from its code: every
+ * file the page reads, writes or compiles is there. The browser preview and the
+ * tests have no such folder and keep the project's files.
+ */
+export function WritingWorkspace(props: WritingProps) {
+  const id = props.project.id;
+  const [root, setRoot] = useState<string | null | undefined>(() =>
+    isTauri() ? writingRoots.get(id) : null,
+  );
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!isTauri() || writingRoots.has(id)) return;
+    let current = true;
+    void projectFolders(id)
+      .then((folders) => {
+        writingRoots.set(id, folders.writing);
+        if (current) setRoot(folders.writing);
+      })
+      .catch((reason) => current && setError(translateError(errorMessage(reason))));
+    return () => {
+      current = false;
+    };
+  }, [id]);
+  const backend = useMemo(
+    () => (root ? withWorkspaceRoot(props.backend, root) : props.backend),
+    [props.backend, root],
+  );
+  if (error)
+    return (
+      <p role="alert" className="error-text">
+        {error}
+      </p>
+    );
+  if (root === undefined) return null;
+  return <WritingWorkspaceView {...props} backend={backend} writingRoot={root ?? undefined} />;
+}
+
+function WritingWorkspaceView({
+  project,
+  store,
+  backend,
+  activePath,
+  onOpen,
+  onContext,
+  writingRoot,
+}: WritingProps & { writingRoot?: string }) {
   const slot = useSidebarSlot();
   const viewActive = useActiveView();
   const readOnly = !canEditProject(project, 'code');
@@ -356,7 +401,7 @@ export function WritingWorkspace({
       for (const session of getFileRuntime(backend).sessions.values())
         if (
           session.projectId === project.id &&
-          !session.workspaceRoot &&
+          session.workspaceRoot === writingRoot &&
           inside(session.path) &&
           session.getSnapshot().dirty &&
           !(await session.save())
@@ -597,6 +642,7 @@ export function WritingWorkspace({
           <FileResources
             project={project}
             backend={backend}
+            workspaceRoot={writingRoot}
             mode="writing"
             view="files"
             folder={manuscript ? manuscript.folder : undefined}
@@ -730,12 +776,14 @@ export function WritingWorkspace({
       project={project}
       store={store}
       backend={backend}
+      workspaceRoot={writingRoot}
       mode="writing"
       view="files"
       scope={manuscript?.id ?? '*'}
       activePath={activePath}
       onActivePathChange={onOpen}
-      onContext={onContext}
+      // The writing folder is not a code folder: chats started here keep theirs.
+      onContext={({ workspaceRoot: _, ...context }) => onContext(context)}
       onSaved={onSaved}
       onCursor={(path, line) => (cursor.current = { path, line })}
       editorExtensions={(path) => (/\.tex$/i.test(path) && manuscript ? extensions : [])}

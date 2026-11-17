@@ -127,3 +127,40 @@ export const nativeResearch: ResearchBackend = {
     };
   },
 };
+
+/**
+ * A project's places, kept apart: the literature folder (papers), the code
+ * folder, the writing folder (manuscripts) and the AI workspace, where the
+ * assistant leaves what it makes unless told otherwise.
+ */
+export type ProjectFolders = {
+  literature: string | null;
+  code: string;
+  writing: string;
+  workspace: string;
+};
+
+export const projectFolders = (projectId: string) =>
+  invoke<ProjectFolders>('project_folders', { projectId });
+
+/** The same backend, working in `root` unless a call names another folder. */
+export function withWorkspaceRoot(backend: ResearchBackend, root: string): ResearchBackend {
+  const { readBinary, reveal, createDirectory } = backend;
+  return {
+    ...backend,
+    listFiles: (projectId, workspaceRoot) => backend.listFiles(projectId, workspaceRoot ?? root),
+    readFile: (projectId, path, workspaceRoot) =>
+      backend.readFile(projectId, path, workspaceRoot ?? root),
+    writeFile: (projectId, path, content, expectedVersion, workspaceRoot) =>
+      backend.writeFile(projectId, path, content, expectedVersion, workspaceRoot ?? root),
+    readBinary:
+      readBinary &&
+      ((projectId, path, workspaceRoot) => readBinary(projectId, path, workspaceRoot ?? root)),
+    reveal:
+      reveal &&
+      ((projectId, path, workspaceRoot) => reveal(projectId, path, workspaceRoot ?? root)),
+    createDirectory:
+      createDirectory &&
+      ((projectId, path, workspaceRoot) => createDirectory(projectId, path, workspaceRoot ?? root)),
+  };
+}

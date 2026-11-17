@@ -13,6 +13,9 @@ export const DOMAINS = {
   asset: 'file',
   // Document pages, one JSON file each.
   doc: 'file',
+  // The writing folder (manuscripts) and the AI workspace, apart from the code.
+  writing: 'file',
+  ai: 'file',
 };
 
 const RECORD_ID = /^[A-Za-z0-9_-]{1,80}$/;

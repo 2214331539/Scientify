@@ -69,6 +69,10 @@ pub(crate) enum Domain {
     Asset,
     /// Document pages (`workspace/docs/<project>`), merged block by block when both sides change.
     Doc,
+    /// The writing folder, where manuscripts live (`research::writing_root`).
+    Writing,
+    /// The AI workspace, where the assistant leaves what it makes (`research::ai_root`).
+    Workspace,
     Project,
     Record,
     Experiment,
@@ -76,11 +80,13 @@ pub(crate) enum Domain {
 }
 
 impl Domain {
-    const ALL: [Domain; 8] = [
+    const ALL: [Domain; 10] = [
         Domain::Library,
         Domain::Code,
         Domain::Asset,
         Domain::Doc,
+        Domain::Writing,
+        Domain::Workspace,
         Domain::Project,
         Domain::Record,
         Domain::Experiment,
@@ -92,6 +98,8 @@ impl Domain {
             Domain::Code => "code",
             Domain::Asset => "asset",
             Domain::Doc => "doc",
+            Domain::Writing => "writing",
+            Domain::Workspace => "ai",
             Domain::Project => "project",
             Domain::Record => "record",
             Domain::Experiment => "experiment",
@@ -104,7 +112,12 @@ impl Domain {
     fn is_file(self) -> bool {
         matches!(
             self,
-            Domain::Library | Domain::Code | Domain::Asset | Domain::Doc
+            Domain::Library
+                | Domain::Code
+                | Domain::Asset
+                | Domain::Doc
+                | Domain::Writing
+                | Domain::Workspace
         )
     }
     fn collection(self) -> Option<&'static str> {
@@ -308,7 +321,51 @@ pub(crate) enum Remote<'a> {
     Memory(&'a memory::Server),
 }
 
+/// Which sync types each server accepts, asked once per run of the app.
+static SERVER_DOMAINS: std::sync::Mutex<BTreeMap<String, Vec<String>>> =
+    std::sync::Mutex::new(BTreeMap::new());
+
 impl Remote<'_> {
+    /// Whether the server takes this sync type (`syncDomains` in `/v1/client-policy`).
+    async fn supports(&self, domain: &str) -> bool {
+        match self {
+            Remote::Http { endpoint, .. } => {
+                let known = SERVER_DOMAINS
+                    .lock()
+                    .ok()
+                    .and_then(|cache| cache.get(endpoint).cloned());
+                let domains = match known {
+                    Some(domains) => domains,
+                    None => {
+                        let Ok(policy) = super::request_json(
+                            endpoint,
+                            "/client-policy",
+                            reqwest::Method::GET,
+                            None,
+                            None,
+                        )
+                        .await
+                        else {
+                            return false;
+                        };
+                        let domains: Vec<String> = policy["syncDomains"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .filter_map(|d| d.as_str().map(str::to_owned))
+                            .collect();
+                        if let Ok(mut cache) = SERVER_DOMAINS.lock() {
+                            cache.insert(endpoint.clone(), domains.clone());
+                        }
+                        domains
+                    }
+                };
+                domains.iter().any(|d| d == domain)
+            }
+            #[cfg(test)]
+            Remote::Memory(_) => true,
+        }
+    }
     async fn pull(&self, project: &str, since: u64) -> Result<Page, String> {
         match self {
             Remote::Http { state, endpoint } => {
@@ -532,7 +589,7 @@ fn include(domain: Domain, rel: &str, name: &str, dir: bool) -> bool {
             }
             !name.starts_with('.')
         }
-        Domain::Code => {
+        Domain::Code | Domain::Writing | Domain::Workspace => {
             if name.starts_with(".scientify") {
                 return false;
             }
@@ -1024,6 +1081,17 @@ pub(crate) async fn sync(
         device.data().join("note-assets").join(project),
     );
     roots.insert(Domain::Doc, crate::docs::folder(device.data(), project)?);
+    // Older servers know neither; until they do, these folders stay on this device.
+    if remote.supports("writing").await {
+        roots.insert(
+            Domain::Writing,
+            crate::research::writing_root(device.storage, device.files, project)?,
+        );
+        roots.insert(
+            Domain::Workspace,
+            crate::research::ai_root(device.storage, project)?,
+        );
+    }
     rebase_moved_roots(&mut state, &roots);
 
     // 1. Everything the server changed since this device last caught up.

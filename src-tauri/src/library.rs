@@ -76,15 +76,17 @@ pub async fn library_choose(
     let service = app.state::<LibraryState>().service.clone();
     let a = app.clone();
     let id = project_id.clone();
+    let (storage, files) = (state.storage.clone(), state.files.clone());
     let result = tauri::async_runtime::spawn_blocking(move || {
         let Some(file) = a.dialog().file().blocking_pick_folder() else {
             return Ok(None);
         };
+        let folder = file.into_path().map_err(|e| e.to_string())?;
+        // Papers stay apart from code, manuscripts and what the AI makes.
+        crate::research::check_literature(&storage, &files, &id, &folder)?;
         a.state::<super::agent::AgentState>()
             .protect(None, None, Some(&id))?;
-        service
-            .mount(&id, &file.into_path().map_err(|e| e.to_string())?)
-            .map(Some)
+        service.mount(&id, &folder).map(Some)
     })
     .await
     .map_err(|e| e.to_string())??;

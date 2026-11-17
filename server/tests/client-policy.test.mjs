@@ -21,6 +21,9 @@ test('apps below the minimum are asked to update; older ones without a version p
   assert.doesNotThrow(() => requireSupportedClient(request('0.4.0-alpha.1'), config));
   assert.doesNotThrow(() => requireSupportedClient(request(''), config));
   assert.doesNotThrow(() => requireSupportedClient(request('0.1.0'), {}));
-  assert.deepEqual(clientPolicy(config), { minimum: '0.4.0-alpha.1', recommended: '0.4.0-alpha.2' });
-  assert.deepEqual(clientPolicy({}), { minimum: null, recommended: null });
+  assert.equal(clientPolicy(config).minimum, '0.4.0-alpha.1');
+  assert.equal(clientPolicy(config).recommended, '0.4.0-alpha.2');
+  assert.equal(clientPolicy({}).minimum, null);
+  assert.ok(clientPolicy({}).syncDomains.includes('writing'));
+  assert.ok(clientPolicy({}).syncDomains.includes('ai'));
 });

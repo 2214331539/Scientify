@@ -8,6 +8,9 @@ import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import { ProjectCoverArt } from './ProjectCover';
 import { coverColor, projectCoverColors } from './model';
+import { isTauri } from '@tauri-apps/api/core';
+import { projectFolders, type ProjectFolders } from '../../platform/research';
+import { displayPath, sameOrInside } from '../../platform/os';
 
 /** Edits a project's name, question, cover and code directory. Creating a project uses the wizard. */
 export function ProjectForm({
@@ -31,6 +34,20 @@ export function ProjectForm({
     color: coverColor(project),
   }));
   const [dirty, setDirty] = useState(false);
+  const [folders, setFolders] = useState<ProjectFolders | null>(null);
+  useEffect(() => {
+    if (!isTauri()) return;
+    let current = true;
+    void projectFolders(project.id)
+      .then((value) => current && setFolders(value))
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [project.id]);
+  // Code never shares a folder with the papers.
+  const clash =
+    !!draft.path && !!folders?.literature && sameOrInside(draft.path, folders.literature);
   useEffect(() => {
     store.getState().setDirty(dirty);
     return () => store.getState().setDirty(false);
@@ -41,7 +58,7 @@ export function ProjectForm({
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!draft.name.trim()) return;
+    if (!draft.name.trim() || clash) return;
     const saved = await store.getState().update((workspace) => {
       const target = workspace.projects.find((p) => p.id === project.id);
       if (!target) throw new Error(t('项目不存在，请重新载入。'));
@@ -131,7 +148,7 @@ export function ProjectForm({
               </label>
             </fieldset>
             <label>
-              {t('项目目录')}
+              {t('代码文件夹')}
               <div className="input-action">
                 <Input
                   disabled={busy || !canEditProject(project)}
@@ -163,6 +180,21 @@ export function ProjectForm({
             </label>
             {fileEditsPending ? (
               <p className="muted">{t('存在未保存文件或文件正在写入，暂时不能更改目录。')}</p>
+            ) : null}
+            {clash ? (
+              <p role="alert" className="error-text">
+                {t('代码文件夹不能和文献文件夹相同或互相包含，请另选一个文件夹。')}
+              </p>
+            ) : null}
+            {folders ? (
+              <dl className="project-folders">
+                <dt>{t('文献文件夹')}</dt>
+                <dd>{folders.literature ? displayPath(folders.literature) : t('尚未打开')}</dd>
+                <dt>{t('写作文件夹')}</dt>
+                <dd>{displayPath(folders.writing)}</dd>
+                <dt>{t('AI 工作区')}</dt>
+                <dd>{displayPath(folders.workspace)}</dd>
+              </dl>
             ) : null}
           </div>
         </div>

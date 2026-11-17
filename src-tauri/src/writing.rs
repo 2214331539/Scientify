@@ -207,7 +207,7 @@ fn manuscript(
 ) -> Result<Manuscript, String> {
     let root = project_root
         .canonicalize()
-        .map_err(|_| "项目文件夹不存在。")?;
+        .map_err(|_| "写作文件夹不存在。")?;
     let dir = if folder.is_empty() {
         root.clone()
     } else {
@@ -215,7 +215,7 @@ fn manuscript(
     };
     let dir = dir.canonicalize().map_err(|_| "稿件文件夹不存在。")?;
     if !dir.starts_with(&root) || !dir.is_dir() {
-        return Err("稿件文件夹必须在项目文件夹里。".into());
+        return Err("稿件文件夹必须在写作文件夹里。".into());
     }
     scientify_core::research::reject_links(&dir)?;
     let main_rel = relative(main)?;
@@ -259,8 +259,9 @@ fn manuscript(
     })
 }
 
+// Manuscripts live in the project's writing folder, apart from its code.
 fn locate(state: &AppState, project: &str, folder: &str, main: &str) -> Result<Manuscript, String> {
-    let root = crate::git::resolve(&state.storage, &state.files, project, None)?;
+    let root = crate::research::writing_root(&state.storage, &state.files, project)?;
     manuscript(&root, state.storage.directory(), project, folder, main)
 }
 
@@ -1004,10 +1005,8 @@ fn unpack(zip: &[u8], root: &Path, hint: &str) -> Result<Imported, String> {
     })
 }
 
-fn project_root(state: &AppState, project: &str) -> Result<PathBuf, String> {
-    crate::git::resolve(&state.storage, &state.files, project, None)?
-        .canonicalize()
-        .map_err(|_| "项目文件夹不存在。".into())
+fn writing_folder(state: &AppState, project: &str) -> Result<PathBuf, String> {
+    crate::research::writing_root(&state.storage, &state.files, project)
 }
 
 /// Lets the person pick a zip (for example Overleaf's "Download source") and unpacks it into
@@ -1022,7 +1021,7 @@ pub async fn writing_import_zip<R: tauri::Runtime>(
     use tauri_plugin_dialog::DialogExt;
     crate::library::trusted(&view)?;
     crate::collaboration::permissions::require_write(&state.storage, &project_id, "code")?;
-    let root = project_root(&state, &project_id)?;
+    let root = writing_folder(&state, &project_id)?;
     tauri::async_runtime::spawn_blocking(move || {
         let Some(picked) = app
             .dialog()
@@ -1102,7 +1101,7 @@ pub async fn writing_clone<R: tauri::Runtime>(
             return Err("令牌无效。".into());
         }
     }
-    let root = project_root(&state, &project_id)?;
+    let root = writing_folder(&state, &project_id)?;
     tauri::async_runtime::spawn_blocking(move || {
         let folder = unique_folder(&root, &safe_name(name.trim()));
         let target = root.join(&folder);
