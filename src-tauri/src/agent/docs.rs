@@ -97,6 +97,9 @@ pub fn queue<R: tauri::Runtime>(
         if entry.active_turn.as_deref() != params["turnId"].as_str() || entry.lease.is_none() {
             return Err("工具任务已经结束。".into());
         }
+        if entry.permission == PermissionMode::ReadOnly {
+            return Err("只读模式下不能修改，请把权限调到“询问”或以上。".into());
+        }
         if entry.permission == PermissionMode::Full {
             return Ok(Some(event.clone()));
         }

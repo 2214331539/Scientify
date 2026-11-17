@@ -67,6 +67,7 @@ import {
   type ChatMessage,
   type Conversation,
 } from './model';
+import { PERMISSIONS } from './permissions';
 
 interface Props {
   store: WorkspaceStore;
@@ -1200,22 +1201,19 @@ export function AssistantPanel({
         {menu?.kind === 'permissions' ? (
           <>
             <div className="sf-ai-permission-note">{t('只影响这个对话，从下一个任务起生效。')}</div>
-            {(['ask', 'full'] as const).map((value) => (
+            {PERMISSIONS.map((item) => (
               <Button
-                key={value}
+                key={item.id}
                 role="menuitemradio"
-                aria-checked={permission === value}
+                aria-checked={permission === item.id}
                 variant="ghost"
                 disabled={permissionDisabled}
                 className="sf-ai-permission-option"
-                onClick={() => void choosePermission(value)}
+                data-permission={item.id}
+                onClick={() => void choosePermission(item.id)}
               >
-                <strong>{value === 'ask' ? t('询问') : t('完全允许')}</strong>
-                <span>
-                  {value === 'ask'
-                    ? t('在沙箱里运行；越权和 Git 操作前询问。')
-                    : t('不用沙箱，可以联网和访问工作区外的文件，不再询问。')}
-                </span>
+                <strong>{t(item.name)}</strong>
+                <span>{t(item.detail)}</span>
               </Button>
             ))}
           </>

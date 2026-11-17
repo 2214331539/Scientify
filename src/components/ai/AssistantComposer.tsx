@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type Ref, type MouseEvent } from 'r
 import { Button, Textarea } from '../primitives';
 import { attachmentNote, type ChatAttachment } from '../../features/assistant/model';
 import type { AgentSkill, AgentSkillRef, PermissionMode } from '../../platform/agent';
+import { permissionName } from '../../features/assistant/permissions';
 import {
   bindingFor,
   eventToShortcut,
@@ -412,7 +413,7 @@ export function AssistantComposer({
             <Shield size={12} />
             <span>
               <span className="sf-ai-permission-prefix">{t('Permission')} · </span>
-              {permission === 'full' ? t('完全允许') : t('询问')}
+              {t(permissionName(permission))}
             </span>
             <ChevronUp size={12} />
           </Button>

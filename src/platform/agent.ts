@@ -8,7 +8,7 @@ import type { AIProtocol } from '../domain/workspace';
  */
 /** The inbox domain belongs to chats outside any project. */
 export type AgentDomain = 'literature' | 'code' | 'inbox';
-export type PermissionMode = 'ask' | 'full';
+export type PermissionMode = 'readonly' | 'ask' | 'auto' | 'full';
 /** Where a turn is sent from; the native side turns it into the folder the turn works in. */
 export type TurnPlace = {
   page: WorkspaceId;
@@ -149,7 +149,14 @@ export function isApprovalRequest(event: AgentEvent): event is ApprovalRequest {
  * rather than refusing this one action.
  */
 export type ApprovalDecision =
-  'accept' | 'acceptForSession' | 'decline' | 'cancel' | 'grantPermissions' | 'denyPermissions';
+  | 'accept'
+  | 'acceptForSession'
+  /** Accept, and from now on run commands like this one without asking. */
+  | 'acceptAlways'
+  | 'decline'
+  | 'cancel'
+  | 'grantPermissions'
+  | 'denyPermissions';
 
 export function approvalResult(
   decision: ApprovalDecision,
@@ -161,6 +168,13 @@ export function approvalResult(
       permissions: decision === 'grantPermissions' ? (params.permissions ?? {}) : {},
       scope: 'turn',
     };
+  }
+  if (decision === 'acceptAlways') {
+    const amendment = (approval?.params as { proposedExecpolicyAmendment?: unknown } | undefined)
+      ?.proposedExecpolicyAmendment;
+    return Array.isArray(amendment) && amendment.length
+      ? { decision: { acceptWithExecpolicyAmendment: { execpolicy_amendment: amendment } } }
+      : { decision: 'acceptForSession' };
   }
   return { decision };
 }

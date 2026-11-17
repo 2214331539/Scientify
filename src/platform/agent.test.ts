@@ -90,3 +90,19 @@ describe('engine protocol support', () => {
     expect(engineSupports('gemini')).toBe(false);
   });
 });
+
+it('allows a kind of command from now on with the prefix Codex proposed', async () => {
+  const { approvalResult } = await import('./agent');
+  const request = {
+    kind: 'request',
+    id: 7,
+    method: 'item/commandExecution/requestApproval',
+    params: { proposedExecpolicyAmendment: ['pip', 'install'] },
+  } as unknown as Parameters<typeof approvalResult>[1];
+  expect(approvalResult('acceptAlways', request)).toEqual({
+    decision: { acceptWithExecpolicyAmendment: { execpolicy_amendment: ['pip', 'install'] } },
+  });
+  expect(approvalResult('acceptAlways', { ...request, params: {} } as typeof request)).toEqual({
+    decision: 'acceptForSession',
+  });
+});

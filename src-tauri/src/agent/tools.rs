@@ -520,6 +520,9 @@ fn queue_git<R: tauri::Runtime>(
         let mut stored = event.clone();
         stored["params"]["arguments"] =
             serde_json::to_value(&request).map_err(|e| e.to_string())?;
+        if entry.permission == PermissionMode::ReadOnly {
+            return Err("只读模式下不能修改，请把权限调到“询问”或以上。".into());
+        }
         if entry.permission == PermissionMode::Full {
             return Ok(Some(stored));
         }

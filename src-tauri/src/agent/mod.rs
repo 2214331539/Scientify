@@ -120,23 +120,46 @@ impl SessionEntry {
 #[derive(Clone, Copy, Default, Deserialize, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum PermissionMode {
+    /// Reads, searches and answers; anything that would write fails, and nothing is asked.
+    #[serde(rename = "readonly")]
+    ReadOnly,
+    /// Asks before every command not known to be safe and before every file change.
     #[default]
     Ask,
+    /// Works inside its folders on its own; asks only to go beyond them.
+    Auto,
+    /// No sandbox and no questions.
     Full,
 }
 impl PermissionMode {
     fn approval_policy(self) -> &'static str {
-        if self == Self::Full {
-            "never"
-        } else {
-            "on-request"
+        match self {
+            Self::ReadOnly | Self::Full => "never",
+            Self::Ask => "untrusted",
+            Self::Auto => "on-request",
         }
     }
     fn sandbox(self, root: &std::path::Path) -> Value {
-        if self == Self::Full {
-            json!({"type":"dangerFullAccess"})
-        } else {
-            execution::policy(root, None)
+        match self {
+            Self::Full => json!({"type":"dangerFullAccess"}),
+            Self::ReadOnly => json!({"type":"readOnly","networkAccess":true}),
+            Self::Ask | Self::Auto => execution::policy(root, None),
+        }
+    }
+    /// The sandbox as `thread/start` names it.
+    fn sandbox_mode(self) -> &'static str {
+        match self {
+            Self::Full => "danger-full-access",
+            Self::ReadOnly => "read-only",
+            Self::Ask | Self::Auto => "workspace-write",
+        }
+    }
+    /// The sandbox as the page shows it.
+    fn sandbox_kind(self) -> &'static str {
+        match self {
+            Self::Full => "dangerFullAccess",
+            Self::ReadOnly => "readOnly",
+            Self::Ask | Self::Auto => "workspaceWrite",
         }
     }
     fn automatic_approval(self, event: &Value) -> Option<Value> {
@@ -663,16 +686,11 @@ pub async fn agent_start_thread(
                         return Err("请等待当前任务结束后再切换权限。".into());
                     }
                     if entry.active_turn.is_none() {
-                        if permission == PermissionMode::Ask {
+                        if permission != PermissionMode::Full {
                             execution::prepare(&mut entry.session, &root)?;
                         }
                         entry.permission = permission;
-                        entry.handle.sandbox = if permission == PermissionMode::Full {
-                            "dangerFullAccess"
-                        } else {
-                            "workspaceWrite"
-                        }
-                        .into();
+                        entry.handle.sandbox = permission.sandbox_kind().into();
                     }
                     let mut handle = entry.handle.clone();
                     handle.fresh_thread = !entry.has_turns;
@@ -732,7 +750,7 @@ pub async fn agent_start_thread(
                 &root,
                 &connection,
             )?;
-            if permission == PermissionMode::Ask {
+            if permission != PermissionMode::Full {
                 execution::prepare(&mut session, &root)?;
             }
             session
@@ -747,11 +765,7 @@ pub async fn agent_start_thread(
             plan.params["developerInstructions"] = json!(base + &custom);
         }
         plan.params["approvalPolicy"] = json!(permission.approval_policy());
-        plan.params["sandbox"] = json!(if permission == PermissionMode::Full {
-            "danger-full-access"
-        } else {
-            "workspace-write"
-        });
+        plan.params["sandbox"] = json!(permission.sandbox_mode());
         let response = session.call(plan.method, plan.params, THREAD_BUDGET)?;
         let fresh_thread = plan.method == "thread/start";
         let managed_runs = plan.managed_runs;
@@ -951,16 +965,16 @@ pub async fn agent_start_turn(
         if let Some(plan) = &plan { input.push(json!({"type":"text","text":plan.context,"text_elements":[]})); }
         input.push(json!({"type":"text","text":scratch.instruction(),"text_elements":[]}));
         let input = skills::append(&mut entry.session, bound, input, skills.unwrap_or_default())?;
-        if permission == PermissionMode::Ask { execution::prepare(&mut entry.session, root)?; }
+        if permission != PermissionMode::Full { execution::prepare(&mut entry.session, root)?; }
         entry.permission = permission;
-        entry.handle.sandbox = if permission == PermissionMode::Full { "dangerFullAccess" } else { "workspaceWrite" }.into();
+        entry.handle.sandbox = permission.sandbox_kind().into();
         let lease = crate::code::Lease::agent(std::path::Path::new(&entry.handle.cwd))?;
         // Protect against an uncertain turn/start outcome: do not retry this text automatically.
         registry::write(app.state::<AppState>().storage.directory(),&entry.handle,true,entry.managed_runs,entry.git_tools,entry.browser_tools)?;
         entry.lease = Some(lease);
         entry.has_turns = true;
         entry.active_turn = Some("starting".into());
-        let sandbox = if permission == PermissionMode::Full { permission.sandbox(root) } else {
+        let sandbox = if matches!(permission, PermissionMode::Full | PermissionMode::ReadOnly) { permission.sandbox(root) } else {
             match &plan {
                 Some(plan) => execution::policy_for(plan.writable.iter().map(PathBuf::as_path).chain([root, scratch.path()])),
                 None => execution::policy(root, Some(scratch.path())),
@@ -1533,7 +1547,26 @@ mod tests {
         assert_eq!(PermissionMode::default(), PermissionMode::Ask);
         assert!(serde_json::from_value::<PermissionMode>(json!("invalid")).is_err());
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(PermissionMode::Ask.approval_policy(), "on-request");
+        assert_eq!(PermissionMode::Ask.approval_policy(), "untrusted");
+        assert_eq!(PermissionMode::Auto.approval_policy(), "on-request");
+        assert_eq!(PermissionMode::ReadOnly.approval_policy(), "never");
+        assert_eq!(
+            PermissionMode::ReadOnly.sandbox(dir.path())["type"],
+            "readOnly"
+        );
+        assert_eq!(PermissionMode::ReadOnly.sandbox_mode(), "read-only");
+        assert_eq!(PermissionMode::Auto.sandbox_mode(), "workspace-write");
+        for (text, mode) in [
+            ("readonly", PermissionMode::ReadOnly),
+            ("ask", PermissionMode::Ask),
+            ("auto", PermissionMode::Auto),
+            ("full", PermissionMode::Full),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<PermissionMode>(json!(text)).unwrap(),
+                mode
+            );
+        }
         assert_eq!(
             PermissionMode::Ask.sandbox(dir.path())["type"],
             "workspaceWrite"
@@ -1553,6 +1586,7 @@ mod tests {
         ] {
             let event = json!({"kind":"request","method":method});
             assert!(PermissionMode::Ask.automatic_approval(&event).is_none());
+            assert!(PermissionMode::Auto.automatic_approval(&event).is_none());
             assert_eq!(
                 PermissionMode::Full.automatic_approval(&event),
                 Some(json!({"decision":"accept"}))

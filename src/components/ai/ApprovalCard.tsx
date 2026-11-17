@@ -97,6 +97,15 @@ export function ApprovalCard({
   // `item/permissions/requestApproval` answers with a permission profile rather
   // than a decision, so it uses the dedicated grant/deny response shape below.
   const permissionRequest = event.method === 'item/permissions/requestApproval';
+  // The command prefix Codex suggests allowing from now on, e.g. `pip install`.
+  const proposed = (event.params as { proposedExecpolicyAmendment?: unknown } | undefined)
+    ?.proposedExecpolicyAmendment;
+  const alwaysPattern =
+    event.method === 'item/commandExecution/requestApproval' &&
+    Array.isArray(proposed) &&
+    proposed.length
+      ? proposed.join(' ')
+      : '';
   return (
     <article className="sf-approval" role="group" aria-label={title} data-method={event.method}>
       <header className="sf-approval-head">
@@ -157,6 +166,18 @@ export function ApprovalCard({
               {t('本会话允许')}
             </Button>
           )}
+          {alwaysPattern ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              disabled={busy}
+              title={t('以后遇到 {pattern} 开头的命令都直接运行', { pattern: alwaysPattern })}
+              onClick={() => onDecide('acceptAlways')}
+            >
+              {t('以后都允许')}
+            </Button>
+          ) : null}
           <Button
             variant="secondary"
             size="sm"

@@ -4,6 +4,7 @@ import type { Entity, ModelSettings } from '../../domain/workspace';
 import type { AIContentPart } from '../../platform/research';
 import type { WorkspaceStore } from '../../stores/workspace';
 import type { AgentDomain, AgentSkillRef, PermissionMode } from '../../platform/agent';
+import { asPermission } from './permissions';
 
 export type ContextSnapshot = WorkContext & { capturedAt: string };
 export type ChatAttachment = {
@@ -107,7 +108,7 @@ export function asConversation(entity: Entity & { project: string }): Conversati
     }));
   return {
     ...entity,
-    agentPermission: entity.agentPermission === 'full' ? 'full' : 'ask',
+    agentPermission: asPermission(entity.agentPermission),
     title: typeof entity.title === 'string' ? entity.title : t('历史对话'),
     updatedAt: typeof entity.updatedAt === 'string' ? entity.updatedAt : '',
     messages,

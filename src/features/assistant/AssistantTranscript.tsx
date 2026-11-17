@@ -197,7 +197,7 @@ export function AssistantTranscript({
             </span>
           </div>
         ) : null}
-        {agentState.sandbox === 'readOnly' ? (
+        {agentState.sandbox === 'readOnly' && conversation.agentPermission !== 'readonly' ? (
           <div className="sf-agent-sandbox-notice" role="status">
             <span>
               {t(

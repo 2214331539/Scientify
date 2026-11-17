@@ -358,9 +358,9 @@ it('persists permissions per chat, opens the same selector via slash, and defaul
   const input = screen.getByLabelText('向 AI 提问');
   await user.type(input, '/permission');
   await user.keyboard('{Enter}');
-  await user.click(screen.getByRole('menuitemradio', { name: /^完全允许/ }));
+  await user.click(screen.getByRole('menuitemradio', { name: /^完全访问/ }));
   await waitFor(() => expect(store.getState().data?.sessions[0]?.agentPermission).toBe('full'));
-  expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全允许');
+  expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全访问');
   expect(askAI).not.toHaveBeenCalled();
   const first = store.getState().data!.sessions[0];
   await user.click(screen.getByRole('button', { name: '新建 AI 对话' }));
@@ -368,7 +368,7 @@ it('persists permissions per chat, opens the same selector via slash, and defaul
   await user.click(screen.getByRole('button', { name: '当前 AI 对话' }));
   const history = screen.getByRole('menu', { name: '历史对话' });
   await user.click(within(history).getAllByRole('menuitemradio')[0]);
-  expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全允许');
+  expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全访问');
   view.unmount();
   render(
     <AssistantPanel
@@ -379,7 +379,7 @@ it('persists permissions per chat, opens the same selector via slash, and defaul
       agent={agentStub()}
     />,
   );
-  expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全允许');
+  expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('完全访问');
   expect(
     store.getState().data?.sessions.find((chat) => chat.id === first.id)?.agentPermission,
   ).toBe('full');
@@ -406,7 +406,7 @@ it('keeps ask permission when saving full access fails', async () => {
   );
   const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: '执行权限' }));
-  await user.click(screen.getByRole('menuitemradio', { name: /^完全允许/ }));
+  await user.click(screen.getByRole('menuitemradio', { name: /^完全访问/ }));
   await screen.findByText('disk full');
   expect(screen.getByRole('button', { name: '执行权限' }).textContent).toContain('询问');
   expect(store.getState().data?.sessions).toHaveLength(0);

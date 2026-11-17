@@ -1,4 +1,28 @@
 {
+  "只读": ["只读", "Read only"],
+  "只读文件、检索和回答；不改文件，也不执行会写入的命令。": [
+    "只读文件、检索和回答；不改文件，也不执行会写入的命令。",
+    "Reads files, searches and answers; changes no files and runs nothing that writes."
+  ],
+  "在沙箱里工作，可以联网；每条命令和每次改文件前都先问你。": [
+    "在沙箱里工作，可以联网；每条命令和每次改文件前都先问你。",
+    "Works in the sandbox with network access; asks before every command and every file change."
+  ],
+  "自动": ["自动", "Auto"],
+  "在项目的文件夹里自己改文件、运行命令；超出范围时才问你。": [
+    "在项目的文件夹里自己改文件、运行命令；超出范围时才问你。",
+    "Edits files and runs commands in the project's folders on its own; asks only to go beyond them."
+  ],
+  "完全访问": ["完全访问", "Full access"],
+  "不用沙箱，可以访问工作区外的文件，不再询问。": [
+    "不用沙箱，可以访问工作区外的文件，不再询问。",
+    "No sandbox: can reach files outside the workspace and never asks."
+  ],
+  "以后都允许": ["以后都允许", "Always allow"],
+  "以后遇到 {pattern} 开头的命令都直接运行": [
+    "以后遇到 {pattern} 开头的命令都直接运行",
+    "From now on, run commands starting with {pattern} without asking"
+  ],
   "自定义指令": ["自定义指令", "Custom instructions"],
   "希望 AI 了解你什么、怎样回答。例如研究方向、常用语言和工具、回答的详略。对新对话生效。": [
     "希望 AI 了解你什么、怎样回答。例如研究方向、常用语言和工具、回答的详略。对新对话生效。",
