@@ -25,6 +25,7 @@ export const ChatMessageView = memo(function ChatMessageView({
   loadImage,
   onRegenerate,
   onEdit,
+  anchor,
 }: {
   role: 'user' | 'assistant';
   text: string;
@@ -41,6 +42,8 @@ export const ChatMessageView = memo(function ChatMessageView({
   onRegenerate?: () => void;
   /** Put this question back in the composer to change it. */
   onEdit?: () => void;
+  /** The element id the conversation rail scrolls to. */
+  anchor?: string;
 }) {
   usePreferences();
   const displayedText = useDeferredValue(text);
@@ -76,6 +79,7 @@ export const ChatMessageView = memo(function ChatMessageView({
     copyState === 'copied' ? t('已复制') : copyState === 'error' ? t('复制失败，请重试') : '';
   return (
     <article
+      id={anchor}
       className={`sf-chat-message sf-chat-${role}`}
       aria-label={role === 'user' ? t('用户消息') : t('助手消息')}
       data-copy-state={copyState}

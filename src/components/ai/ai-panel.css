@@ -1018,3 +1018,328 @@
 .sf-file-chip svg {
   flex: none;
 }
+/* ---------- Conversation layout, after ChatGPT ---------- */
+.sf-chat-frame {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.sf-chat-frame > .sf-chat-messages {
+  padding: 8px 22px 24px 16px;
+}
+.sf-chat-message {
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+/* The user's questions: a soft bubble on the right. */
+.sf-chat-user {
+  max-width: 86%;
+  margin-block: 14px 2px;
+  padding: 0 0 26px;
+}
+.sf-chat-user > .sf-markdown,
+.sf-chat-user > .sf-chat-message-attachments {
+  padding: 8px 14px;
+  border-radius: 18px;
+  background: var(--sf-surface-selected);
+}
+.sf-chat-user > .sf-markdown {
+  white-space: pre-wrap;
+}
+.sf-chat-user > .sf-chat-message-attachments {
+  margin-bottom: 4px;
+  background: transparent;
+  padding: 0;
+}
+.sf-chat-user .sf-ai-context-excerpt {
+  margin-top: 2px;
+  text-align: right;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-chat-user:is(:hover, :focus-within) .sf-ai-context-excerpt,
+.sf-chat-user .sf-ai-context-excerpt[open] {
+  opacity: 1;
+}
+/* Answers: full width, no bubble; actions show on hover. */
+.sf-chat-assistant {
+  width: 100%;
+  max-width: 100%;
+  margin-block: 2px 6px;
+  padding-top: 4px;
+}
+.sf-chat-assistant .sf-markdown h1,
+.sf-chat-assistant .sf-markdown h2 {
+  margin: 18px 0 8px;
+  font-size: 15.5px;
+}
+.sf-chat-assistant .sf-markdown h3 {
+  margin: 14px 0 6px;
+  font-size: 14px;
+}
+.sf-chat-assistant .sf-markdown table {
+  margin: 10px 0;
+  font-size: 12.5px;
+}
+.sf-chat-assistant .sf-markdown th {
+  background: var(--sf-surface-sunken);
+  font-weight: 600;
+}
+.sf-chat-assistant .sf-markdown :not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--sf-surface-sunken);
+  font-size: 0.92em;
+}
+.sf-chat-assistant .sf-markdown hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+/* "今天 13:54" between stretches of a conversation. */
+.sf-chat-stamp {
+  margin: 18px 0 4px;
+  color: var(--sf-text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+/* One turn's work above its answer: "已处理 4 分 28 秒 ›". */
+.sf-ai-process {
+  margin: 6px 0 2px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.sf-ai-process > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 0;
+  list-style: none;
+  cursor: pointer;
+}
+.sf-ai-process > summary::-webkit-details-marker {
+  display: none;
+}
+.sf-ai-process > summary > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-ai-process > summary:hover {
+  color: var(--sf-text-secondary);
+}
+.sf-ai-process-chevron {
+  flex: none;
+  transition: transform var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-ai-process[open] > summary .sf-ai-process-chevron {
+  transform: rotate(90deg);
+}
+.sf-ai-process.is-running > summary {
+  color: var(--sf-text-secondary);
+}
+.sf-ai-process-body {
+  margin: 4px 0 8px 4px;
+  padding-left: 12px;
+  border-left: 2px solid var(--sf-border-subtle);
+}
+.sf-ai-process-body .sf-ai-thinking-text {
+  margin: 4px 0 8px;
+  padding: 0;
+  border: 0;
+}
+.sf-ai-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+}
+.sf-ai-steps li {
+  position: relative;
+  padding-left: 14px;
+  color: var(--sf-text-secondary);
+  overflow-wrap: anywhere;
+}
+.sf-ai-steps li::before {
+  content: '';
+  position: absolute;
+  top: 0.7em;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sf-text-disabled);
+}
+.sf-ai-steps li.is-completed::before {
+  background: var(--sf-status-success);
+}
+.sf-ai-steps li.is-failed::before,
+.sf-ai-steps li.is-declined::before {
+  background: var(--sf-status-danger);
+}
+.sf-ai-steps li.is-inProgress::before {
+  background: var(--sf-link);
+}
+.sf-ai-steps summary {
+  cursor: pointer;
+}
+.sf-ai-steps pre {
+  max-height: 180px;
+  margin: 4px 0;
+  padding: 6px 8px;
+  overflow: auto;
+  border-radius: 4px;
+  background: var(--sf-surface-sunken);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+/* Marks along the right edge, one per question. */
+.sf-chat-rail {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 60%;
+  padding: 6px 2px;
+  overflow: hidden;
+  transform: translateY(-50%);
+}
+.sf-chat-rail-mark {
+  position: relative;
+  flex: none;
+  width: 12px;
+  height: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--sf-border-control);
+  cursor: pointer;
+  transition:
+    width var(--sf-motion-feedback) var(--sf-ease-standard),
+    background var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-chat-rail-mark[aria-current='true'] {
+  background: var(--sf-text-secondary);
+}
+.sf-chat-rail:hover .sf-chat-rail-mark {
+  width: 16px;
+}
+.sf-chat-rail-mark:hover {
+  background: var(--sf-text-primary);
+}
+.sf-chat-rail-mark:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px);
+  width: max-content;
+  max-width: 240px;
+  padding: 5px 9px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 6px;
+  background: var(--sf-surface-raised);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 12%);
+  color: var(--sf-text-primary);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  text-align: left;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+/* Back to the newest message. */
+.sf-chat-to-bottom {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 50%;
+  background: var(--sf-surface-raised);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 12%);
+  color: var(--sf-text-secondary);
+  cursor: pointer;
+  transform: translateX(-50%);
+  animation: sf-fade-in var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-chat-to-bottom:hover {
+  color: var(--sf-text-primary);
+}
+@keyframes sf-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+/* The composer: a rounded card that lifts a little when typing. */
+.sf-ai-composer {
+  margin: 6px 12px 12px;
+  padding: 8px 8px 6px 10px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
+  transition:
+    border-color var(--sf-motion-feedback) var(--sf-ease-standard),
+    box-shadow var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.sf-ai-composer:focus-within {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+}
+.sf-ai-composer .sf-textarea {
+  font-size: 13px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-chat-to-bottom {
+    animation: none;
+  }
+}
+.sf-ai-composer .sf-ai-attach-button {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  color: var(--sf-text-secondary);
+}
+.sf-ai-composer .sf-ai-send {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+}
+/* Tighter rhythm: actions sit just under each message. */
+.sf-chat-frame .sf-chat-user {
+  padding-bottom: 22px;
+}
+.sf-chat-frame .sf-chat-assistant {
+  padding-bottom: 24px;
+}
+.sf-chat-frame .sf-message-actions {
+  bottom: 0;
+}
+/* The rail's hover label sits outside it. */
+.sf-chat-frame .sf-chat-rail {
+  overflow: visible;
+}
+.sf-ai-steps summary {
+  list-style: none;
+}
+.sf-ai-steps summary::-webkit-details-marker {
+  display: none;
+}
+.sf-ai-steps summary:hover {
+  color: var(--sf-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

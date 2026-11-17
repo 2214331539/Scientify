@@ -1,4 +1,15 @@
 {
+  "{s} 秒": ["{s} 秒", "{s}s"],
+  "{m} 分 {s} 秒": ["{m} 分 {s} 秒", "{m}m {s}s"],
+  "已处理 {time}": ["已处理 {time}", "Worked for {time}"],
+  "处理过程": ["处理过程", "Steps"],
+  "对话导航": ["对话导航", "Conversation outline"],
+  "（附件）": ["（附件）", "(attachment)"],
+  "今天 {time}": ["今天 {time}", "Today {time}"],
+  "昨天 {time}": ["昨天 {time}", "Yesterday {time}"],
+  "{month} 月 {day} 日 {time}": ["{month} 月 {day} 日 {time}", "{month}/{day} {time}"],
+  "回到最新": ["回到最新", "Back to latest"],
+  "添加文件或图片": ["添加文件或图片", "Add files or images"],
   "这个 Word 文件无法预览，可以用系统程序打开。": [
     "这个 Word 文件无法预览，可以用系统程序打开。",
     "This Word file can't be previewed. Open it with the system app."

@@ -7,7 +7,9 @@ import {
   FilePlus,
   LoaderCircle,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { t } from '../../i18n';
+import { Mascot } from '../../components/ai/Mascot';
 import type { AgentPlanStep } from './agent-session';
 
 /** The steps the Agent planned for this turn, ticked off as it goes. */
@@ -174,5 +176,93 @@ export function TurnFiles({
         );
       })}
     </div>
+  );
+}
+
+/** "45 秒", "4 分 28 秒". */
+export function duration(ms: number) {
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  return seconds < 60
+    ? t('{s} 秒', { s: seconds })
+    : t('{m} 分 {s} 秒', { m: Math.floor(seconds / 60), s: seconds % 60 });
+}
+
+type Operation = { id: string; label: string; status: string; output: string };
+
+/**
+ * One turn's work, above its answer: "正在搜索网页… · 12 秒" while it runs,
+ * "已处理 4 分 28 秒" after, opening to what the model thought, its plan, each
+ * step it took and the files it changed.
+ */
+export function TurnProcess({
+  running,
+  status,
+  startedAt,
+  completedAt,
+  reasoning,
+  plan,
+  operations,
+  diff,
+}: {
+  running: boolean;
+  status?: string;
+  startedAt?: string;
+  completedAt?: string;
+  reasoning?: string;
+  plan: AgentPlanStep[];
+  operations: Operation[];
+  diff?: string;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
+  const start = startedAt ? Date.parse(startedAt) : NaN;
+  const end = running ? now : completedAt ? Date.parse(completedAt) : NaN;
+  const elapsed = Number.isFinite(start) && Number.isFinite(end) ? end - start : null;
+  const empty = !reasoning && !plan.length && !operations.length && !diff;
+  if (!running && empty) return null;
+  const label = running
+    ? [status || t('正在处理…'), elapsed !== null ? duration(elapsed) : '']
+        .filter(Boolean)
+        .join(' · ')
+    : elapsed !== null
+      ? t('已处理 {time}', { time: duration(elapsed) })
+      : t('处理过程');
+  return (
+    <details className={`sf-ai-process${running ? ' is-running' : ''}`} open={running}>
+      <summary>
+        {running ? <Mascot size={16} mood="working" /> : null}
+        <span>{label}</span>
+        {!empty ? (
+          <ChevronRight size={13} aria-hidden="true" className="sf-ai-process-chevron" />
+        ) : null}
+      </summary>
+      {!empty ? (
+        <div className="sf-ai-process-body">
+          {reasoning ? <div className="sf-ai-thinking-text">{reasoning}</div> : null}
+          <PlanList plan={plan} />
+          {operations.length ? (
+            <ol className="sf-ai-steps">
+              {operations.map((op) => (
+                <li key={op.id} className={`is-${op.status}`}>
+                  {op.output ? (
+                    <details>
+                      <summary>{op.label}</summary>
+                      <pre>{op.output}</pre>
+                    </details>
+                  ) : (
+                    <span>{op.label}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          {diff ? <TurnDiff diff={diff} /> : null}
+        </div>
+      ) : null}
+    </details>
   );
 }

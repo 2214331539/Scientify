@@ -1,5 +1,13 @@
 import { t } from '../../i18n';
-import { ArrowUp, ChevronUp, CornerDownLeft, LoaderCircle, Shield, Square } from 'lucide-react';
+import {
+  ArrowUp,
+  ChevronUp,
+  CornerDownLeft,
+  LoaderCircle,
+  Plus,
+  Shield,
+  Square,
+} from 'lucide-react';
 import { useEffect, useId, useRef, useState, type Ref, type MouseEvent } from 'react';
 import { Button, Textarea } from '../primitives';
 import { attachmentNote, type ChatAttachment } from '../../features/assistant/model';
@@ -99,6 +107,7 @@ export function AssistantComposer({
   const [dragging, setDragging] = useState(false);
   const modelButton = useRef<HTMLButtonElement>(null);
   const permissionButton = useRef<HTMLButtonElement>(null);
+  const filePicker = useRef<HTMLInputElement>(null);
   const listId = useId();
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [cursor, setCursor] = useState({ query: '', index: 0 });
@@ -377,6 +386,34 @@ export function AssistantComposer({
         </div>
       ) : null}
       <div className="sf-ai-composer-actions">
+        {onAttach ? (
+          <>
+            <input
+              ref={filePicker}
+              type="file"
+              multiple
+              hidden
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                event.target.value = '';
+                if (files.length) onAttach(files);
+              }}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              type="button"
+              className="sf-ai-attach-button"
+              aria-label={t('添加文件或图片')}
+              tooltip={t('添加文件或图片')}
+              disabled={disabled}
+              onClick={() => filePicker.current?.click()}
+            >
+              <Plus size={16} />
+            </Button>
+          </>
+        ) : null}
         <Button
           ref={modelButton}
           variant="ghost"
@@ -446,6 +483,7 @@ export function AssistantComposer({
           variant="primary"
           size="sm"
           iconOnly
+          className="sf-ai-send"
           type={isBusy ? 'button' : 'submit'}
           aria-label={isBusy ? (canInterrupt ? t('中止任务') : t('正在处理')) : t('发送')}
           title={

@@ -42,3 +42,18 @@ it('says what a web tool is doing', () => {
   expect(describeTool({ type: 'dynamicToolCall', tool: 'scientify_run' })).toBeNull();
   expect(describeTool({ type: 'commandExecution', command: 'ls' })).toBeNull();
 });
+
+it('formats how long a turn took and when a stretch of the chat began', async () => {
+  const { duration } = await import('./TurnDetails');
+  const { timeStamp } = await import('./AssistantTranscript');
+  expect(duration(45_000)).toBe('45 秒');
+  expect(duration(268_000)).toBe('4 分 28 秒');
+  const now = new Date('2026-11-17T20:00:00');
+  const at = (time: string) => new Date(`2026-11-17T${time}`).toISOString();
+  expect(timeStamp(at('13:54:00'), undefined, now)).toMatch(/^今天 13:54$/);
+  expect(timeStamp(at('13:55:00'), at('13:54:00'), now)).toBe('');
+  expect(timeStamp(at('15:00:00'), at('13:54:00'), now)).toMatch(/^今天 15:00$/);
+  expect(timeStamp(new Date('2026-11-16T09:05:00').toISOString(), undefined, now)).toMatch(
+    /^昨天 09:05$/,
+  );
+});
