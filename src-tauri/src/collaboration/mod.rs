@@ -590,18 +590,28 @@ pub async fn collaboration_model_token<R: tauri::Runtime>(
     renew: Option<bool>,
 ) -> Result<String, String> {
     trusted(&view)?;
-    let current = snapshot(&state)?;
+    model_token(&state, renew.unwrap_or(false), None).await
+}
+
+/// The same token, for requests the app makes itself (selection translation).
+/// With `renew`, `stale` is the token the server refused: a new one is asked
+/// for unless a request running alongside already replaced it.
+pub(crate) async fn model_token(
+    state: &AppState,
+    renew: bool,
+    stale: Option<&str>,
+) -> Result<String, String> {
+    let current = snapshot(state)?;
     let user_id = current.user_id.clone().ok_or("请先登录协作服务器。")?;
     let mut slot = model_token_slot().lock().await;
-    if !renew.unwrap_or(false) {
-        if let Some((endpoint, user, _, token)) = slot.as_ref() {
-            if *endpoint == current.endpoint && *user == user_id {
-                return Ok(token.clone());
-            }
+    if let Some((endpoint, user, _, token)) = slot.as_ref() {
+        let replaced = stale.is_some_and(|stale| stale != token);
+        if *endpoint == current.endpoint && *user == user_id && (!renew || replaced) {
+            return Ok(token.clone());
         }
     }
     let result = auth_request(
-        &state,
+        state,
         &current.endpoint,
         "/model-tokens",
         reqwest::Method::POST,

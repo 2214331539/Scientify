@@ -175,11 +175,12 @@ async fn ensure_started<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
                                     let _ = responses.send(json!({"type":"error", "id":id, "error":"并行翻译请求过多。"}));
                                     continue;
                                 }
-                                let request = model_request(&host, &message["body"]);
+                                let app = host.clone();
+                                let body = message["body"].clone();
                                 let output = responses.clone();
                                 let request_id = id.clone();
                                 let handle = tasks.spawn(async move {
-                                    let result = match request { Ok(request) => complete(request, &request_id, &output).await, Err(error) => Err(error.into()) };
+                                    let result = translate(&app, &body, &request_id, &output).await;
                                     let message = match result { Ok(()) => json!({"type":"complete", "id":request_id}), Err(error) => json!({"type":"error", "id":request_id, "error":error.message, "status":error.status}) };
                                     let _ = output.send(message);
                                     request_id
@@ -218,10 +219,47 @@ async fn ensure_started<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
     Ok(())
 }
 
-fn model_request<R: tauri::Runtime>(
+/// Translates with the saved model. A refused official-model token (it is
+/// replaced each launch and on another sign-in) is renewed once.
+async fn translate<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     body: &Value,
-) -> Result<crate::ai::AIRequest, String> {
+    id: &str,
+    output: &mpsc::UnboundedSender<Value>,
+) -> Result<(), crate::ai::stream::StreamError> {
+    let (request, official) = model_request(app, body, None).await?;
+    match complete(request, id, output).await {
+        Err(error) if error.status == 401 && official.is_some() => {
+            let (request, _) = model_request(app, body, official.as_deref()).await?;
+            complete(request, id, output).await
+        }
+        Err(error) if official.is_some() => Err(official_problem(error)),
+        result => result,
+    }
+}
+
+/// What the official service's refusals mean, instead of a bare HTTP status.
+fn official_problem(error: crate::ai::stream::StreamError) -> crate::ai::stream::StreamError {
+    let message = match error.status {
+        401 => "官方模型令牌已失效，请重新登录后再试。",
+        402 => "官方模型额度已用完，可以在“设置 → 账号与订阅”查看。",
+        403 => "当前套餐不能使用这个模型，或账号已停用。",
+        429 => "官方模型今天的用量已到上限，或请求太频繁，请稍后再试。",
+        _ => return error,
+    };
+    crate::ai::stream::StreamError {
+        message: message.into(),
+        status: error.status,
+    }
+}
+
+/// The request for the saved model, and the official-model token it carries
+/// when the model is Scientify's own. `stale` is a token the server refused.
+async fn model_request<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    body: &Value,
+    stale: Option<&str>,
+) -> Result<(crate::ai::AIRequest, Option<String>), String> {
     let state = app.state::<crate::AppState>();
     let data = state.storage.load()?.ok_or("请先配置 AI 模型。")?;
     let model = &data["settings"]["model"];
@@ -230,9 +268,20 @@ fn model_request<R: tauri::Runtime>(
     }
     let provider = model["provider"].as_str().unwrap_or("ollama");
     let endpoint = model["endpoint"].as_str().ok_or("请先配置 AI 服务地址。")?;
-    let key = crate::credentials::load_for_model(state.storage.directory(), provider, endpoint)?;
-    serde_json::from_value(json!({"provider":provider,"endpoint":endpoint,"apiKey":key,"model":model["model"],"messages":body["messages"],"max_tokens":body["max_tokens"],"temperature":body["temperature"]}))
-        .map_err(|_| "翻译请求格式错误。".into())
+    // The official models take this device's model token, which is kept in
+    // memory only and never in the credential store.
+    let official = if model["serviceId"] == "scientify" {
+        Some(crate::collaboration::model_token(&state, stale.is_some(), stale).await?)
+    } else {
+        None
+    };
+    let key = match &official {
+        Some(token) => Some(token.clone()),
+        None => crate::credentials::load_for_model(state.storage.directory(), provider, endpoint)?,
+    };
+    let request = serde_json::from_value(json!({"provider":provider,"endpoint":endpoint,"apiKey":key,"model":model["model"],"messages":body["messages"],"max_tokens":body["max_tokens"],"temperature":body["temperature"]}))
+        .map_err(|_| "翻译请求格式错误。")?;
+    Ok((request, official))
 }
 
 async fn complete(
@@ -351,11 +400,17 @@ mod tests {
             .unwrap();
         let model = configuration(app.handle()).unwrap()["model"].clone();
         assert!(!model.as_str().unwrap().contains(&endpoint));
-        let request = model_request(app.handle(), &json!({
+        let (request, official) = tauri::async_runtime::block_on(model_request(app.handle(), &json!({
             "model":model, "endpoint":"https://untrusted.invalid", "apiKey":"ignored-child-input",
             "messages":[{"role":"user","content":"fixture"}], "max_tokens":768,"temperature":0.4,
-        })).unwrap();
-        assert!(model_request(app.handle(), &json!({"model":"stale-model"})).is_err());
+        }), None)).unwrap();
+        assert!(official.is_none());
+        assert!(tauri::async_runtime::block_on(model_request(
+            app.handle(),
+            &json!({"model":"stale-model"}),
+            None
+        ))
+        .is_err());
         let server = std::thread::spawn(move || {
             let (mut socket, _) = listener.accept().unwrap();
             socket
@@ -396,6 +451,39 @@ mod tests {
         assert_eq!(delta["id"], "translation-only");
         assert_eq!(delta["text"], "fixture translation");
         server.join().unwrap();
+    }
+
+    #[test]
+    fn the_official_model_takes_this_devices_model_token_not_a_stored_key() {
+        let temp = tempfile::tempdir().unwrap();
+        let storage =
+            Arc::new(scientify_core::storage::Storage::open(temp.path().join("data")).unwrap());
+        let mut data = scientify_core::workspace::empty();
+        data["revision"] = json!(1);
+        data["settings"]["model"] = json!({
+            "provider":"openai","serviceId":"scientify","endpoint":"https://127.0.0.1:9","model":"official"
+        });
+        storage.save(data, 0).unwrap();
+        let app = tauri::test::mock_builder()
+            .manage(crate::AppState {
+                files: Arc::new(scientify_core::research::ResearchFiles::new(
+                    storage.directory().into(),
+                )),
+                storage,
+                legacy: temp.path().join("legacy"),
+            })
+            .build(crate::app_context())
+            .unwrap();
+        let model = configuration(app.handle()).unwrap()["model"].clone();
+        // Signed out there is no token, so nothing is sent without one.
+        let error = tauri::async_runtime::block_on(model_request(
+            app.handle(),
+            &json!({"model":model,"messages":[]}),
+            None,
+        ))
+        .err()
+        .unwrap();
+        assert!(error.contains("登录"), "{error}");
     }
 }
 
