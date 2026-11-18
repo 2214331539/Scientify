@@ -292,7 +292,8 @@ fn run(app: &tauri::AppHandle) -> Result<Vec<crate::browser::BrowserTab>, String
     })?;
     if let Ok(urls) = std::env::var("SCIENTIFY_BROWSER_PROBE_URLS") {
         for address in urls.split(',') {
-            let url = crate::browser::resolve_address(address)?.ok_or("probe URL required")?;
+            let url = crate::browser::resolve_address(address, crate::browser::search_engine(app))?
+                .ok_or("probe URL required")?;
             crate::browser::navigate(app, &tab, url)?;
             let _ = wait(|| crate::browser::get(app, "main", &tab.id).is_ok_and(|t| !t.loading));
             probes.push(crate::browser::get(app, "main", &tab.id)?);

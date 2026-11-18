@@ -14,8 +14,17 @@ export type BrowserTab = {
   background?: boolean;
 };
 
-/** The first page shown by every embedded browser tab. */
-export const DEFAULT_BROWSER_URL = 'https://cn.bing.com';
+/**
+ * The first page of every embedded browser tab: the home page of the search
+ * engine chosen in Settings (browser.rs `HOME_ADDRESS`).
+ */
+export const DEFAULT_BROWSER_URL = 'scientify:home';
+/** The search engines the address bar can use; `settings.browserSearch`. */
+export const SEARCH_ENGINES = [
+  ['google', 'Google'],
+  ['bing', '必应'],
+  ['baidu', '百度'],
+] as const;
 
 export const browserCommand = <T = void>(request: Record<string, unknown>) =>
   localCommand<T>('browser_command', { request });

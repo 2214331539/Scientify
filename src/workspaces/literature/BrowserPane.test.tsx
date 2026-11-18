@@ -51,7 +51,7 @@ it('opens Google by default, navigates entered addresses, and preserves text bei
   const user = userEvent.setup();
   render(<BrowserPane id="web" onChanged={() => {}} />);
   const address = screen.getByRole('textbox', { name: '网址或搜索词' });
-  expect((address as HTMLInputElement).value).toBe(DEFAULT_BROWSER_URL);
+  expect((address as HTMLInputElement).value).toBe('');
   await waitFor(() =>
     expect(bridge.command).toHaveBeenCalledWith({
       op: 'navigate',

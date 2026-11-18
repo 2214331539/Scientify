@@ -1,7 +1,8 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { NativeTranslationPanel } from '../translation/NativeTranslationPanel';
 import { t, translateError } from '../../i18n';
-import { Button, Input } from '../../components/primitives';
+import { Button, Dropdown, Input } from '../../components/primitives';
+import { SEARCH_ENGINES } from '../../platform/browser-pane';
 import { PreferenceFields } from './Appearance';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
@@ -302,6 +303,31 @@ export function SettingsDialog({
           <div className="settings-group">
             <div className="settings-item">
               <PreferenceFields field="language" />
+              <span className="settings-item-action" aria-hidden="true" />
+            </div>
+            <div className="settings-item">
+              <div className="preference-fields">
+                <label>
+                  {t('浏览器搜索引擎')}
+                  <Dropdown
+                    aria-label={t('浏览器搜索引擎')}
+                    disabled={busy || !data}
+                    value={String(data?.settings.browserSearch ?? 'google')}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      void store.getState().update((d) => {
+                        d.settings.browserSearch = value;
+                      });
+                    }}
+                  >
+                    {SEARCH_ENGINES.map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {t(label)}
+                      </option>
+                    ))}
+                  </Dropdown>
+                </label>
+              </div>
               <span className="settings-item-action" aria-hidden="true" />
             </div>
             <form

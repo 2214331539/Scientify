@@ -574,6 +574,8 @@ export function App({
         op: 'openUrl',
         project_id: detail.projectId,
         address: detail.url,
+        // No tab strip over the center: links asking for a new window open in place.
+        preview: true,
       })
         .then((tab) => {
           setFilePreview(null);

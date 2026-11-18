@@ -89,9 +89,72 @@ pub struct BrowserTab {
     /// page may load from, so its scripts, styles and pictures work but nothing else does.
     #[serde(skip)]
     pub folder: Option<std::path::PathBuf>,
+    /// Shown over the center, where there are no tabs: links that ask for a
+    /// new window open in this one instead.
+    #[serde(skip)]
+    pub inline: bool,
 }
 #[derive(Default)]
 pub struct BrowserState(pub Mutex<HashMap<String, BrowserTab>>);
+
+/// What the address bar searches with and new tabs open (Settings → 浏览器):
+/// id, search page, query parameter and home page.
+const ENGINES: [(&str, &str, &str, &str); 3] = [
+    (
+        "google",
+        "https://www.google.com/search",
+        "q",
+        "https://www.google.com",
+    ),
+    (
+        "bing",
+        "https://cn.bing.com/search",
+        "q",
+        "https://cn.bing.com",
+    ),
+    (
+        "baidu",
+        "https://www.baidu.com/s",
+        "wd",
+        "https://www.baidu.com",
+    ),
+];
+/// The address the app gives for "the search engine's home page".
+pub const HOME_ADDRESS: &str = "scientify:home";
+
+/// The chosen search engine; Google unless Settings say otherwise.
+pub(crate) fn search_engine(app: &tauri::AppHandle) -> &'static str {
+    let chosen = app
+        .state::<crate::AppState>()
+        .storage
+        .load()
+        .ok()
+        .flatten()
+        .and_then(|data| {
+            data["settings"]["browserSearch"]
+                .as_str()
+                .map(str::to_owned)
+        });
+    ENGINES
+        .iter()
+        .find(|engine| Some(engine.0) == chosen.as_deref())
+        .unwrap_or(&ENGINES[0])
+        .0
+}
+
+fn engine(id: &str) -> &'static (&'static str, &'static str, &'static str, &'static str) {
+    ENGINES
+        .iter()
+        .find(|engine| engine.0 == id)
+        .unwrap_or(&ENGINES[0])
+}
+
+fn search_url(engine_id: &str, query: &str) -> tauri::Url {
+    let (_, page, key, _) = engine(engine_id);
+    let mut url = tauri::Url::parse(page).unwrap();
+    url.query_pairs_mut().append_pair(key, query);
+    url
+}
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Bounds {
@@ -112,6 +175,9 @@ pub enum Request {
     OpenUrl {
         project_id: String,
         address: String,
+        /// Shown over the center rather than as a literature tab.
+        #[serde(default)]
+        preview: bool,
     },
     /// A project file (an HTML report the assistant made) in a tab of its own.
     OpenFile {
@@ -140,10 +206,15 @@ pub enum Request {
     },
 }
 
-pub fn resolve_address(raw: &str) -> Result<Option<tauri::Url>, String> {
+/// The page for what was typed in the address bar: an address, or a search
+/// with `engine` (an `ENGINES` id).
+pub fn resolve_address(raw: &str, engine_id: &str) -> Result<Option<tauri::Url>, String> {
     let text = raw.trim();
     if text.is_empty() {
         return Ok(None);
+    }
+    if text == HOME_ADDRESS {
+        return Ok(Some(tauri::Url::parse(engine(engine_id).3).unwrap()));
     }
     if text.len() > 8192 {
         return Err("地址过长。".into());
@@ -163,9 +234,7 @@ pub fn resolve_address(raw: &str) -> Result<Option<tauri::Url>, String> {
     .iter()
     .any(|prefix| lower.starts_with(prefix))
     {
-        let mut url = tauri::Url::parse("https://cn.bing.com/search").unwrap();
-        url.query_pairs_mut().append_pair("q", text);
-        return Ok(Some(url));
+        return Ok(Some(search_url(engine_id, text)));
     }
     if [
         "file:",
@@ -207,9 +276,7 @@ pub fn resolve_address(raw: &str) -> Result<Option<tauri::Url>, String> {
         }) {
             return Err("仅允许 HTTP 或 HTTPS 网页。".into());
         }
-        let mut u = tauri::Url::parse("https://cn.bing.com/search").unwrap();
-        u.query_pairs_mut().append_pair("q", text);
-        u
+        search_url(engine_id, text)
     };
     if !allowed(&url) {
         return Err("该地址不允许在内嵌浏览器中打开。".into());
@@ -311,6 +378,7 @@ pub(crate) fn create_tab(
         http_status: None,
         error: None,
         folder: None,
+        inline: false,
     };
     tabs.insert(tab.id.clone(), tab.clone());
     Ok(tab)
@@ -334,6 +402,7 @@ pub(crate) fn navigate(
     let a = app.clone();
     let new_app = app.clone();
     let id = tab.id.clone();
+    let opener = tab.id.clone();
     let profile = app
         .state::<crate::AppState>()
         .storage
@@ -395,8 +464,21 @@ pub(crate) fn navigate(
             let a = new_app.clone();
             let owner = owner.clone();
             let project = project.clone();
+            let opener = opener.clone();
             tauri::async_runtime::spawn(async move {
-                if let Ok(tab) = create_tab(&a, &owner, &project) {
+                // Over the center there is no tab strip to show a new tab in.
+                let inline = a
+                    .state::<BrowserState>()
+                    .0
+                    .lock()
+                    .ok()
+                    .and_then(|tabs| tabs.get(&opener).map(|t| t.inline))
+                    .unwrap_or(false);
+                if inline {
+                    if let Ok(tab) = get(&a, &owner, &opener) {
+                        let _ = navigate(&a, &tab, url);
+                    }
+                } else if let Ok(tab) = create_tab(&a, &owner, &project) {
                     let _ = navigate(&a, &tab, url);
                     let _ = a.emit_to(&owner, "browser-created", tab);
                 }
@@ -937,6 +1019,7 @@ pub async fn browser_command(
         Request::OpenUrl {
             project_id,
             address,
+            preview,
         } => {
             let data = app
                 .state::<crate::AppState>()
@@ -963,6 +1046,9 @@ pub async fn browser_command(
                 navigate(&app, &tab, url)?;
                 tab
             };
+            if preview {
+                update(&app, &tab.id, |t| t.inline = true);
+            }
             let current = get(&app, &owner, &tab.id)?;
             app.emit_to(&owner, "browser-created", &current)
                 .map_err(|e| e.to_string())?;
@@ -970,7 +1056,7 @@ pub async fn browser_command(
         }
         Request::Navigate { id, address } => {
             let tab = get(&app, &owner, &id)?;
-            if let Some(url) = resolve_address(&address)? {
+            if let Some(url) = resolve_address(&address, search_engine(&app))? {
                 navigate(&app, &tab, url)?;
             }
             Ok(serde_json::to_value(get(&app, &owner, &id)?).unwrap())
@@ -1056,7 +1142,7 @@ pub async fn browser_command(
             Ok(serde_json::Value::Null)
         }
         Request::External { address } => {
-            let url = resolve_address(&address)?.ok_or("请输入网址。")?;
+            let url = resolve_address(&address, search_engine(&app))?.ok_or("请输入网址。")?;
             app.opener()
                 .open_url(url.as_str(), None::<String>)
                 .map_err(|e| e.to_string())?;
@@ -1076,15 +1162,37 @@ mod tests {
     use super::*;
     #[test]
     fn addresses_and_internal_boundaries() {
+        let host = |raw: &str, engine: &str| {
+            resolve_address(raw, engine)
+                .unwrap()
+                .unwrap()
+                .host_str()
+                .map(str::to_owned)
+        };
         assert_eq!(
-            resolve_address("continual learning")
-                .unwrap()
-                .unwrap()
-                .host_str(),
+            host("continual learning", "google").as_deref(),
+            Some("www.google.com")
+        );
+        assert_eq!(
+            host("continual learning", "bing").as_deref(),
             Some("cn.bing.com")
         );
+        assert_eq!(
+            host(HOME_ADDRESS, "baidu").as_deref(),
+            Some("www.baidu.com")
+        );
+        // An unknown choice falls back to Google.
+        assert_eq!(
+            host(HOME_ADDRESS, "other").as_deref(),
+            Some("www.google.com")
+        );
+        let baidu = resolve_address("持续学习", "baidu").unwrap().unwrap();
+        assert_eq!(
+            baidu.query_pairs().find(|(k, _)| k == "wd").unwrap().1,
+            "持续学习"
+        );
         for query in ["continual learning", "site:arxiv.org 持续学习"] {
-            let url = resolve_address(query).unwrap().unwrap();
+            let url = resolve_address(query, "google").unwrap().unwrap();
             assert_eq!(url.path(), "/search");
             assert_eq!(
                 url.query_pairs().find(|(key, _)| key == "q").unwrap().1,
@@ -1092,14 +1200,17 @@ mod tests {
             );
         }
         assert_eq!(
-            resolve_address("localhost:8765/test")
+            resolve_address("localhost:8765/test", "google")
                 .unwrap()
                 .unwrap()
                 .scheme(),
             "http"
         );
         assert_eq!(
-            resolve_address("example.com").unwrap().unwrap().scheme(),
+            resolve_address("example.com", "google")
+                .unwrap()
+                .unwrap()
+                .scheme(),
             "https"
         );
         for bad in [
@@ -1110,9 +1221,9 @@ mod tests {
             "http://localhost:1420/",
             "https://user:secret@example.com/",
         ] {
-            assert!(resolve_address(bad).is_err(), "{bad}");
+            assert!(resolve_address(bad, "google").is_err(), "{bad}");
         }
-        assert!(resolve_address(" ").unwrap().is_none());
+        assert!(resolve_address(" ", "google").unwrap().is_none());
     }
 
     #[test]

@@ -26,7 +26,8 @@ export function BrowserPane({
 }) {
   const viewActive = useActiveView();
   const [tab, setTab] = useState<BrowserTab | null>(null),
-    [address, setAddress] = useState(DEFAULT_BROWSER_URL),
+    // The home page is a placeholder until the real address arrives.
+    [address, setAddress] = useState(initialUrl ?? ''),
     [error, setError] = useState('');
   const canvas = useRef<HTMLDivElement>(null),
     callback = useRef(onChanged);
