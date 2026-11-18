@@ -259,10 +259,10 @@ public sealed partial class TranslationPopupWindow : Window
         var screen = Screens.ScreenFromPoint(new PixelPoint((int)anchor.X, (int)anchor.Y)) ?? Screens.Primary;
         if (screen is not null)
         {
-            MaxWidth = Math.Min(600, screen.WorkingArea.Width / screen.Scaling - 16);
-            MaxHeight = Math.Min(440, screen.WorkingArea.Height / screen.Scaling - 16);
-            MinWidth = Math.Min(320, MaxWidth);
-            MinHeight = Math.Min(112, MaxHeight);
+            MaxWidth = Math.Min(560, screen.WorkingArea.Width / screen.Scaling - 16);
+            MaxHeight = Math.Min(380, screen.WorkingArea.Height / screen.Scaling - 16);
+            MinWidth = Math.Min(280, MaxWidth);
+            MinHeight = Math.Min(104, MaxHeight);
             Width = Math.Clamp(Width, MinWidth, MaxWidth);
         }
         PlaceAtPreferredOffset();
@@ -282,15 +282,16 @@ public sealed partial class TranslationPopupWindow : Window
         ActionBarSurface.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var outer = PopupRoot.Margin;
         // Choose the width from the source once; incoming tokens only grow the height.
-        var sourceWidth = _sourceText.Length < 100 ? 340 : _sourceText.Length < 400 ? 400 : 460;
+        var sourceWidth = _sourceText.Length < 100 ? 300 : _sourceText.Length < 400 ? 360 : 420;
         Width = Math.Clamp(Math.Max(sourceWidth, ActionBarSurface.DesiredSize.Width + inset.Left + inset.Right + outer.Left + outer.Right), MinWidth, MaxWidth);
-        var readingWidth = Math.Max(100, Width - 30 - inset.Left - inset.Right - outer.Left - outer.Right - (glass ? 24 : 0));
+        // The card's padding (12 each side) and its 1-pixel borders.
+        var readingWidth = Math.Max(100, Width - 26 - inset.Left - inset.Right - outer.Left - outer.Right - (glass ? 24 : 0));
         Control reading = LoadingPanel.IsVisible ? LoadingPanel : content;
         reading.Measure(new Size(readingWidth, double.PositiveInfinity));
         QuestionRow.Measure(new Size(readingWidth, double.PositiveInfinity));
         NoticeText.Measure(new Size(readingWidth, double.PositiveInfinity));
-        // Card chrome: drag row 20, card padding 2 above and 12 below, and its 1-pixel top and bottom borders.
-        var chromeHeight = ActionBarSurface.DesiredSize.Height + 36 + QuestionRow.DesiredSize.Height + NoticeText.DesiredSize.Height;
+        // Card chrome: drag row 20, card padding 2 above and 10 below, and its 1-pixel top and bottom borders.
+        var chromeHeight = ActionBarSurface.DesiredSize.Height + 34 + QuestionRow.DesiredSize.Height + NoticeText.DesiredSize.Height;
         Height = Math.Clamp(reading.DesiredSize.Height + chromeHeight + (glass ? 24 : 0) + inset.Top + inset.Bottom + outer.Top + outer.Bottom, MinHeight, MaxHeight);
         if (!_dragging) PlaceAtPreferredOffset();
     }

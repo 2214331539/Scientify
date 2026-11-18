@@ -117,8 +117,10 @@ public sealed class JsonSettingsStore : ISettingsStore
     private static YitaSettings Normalize(YitaSettings settings)
     {
         var normalized = YitaSettings.FromOriginal(settings.ToOriginal());
-        // 16.5 was the default reading size; settings from before it changed move to the new one.
-        var oldDefault = settings.ReadingTypographyVersion < 1 && Math.Abs(normalized.DefaultTranslationFontSize - 16.5) < 0.01;
+        // A size still at the default of its time (16.5, then 15) moves to the current one; a chosen size stays.
+        var size = normalized.DefaultTranslationFontSize;
+        var oldDefault = (settings.ReadingTypographyVersion < 1 && Math.Abs(size - 16.5) < 0.01)
+            || (settings.ReadingTypographyVersion < 2 && Math.Abs(size - 15) < 0.01);
         return normalized with
         {
             SchemaVersion = YitaSettings.CurrentSchemaVersion,
@@ -127,7 +129,7 @@ public sealed class JsonSettingsStore : ISettingsStore
             UseClipboardFallback = settings.SelectionCompatibilityVersion < 1 || settings.UseClipboardFallback,
             SelectionCompatibilityVersion = 1,
             DefaultTranslationFontSize = oldDefault ? YitaSettings.Default.DefaultTranslationFontSize : normalized.DefaultTranslationFontSize,
-            ReadingTypographyVersion = 1,
+            ReadingTypographyVersion = 2,
         };
     }
 

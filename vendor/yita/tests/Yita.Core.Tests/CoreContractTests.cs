@@ -32,10 +32,13 @@ public sealed class CoreContractTests
             var store = new JsonSettingsStore(path);
             await store.SaveAsync(YitaSettings.Default with { ReadingTypographyVersion = 0, DefaultTranslationFontSize = 16.5 });
             var upgraded = await store.LoadAsync();
-            Assert.Equal(15, upgraded.DefaultTranslationFontSize);
-            Assert.Equal(1, upgraded.ReadingTypographyVersion);
+            Assert.Equal(14, upgraded.DefaultTranslationFontSize);
+            Assert.Equal(2, upgraded.ReadingTypographyVersion);
             await store.SaveAsync(upgraded with { DefaultTranslationFontSize = 16.5 });
             Assert.Equal(16.5, (await store.LoadAsync()).DefaultTranslationFontSize);
+            // 15 was the default for a while: still at it, it moves on too.
+            await store.SaveAsync(YitaSettings.Default with { ReadingTypographyVersion = 1, DefaultTranslationFontSize = 15 });
+            Assert.Equal(14, (await store.LoadAsync()).DefaultTranslationFontSize);
             await store.SaveAsync(YitaSettings.Default with { ReadingTypographyVersion = 0, DefaultTranslationFontSize = 18 });
             Assert.Equal(18, (await store.LoadAsync()).DefaultTranslationFontSize);
         }
