@@ -49,11 +49,8 @@ impl Lease {
         {
             return Err("此目录有运行或文件写入，暂不能执行 Git 写操作。".into());
         }
-        if matches!(kind, Kind::Agent) && overlapping.iter().any(|entry| entry.agents > 0) {
-            return Err(
-                "此目录已有 AI 任务。请等待任务结束，或选择另一个 worktree 新建会话。".into(),
-            );
-        }
+        // Several AI conversations may work in one folder at once (two papers
+        // analysed side by side in the AI workspace), as in Codex or Claude Code.
         let entry = state.entry(root.clone()).or_default();
         match kind {
             Kind::Agent => entry.agents += 1,
@@ -109,11 +106,12 @@ pub(crate) fn busy(root: &Path) -> bool {
 mod tests {
     use super::*;
     #[test]
-    fn separate_directories_can_run_but_mutation_and_same_directory_agents_are_protected() {
+    fn agents_share_a_directory_but_git_mutation_waits_for_them() {
         let a = tempfile::tempdir().unwrap();
         let b = tempfile::tempdir().unwrap();
         let agent = Lease::agent(a.path()).unwrap();
-        assert!(Lease::agent(a.path()).is_err());
+        // A second conversation in the same folder works alongside the first.
+        drop(Lease::agent(a.path()).unwrap());
         assert!(Lease::mutation(a.path()).is_err());
         let other = Lease::agent(b.path()).unwrap();
         let run = Lease::run(a.path()).unwrap();
@@ -133,7 +131,7 @@ mod tests {
         let child = directory.path().join("nested");
         std::fs::create_dir(&child).unwrap();
         let agent = Lease::agent(&child).unwrap();
-        assert!(Lease::agent(directory.path()).is_err());
+        drop(Lease::agent(directory.path()).unwrap());
         assert!(Lease::mutation(directory.path()).is_err());
         let approved = Lease::agent_mutation(&child).unwrap();
         assert!(Lease::write(&child).is_err());
