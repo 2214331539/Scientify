@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { PageSummary } from '../model';
 import type { Attached } from '../../../platform/attachments';
+import type { LinkPreview } from '../../../platform/weblinks';
 
 export type Pick = { path: string; title: string };
 /** What the editor's blocks need from the rest of the app. */
@@ -21,6 +22,12 @@ export type DocEnv = {
   pickAttachments(): Promise<Attached[]>;
   /** Shows an attachment in the center. */
   openAttachment(asset: string): void;
+  /** A web page over the center. */
+  openUrl(url: string): void;
+  /** A link card's contents. */
+  previewLink(url: string): Promise<LinkPreview>;
+  /** Makes a web page's main text a new subpage and opens it. */
+  importLink(url: string): Promise<void>;
   paperNote(path: string): Promise<string>;
   /** Asks the person to choose a paper or a project file. */
   pick(kind: 'paper' | 'paperNote' | 'file'): Promise<Pick | null>;

@@ -7,6 +7,9 @@
 import type { JSONContent } from '@tiptap/core';
 import { blockId, type Block, type BlockType, type Inline, type Marks } from './model';
 
+/** What a link card keeps about its page. */
+const LINK_FIELDS = ['url', 'title', 'description', 'site', 'icon', 'image'] as const;
+
 /** A table cell's extras: its merge span, background and alignment. */
 export type TableCellProps = {
   colspan?: number;
@@ -191,6 +194,16 @@ function blockToEditor(block: Block): JSONContent {
       return {
         type: { paper: 'paperBlock', paperNote: 'paperNote', file: 'fileBlock' }[block.type],
         attrs: { id, path: String(p.path ?? ''), title: String(p.title ?? '') },
+      };
+    case 'link':
+      return {
+        type: 'linkCard',
+        attrs: {
+          id,
+          ...Object.fromEntries(
+            LINK_FIELDS.map((field) => [field, typeof p[field] === 'string' ? p[field] : '']),
+          ),
+        },
       };
     case 'attachment':
       return {
@@ -396,6 +409,18 @@ function blockFromEditor(node: JSONContent): Block[] {
           type:
             node.type === 'paperBlock' ? 'paper' : node.type === 'paperNote' ? 'paperNote' : 'file',
           props: { path: String(node.attrs?.path ?? ''), title: String(node.attrs?.title ?? '') },
+        },
+      ];
+    case 'linkCard':
+      return [
+        {
+          id,
+          type: 'link',
+          props: Object.fromEntries(
+            LINK_FIELDS.map((field) => [field, String(node.attrs?.[field] ?? '')]).filter(
+              ([field, value]) => value || field === 'url',
+            ),
+          ),
         },
       ];
     case 'attachmentBlock':

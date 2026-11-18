@@ -1,4 +1,13 @@
 {
+  "链接显示方式": ["链接显示方式", "Link display"],
+  "正在读取网页…": ["正在读取网页…", "Reading the page…"],
+  "卡片": ["卡片", "Card"],
+  "导入为文档": ["导入为文档", "Import as document"],
+  "链接卡片": ["链接卡片", "Link card"],
+  "输入网页地址，生成链接卡片": [
+    "输入网页地址，生成链接卡片",
+    "Enter a web address for the link card"
+  ],
   "在中间预览": ["在中间预览", "Preview in the center"],
   "附件": ["附件", "Attachment"],
   "文件": ["文件", "File"],

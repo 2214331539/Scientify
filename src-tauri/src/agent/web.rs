@@ -76,7 +76,7 @@ struct Papers {
     limit: Option<usize>,
 }
 
-fn client() -> Result<reqwest::Client, String> {
+pub(crate) fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .user_agent(AGENT)
         .connect_timeout(Duration::from_secs(10))
@@ -85,7 +85,7 @@ fn client() -> Result<reqwest::Client, String> {
         .map_err(|e| e.to_string())
 }
 
-async fn get(url: &str) -> Result<(String, String, String), String> {
+pub(crate) async fn get(url: &str) -> Result<(String, String, String), String> {
     let response = client()?
         .get(url)
         .header("accept-language", "zh-CN,zh;q=0.9,en;q=0.8")

@@ -34,6 +34,8 @@
     "allow-research-reveal",
     "allow-project-folders",
     "allow-doc-attachment",
+    "allow-web-link-preview",
+    "allow-web-link-import",
     "allow-research-locate",
     "allow-research-open-system",
     "allow-writing-tex-status",

@@ -1,3 +1,4 @@
+import { linkImport, linkPreview } from '../../platform/weblinks';
 import { locateAttachment, pickAttachments, saveAttachment } from '../../platform/attachments';
 /**
  * The documents module: a project's knowledge base. The sidebar holds the page tree; the main
@@ -536,6 +537,21 @@ function DocPage({
       saveImage: (file) => images.save(file),
       attachFiles: (files) => Promise.all(files.map((file) => saveAttachment(project.id, file))),
       pickAttachments: () => pickAttachments(project.id),
+      openUrl: (url) =>
+        window.dispatchEvent(
+          new CustomEvent('scientify-preview-url', { detail: { projectId: project.id, url } }),
+        ),
+      previewLink: (url) => linkPreview(url),
+      importLink: async (url) => {
+        const imported = await linkImport(url);
+        const parsed = markdownToPage(imported.markdown);
+        const page = await runtime.create({
+          parent: id,
+          title: imported.title || parsed.title || url,
+          blocks: parsed.blocks.length ? parsed.blocks : undefined,
+        });
+        if (page) onOpenPage(page.id);
+      },
       openAttachment: (asset) =>
         void locateAttachment(project.id, asset)
           .then((located) =>

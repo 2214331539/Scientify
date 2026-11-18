@@ -1461,3 +1461,105 @@ dialog.doc-dialog > .doc-dialog-note + * {
   flex: none;
   color: var(--sf-link);
 }
+/* A link shown as a card: title, summary, site and cover. */
+.doc-link-card {
+  margin: 6px 0;
+}
+.doc-link-card > button {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-raised);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--sf-motion-feedback) var(--sf-ease-standard);
+}
+.doc-link-card > button:hover {
+  border-color: var(--sf-border-hover);
+}
+.doc-link-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.doc-link-card-text b {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-link-card-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--sf-text-secondary);
+  font-size: 12.5px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.doc-link-card-text small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  color: var(--sf-text-muted);
+  font-size: 11.5px;
+}
+.doc-link-card-text small img {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+.doc-link-card-cover {
+  flex: none;
+  width: 120px;
+  max-height: 84px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+/* Under a pasted link: link, title, card or import. */
+.doc-link-paste {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-raised);
+  box-shadow: var(--sf-shadow-popover);
+  font-size: 12px;
+}
+.doc-link-paste button {
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sf-text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.doc-link-paste button:hover {
+  background: var(--sf-surface-hover);
+  color: var(--sf-text-primary);
+}
+.doc-link-paste-busy {
+  padding: 4px 9px;
+  color: var(--sf-text-muted);
+}
+.doc-link-paste-error {
+  max-width: 260px;
+  padding: 4px 8px;
+  color: var(--sf-status-danger);
+}

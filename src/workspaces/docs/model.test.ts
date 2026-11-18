@@ -257,3 +257,26 @@ describe('attachments', () => {
     expect(blocksToMarkdown([block])).toContain('[📎 结果.xlsx](attachments/abc/结果.xlsx)');
   });
 });
+
+describe('link cards', () => {
+  it('keep their page details and export as a Markdown link', async () => {
+    const { blocksFromEditor } = await import('./convert');
+    const { blocksToMarkdown } = await import('./markdown');
+    const block = {
+      id: 'l1',
+      type: 'link' as const,
+      props: {
+        url: 'https://arxiv.org/abs/1706.03762',
+        title: 'Attention Is All You Need',
+        description: 'The Transformer paper.',
+        site: 'arXiv',
+      },
+    };
+    const [node] = blocksToEditor([block]);
+    expect(node.type).toBe('linkCard');
+    expect(blocksFromEditor([node])).toEqual([block]);
+    expect(blocksToMarkdown([block])).toBe(
+      '[Attention Is All You Need](https://arxiv.org/abs/1706.03762)',
+    );
+  });
+});

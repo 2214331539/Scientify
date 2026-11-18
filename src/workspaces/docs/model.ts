@@ -39,6 +39,8 @@ export type BlockType =
   | 'file'
   /** A file of any kind attached to the page (stored with the note assets). */
   | 'attachment'
+  /** A web link shown as a card. */
+  | 'link'
   | 'conflict';
 export type Block = {
   id: string;
@@ -179,7 +181,9 @@ export function blockText(block: Block): string {
             ? String(block.props?.title ?? block.props?.path ?? '')
             : block.type === 'attachment'
               ? String(block.props?.name ?? '')
-              : inlineText(block.content);
+              : block.type === 'link'
+                ? [block.props?.title, block.props?.description].filter(Boolean).join('\n')
+                : inlineText(block.content);
   return [own, ...(block.children ?? []).map(blockText)].filter(Boolean).join('\n');
 }
 export const pageText = (page: Page) => [page.title, ...page.blocks.map(blockText)].join('\n');

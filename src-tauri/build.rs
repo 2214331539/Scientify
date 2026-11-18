@@ -39,6 +39,8 @@ fn main() {
             "research_reveal",
             "project_folders",
             "doc_attachment",
+            "web_link_preview",
+            "web_link_import",
             "research_locate",
             "research_open_system",
             "writing_tex_status",

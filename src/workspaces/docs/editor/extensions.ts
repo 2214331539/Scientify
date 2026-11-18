@@ -22,6 +22,7 @@ import {
   DocMention,
   FileBlock,
   AttachmentBlock,
+  LinkCard,
   PaperBlock,
   PaperNoteBlock,
 } from './nodes';
@@ -46,6 +47,7 @@ const BLOCKS = [
   'paperNote',
   'fileBlock',
   'attachmentBlock',
+  'linkCard',
   'conflict',
 ];
 
@@ -181,6 +183,7 @@ export function docExtensions(env: () => DocEnv, editor: () => Editor | null) {
     PaperNoteBlock,
     FileBlock,
     AttachmentBlock,
+    LinkCard,
     DocMention.configure({
       suggestions: mentionSuggestions(env),
       deleteTriggerWithBackspace: true,

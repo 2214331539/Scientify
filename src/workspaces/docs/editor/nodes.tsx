@@ -301,6 +301,44 @@ function AttachmentView({ node }: ReactNodeViewProps) {
     </NodeViewWrapper>
   );
 }
+/** A link shown as a card, as in Feishu: title, summary, site and cover; click to open it in the center. */
+function LinkCardView({ node }: ReactNodeViewProps) {
+  const env = useDocEnv();
+  const a = node.attrs as Record<string, string>;
+  const host = (() => {
+    try {
+      return new URL(a.url).host.replace(/^www\./, '');
+    } catch {
+      return a.url;
+    }
+  })();
+  return (
+    <NodeViewWrapper className="doc-link-card" data-drag-handle="">
+      <button
+        type="button"
+        contentEditable={false}
+        title={a.url}
+        onClick={() => env.openUrl(a.url)}
+      >
+        <span className="doc-link-card-text">
+          <b>{a.title || a.url}</b>
+          {a.description ? <span className="doc-link-card-summary">{a.description}</span> : null}
+          <small>
+            {a.icon ? <img src={a.icon} alt="" /> : null}
+            {a.site || host}
+          </small>
+        </span>
+        {a.image ? <img className="doc-link-card-cover" src={a.image} alt="" /> : null}
+      </button>
+    </NodeViewWrapper>
+  );
+}
+export const LinkCard = atomBlock(
+  'linkCard',
+  ['url', 'title', 'description', 'site', 'icon', 'image'],
+  LinkCardView,
+);
+
 export const AttachmentBlock = atomBlock(
   'attachmentBlock',
   ['asset', 'name', 'size'],

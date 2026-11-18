@@ -15,7 +15,7 @@ mod registry;
 pub(crate) mod scratch;
 pub(crate) mod skills;
 mod tools;
-mod web;
+pub(crate) mod web;
 
 use super::AppState;
 use process::EngineSession;

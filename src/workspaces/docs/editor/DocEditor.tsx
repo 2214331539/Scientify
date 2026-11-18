@@ -32,6 +32,8 @@ import type { Block } from '../model';
 import { DocEnvContext, type DocEnv } from './env';
 import { Mascot } from '../../../components/ai/Mascot';
 import { docExtensions } from './extensions';
+import { LinkPasteMenu, isLink, type PastedLink } from './LinkPaste';
+import type { EditorView } from '@tiptap/pm/view';
 
 export const TEXT_COLORS: [string, string | null][] = [
   ['默认', null],
@@ -76,6 +78,19 @@ export function DocEditor({
   envRef.current = env;
   const latest = useRef({ onChange, onSelection });
   latest.current = { onChange, onSelection };
+  // A URL pasted on its own is linked at once; a small bar then offers title, card or import.
+  const [pasted, setPasted] = useState<PastedLink | null>(null);
+  const pasteLink = useRef<(view: EditorView, event: ClipboardEvent) => boolean>(() => false);
+  pasteLink.current = (view, event) => {
+    const text = event.clipboardData?.getData('text/plain')?.trim() ?? '';
+    if (readOnly || !isLink(text) || event.clipboardData?.files.length) return false;
+    const { from, to } = view.state.selection;
+    const mark = view.state.schema.marks.link?.create({ href: text });
+    if (!mark) return false;
+    view.dispatch(view.state.tr.insertText(text, from, to).addMark(from, from + text.length, mark));
+    setPasted({ from, to: from + text.length, url: text });
+    return true;
+  };
   const editorRef = useRef<Editor | null>(null);
   // The editor is made once per page; later renders must not hand it new options.
   const [options] = useState(() => ({
@@ -85,7 +100,10 @@ export function DocEditor({
     ),
     content: pageToEditor(blocks),
     editable: !readOnly,
-    editorProps: { attributes: { class: 'doc-prose', spellcheck: 'false' } },
+    editorProps: {
+      attributes: { class: 'doc-prose', spellcheck: 'false' },
+      handlePaste: (view: EditorView, event: ClipboardEvent) => pasteLink.current(view, event),
+    },
     onUpdate: ({
       editor,
       transaction,
@@ -357,6 +375,14 @@ export function DocEditor({
         ) : null}
       </Menu>
       {readOnly ? null : <TableToolbar editor={editor} backgrounds={BACKGROUNDS} />}
+      {pasted && !readOnly ? (
+        <LinkPasteMenu
+          editor={editor}
+          pasted={pasted}
+          env={envRef.current}
+          onDone={() => setPasted(null)}
+        />
+      ) : null}
       {readOnly ? null : (
         <BubbleMenu
           editor={editor}

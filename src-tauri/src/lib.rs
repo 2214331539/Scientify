@@ -15,6 +15,7 @@ mod docs;
 mod translation_window;
 mod tray;
 mod updates;
+mod weblink;
 mod webview_profile;
 mod yita;
 pub use data_location::migrate_offline as migrate_storage_offline;
@@ -376,6 +377,8 @@ pub fn run() {
             research::research_reveal,
             research::project_folders,
             attachments::doc_attachment,
+            weblink::web_link_preview,
+            weblink::web_link_import,
             research::research_locate,
             research::research_open_system,
             writing::writing_tex_status,

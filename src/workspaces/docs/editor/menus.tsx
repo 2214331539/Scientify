@@ -141,6 +141,23 @@ function insertPicked(kind: 'paper' | 'paperNote' | 'file') {
       .run();
   };
 }
+/** A web page as a card: asks for its address and reads the page. */
+async function linkCard(editor: Editor, range: Range, env: DocEnv) {
+  start(editor, range).run();
+  const url = (await requestText(t('输入网页地址，生成链接卡片'), 'https://'))?.trim();
+  if (!url || url === 'https://') return;
+  const preview = await env.previewLink(url).catch(() => null);
+  editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: 'linkCard',
+      attrs: preview
+        ? { ...preview, url, icon: preview.icon ?? '', image: preview.image ?? '' }
+        : { url, title: url },
+    })
+    .run();
+}
 /** Attaches files chosen with the system dialog, as cards. */
 async function attachFiles(editor: Editor, range: Range, env: DocEnv) {
   start(editor, range).run();
@@ -185,6 +202,14 @@ export const SLASH: Slash[] = [
     keys: 'lwbj note biji',
     icon: icon(NotebookPen),
     run: insertPicked('paperNote'),
+  },
+  {
+    id: 'linkCard',
+    group: '研究',
+    label: '链接卡片',
+    keys: 'ljkp lj link card url wangzhi',
+    icon: icon(Link2),
+    run: linkCard,
   },
   {
     id: 'attachment',
