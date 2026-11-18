@@ -58,6 +58,8 @@ const numbered = /^(\d{1,2}(?:\.\d{1,2}){0,4})[.)]?\s+\S/;
 const named =
   /^(?:abstract|introduction|background|related work|method(?:s|ology)?|experiments?|results?|discussion|conclusions?|limitations?|acknowledg(?:e)?ments?|references|bibliography|appendix(?:\s+[A-Z])?|摘要|引言|绪论|相关工作|方法|实验|结果|讨论|结论|参考文献|附录)(?:\s*[:：.]?\s*)$/i;
 const caption = /^(?:fig(?:ure)?\.?|table|algorithm|图|表|算法)\s*\d/i;
+/** The arXiv identifier printed down the first page's margin. */
+const stamp = /^arxiv:\s*\d{4}\.\d{4,5}/i;
 
 /** Keep coordinates in PDF space; zoom and rotation are applied only when navigating. */
 export function detectHeadings(lines: TextLine[], pageCount: number): PdfHeading[] {
@@ -76,7 +78,13 @@ export function detectHeadings(lines: TextLine[], pageCount: number): PdfHeading
   const bodySize = [...sizes].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 10;
   const candidates = lines.filter((line) => {
     const text = line.title;
-    if (text.length < 2 || text.length > 160 || caption.test(text) || /^\W*\d+\W*$/.test(text))
+    if (
+      text.length < 2 ||
+      text.length > 160 ||
+      caption.test(text) ||
+      stamp.test(text) ||
+      /^\W*\d+\W*$/.test(text)
+    )
       return false;
     if (
       (line.y < line.height * 0.09 || line.y > line.height * 0.93) &&
@@ -123,6 +131,20 @@ export function detectHeadings(lines: TextLine[], pageCount: number): PdfHeading
   });
 }
 
+/**
+ * Bookmarks naming only the paper itself (one entry in a longer document), as
+ * in Vinci2; the headings are then read from the text. Also tells a saved
+ * outline from before this rule that should be read again.
+ */
+export function titleOnlyBookmarks(outline: PdfOutline, pageCount: number) {
+  return (
+    outline.source === 'bookmarks' &&
+    !outline.customized &&
+    outline.entries.length === 1 &&
+    pageCount > 3
+  );
+}
+
 export async function readPdfOutline(
   pdf: PDFDocumentProxy,
   signal: AbortSignal,
@@ -131,6 +153,8 @@ export async function readPdfOutline(
   // A damaged outline falls back to reading the headings from the text.
   const bookmarks = await pdf.getOutline().catch(() => null);
   signal.throwIfAborted();
+  // Bookmarks that name only the paper (Vinci2's single title entry) are no outline.
+  let titleOnly: PdfOutline | null = null;
   if (bookmarks?.length) {
     const entries: PdfHeading[] = [];
     async function visit(items: NonNullable<typeof bookmarks>, level: number, prefix: string) {
@@ -162,7 +186,9 @@ export async function readPdfOutline(
       customized: false,
       entries,
     });
-    if (outline.entries.length) return outline;
+    if (!titleOnlyBookmarks(outline, pdf.numPages)) {
+      if (outline.entries.length) return outline;
+    } else titleOnly = outline;
   }
   const lines: TextLine[] = [];
   for (let number = 1; number <= pdf.numPages; number++) {
@@ -233,12 +259,13 @@ export async function readPdfOutline(
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
   signal.throwIfAborted();
-  return normalizeOutline({
+  const detected = normalizeOutline({
     version: 1,
     source: 'detected',
     customized: false,
     entries: detectHeadings(lines, pdf.numPages),
   });
+  return detected.entries.length || !titleOnly ? detected : titleOnly;
 }
 
 export function visibleHeadings(entries: PdfHeading[], collapsed: Set<string>, query: string) {

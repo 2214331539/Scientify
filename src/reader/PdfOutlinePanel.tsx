@@ -12,6 +12,7 @@ import {
   changeHeadingLevel,
   normalizeOutline,
   readPdfOutline,
+  titleOnlyBookmarks,
   visibleHeadings,
   type PdfHeading,
   type PdfOutline,
@@ -74,7 +75,7 @@ export function PdfOutlinePanel({
         const record = await outlineMetadata(fingerprint);
         if (controller.signal.aborted) return;
         revision.current = record.revision;
-        if (record.outline) {
+        if (record.outline && !titleOnlyBookmarks(record.outline, pdf.numPages)) {
           setOutline(record.outline);
           return;
         }

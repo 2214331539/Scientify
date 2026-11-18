@@ -174,6 +174,56 @@ it('cancels extraction between pages and never cleans up a page owned by the ren
   expect(cleanup).not.toHaveBeenCalled();
 });
 
+it('reads the headings from the text when the bookmarks only name the paper', async () => {
+  const text = [
+    {
+      str: '1 Introduction',
+      transform: [14, 0, 0, 14, 50, 700],
+      width: 96,
+      height: 14,
+      fontName: 'f2',
+    },
+    {
+      str: 'Body text that runs along the whole line in the usual size of the paper.',
+      transform: [10, 0, 0, 10, 50, 680],
+      width: 420,
+      height: 10,
+      fontName: 'f1',
+    },
+    {
+      str: 'arXiv:2607.11523v1 [cs.CV] 13 Jul 2026',
+      transform: [14, 0, 0, 14, 20, 400],
+      width: 200,
+      height: 14,
+      fontName: 'f2',
+    },
+  ];
+  const paper = (items: unknown[]) => ({
+    numPages: 8,
+    // Vinci2 bookmarks its title and nothing else.
+    getOutline: async () => [{ title: 'A paper', dest: [0], items: [] }],
+    getDestination: vi.fn(),
+    getPageIndex: vi.fn(),
+    getPage: async (page: number) => ({
+      view: [0, 0, 600, 800],
+      getTextContent: async () => ({ items: page === 1 ? items : [], styles: {} }),
+      cleanup: vi.fn(),
+    }),
+  });
+  const signal = new AbortController().signal;
+  const detected = await readPdfOutline(
+    paper(text) as unknown as PDFDocumentProxy,
+    signal,
+    vi.fn(),
+  );
+  expect(detected.source).toBe('detected');
+  expect(detected.entries.map((entry) => entry.title).join('|')).toMatch(/Introduction/);
+  expect(detected.entries.some((entry) => /arxiv/i.test(entry.title))).toBe(false);
+  // With no headings in the text either, the title bookmark is kept.
+  const bare = await readPdfOutline(paper([]) as unknown as PDFDocumentProxy, signal, vi.fn());
+  expect(bare).toMatchObject({ source: 'bookmarks', entries: [{ title: 'A paper', page: 1 }] });
+});
+
 it('extracts a title split into text fragments and keeps PDF coordinates', async () => {
   const items = [
     { str: '2', transform: [13, 0, 0, 13, 50, 700], width: 7, height: 13, fontName: 'g_d0_f2' },
