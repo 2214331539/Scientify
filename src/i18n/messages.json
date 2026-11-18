@@ -1,4 +1,9 @@
 {
+  "发送错误报告": ["发送错误报告", "Send error reports"],
+  "出错时把错误信息发给我们，用来修复问题。不含文件内容。": [
+    "出错时把错误信息发给我们，用来修复问题。不含文件内容。",
+    "When something breaks, send us the error so we can fix it. File contents are never included."
+  ],
   "有文件在这一轮之后又被改过，不能自动撤销。": [
     "有文件在这一轮之后又被改过，不能自动撤销。",
     "A file was changed again after this turn, so it can't be undone automatically."

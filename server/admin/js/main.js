@@ -2,7 +2,7 @@
 
 import { SignedOut, get, post } from './api.js';
 import { dialogError, drawCharts, esc, icon, installTooltips, resetRegistry, toast } from './ui.js';
-import { overview, teamPage, teamsPage, userPage, usersPage } from './pages-ops.js';
+import { errorsPage, overview, teamPage, teamsPage, userPage, usersPage } from './pages-ops.js';
 import { auditPage, codesPage, modelsPage, ordersPage, plansPage, usagePage } from './pages-billing.js';
 
 const NAV = [
@@ -17,9 +17,10 @@ const NAV = [
   { id: 'usage', name: '用量', icon: 'chart' },
   { id: 'orders', name: '订单', icon: 'receipt' },
   { group: '系统' },
+  { id: 'errors', name: '错误', icon: 'alert' },
   { id: 'audit', name: '审计', icon: 'shield' },
 ];
-const PAGES = { overview, users: usersPage, teams: teamsPage, plans: plansPage, codes: codesPage, models: modelsPage, usage: usagePage, orders: ordersPage, audit: auditPage };
+const PAGES = { overview, users: usersPage, teams: teamsPage, plans: plansPage, codes: codesPage, models: modelsPage, usage: usagePage, orders: ordersPage, errors: errorsPage, audit: auditPage };
 
 const state = { admin: null, plans: [], theme: localStorage.getItem('sf-admin-theme') || 'light' };
 let current = { page: null, route: null, data: null };

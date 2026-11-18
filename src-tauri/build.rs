@@ -113,6 +113,7 @@ fn main() {
             "collaboration_status",
             "collaboration_configure",
             "collaboration_health",
+            "collaboration_report_error",
             "collaboration_send_code",
             "collaboration_login",
             "collaboration_sign_in",

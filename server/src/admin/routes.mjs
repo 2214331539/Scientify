@@ -668,5 +668,45 @@ async function route(request, response, { config, db }, path, url) {
     const result = await db.query('SELECT * FROM admin_audit ORDER BY created_at DESC LIMIT $1', [limit]);
     return send(response, 200, { entries: result.rows.map(auditView) });
   }
+  if (method === 'GET' && path === '/errors') {
+    const all = url.searchParams.get('all') === '1';
+    const result = await db.query(
+      `SELECT e.*, u.phone, u.nickname,
+              (SELECT COUNT(*) FROM client_error_devices d WHERE d.fingerprint = e.fingerprint) AS devices
+         FROM client_errors e LEFT JOIN users u ON u.id = e.last_user_id
+        WHERE $1 OR e.resolved_at IS NULL
+        ORDER BY e.last_at DESC LIMIT 200`,
+      [all],
+    );
+    return send(response, 200, {
+      all,
+      errors: result.rows.map((row) => ({
+        id: row.fingerprint,
+        message: row.message,
+        stack: row.stack,
+        source: row.source,
+        page: row.page,
+        version: row.version,
+        platform: row.platform,
+        count: Number(row.count),
+        devices: Number(row.devices),
+        user: row.last_user_id ? row.nickname || maskPhone(row.phone) : '',
+        userId: row.last_user_id,
+        firstAt: row.first_at,
+        lastAt: row.last_at,
+        resolved: !!row.resolved_at,
+      })),
+    });
+  }
+  const errorMatch = path.match(/^\/errors\/([0-9a-f]{32})\/resolve$/);
+  if (method === 'POST' && errorMatch) {
+    const result = await db.query(
+      'UPDATE client_errors SET resolved_at = NOW() WHERE fingerprint = $1 AND resolved_at IS NULL RETURNING message',
+      [errorMatch[1]],
+    );
+    if (result.rows[0])
+      await record({ action: '标记错误已处理', targetType: 'errors', targetId: errorMatch[1], target: result.rows[0].message.slice(0, 80) });
+    return send(response, 200, { ok: true });
+  }
   throw fail(404, '未知接口。');
 }

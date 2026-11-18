@@ -1429,6 +1429,20 @@ td .muted,
   align-items: center;
   gap: 6px;
 }
+.error-detail summary {
+  cursor: pointer;
+}
+.error-stack {
+  max-width: 640px;
+  max-height: 260px;
+  margin: 6px 0 0;
+  overflow: auto;
+  color: var(--text-3);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 .chips-select {
   display: flex;
   flex-wrap: wrap;

@@ -6,9 +6,11 @@ import { isTauri } from '@tauri-apps/api/core';
 import { createWorkspaceStore } from './stores/workspace';
 import { browserResearch, browserWorkspace } from './platform/browser';
 import { applyAppearance, getPreferences, setPreferences } from './i18n/preferences';
+import { installErrorReports } from './platform/error-reports';
 
 const native = isTauri();
 if (native) {
+  installErrorReports();
   const params = new URLSearchParams(location.search);
   try {
     const prefs = JSON.parse(params.get('preferences') ?? 'null');

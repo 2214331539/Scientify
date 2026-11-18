@@ -295,6 +295,28 @@ export const auditTable = (entries) =>
     .map((a) => `<tr><td class="num muted">${time(a.at)}</td><td>${esc(a.admin)}</td><td><b>${esc(a.action)}</b></td><td>${esc(a.target) || '—'}</td><td class="json">${a.after ? esc(JSON.stringify(a.after)) : '—'}</td><td class="wrap muted">${esc(a.reason) || '—'}</td><td class="num muted">${esc(a.ip)}</td></tr>`)
     .join('')}</tbody></table>`;
 
+// ---------- Errors ----------
+export const errorsPage = {
+  title: () => '错误',
+  load: (route) => get(`/errors${route.query.all === '1' ? '?all=1' : ''}`),
+  view(data) {
+    const rows = data.errors
+      .map(
+        (e) => `<tr><td class="num muted">${ago(e.lastAt)}</td><td class="wrap"><details class="error-detail"><summary><b>${esc(e.message)}</b></summary><div class="json">${esc(e.source)}${e.page ? ` · ${esc(e.page)}` : ''} · 首次 ${time(e.firstAt)}</div>${e.stack ? `<pre class="error-stack">${esc(e.stack)}</pre>` : ''}</details></td><td class="num">${esc(e.version)}</td><td>${esc(e.platform)}</td><td class="n">${fmt(e.count)}</td><td class="n">${fmt(e.devices)}</td><td>${e.userId ? `<a href="#/users/${encodeURIComponent(e.userId)}">${esc(e.user)}</a>` : '—'}</td><td class="n">${e.resolved ? chip('已处理') : `<button class="btn sm" data-act="resolve" data-id="${esc(e.id)}">已处理</button>`}</td></tr>`,
+      )
+      .join('');
+    const table = `<table><thead><tr><th>最近</th><th>错误</th><th>版本</th><th>平台</th><th class="n">次数</th><th class="n">设备</th><th>最近用户</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<div class="toolbar">${seg('all', data.all ? '1' : '0', [['0', '未处理'], ['1', '全部']])}<span class="muted">应用里没接住的错误，同一错误合并计数；再次出现会重新变成未处理。用户可以在设置里关掉上报。</span></div>${card('错误', data.errors.length ? table : empty(data.all ? '还没有收到错误报告。' : '没有未处理的错误。'), { flush: true })}`;
+  },
+  act: {
+    async resolve(el, ctx) {
+      await post(`/errors/${encodeURIComponent(el.dataset.id)}/resolve`);
+      toast('已标记为处理');
+      await ctx.reload();
+    },
+  },
+};
+
 // ---------- Teams ----------
 function teamGraph(list) {
   return () => {

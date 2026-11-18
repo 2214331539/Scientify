@@ -251,4 +251,32 @@ CREATE INDEX admin_audit_time ON admin_audit(created_at);
 CREATE INDEX admin_audit_target ON admin_audit(target_type, target_id);
 `,
   },
+  {
+    id: 2,
+    name: 'client error reports',
+    sql: `
+-- One row per error group (errors.mjs fingerprint); a repeat reopens it.
+CREATE TABLE client_errors (
+  fingerprint TEXT PRIMARY KEY,
+  message TEXT NOT NULL,
+  stack TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT '',
+  page TEXT NOT NULL DEFAULT '',
+  version TEXT NOT NULL DEFAULT '',
+  platform TEXT NOT NULL DEFAULT '',
+  count INTEGER NOT NULL DEFAULT 1,
+  last_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  resolved_at TIMESTAMPTZ,
+  first_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX client_errors_last ON client_errors(last_at);
+-- Hashed device ids, to count how many devices an error reached.
+CREATE TABLE client_error_devices (
+  fingerprint TEXT NOT NULL REFERENCES client_errors(fingerprint) ON DELETE CASCADE,
+  device TEXT NOT NULL,
+  PRIMARY KEY (fingerprint, device)
+);
+`,
+  },
 ];

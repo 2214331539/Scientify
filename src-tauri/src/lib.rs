@@ -451,6 +451,7 @@ pub fn run() {
             collaboration::collaboration_status,
             collaboration::collaboration_configure,
             collaboration::collaboration_health,
+            collaboration::collaboration_report_error,
             collaboration::collaboration_send_code,
             collaboration::collaboration_login,
             collaboration::collaboration_sign_in,

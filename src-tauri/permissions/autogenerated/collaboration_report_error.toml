@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-report-error"
+description = "Enables the collaboration_report_error command without any pre-configured scope."
+commands.allow = ["collaboration_report_error"]
+
+[[permission]]
+identifier = "deny-collaboration-report-error"
+description = "Denies the collaboration_report_error command without any pre-configured scope."
+commands.deny = ["collaboration_report_error"]

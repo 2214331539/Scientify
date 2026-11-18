@@ -105,6 +105,7 @@
     "allow-collaboration-status",
     "allow-collaboration-configure",
     "allow-collaboration-health",
+    "allow-collaboration-report-error",
     "allow-collaboration-send-code",
     "allow-collaboration-login",
     "allow-collaboration-sign-in",

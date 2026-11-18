@@ -342,6 +342,49 @@ pub async fn collaboration_health<R: tauri::Runtime>(
     request_json(&endpoint, "/health", reqwest::Method::GET, None, None).await
 }
 
+/// Sends an error the app ran into to the service (server errors.mjs), unless
+/// the service is turned off; the page checks the Settings switch first. A
+/// report that doesn't arrive is dropped.
+#[tauri::command]
+pub async fn collaboration_report_error<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    report: Value,
+) -> Result<(), String> {
+    trusted(&view)?;
+    let current = snapshot(&state)?;
+    if !current.enabled {
+        return Ok(());
+    }
+    let text = |key: &str, limit: usize| -> String {
+        report[key]
+            .as_str()
+            .unwrap_or_default()
+            .chars()
+            .take(limit)
+            .collect()
+    };
+    let payload = json!({
+        "message": text("message", 1000),
+        "stack": text("stack", 8000),
+        "source": text("source", 120),
+        "page": text("page", 80),
+        "version": env!("CARGO_PKG_VERSION"),
+        "platform": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+        "device": current.client_id,
+    });
+    let token = read_auth(&state)?.map(|auth| auth.access_token);
+    let _ = request_json(
+        &current.endpoint,
+        "/errors",
+        reqwest::Method::POST,
+        token.as_deref(),
+        Some(payload),
+    )
+    .await;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn collaboration_send_code<R: tauri::Runtime>(
     view: Webview<R>,

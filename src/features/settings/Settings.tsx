@@ -29,6 +29,7 @@ import type { ResearchBackend } from '../../platform/research';
 import { UpdatePanel } from '../update/UpdatePanel';
 import { AssistantInstructions } from './AssistantInstructions';
 import { McpServers } from './McpServers';
+import { errorReportsOn, setErrorReports } from '../../platform/error-reports';
 import './settings.css';
 
 function TranslationPreferences() {
@@ -36,6 +37,27 @@ function TranslationPreferences() {
     <NativeTranslationPanel />
   ) : (
     <p>{t('划词翻译请在 Scientify 桌面应用中使用。')}</p>
+  );
+}
+
+function ErrorReportsRow() {
+  const [on, setOn] = useState(errorReportsOn);
+  return (
+    <section className="setting-row">
+      <div>
+        <h3>{t('发送错误报告')}</h3>
+        <p>{t('出错时把错误信息发给我们，用来修复问题。不含文件内容。')}</p>
+      </div>
+      <input
+        type="checkbox"
+        aria-label={t('发送错误报告')}
+        checked={on}
+        onChange={(event) => {
+          setErrorReports(event.target.checked);
+          setOn(event.target.checked);
+        }}
+      />
+    </section>
   );
 }
 
@@ -171,6 +193,7 @@ function DataPreferences({ store }: { store: WorkspaceStore }) {
           {t('恢复备份')}
         </Button>
       </section>
+      <ErrorReportsRow />
       {state.dirty ? (
         <p className="muted">{t('请先保存或清空未保存的内容，再进行数据导入、导出与恢复。')}</p>
       ) : null}

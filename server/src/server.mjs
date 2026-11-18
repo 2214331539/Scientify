@@ -24,6 +24,7 @@ import { importFromEnvironment } from './billing/models.mjs';
 import { handleAdmin } from './admin/routes.mjs';
 import { startJobs } from './jobs.mjs';
 import { clientPolicy, requireSupportedClient } from './client-policy.mjs';
+import { recordError } from './errors.mjs';
 
 const now = () => new Date();
 const uuid = () => crypto.randomUUID();
@@ -185,6 +186,12 @@ async function handle(request, response, context) {
     }
     if (request.method === 'GET' && path === '/v1/client-policy')
       return send(response, 200, clientPolicy(config));
+    // Before the version check: an outdated app's errors still help.
+    if (request.method === 'POST' && path === '/v1/errors') {
+      const input = await body(request, 32_768);
+      await recordError(db, config, request, clientAddress(request, config), input);
+      return send(response, 202, { accepted: true });
+    }
     requireSupportedClient(request, config);
     if (request.method === 'POST' && path === '/v1/auth/send-code') {
       const input = await body(request, 16_384);

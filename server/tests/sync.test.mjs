@@ -312,3 +312,26 @@ test('owners remove members and members may leave', options, async () => {
   const members = await api(users.owner, 'GET', `/v1/projects/${id}/members`);
   assert.deepEqual(members.body.members.map((item) => item.role).sort(), ['editor', 'owner']);
 });
+
+test('error reports group by error and count devices, signed in or not', options, async () => {
+  const report = { message: 'boom 1', stack: 'at f (a.js:1:1)', version: '0.4.0', device: 'd1' };
+  assert.equal((await api(users.owner, 'POST', '/v1/errors', report)).status, 202);
+  const anonymous = await fetch(`${base}/v1/errors`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...report, message: 'boom 2', device: 'd2' }),
+  });
+  assert.equal(anonymous.status, 202);
+  await db.query("UPDATE client_errors SET resolved_at = NOW()");
+  await api(users.editor, 'POST', '/v1/errors', { ...report, device: 'd2' });
+  const rows = await db.query(
+    `SELECT count, last_user_id, resolved_at,
+            (SELECT COUNT(*) FROM client_error_devices d WHERE d.fingerprint = e.fingerprint) AS devices
+       FROM client_errors e`,
+  );
+  assert.equal(rows.rows.length, 1);
+  assert.equal(rows.rows[0].count, 3);
+  assert.equal(Number(rows.rows[0].devices), 2);
+  assert.equal(rows.rows[0].last_user_id, users.editor.id);
+  assert.equal(rows.rows[0].resolved_at, null);
+});
