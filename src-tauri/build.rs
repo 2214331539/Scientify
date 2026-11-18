@@ -43,6 +43,7 @@ fn main() {
             "web_link_import",
             "research_locate",
             "research_open_system",
+            "research_restore_file",
             "writing_tex_status",
             "writing_compile",
             "writing_cancel",

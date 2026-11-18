@@ -312,6 +312,51 @@ pub async fn research_open_system(
         .map_err(|e| e.to_string())
 }
 
+/// Puts a file back as it was before an AI turn: writes `content`, or removes
+/// the file when there is none (it was new in that turn). Only inside the
+/// project's folders.
+#[tauri::command]
+pub async fn research_restore_file(
+    state: State<'_, AppState>,
+    project_id: String,
+    path: String,
+    content: Option<String>,
+) -> Result<(), String> {
+    let (storage, files) = (state.storage.clone(), state.files.clone());
+    tauri::async_runtime::spawn_blocking(move || {
+        let target = PathBuf::from(path.trim());
+        let name = target.file_name().ok_or("文件路径无效。")?.to_owned();
+        // A deleted file may have taken its folder with it: check the nearest
+        // folder that still exists, then make the rest again.
+        let mut missing = Vec::new();
+        let mut existing = target.parent().ok_or("文件路径无效。")?;
+        while !existing.is_dir() {
+            let part = existing.file_name().ok_or("文件路径无效。")?;
+            missing.push(part.to_owned());
+            existing = existing.parent().ok_or("文件路径无效。")?;
+        }
+        let mut parent = existing.canonicalize().map_err(|e| e.to_string())?;
+        if !project_places(&storage, &files, &project_id)?
+            .iter()
+            .any(|place| parent.starts_with(place))
+        {
+            return Err("只能恢复项目文件夹里的文件。".into());
+        }
+        parent.extend(missing.into_iter().rev());
+        if content.is_some() {
+            std::fs::create_dir_all(&parent).map_err(|e| e.to_string())?;
+        }
+        let target = parent.join(name);
+        match content {
+            Some(text) => std::fs::write(&target, text).map_err(|e| e.to_string()),
+            None if target.is_file() => std::fs::remove_file(&target).map_err(|e| e.to_string()),
+            None => Ok(()),
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// The project's four places, for the writing page and project settings.
 #[tauri::command]
 pub async fn project_folders(

@@ -381,6 +381,7 @@ pub fn run() {
             weblink::web_link_import,
             research::research_locate,
             research::research_open_system,
+            research::research_restore_file,
             writing::writing_tex_status,
             writing::writing_compile,
             writing::writing_cancel,

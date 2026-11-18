@@ -355,8 +355,12 @@ export class AgentRuntime {
       const images = attachments
         .filter((item) => item.mimeType.startsWith('image/'))
         .map(({ mimeType, data }) => ({ mimeType, data }));
+      // The engine still remembers the files as it left them.
+      const undone = seed.agentRun?.undone
+        ? '<note>用户已撤销你上一轮对文件的修改，这些文件已恢复到那一轮之前的样子。</note>\n\n'
+        : '';
       await task.session.send(
-        previous + selected + text + material + attachmentMaterial(attachments),
+        undone + previous + selected + text + material + attachmentMaterial(attachments),
         images,
         skills,
         place,
@@ -470,6 +474,7 @@ export class AgentRuntime {
               .map((op) => ({ ...op, output: op.output.slice(-4000) })),
             ...(task.state.plan.length ? { plan: task.state.plan } : {}),
             ...(task.state.diff ? { diff: task.state.diff.slice(0, 60_000) } : {}),
+            ...(task.state.diff.length > 60_000 ? { diffCut: true } : {}),
             ...(task.state.reasoning ? { reasoning: task.state.reasoning.slice(-8_000) } : {}),
             ...(task.state.thoughtMs ? { thoughtMs: task.state.thoughtMs } : {}),
             ...(task.state.files.length ? { files: task.state.files } : {}),

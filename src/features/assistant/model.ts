@@ -59,8 +59,11 @@ export type Conversation = Entity & {
     error: string | null;
     operations: { id: string; label: string; status: string; output: string }[];
     plan?: { step: string; status: string }[];
-    /** The turn's file changes, as a unified diff (capped). */
+    /** The turn's file changes, as a unified diff (capped; `diffCut` when it was). */
     diff?: string;
+    diffCut?: boolean;
+    /** The user put the turn's files back as they were. */
+    undone?: boolean;
     reasoning?: string;
     thoughtMs?: number;
     files?: { path: string; kind: 'add' | 'update' | 'delete' }[];

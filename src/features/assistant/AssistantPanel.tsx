@@ -11,6 +11,7 @@ import { Button } from '../../components/primitives';
 import { ModelSettingsDialog } from './ModelSettingsDialog';
 import { AssistantConversations, type AssistantMenu } from './AssistantConversations';
 import { AssistantTranscript } from './AssistantTranscript';
+import { undoTurn } from './undo';
 import { getFileRuntime, reloadDirectorySessions } from '../../editor/sessions';
 import { codeContext } from '../../workspaces/experiments/code-context';
 import { experimentsFor } from '../../workspaces/experiments/catalog';
@@ -667,6 +668,34 @@ export function AssistantPanel({
             t('当前输入尚未发送，请在任务结束后重试。'),
         );
     }
+  }
+
+  /** Puts the files the last turn changed back as they were. */
+  async function undoLastTurn() {
+    const run = conversation.agentRun;
+    if (!run?.diff || run.undone) return;
+    const count = run.files?.length ?? 0;
+    if (!(await confirmAction(t('把这一轮 AI 改过的 {count} 个文件恢复原样？', { count })))) return;
+    const id = conversation.id;
+    try {
+      const files = (run.files ?? []).map((file) => file.path);
+      const { skipped } = await undoTurn(scope, run.diff, files, conversation.agentCwd);
+      setError(skipped.length ? t('以下文件没能撤销：{files}', { files: skipped.join('、') }) : '');
+    } catch (reason) {
+      setError(safeError(reason));
+      return;
+    }
+    const saved = await store.getState().update((workspace) => {
+      const target = workspace.sessions.find((entry) => entry.id === id && entry.project === scope);
+      if (target?.agentRun) target.agentRun = { ...target.agentRun, undone: true };
+    });
+    if (!saved) setError(store.getState().error || t('对话保存失败，内容仍保留在当前面板。'));
+    if (activeConversationId.current === id)
+      setConversation((current) =>
+        current.agentRun
+          ? { ...current, agentRun: { ...current.agentRun, undone: true } }
+          : current,
+      );
   }
 
   async function renameConversation(id: string) {
@@ -1413,6 +1442,7 @@ export function AssistantPanel({
           setPrompt(message.text);
           composerRef.current?.focus();
         }}
+        onUndo={undoLastTurn}
         activeTask={activeTask}
         chatTask={chatTask}
         agentPending={agentPending}

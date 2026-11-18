@@ -69,6 +69,8 @@ interface Props {
   /** Ask the last question again, or put it back in the composer to change it. */
   onRegenerate?(message: ChatMessage): void;
   onEdit?(message: ChatMessage): void;
+  /** Put the files the last turn changed back as they were. */
+  onUndo?(): Promise<void>;
 }
 
 /** Message rendering owns scroll-following, while task actions stay in the panel. */
@@ -85,6 +87,7 @@ export function AssistantTranscript({
   onDecide,
   onRegenerate,
   onEdit,
+  onUndo,
 }: Props) {
   const messagesRef = useRef<HTMLDivElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -228,6 +231,10 @@ export function AssistantTranscript({
                       files={savedRun.files ?? []}
                       cwd={conversation.agentCwd}
                       onOpen={local ? onOpenFile : undefined}
+                      undone={savedRun.undone}
+                      onUndo={
+                        local && idle && savedRun.diff && !savedRun.diffCut ? onUndo : undefined
+                      }
                     />
                   ) : null}
                 </Fragment>

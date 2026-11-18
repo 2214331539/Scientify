@@ -1,4 +1,19 @@
 {
+  "有文件在这一轮之后又被改过，不能自动撤销。": [
+    "有文件在这一轮之后又被改过，不能自动撤销。",
+    "A file was changed again after this turn, so it can't be undone automatically."
+  ],
+  "已撤销": ["已撤销", "Undone"],
+  "正在撤销…": ["正在撤销…", "Undoing…"],
+  "撤销修改": ["撤销修改", "Undo changes"],
+  "把这一轮 AI 改过的 {count} 个文件恢复原样？": [
+    "把这一轮 AI 改过的 {count} 个文件恢复原样？",
+    "Put the {count} files the AI changed in this turn back as they were?"
+  ],
+  "以下文件没能撤销：{files}": [
+    "以下文件没能撤销：{files}",
+    "These files couldn't be undone: {files}"
+  ],
   "MCP 工具": ["MCP 工具", "MCP tools"],
   "接入 MCP 服务后，AI 能用它们提供的工具，例如读 Zotero、查数据库。对新任务生效。": [
     "接入 MCP 服务后，AI 能用它们提供的工具，例如读 Zotero、查数据库。对新任务生效。",

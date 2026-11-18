@@ -6,6 +6,7 @@ import {
   FilePen,
   FilePlus,
   LoaderCircle,
+  Undo2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { t } from '../../i18n';
@@ -136,21 +137,29 @@ export function Thinking({
 
 const FILE_KINDS = { add: '新建', update: '修改', delete: '删除' } as const;
 
-/** The files this turn created, changed or deleted; click one to see it in the center. */
+/**
+ * The files this turn created, changed or deleted; click one to see it in the
+ * center. The last turn's can be put back as they were.
+ */
 export function TurnFiles({
   files,
   cwd,
   onOpen,
+  onUndo,
+  undone,
 }: {
   files: { path: string; kind: keyof typeof FILE_KINDS }[];
   cwd?: string | null;
   onOpen?(path: string): void;
+  onUndo?(): Promise<void>;
+  undone?: boolean;
 }) {
+  const [undoing, setUndoing] = useState(false);
   if (!files.length) return null;
   const absolute = (path: string) =>
     /^(?:[a-z]:[\\/]|\\\\|\/)/i.test(path) || !cwd ? path : `${cwd.replace(/[\\/]+$/, '')}/${path}`;
   return (
-    <div className="sf-ai-files" aria-label={t('本轮文件')}>
+    <div className={`sf-ai-files${undone ? ' is-undone' : ''}`} aria-label={t('本轮文件')}>
       {files.map((file) => {
         const name = file.path.split(/[\\/]/).at(-1) ?? file.path;
         const path = absolute(file.path);
@@ -175,6 +184,22 @@ export function TurnFiles({
           </button>
         );
       })}
+      {undone ? (
+        <span className="sf-ai-files-note">{t('已撤销')}</span>
+      ) : onUndo ? (
+        <button
+          type="button"
+          className="sf-ai-files-undo"
+          disabled={undoing}
+          onClick={() => {
+            setUndoing(true);
+            void onUndo().finally(() => setUndoing(false));
+          }}
+        >
+          <Undo2 size={13} aria-hidden="true" />
+          {undoing ? t('正在撤销…') : t('撤销修改')}
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -38,6 +38,7 @@
     "allow-web-link-import",
     "allow-research-locate",
     "allow-research-open-system",
+    "allow-research-restore-file",
     "allow-writing-tex-status",
     "allow-writing-compile",
     "allow-writing-cancel",
