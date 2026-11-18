@@ -24,6 +24,24 @@ public sealed class CoreContractTests
         finally { if (Directory.Exists(Path.GetDirectoryName(path))) Directory.Delete(Path.GetDirectoryName(path)!, true); }
     }
     [Fact]
+    public async Task TheOldDefaultReadingSizeMovesToTheNewOneOnceAndAChosenSizeStays()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "yita-reading-" + Guid.NewGuid().ToString("N"), "settings.json");
+        try
+        {
+            var store = new JsonSettingsStore(path);
+            await store.SaveAsync(YitaSettings.Default with { ReadingTypographyVersion = 0, DefaultTranslationFontSize = 16.5 });
+            var upgraded = await store.LoadAsync();
+            Assert.Equal(15, upgraded.DefaultTranslationFontSize);
+            Assert.Equal(1, upgraded.ReadingTypographyVersion);
+            await store.SaveAsync(upgraded with { DefaultTranslationFontSize = 16.5 });
+            Assert.Equal(16.5, (await store.LoadAsync()).DefaultTranslationFontSize);
+            await store.SaveAsync(YitaSettings.Default with { ReadingTypographyVersion = 0, DefaultTranslationFontSize = 18 });
+            Assert.Equal(18, (await store.LoadAsync()).DefaultTranslationFontSize);
+        }
+        finally { if (Directory.Exists(Path.GetDirectoryName(path))) Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
+    [Fact]
     public void PopupOffsetIsRelativeToTheCurrentSelectionAnchor()
     {
         var first = PopupPlacementResolver.Resolve(

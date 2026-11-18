@@ -25,7 +25,9 @@ public sealed record YitaSettings
     public string CustomAccentColor { get; init; } = "#24756B";
     public string PopupVisualStyle { get; init; } = "minimal";
     public bool ReduceMotion { get; init; }
-    public double DefaultTranslationFontSize { get; init; } = 16.5;
+    public double DefaultTranslationFontSize { get; init; } = 15;
+    /// <summary>1 once the reading size moved from 16.5 to 15; a 16.5 saved before then was the old default.</summary>
+    public int ReadingTypographyVersion { get; init; }
     public string EnglishTranslationFontFamily { get; init; } = TranslationFontCatalog.DefaultEnglishFontFamily;
     public string ChineseTranslationFontFamily { get; init; } = TranslationFontCatalog.DefaultChineseFontFamily;
     public bool AiHistoryEnabled { get; init; }
@@ -37,7 +39,7 @@ public sealed record YitaSettings
     public string DeepSeekEndpoint { get; init; } = "https://api.deepseek.com";
     public string DeepSeekModel { get; init; } = "deepseek-v4-flash";
     public static YitaSettings Default { get; } = new()
-        { SchemaVersion = CurrentSchemaVersion, SelectionCompatibilityVersion = 1 };
+        { SchemaVersion = CurrentSchemaVersion, SelectionCompatibilityVersion = 1, ReadingTypographyVersion = 1 };
 
     internal AppSettings ToOriginal(string apiKey = "") => SettingsStore.NormalizeSettings(new AppSettings
     {

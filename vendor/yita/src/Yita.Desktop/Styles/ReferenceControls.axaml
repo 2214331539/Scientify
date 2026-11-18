@@ -134,20 +134,23 @@
     </Setter>
   </Style>
   <Style Selector="Button.text-action"><Setter Property="Width" Value="NaN" /><Setter Property="Height" Value="28" /><Setter Property="MinWidth" Value="58" /><Setter Property="Margin" Value="0" /><Setter Property="Padding" Value="7,3" /><Setter Property="FontSize" Value="13" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="Button.segment-action"><Setter Property="MinWidth" Value="38" /><Setter Property="FontSize" Value="12" /><Setter Property="FontWeight" Value="Medium" /></Style>
-  <Style Selector="Button.compact-action, ToggleButton.compact-action"><Setter Property="Width" Value="28" /><Setter Property="Height" Value="28" /></Style>
+  <Style Selector="Button.segment-action"><Setter Property="MinWidth" Value="36" /><Setter Property="Height" Value="22" /><Setter Property="Padding" Value="8,0" /><Setter Property="FontSize" Value="12" /><Setter Property="FontWeight" Value="Normal" /><Setter Property="Foreground" Value="{DynamicResource PopupMutedBrush}" /></Style>
+  <Style Selector="Button.segment-action.selected"><Setter Property="Foreground" Value="{DynamicResource PopupTextBrush}" /><Setter Property="FontWeight" Value="Medium" /></Style>
+  <Style Selector="Button.segment-action.selected /template/ Border#ReadingChrome"><Setter Property="Background" Value="{DynamicResource PopupBackgroundBrush}" /><Setter Property="BoxShadow" Value="0 1 2 0 #14000000" /></Style>
+  <Style Selector="Button.compact-action, ToggleButton.compact-action"><Setter Property="Width" Value="26" /><Setter Property="Height" Value="26" /><Setter Property="Padding" Value="0" /><Setter Property="Foreground" Value="{DynamicResource PopupMutedBrush}" /></Style>
+  <Style Selector="Button.send-action /template/ Border#ReadingChrome"><Setter Property="CornerRadius" Value="12" /></Style>
   <Style Selector="ComboBox.popup-language">
-    <Setter Property="Width" Value="96" /><Setter Property="MinHeight" Value="28" /><Setter Property="Height" Value="28" />
-    <Setter Property="FontFamily" Value="{DynamicResource InterfaceFont}" /><Setter Property="FontSize" Value="13" /><Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource PopupTextBrush}" /><Setter Property="Background" Value="{DynamicResource PopupBackgroundBrush}" />
-    <Setter Property="Padding" Value="10,3,6,3" /><Setter Property="Cursor" Value="Hand" /><Setter Property="MaxDropDownHeight" Value="200" />
+    <Setter Property="Width" Value="84" /><Setter Property="MinHeight" Value="26" /><Setter Property="Height" Value="26" />
+    <Setter Property="FontFamily" Value="{DynamicResource InterfaceFont}" /><Setter Property="FontSize" Value="12.5" /><Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource PopupTextBrush}" /><Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="8,2,2,2" /><Setter Property="Cursor" Value="Hand" /><Setter Property="MaxDropDownHeight" Value="200" />
     <Setter Property="Template">
       <ControlTemplate>
         <Border x:Name="LanguageChrome" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource PopupButtonCornerRadius}">
-          <Grid ColumnDefinitions="*,24">
+          <Grid ColumnDefinitions="*,20">
             <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
-            <Path Grid.Column="1" Width="9" Height="5" VerticalAlignment="Center" HorizontalAlignment="Center"
-                  Data="M0,0 L4.5,4.5 L9,0" Stroke="{DynamicResource PopupMutedBrush}" StrokeThickness="1.5" StrokeLineCap="Round" />
+            <Path Grid.Column="1" Width="8" Height="4.5" VerticalAlignment="Center" HorizontalAlignment="Center"
+                  Data="M0,0 L4,4 L8,0" Stroke="{DynamicResource PopupMutedBrush}" StrokeThickness="1.3" StrokeLineCap="Round" StrokeJoin="Round" />
             <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}" PlacementTarget="LanguageChrome"
                    MinWidth="160" MaxHeight="{TemplateBinding MaxDropDownHeight}" Placement="BottomEdgeAlignedLeft"
                    VerticalOffset="6" IsLightDismissEnabled="True" InheritsTransform="True" WindowManagerAddShadowHint="False">

@@ -1,11 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Yita.Desktop.TranslationPopupWindow" Title="Scientify · Translate" Icon="avares://Yita.Desktop/Assets/Scientify.ico" Width="380" Height="132"
-        MinWidth="340" MinHeight="124" MaxWidth="640" MaxHeight="540"
+        x:Class="Yita.Desktop.TranslationPopupWindow" Title="Scientify · Translate" Icon="avares://Yita.Desktop/Assets/Scientify.ico" Width="360" Height="124"
+        MinWidth="320" MinHeight="112" MaxWidth="600" MaxHeight="440"
         SystemDecorations="None" TransparencyLevelHint="Transparent" Background="Transparent"
         ShowInTaskbar="False" ShowActivated="False" Topmost="True" CanResize="True"
         xmlns:local="using:Yita.Desktop" FontFamily="{DynamicResource InterfaceFont}" KeyDown="PopupKeyDown">
   <Grid x:Name="PopupRoot" Margin="{DynamicResource PopupRootMargin}" RowDefinitions="Auto,*">
-    <Border x:Name="ActionBarSurface" Margin="0,0,10,6" Padding="5,4" HorizontalAlignment="Right"
+    <Border x:Name="ActionBarSurface" Margin="0,0,8,6" Padding="4,3" HorizontalAlignment="Right"
             Background="{DynamicResource PopupButtonBrush}" BorderBrush="{DynamicResource PopupButtonBorderBrush}"
             BorderThickness="{DynamicResource PopupEdgeThickness}" BoxShadow="{DynamicResource PopupToolbarShadow}"
             CornerRadius="{DynamicResource PopupActionBarCornerRadius}"
@@ -13,40 +13,40 @@
               <StackPanel Orientation="Horizontal">
                 <ComboBox x:Name="PopupTargetLanguageComboBox" Classes="popup-language" Margin="0,0,4,0"
                           VerticalAlignment="Center" SelectionChanged="TargetLanguageSelectionChanged" />
-                <Border Padding="3" Margin="0,0,4,0" CornerRadius="7" Background="{DynamicResource QuestionInputBrush}">
+                <Border Padding="2" Margin="0,0,2,0" CornerRadius="7" VerticalAlignment="Center" Background="{DynamicResource QuestionInputBrush}">
                   <StackPanel Orientation="Horizontal">
                     <Button x:Name="OriginalButton" Classes="reading-action text-action segment-action" Content="Source" ToolTip.Tip="Show source" Click="OriginalClick" />
                     <Button x:Name="TranslatedButton" Classes="reading-action text-action segment-action selected" Content="Translation" ToolTip.Tip="Show translation" Click="TranslatedClick" />
                   </StackPanel>
                 </Border>
                 <ToggleButton x:Name="PinButton" Classes="reading-action compact-action" ToolTip.Tip="Keep window" Click="PinClick">
-                  <Grid Width="24" Height="24"><Viewbox Width="20" Height="20"><Canvas Width="24" Height="24"><Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Data="M16,9V4L17,3V2H7V3L8,4V9C8,10.66 6.66,12 5,12V14H11V21H13V14H19V12C17.34,12 16,10.66 16,9Z" /></Canvas></Viewbox></Grid>
+                  <Viewbox Width="15" Height="15"><Canvas Width="24" Height="24"><Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Data="M16,9V4L17,3V2H7V3L8,4V9C8,10.66 6.66,12 5,12V14H11V21H13V14H19V12C17.34,12 16,10.66 16,9Z" /></Canvas></Viewbox>
                 </ToggleButton>
                 <Button x:Name="CloseButton" Classes="reading-action compact-action" ToolTip.Tip="Close" Click="CloseClick">
-                  <Grid Width="24" Height="24"><Viewbox Width="20" Height="20"><Canvas Width="24" Height="24"><Path Stroke="{DynamicResource PopupTextBrush}" StrokeThickness="2" StrokeLineCap="Round" Data="M6,6 L18,18 M18,6 L6,18" /></Canvas></Viewbox></Grid>
+                  <Viewbox Width="14" Height="14"><Canvas Width="24" Height="24"><Path Stroke="{DynamicResource PopupTextBrush}" StrokeThickness="2.4" StrokeLineCap="Round" Data="M6,6 L18,18 M18,6 L6,18" /></Canvas></Viewbox>
                 </Button>
               </StackPanel>
     </Border>
     <Grid Grid.Row="1">
       <Path x:Name="BubbleTail" Width="18" Height="16" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,31,0,0" IsHitTestVisible="False" Fill="{DynamicResource PopupTailBrush}" Data="M0,0 L18,8 L0,16 Z" IsVisible="False" />
-      <Border x:Name="PopupSurface" BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="{DynamicResource PopupEdgeThickness}" BoxShadow="{DynamicResource PopupSurfaceShadow}" Padding="14,4,14,14" CornerRadius="{DynamicResource PopupSurfaceCornerRadius}" Background="{DynamicResource PopupBackgroundBrush}">
-        <Grid RowDefinitions="24,*">
-          <Border x:Name="DragHandle" Height="24" Background="Transparent" Cursor="SizeAll" ToolTip.Tip="Drag to move"
+      <Border x:Name="PopupSurface" BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="{DynamicResource PopupEdgeThickness}" BoxShadow="{DynamicResource PopupSurfaceShadow}" Padding="14,2,14,12" CornerRadius="{DynamicResource PopupSurfaceCornerRadius}" Background="{DynamicResource PopupBackgroundBrush}">
+        <Grid RowDefinitions="20,*">
+          <Border x:Name="DragHandle" Height="20" Background="Transparent" Cursor="SizeAll" ToolTip.Tip="Drag to move"
                   PointerPressed="HeaderPointerPressed" PointerMoved="HeaderPointerMoved" PointerReleased="HeaderPointerReleased" PointerCaptureLost="HeaderPointerCaptureLost">
             <Grid ColumnDefinitions="16,*,16">
-              <Image Width="14" Height="14" HorizontalAlignment="Left" Source="{DynamicResource BrandLogo}" ToolTip.Tip="Scientify" Opacity="0.75" />
-              <Border Grid.Column="1" Width="28" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource PopupMutedBrush}" Opacity="0.24" CornerRadius="2" />
+              <Image Width="12" Height="12" HorizontalAlignment="Left" Source="{DynamicResource BrandLogo}" ToolTip.Tip="Scientify" Opacity="0.55" />
+              <Border Grid.Column="1" Width="24" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource PopupMutedBrush}" Opacity="0.18" CornerRadius="1.5" />
             </Grid>
           </Border>
           <Grid Grid.Row="1" RowDefinitions="*,Auto,Auto">
             <Border Background="{DynamicResource PopupTextSurfaceBrush}" CornerRadius="{DynamicResource PopupTextSurfaceCornerRadius}" Padding="{DynamicResource PopupTextSurfacePadding}">
               <Grid>
-                <StackPanel x:Name="LoadingPanel" VerticalAlignment="Top" Orientation="Horizontal" Spacing="10" Margin="4,12">
-                  <ProgressBar IsIndeterminate="True" Width="24" MinWidth="0" Height="2" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" />
-                  <TextBlock x:Name="LoadingText" Text="Translating…" FontSize="13" Foreground="{DynamicResource PopupMutedBrush}" TextWrapping="Wrap" />
+                <StackPanel x:Name="LoadingPanel" VerticalAlignment="Top" Orientation="Horizontal" Spacing="9" Margin="2,8">
+                  <ProgressBar IsIndeterminate="True" Width="20" MinWidth="0" Height="2" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" />
+                  <TextBlock x:Name="LoadingText" Text="Translating…" FontSize="12.5" Foreground="{DynamicResource PopupMutedBrush}" TextWrapping="Wrap" />
                 </StackPanel>
                 <ScrollViewer x:Name="ReadingScroll" IsVisible="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                  <SelectableTextBlock x:Name="TranslationText" Margin="4,0" FontSize="16.5" LineHeight="25.58" TextWrapping="Wrap" RenderOptions.TextRenderingMode="Antialias" Foreground="{DynamicResource PopupTextBrush}">
+                  <SelectableTextBlock x:Name="TranslationText" Margin="2,0,6,0" FontSize="15" LineHeight="24" TextWrapping="Wrap" RenderOptions.TextRenderingMode="Antialias" Foreground="{DynamicResource PopupTextBrush}">
                     <SelectableTextBlock.ContextMenu>
                       <ContextMenu FontFamily="{DynamicResource InterfaceFont}" FontSize="13">
                         <MenuItem x:Name="CopyTextMenu" Header="Copy" Click="CopyReadingClick" />
@@ -83,26 +83,26 @@
                     </Grid>
                   </Border>
                   <ScrollViewer Grid.Row="1" Margin="12,10" VerticalScrollBarVisibility="Auto">
-                    <SelectableTextBlock x:Name="ExplanationText" FontSize="16.5" LineHeight="27.72" TextWrapping="Wrap" Foreground="{DynamicResource PopupTextBrush}" />
+                    <SelectableTextBlock x:Name="ExplanationText" FontSize="15" LineHeight="24" TextWrapping="Wrap" Foreground="{DynamicResource PopupTextBrush}" />
                   </ScrollViewer>
                 </Grid>
               </Grid>
             </Border>
-            <TextBlock x:Name="NoticeText" Grid.Row="1" IsVisible="False" Margin="4,6,4,0" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock x:Name="NoticeText" Grid.Row="1" IsVisible="False" Margin="2,6,2,0" TextWrapping="Wrap" FontSize="11.5" Foreground="{DynamicResource AccentBrush}" />
             <Grid x:Name="QuestionRow" Grid.Row="2" IsVisible="False" ColumnDefinitions="*,Auto,Auto">
-              <Border MaxWidth="520" HorizontalAlignment="Stretch" Margin="0,10,0,0" Padding="9,6" CornerRadius="{DynamicResource InputCornerRadius}" Background="{DynamicResource QuestionInputBrush}">
+              <Border MaxWidth="520" HorizontalAlignment="Stretch" Margin="0,10,0,0" Padding="10,3,3,3" CornerRadius="{DynamicResource InputCornerRadius}" Background="{DynamicResource QuestionInputBrush}">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBox x:Name="InlineQuestionTextBox" MinWidth="60" MinHeight="23" MaxHeight="72" Padding="2" FontSize="12" BorderThickness="0" Background="Transparent" Watermark="Ask about this…" AcceptsReturn="True" TextWrapping="Wrap" />
-                  <Button x:Name="AskButton" Grid.Column="1" Width="26" Height="26" Margin="6,0,0,0" Classes="reading-action" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextBrush}" Click="AskClick">
-                    <Path Data="M7,13 L12,8 L17,13 M12,8 V19" Stroke="{DynamicResource AccentTextBrush}" StrokeThickness="1.8" StrokeLineCap="Round" Width="13" Height="13" Stretch="Uniform" />
+                  <TextBox x:Name="InlineQuestionTextBox" MinWidth="60" MinHeight="22" MaxHeight="72" Padding="0,2" FontSize="12.5" VerticalAlignment="Center" BorderThickness="0" Background="Transparent" Watermark="Ask about this…" AcceptsReturn="True" TextWrapping="Wrap" />
+                  <Button x:Name="AskButton" Grid.Column="1" Width="24" Height="24" Margin="6,0,0,0" VerticalAlignment="Bottom" IsEnabled="False" Classes="reading-action send-action" Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource AccentTextBrush}" Click="AskClick">
+                    <Path Data="M7,12 L12,7 L17,12 M12,7 V18" Stroke="{DynamicResource AccentTextBrush}" StrokeThickness="1.6" StrokeLineCap="Round" StrokeJoin="Round" Width="11" Height="11" Stretch="Uniform" />
                   </Button>
                 </Grid>
               </Border>
-              <Button x:Name="ScientifyAssistantButton" Grid.Column="2" IsVisible="False" Height="32" Width="32" VerticalAlignment="Bottom" Margin="6,10,0,0" Classes="reading-action text-action" Click="AssistantClick">
-                <Path Data="M4,20 L20,4 M7,4 H20 V17" Stroke="{DynamicResource PopupTextBrush}" StrokeThickness="1.8" Width="14" Height="14" Stretch="Uniform" />
+              <Button x:Name="ScientifyAssistantButton" Grid.Column="2" IsVisible="False" Height="28" Width="28" VerticalAlignment="Bottom" Margin="2,10,0,1" Classes="reading-action" Click="AssistantClick">
+                <Path Data="M5,19 L19,5 M8,5 H19 V16" Stroke="{DynamicResource PopupMutedBrush}" StrokeThickness="1.4" StrokeLineCap="Round" StrokeJoin="Round" Width="12" Height="12" Stretch="Uniform" />
               </Button>
-              <Button x:Name="DeepSeekChatButton" Grid.Column="1" Width="28" Height="32" Margin="4,10,0,0" Padding="5" VerticalAlignment="Bottom" Classes="reading-action" Background="Transparent" Click="ChatClick">
-                <Path Data="M5,4 H19 A2,2 0 0 1 21,6 V15 A2,2 0 0 1 19,17 H10 L5,21 V17 H4 A2,2 0 0 1 2,15 V6 A2,2 0 0 1 4,4 Z" Stroke="{DynamicResource PopupTextBrush}" StrokeThickness="1.5" Width="15" Height="15" Stretch="Uniform" />
+              <Button x:Name="DeepSeekChatButton" Grid.Column="1" Width="28" Height="28" Margin="4,10,0,1" Padding="0" VerticalAlignment="Bottom" Classes="reading-action" Background="Transparent" Click="ChatClick">
+                <Path Data="M5,4 H19 A2,2 0 0 1 21,6 V15 A2,2 0 0 1 19,17 H10 L5,21 V17 H4 A2,2 0 0 1 2,15 V6 A2,2 0 0 1 4,4 Z" Stroke="{DynamicResource PopupMutedBrush}" StrokeThickness="1.3" StrokeJoin="Round" Width="14" Height="14" Stretch="Uniform" />
               </Button>
             </Grid>
           </Grid>

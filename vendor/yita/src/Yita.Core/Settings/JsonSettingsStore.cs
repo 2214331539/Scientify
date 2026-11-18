@@ -114,14 +114,22 @@ public sealed class JsonSettingsStore : ISettingsStore
         catch (IOException) when (File.Exists(backupPath)) { }
     }
 
-    private static YitaSettings Normalize(YitaSettings settings) => YitaSettings.FromOriginal(settings.ToOriginal()) with
+    private static YitaSettings Normalize(YitaSettings settings)
     {
-        SchemaVersion = YitaSettings.CurrentSchemaVersion,
-        PopupOffsetX = settings.PopupOffsetX, PopupOffsetY = settings.PopupOffsetY,
-        ReduceMotion = settings.ReduceMotion,
-        UseClipboardFallback = settings.SelectionCompatibilityVersion < 1 || settings.UseClipboardFallback,
-        SelectionCompatibilityVersion = 1,
-    };
+        var normalized = YitaSettings.FromOriginal(settings.ToOriginal());
+        // 16.5 was the default reading size; settings from before it changed move to the new one.
+        var oldDefault = settings.ReadingTypographyVersion < 1 && Math.Abs(normalized.DefaultTranslationFontSize - 16.5) < 0.01;
+        return normalized with
+        {
+            SchemaVersion = YitaSettings.CurrentSchemaVersion,
+            PopupOffsetX = settings.PopupOffsetX, PopupOffsetY = settings.PopupOffsetY,
+            ReduceMotion = settings.ReduceMotion,
+            UseClipboardFallback = settings.SelectionCompatibilityVersion < 1 || settings.UseClipboardFallback,
+            SelectionCompatibilityVersion = 1,
+            DefaultTranslationFontSize = oldDefault ? YitaSettings.Default.DefaultTranslationFontSize : normalized.DefaultTranslationFontSize,
+            ReadingTypographyVersion = 1,
+        };
+    }
 
     private static T Deserialize<T>(JsonElement root, JsonSerializerOptions options)
     {

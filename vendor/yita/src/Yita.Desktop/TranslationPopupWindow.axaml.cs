@@ -44,6 +44,8 @@ public sealed partial class TranslationPopupWindow : Window
         InitializeComponent();
         // Handle Enter before the multiline TextBox consumes it as a newline.
         InlineQuestionTextBox.AddHandler(KeyDownEvent, QuestionKeyDown, RoutingStrategies.Tunnel);
+        // Send lights up only once there is a question.
+        InlineQuestionTextBox.TextChanged += (_, _) => AskButton.IsEnabled = !string.IsNullOrWhiteSpace(InlineQuestionTextBox.Text);
         PopupTargetLanguageComboBox.ItemsSource = TargetLanguageOptions.CreateItems();
         SetTargetLanguage(_settings.TargetLanguageMode, _settings.TargetLanguage);
         DesktopFloatingWindowBehavior.Apply(this);
@@ -73,7 +75,7 @@ public sealed partial class TranslationPopupWindow : Window
         ReferenceTheme.Apply(Resources, settings);
         ApplyUiLanguage(settings.UiLanguage);
         TranslationText.FontSize = ExplanationText.FontSize = settings.DefaultTranslationFontSize;
-        TranslationText.LineHeight = ExplanationText.LineHeight = Math.Round(settings.DefaultTranslationFontSize * 1.55, 2);
+        TranslationText.LineHeight = ExplanationText.LineHeight = ReadingLineHeight(settings.DefaultTranslationFontSize);
         TranslationText.FontFamily = ExplanationText.FontFamily = ReferenceTypography.CreateFont(settings.EnglishTranslationFontFamily);
         BubbleTail.IsVisible = !ScientifyBridge.IsEmbedded && PopupVisualStyleCatalog.IsBubble(settings.PopupVisualStyle);
         var sculpted = PopupVisualStyleCatalog.IsBubbleV2(settings.PopupVisualStyle) || PopupVisualStyleCatalog.IsBubbleV3(settings.PopupVisualStyle);
@@ -257,10 +259,10 @@ public sealed partial class TranslationPopupWindow : Window
         var screen = Screens.ScreenFromPoint(new PixelPoint((int)anchor.X, (int)anchor.Y)) ?? Screens.Primary;
         if (screen is not null)
         {
-            MaxWidth = Math.Min(640, screen.WorkingArea.Width / screen.Scaling - 16);
-            MaxHeight = Math.Min(540, screen.WorkingArea.Height / screen.Scaling - 16);
-            MinWidth = Math.Min(340, MaxWidth);
-            MinHeight = Math.Min(124, MaxHeight);
+            MaxWidth = Math.Min(600, screen.WorkingArea.Width / screen.Scaling - 16);
+            MaxHeight = Math.Min(440, screen.WorkingArea.Height / screen.Scaling - 16);
+            MinWidth = Math.Min(320, MaxWidth);
+            MinHeight = Math.Min(112, MaxHeight);
             Width = Math.Clamp(Width, MinWidth, MaxWidth);
         }
         PlaceAtPreferredOffset();
@@ -280,18 +282,21 @@ public sealed partial class TranslationPopupWindow : Window
         ActionBarSurface.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var outer = PopupRoot.Margin;
         // Choose the width from the source once; incoming tokens only grow the height.
-        var sourceWidth = _sourceText.Length < 100 ? 360 : _sourceText.Length < 400 ? 420 : 480;
+        var sourceWidth = _sourceText.Length < 100 ? 340 : _sourceText.Length < 400 ? 400 : 460;
         Width = Math.Clamp(Math.Max(sourceWidth, ActionBarSurface.DesiredSize.Width + inset.Left + inset.Right + outer.Left + outer.Right), MinWidth, MaxWidth);
         var readingWidth = Math.Max(100, Width - 30 - inset.Left - inset.Right - outer.Left - outer.Right - (glass ? 24 : 0));
         Control reading = LoadingPanel.IsVisible ? LoadingPanel : content;
         reading.Measure(new Size(readingWidth, double.PositiveInfinity));
         QuestionRow.Measure(new Size(readingWidth, double.PositiveInfinity));
         NoticeText.Measure(new Size(readingWidth, double.PositiveInfinity));
-        // Card chrome: drag row 24, reading gap 4, card padding 14 and its 1-pixel top and bottom borders.
-        var chromeHeight = ActionBarSurface.DesiredSize.Height + 44 + QuestionRow.DesiredSize.Height + NoticeText.DesiredSize.Height;
+        // Card chrome: drag row 20, card padding 2 above and 12 below, and its 1-pixel top and bottom borders.
+        var chromeHeight = ActionBarSurface.DesiredSize.Height + 36 + QuestionRow.DesiredSize.Height + NoticeText.DesiredSize.Height;
         Height = Math.Clamp(reading.DesiredSize.Height + chromeHeight + (glass ? 24 : 0) + inset.Top + inset.Bottom + outer.Top + outer.Bottom, MinHeight, MaxHeight);
         if (!_dragging) PlaceAtPreferredOffset();
     }
+
+    /// <summary>1.6 times the size, on whole pixels so lines land on the pixel grid.</summary>
+    internal static double ReadingLineHeight(double fontSize) => Math.Round(fontSize * 1.6);
 
     private void PlaceAtPreferredOffset()
     {
@@ -499,7 +504,7 @@ public sealed partial class TranslationPopupWindow : Window
         {
             var delta = e.Key is Key.OemPlus or Key.Add ? .5 : -.5;
             TranslationText.FontSize = ExplanationText.FontSize = Math.Clamp(TranslationText.FontSize + delta, 12, 34);
-            TranslationText.LineHeight = ExplanationText.LineHeight = Math.Round(TranslationText.FontSize * 1.55, 2);
+            TranslationText.LineHeight = ExplanationText.LineHeight = ReadingLineHeight(TranslationText.FontSize);
             RefreshText(); e.Handled = true;
         }
     }

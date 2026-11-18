@@ -39,12 +39,12 @@ internal static class ScientifyAppearance
         // A quiet, opaque reading plane: depth comes from its edge and shadow.
         Color("PopupBackgroundBrush", "#FFFFFF", "#242726");
         Color("PopupButtonBrush", "#FCF7F8F7", "#FC292C2B");
-        Color("PopupBorderBrush", "#D4DAD7", "#515956");
-        Color("PopupButtonBorderBrush", "#DDE2DF", "#49514E");
-        Color("PopupButtonHoverBrush", "#EAEFEC", "#39413D");
-        Color("PopupTextBrush", "#242727", "#E5E9EC");
-        Color("PopupMutedBrush", "#626867", "#AAB5BD");
-        Color("QuestionInputBrush", "#EFF2F0", "#191C1B");
+        Color("PopupBorderBrush", "#E0E4E2", "#3F4744");
+        Color("PopupButtonBorderBrush", "#E3E7E5", "#424A47");
+        Color("PopupButtonHoverBrush", "#EEF1EF", "#353B39");
+        Color("PopupTextBrush", "#26292A", "#E5E9EC");
+        Color("PopupMutedBrush", "#6B7170", "#A3AEB5");
+        Color("QuestionInputBrush", "#F2F4F3", "#1B1E1D");
         Color("ExplanationSurfaceBrush", "#FAFBFA", "#232625");
         Color("QuestionAnswerSurfaceBrush", "#FAFBFA", "#232625");
         Color("ExplanationHeaderBrush", "#F1F3F2", "#292D2B");
@@ -54,18 +54,19 @@ internal static class ScientifyAppearance
         resources["PopupTextSurfaceBrush"] = Brushes.Transparent;
         resources["PopupTextSurfacePadding"] = new Thickness(0);
         resources["PopupSurfaceCornerRadius"] = new CornerRadius(12);
-        resources["PopupActionBarCornerRadius"] = new CornerRadius(12);
+        resources["PopupActionBarCornerRadius"] = new CornerRadius(10);
         resources["PopupButtonCornerRadius"] = new CornerRadius(6);
-        resources["InputCornerRadius"] = new CornerRadius(9);
+        resources["InputCornerRadius"] = new CornerRadius(15);
         resources["SettingsCardCornerRadius"] = new CornerRadius(10);
         resources["SettingsCardBorderThickness"] = new Thickness(1);
         resources["PopupEdgeThickness"] = new Thickness(1);
         resources["PopupRootMargin"] = new Thickness(12);
         resources["ConversationMargin"] = new Thickness(12);
+        // A soft, wide shadow over a fine edge, as the app's own popovers.
         resources["PopupSurfaceShadow"] = BoxShadows.Parse(dark
-            ? "0 3 8 0 #44000000, 0 9 18 -4 #66000000"
-            : "0 2 5 0 #0D16221C, 0 9 18 -4 #2416221C");
-        resources["PopupToolbarShadow"] = BoxShadows.Parse(dark ? "0 2 6 0 #44000000" : "0 2 6 0 #140F2119");
+            ? "0 1 2 0 #40000000, 0 8 20 -4 #66000000"
+            : "0 1 2 0 #0A16221C, 0 8 20 -4 #1F16221C");
+        resources["PopupToolbarShadow"] = BoxShadows.Parse(dark ? "0 1 4 0 #40000000" : "0 1 4 0 #120F2119");
         resources["BrandLogo"] = Logo(dark);
     }
 }
