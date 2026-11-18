@@ -4177,9 +4177,9 @@
   ],
   "换一个模型": ["换一个模型", "Choose another model"],
   "改用自己的密钥": ["改用自己的密钥", "Use my own key"],
-  "本周期已用 {used} / {total} 点": [
-    "本周期已用 {used} / {total} 点",
-    "{used} / {total} points used this period"
+  "本月已用 {used} / {total} 点": [
+    "本月已用 {used} / {total} 点",
+    "Used this month: {used} / {total} points"
   ],
   "本轮 {spent} 点 · 剩余 {left} 点": [
     "本轮 {spent} 点 · 剩余 {left} 点",

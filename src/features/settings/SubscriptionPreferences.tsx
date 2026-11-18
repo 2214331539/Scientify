@@ -136,7 +136,8 @@ export function SubscriptionPreferences() {
       <Meter
         value={summary.usedThisPeriod}
         total={summary.plan.monthlyPoints}
-        label={t('本周期已用 {used} / {total} 点', {
+        // The plan's points come each month ("本周期" read as "this week").
+        label={t('本月已用 {used} / {total} 点', {
           used: points(summary.usedThisPeriod),
           total: points(summary.plan.monthlyPoints),
         })}
