@@ -65,7 +65,8 @@ export function readLocalSession(project: string): LocalSession {
         active: typeof s.active === 'string' ? s.active : null,
         activeNote: typeof s.activeNote === 'string' ? s.activeNote : null,
         notes: s.notes.filter((id: unknown) => typeof id === 'string'),
-        noteWidth: Math.min(500, Math.max(240, Number(s.noteWidth) || 340)),
+        // The reader narrows a wider note to fit the window.
+        noteWidth: Math.min(2400, Math.max(240, Number(s.noteWidth) || 340)),
       };
   } catch {
     /* UI state is optional. */

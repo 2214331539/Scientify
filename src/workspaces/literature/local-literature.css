@@ -166,6 +166,70 @@
   min-height: 0;
   overflow: hidden;
 }
+/* A paper's full-text translation in its note pane. */
+.paper-translation {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.paper-translation-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 10px 4px 16px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+}
+.paper-translation-bar:empty {
+  display: none;
+}
+.paper-translation-progress {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.paper-translation-progress progress {
+  flex: 1;
+  max-width: 160px;
+  height: 4px;
+  accent-color: var(--sf-accent);
+}
+.paper-translation-error {
+  margin: 8px 16px 0;
+}
+.paper-translation-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 18px 40px;
+  line-height: 1.75;
+}
+.paper-translation-body h2 .sf-button {
+  padding: 0;
+  color: var(--sf-link);
+  font-size: 12px;
+  font-weight: 500;
+}
+.paper-translation-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: auto;
+  padding: 24px;
+  max-width: 320px;
+  text-align: center;
+  color: var(--sf-text-secondary);
+  font-size: 13px;
+}
+.paper-translation-empty p {
+  margin: 0;
+}
 .local-note-group {
   flex-shrink: 0;
   max-width: 48%;

@@ -19,6 +19,7 @@ import {
   Search,
   RefreshCw,
   MoreHorizontal,
+  Languages,
   NotebookPen,
   FileText,
   X,
@@ -62,6 +63,12 @@ import {
   notesPending,
 } from './local-session';
 import { PaperNotes } from './PaperNotes';
+import { PaperTranslation } from './PaperTranslation';
+import {
+  isTranslationTab,
+  paperOfTab,
+  translationTab,
+} from '../../features/translation/paper-translation';
 import { BrowserPane } from './BrowserPane';
 import { SubscriptionSidebar, type BookmarkRequest } from './SubscriptionSidebar';
 import { FeaturePlaceholder } from '../../components/workspace/FeaturePlaceholder';
@@ -88,6 +95,8 @@ import { LibraryTable } from './LibraryTable';
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
 /** The pinned first tab: the library table itself. */
 const HOME = '__library__';
+/** The narrowest the paper may get beside its note (the AI panel leaves 320 to the center). */
+const MIN_READER_WIDTH = 360;
 const parent = (path: string) => path.split('/').slice(0, -1).join('/');
 const filename = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 const join = (folder: string, name: string) => (folder ? `${folder}/${name}` : name);
@@ -175,6 +184,14 @@ export function LocalLiterature({
     generation = useRef(0),
     drag = useRef<string[]>([]);
   const searchTrigger = useRef<HTMLButtonElement>(null);
+  const [hostWidth, setHostWidth] = useState(0);
+  useEffect(() => {
+    const element = host.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setHostWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const currentSession = useRef(session);
   currentSession.current = session;
   const actionPending = useRef(false);
@@ -384,7 +401,7 @@ export function LocalLiterature({
               (tab.kind === 'text' && tab.path && isBelowPath(tab.path, operation.path))
             )
               current = closeLocalTab(current, tab.id);
-          const notes = current.notes.filter((id) => remaining.has(id));
+          const notes = current.notes.filter((id) => remaining.has(paperOfTab(id)));
           return {
             ...current,
             notes,
@@ -468,14 +485,45 @@ export function LocalLiterature({
     if (tab?.kind === 'web') await browserCommand({ op: 'close', id });
     setSession((s) => closeLocalTab(s, id));
   }
-  async function closeNote(id: string) {
-    const note = paperNote(library, project.id, id);
-    if (note.getSnapshot().phase === 'saving' || note.getSnapshot().phase === 'loading') return;
-    if (note.getSnapshot().dirty && !(await note.save())) {
-      setError(note.getSnapshot().error ?? t('保存失败，请重试。'));
-      return;
+  /** Shows a page of a paper, from a page link in its note or translation. */
+  function openPaperPage(id: string, page: number) {
+    const bound = scan.papers.find((p) => p.id === id);
+    if (!bound) return;
+    try {
+      localStorage.setItem(`scientify.reader.${id}`, String(page));
+    } catch {
+      /* Optional location. */
     }
-    if (note.getSnapshot().dirty || note.getSnapshot().phase === 'saving') return;
+    setSession((s) => openLocalPdf(s, id, filename(bound.path)));
+    requestAnimationFrame(() =>
+      window.dispatchEvent(
+        new CustomEvent('scientify-pdf-page', {
+          detail: { paperId: id, page },
+        }),
+      ),
+    );
+  }
+  /** Opens a paper's full-text translation beside it, as its note opens. */
+  function openTranslation(paperId: string) {
+    const id = translationTab(paperId);
+    setSession((s) => ({
+      ...s,
+      notes: s.notes.includes(id) ? s.notes : [...s.notes, id],
+      activeNote: id,
+      showNotes: true,
+    }));
+  }
+  async function closeNote(id: string) {
+    // A translation saves as it goes; only notes have edits to keep.
+    if (!isTranslationTab(id)) {
+      const note = paperNote(library, project.id, id);
+      if (note.getSnapshot().phase === 'saving' || note.getSnapshot().phase === 'loading') return;
+      if (note.getSnapshot().dirty && !(await note.save())) {
+        setError(note.getSnapshot().error ?? t('保存失败，请重试。'));
+        return;
+      }
+      if (note.getSnapshot().dirty || note.getSnapshot().phase === 'saving') return;
+    }
     setSession((s) => {
       const notes = s.notes.filter((n) => n !== id);
       return {
@@ -997,6 +1045,9 @@ export function LocalLiterature({
       )}
     </aside>
   );
+  // The note beside a paper may take the room the AI panel can: all but a
+  // readable column for the paper.
+  const noteMax = Math.max(500, hostWidth - MIN_READER_WIDTH);
   return (
     <div
       className="literature-studio local-library"
@@ -1161,19 +1212,28 @@ export function LocalLiterature({
           {session.showNotes && session.notes.length > 0 && (
             <>
               <ResizeHandle
-                value={session.noteWidth}
+                value={Math.min(session.noteWidth, noteMax)}
                 min={240}
-                max={500}
+                max={noteMax}
                 side="right"
                 label={t('调整论文笔记宽度')}
                 onChange={(noteWidth) => setSession((s) => ({ ...s, noteWidth }))}
               />
-              <div className="local-note-group" inert={busy} style={{ width: session.noteWidth }}>
+              <div
+                className="local-note-group"
+                inert={busy}
+                style={{ width: Math.min(session.noteWidth, noteMax) }}
+              >
                 <DocumentTabs
-                  tabs={session.notes.map((id) => ({
-                    id,
-                    title: filename(scan.papers.find((p) => p.id === id)?.path ?? t('论文笔记')),
-                  }))}
+                  tabs={session.notes.map((id) => {
+                    const name = filename(
+                      scan.papers.find((p) => p.id === paperOfTab(id))?.path ?? t('论文笔记'),
+                    );
+                    return {
+                      id,
+                      title: isTranslationTab(id) ? t('译文 · {name}', { name }) : name,
+                    };
+                  })}
                   activeId={session.activeNote}
                   label={t('论文笔记标签')}
                   panelId={notePanel}
@@ -1186,7 +1246,22 @@ export function LocalLiterature({
                   role="tabpanel"
                   aria-label={t('论文笔记')}
                 >
-                  {session.activeNote && (
+                  {session.activeNote && isTranslationTab(session.activeNote) ? (
+                    <PaperTranslation
+                      key={session.activeNote}
+                      projectId={project.id}
+                      paper={scan.papers.find((p) => p.id === paperOfTab(session.activeNote!))}
+                      title={filename(
+                        scan.papers.find((p) => p.id === paperOfTab(session.activeNote!))?.path ??
+                          '',
+                      ).replace(/\.pdf$/i, '')}
+                      library={library}
+                      backend={backend}
+                      store={store}
+                      readOnly={readOnly}
+                      onPage={(page) => openPaperPage(paperOfTab(session.activeNote!), page)}
+                    />
+                  ) : session.activeNote ? (
                     <PaperNotes
                       readOnly={readOnly}
                       key={session.activeNote}
@@ -1195,26 +1270,9 @@ export function LocalLiterature({
                       id={session.activeNote}
                       paper={scan.papers.find((p) => p.id === session.activeNote)}
                       selection={selection}
-                      onPage={(page) => {
-                        const id = session.activeNote!;
-                        const bound = scan.papers.find((p) => p.id === id);
-                        if (!bound) return;
-                        try {
-                          localStorage.setItem(`scientify.reader.${id}`, String(page));
-                        } catch {
-                          /* Optional location. */
-                        }
-                        setSession((s) => openLocalPdf(s, id, filename(bound.path)));
-                        requestAnimationFrame(() =>
-                          window.dispatchEvent(
-                            new CustomEvent('scientify-pdf-page', {
-                              detail: { paperId: id, page },
-                            }),
-                          ),
-                        );
-                      }}
+                      onPage={(page) => openPaperPage(session.activeNote!, page)}
                     />
-                  )}
+                  ) : null}
                 </div>
               </div>
             </>
@@ -1297,6 +1355,22 @@ export function LocalLiterature({
           >
             <NotebookPen />
             {t('打开论文笔记')}
+          </Button>
+        )}
+        {(binding || targetEntry?.pdf) && (
+          <Button
+            role="menuitem"
+            onClick={async () => {
+              setMenu(null);
+              void run(async () => {
+                const p = binding ?? (await library.open(project.id, target));
+                openTranslation(p.id);
+                await refresh();
+              });
+            }}
+          >
+            <Languages />
+            {t('全文翻译')}
           </Button>
         )}
         <Button

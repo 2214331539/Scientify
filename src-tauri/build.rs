@@ -39,6 +39,7 @@ fn main() {
             "research_reveal",
             "project_folders",
             "doc_attachment",
+            "paper_translation",
             "web_link_preview",
             "web_link_import",
             "research_locate",

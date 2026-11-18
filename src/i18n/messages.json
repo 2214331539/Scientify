@@ -1,4 +1,37 @@
 {
+  "浏览器搜索引擎": ["浏览器搜索引擎", "Browser search engine"],
+  "必应": ["必应", "Bing"],
+  "百度": ["百度", "Baidu"],
+  "全文翻译": ["全文翻译", "Translate full text"],
+  "译文 · {name}": ["译文 · {name}", "Translation · {name}"],
+  "重新翻译会替换现有译文，继续吗？": [
+    "重新翻译会替换现有译文，继续吗？",
+    "Translating again replaces the current translation. Continue?"
+  ],
+  "请先在设置里选好 AI 模型。": [
+    "请先在设置里选好 AI 模型。",
+    "Choose an AI model in Settings first."
+  ],
+  "{title}（全文翻译）": ["{title}（全文翻译）", "{title} (full translation)"],
+  "由 {model} 翻译，{date}。点页码回到原文。": [
+    "由 {model} 翻译，{date}。点页码回到原文。",
+    "Translated by {model}, {date}. Click a page number to go back to the paper."
+  ],
+  "（未翻译）": ["（未翻译）", "(not translated)"],
+  "正在读取论文…": ["正在读取论文…", "Reading the paper…"],
+  "正在翻译 {done}/{total} 段": [
+    "正在翻译 {done}/{total} 段",
+    "Translating {done}/{total} passages"
+  ],
+  "把整篇论文逐段翻译出来，保存在这篇论文名下，以后直接打开。": [
+    "把整篇论文逐段翻译出来，保存在这篇论文名下，以后直接打开。",
+    "Translate the whole paper passage by passage; it is kept with the paper to open again later."
+  ],
+  "会按段调用当前的 AI 模型，长论文需要几分钟。": [
+    "会按段调用当前的 AI 模型，长论文需要几分钟。",
+    "Each passage is a request to the current AI model; a long paper takes a few minutes."
+  ],
+  "开始翻译": ["开始翻译", "Translate"],
   "复制链接": ["复制链接", "Copy link"],
   "已复制链接": ["已复制链接", "Link copied"],
   "编辑链接": ["编辑链接", "Edit link"],

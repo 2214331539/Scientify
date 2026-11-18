@@ -377,6 +377,7 @@ pub fn run() {
             research::research_reveal,
             research::project_folders,
             attachments::doc_attachment,
+            attachments::paper_translation,
             weblink::web_link_preview,
             weblink::web_link_import,
             research::research_locate,
