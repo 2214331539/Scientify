@@ -20,6 +20,7 @@ import {
   CENTER_PAGES,
   COLLABORATION_TEAM_ID,
   ensureCollaborationTeam,
+  isTeamProject,
   markOpened,
   personalProjects,
   type CenterPage,
@@ -78,7 +79,6 @@ import { bindingFor, eventToShortcut, isEditableTarget } from '../platform/short
 import {
   canEditProject,
   collaborationStateEvent,
-  isSyncedProject,
   type CollaborationProject,
 } from '../platform/collaboration';
 import { SignInPage } from '../features/account/SignInPage';
@@ -1209,8 +1209,10 @@ export function App({
   const crumbs: Crumb[] = project
     ? [{ label: project.name }, { label: t(moduleName) }]
     : [{ label: ui.page === 'team' ? t('团队项目') : t('我的项目') }];
+  // A personal project shares to a team (it syncs across this account's devices
+  // anyway); a team project's panel shows its members, sync and conflicts.
   const share =
-    project && isSyncedProject(project) ? (
+    project && isTeamProject(project) ? (
       <ProjectSyncControl
         key={project.id}
         project={project}

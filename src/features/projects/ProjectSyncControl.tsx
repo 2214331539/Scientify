@@ -19,7 +19,7 @@ import {
 } from '../../platform/collaboration';
 import { useProjectSync } from './useProjectSync';
 import { maskPhone } from '../account/account';
-import { roleName } from './ProjectDialogs';
+import { InviteList, roleName, type InviteRole } from './ProjectDialogs';
 import './project-sync.css';
 
 function Version({ label, version }: { label: string; version: ConflictVersion }) {
@@ -58,6 +58,7 @@ export function ProjectSyncControl({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [members, setMembers] = useState<CollaborationMember[] | null>(null);
+  const [invites, setInvites] = useState<{ phone: string; role: InviteRole }[]>([]);
   const [comparison, setComparison] = useState<{
     conflict: SyncConflict;
     preview: ConflictPreview;
@@ -158,7 +159,7 @@ export function ProjectSyncControl({
       </Button>
       {open && (
         <Modal
-          title={comparison ? t('冲突对比') : t('项目同步')}
+          title={comparison ? t('冲突对比') : trigger === 'share' ? t('共享与同步') : t('项目同步')}
           className="project-sync-dialog"
           busy={busy}
           onClose={() => {
@@ -243,6 +244,32 @@ export function ProjectSyncControl({
                     })}
                   </p>
                 )}
+                {project.collaborationRole === 'owner' && signedIn ? (
+                  <section>
+                    <h3>{t('邀请成员')}</h3>
+                    <InviteList invites={invites} onChange={setInvites} disabled={busy} />
+                    <div className="sync-actions">
+                      <Button
+                        variant="primary"
+                        disabled={busy || !invites.length}
+                        onClick={() =>
+                          void run(async () => {
+                            for (const invite of invites)
+                              await collaboration.inviteMember(
+                                project.id,
+                                invite.phone,
+                                invite.role,
+                              );
+                            setInvites([]);
+                            setMembers((await collaboration.members(project.id)).members);
+                          })
+                        }
+                      >
+                        {t('邀请')}
+                      </Button>
+                    </div>
+                  </section>
+                ) : null}
                 {members && (
                   <section>
                     <h3>{t('成员')}</h3>
