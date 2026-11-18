@@ -22,8 +22,10 @@ export type DocEnv = {
   pickAttachments(): Promise<Attached[]>;
   /** Shows an attachment in the center. */
   openAttachment(asset: string): void;
-  /** A web page over the center. */
+  /** A web page over the center; a page or block link (blockLink.ts) goes there instead. */
   openUrl(url: string): void;
+  /** A short message at the top of the page, e.g. "已复制链接". */
+  notify(message: string): void;
   /** A link card's contents. */
   previewLink(url: string): Promise<LinkPreview>;
   /** Makes a web page's main text a new subpage and opens it. */

@@ -56,6 +56,7 @@
     "allow-docs-history",
     "allow-docs-merge",
     "allow-docs-export",
+    "allow-docs-save-file",
     "allow-docs-import",
     "allow-docs-agent-respond",
     "allow-research-import-pdf",

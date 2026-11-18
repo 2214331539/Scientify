@@ -149,7 +149,13 @@ export function docExtensions(env: () => DocEnv, editor: () => Editor | null) {
     StarterKit.configure({
       codeBlock: false,
       heading: { levels: [1, 2, 3] },
-      link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
+      // Opened from the link bubble (LinkBubble.tsx); scientify:// links go to a page or block.
+      link: {
+        openOnClick: false,
+        autolink: true,
+        defaultProtocol: 'https',
+        protocols: ['scientify'],
+      },
       dropcursor: { color: 'var(--sf-accent)', width: 2 },
     }),
     TaskList,

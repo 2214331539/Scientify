@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-docs-save-file"
+description = "Enables the docs_save_file command without any pre-configured scope."
+commands.allow = ["docs_save_file"]
+
+[[permission]]
+identifier = "deny-docs-save-file"
+description = "Denies the docs_save_file command without any pre-configured scope."
+commands.deny = ["docs_save_file"]

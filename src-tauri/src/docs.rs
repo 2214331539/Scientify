@@ -293,7 +293,15 @@ fn snapshot_read(data: &Path, project: &str, id: &str, at: &str) -> Result<Value
 // ---------- Merging ----------
 /// The text put above the other side's version of a block both sides changed.
 const CONFLICT_FROM: &str = "这台电脑上的版本";
-const PAGE_FIELDS: [&str; 6] = ["title", "icon", "parent", "order", "deletedAt", "width"];
+const PAGE_FIELDS: [&str; 7] = [
+    "title",
+    "icon",
+    "parent",
+    "order",
+    "deletedAt",
+    "width",
+    "cover",
+];
 
 fn fresh_ids(block: &mut Value) {
     if let Some(map) = block.as_object_mut() {
@@ -501,6 +509,66 @@ pub async fn docs_history(
     .await
 }
 
+/// A page title as a file name: no characters Windows refuses, at most 80.
+fn file_stem(name: &str) -> String {
+    let stem: String = name
+        .chars()
+        .map(|c| {
+            if r#"\/:*?"<>|"#.contains(c) || c.is_control() {
+                ' '
+            } else {
+                c
+            }
+        })
+        .collect::<String>()
+        .trim()
+        .chars()
+        .take(80)
+        .collect();
+    if stem.is_empty() {
+        "untitled".into()
+    } else {
+        stem
+    }
+}
+
+/// Saves a file made from a page (a Word document) where the person chooses;
+/// false when cancelled.
+#[tauri::command]
+pub async fn docs_save_file(
+    app: tauri::AppHandle,
+    view: tauri::Webview,
+    name: String,
+    extension: String,
+    data: String,
+) -> Result<bool, String> {
+    use base64::Engine;
+    use tauri_plugin_dialog::DialogExt;
+    crate::library::trusted(&view)?;
+    let (filter, extension) = match extension.as_str() {
+        "docx" => ("Word", "docx"),
+        _ => return Err("不支持的导出格式。".into()),
+    };
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data)
+        .map_err(|_| "导出内容无效。")?;
+    blocking(move || {
+        let Some(file) = app
+            .dialog()
+            .file()
+            .add_filter(filter, &[extension])
+            .set_file_name(format!("{}.{extension}", file_stem(&name)))
+            .blocking_save_file()
+        else {
+            return Ok(false);
+        };
+        let path = file.into_path().map_err(|e| e.to_string())?;
+        std::fs::write(path, bytes).map_err(|e| e.to_string())?;
+        Ok(true)
+    })
+    .await
+}
+
 /// Saves a page as Markdown where the person chooses; its images go to `images/` beside it.
 #[tauri::command]
 pub async fn docs_export(
@@ -523,28 +591,11 @@ pub async fn docs_export(
         return Err("项目标识无效。".into());
     }
     blocking(move || {
-        let stem: String = name
-            .chars()
-            .map(|c| {
-                if r#"\/:*?"<>|"#.contains(c) || c.is_control() {
-                    ' '
-                } else {
-                    c
-                }
-            })
-            .collect::<String>()
-            .trim()
-            .chars()
-            .take(80)
-            .collect();
         let Some(file) = app
             .dialog()
             .file()
             .add_filter("Markdown", &["md"])
-            .set_file_name(format!(
-                "{}.md",
-                if stem.is_empty() { "untitled" } else { &stem }
-            ))
+            .set_file_name(format!("{}.md", file_stem(&name)))
             .blocking_save_file()
         else {
             return Ok(false);

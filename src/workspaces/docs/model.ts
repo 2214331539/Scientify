@@ -62,6 +62,8 @@ export type Page = {
   updatedBy?: string;
   deletedAt?: string | null;
   width?: 'standard' | 'wide';
+  /** The band above the title: `gradient:<n>` (cover.ts) or a stored image, `images/…`. */
+  cover?: string | null;
   blocks: Block[];
 };
 /** What the page tree needs; the blocks are read when a page opens. */

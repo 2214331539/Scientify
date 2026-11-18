@@ -61,6 +61,7 @@ fn main() {
             "docs_history",
             "docs_merge",
             "docs_export",
+            "docs_save_file",
             "docs_import",
             "docs_agent_respond",
             "research_import_pdf",

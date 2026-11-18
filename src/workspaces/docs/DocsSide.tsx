@@ -24,7 +24,8 @@ import type { DocHit } from '../../platform/docs';
 import { childrenOf, type PageSummary } from './model';
 import { useDocs, type DocsRuntime } from './runtime';
 
-export type PageAction = 'subpage' | 'rename' | 'duplicate' | 'move' | 'star' | 'export' | 'delete';
+export type PageAction =
+  'subpage' | 'rename' | 'duplicate' | 'move' | 'star' | 'export' | 'exportWord' | 'delete';
 type Drop = { id: string; zone: 'before' | 'after' | 'inside' };
 
 const below = (element: HTMLElement): MenuAnchor => {
@@ -354,6 +355,7 @@ export function DocsSide({
                 ['move', FolderInput, '移动到…'],
                 ['star', Star, starred.includes(menu.page.id) ? '取消收藏' : '收藏'],
                 ['export', Download, '导出 Markdown'],
+                ['exportWord', FileText, '导出 Word'],
               ] as const
             ).map(([action, Icon, label]) => (
               <button

@@ -403,6 +403,85 @@
 .doc-head {
   padding-left: 2px;
 }
+.doc-head-actions {
+  display: flex;
+  gap: 2px;
+}
+/* The band above the title: a preset gradient or a picture. */
+.doc-cover {
+  position: relative;
+  height: 180px;
+  background: var(--sf-surface-hover);
+}
+.is-compact .doc-cover {
+  height: 96px;
+}
+.has-cover .doc-column {
+  padding-top: 20px;
+}
+.has-cover .doc-outline {
+  top: 220px;
+}
+.doc-cover-actions {
+  position: absolute;
+  right: 24px;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.doc-cover:hover .doc-cover-actions,
+.doc-cover-actions:focus-within {
+  opacity: 1;
+}
+.doc-cover-actions button {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--sf-radius);
+  background: rgba(255, 255, 255, 0.86);
+  color: #37352f;
+  font: inherit;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.doc-cover-actions button:hover {
+  background: #fff;
+}
+.doc-cover-error {
+  position: absolute;
+  left: 24px;
+  bottom: 14px;
+  padding: 3px 8px;
+  border-radius: var(--sf-radius);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--sf-status-danger);
+  font-size: 12px;
+}
+.doc-cover-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 44px);
+  gap: 6px;
+  padding: 6px 8px;
+}
+.doc-cover-presets button {
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.doc-cover-presets button:hover {
+  outline: 2px solid var(--sf-accent);
+}
+@media print {
+  .doc-cover-actions {
+    display: none;
+  }
+}
 .doc-icon {
   display: block;
   margin: 4px 0 6px;
@@ -1526,6 +1605,22 @@ dialog.doc-dialog > .doc-dialog-note + * {
   max-height: 84px;
   border-radius: 6px;
   object-fit: cover;
+}
+/* On a link: where it goes, then copy, change, remove. */
+.doc-link-bubble .doc-link-bubble-target {
+  max-width: 280px;
+  color: var(--sf-link);
+}
+.doc-link-bubble-target span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A block reached from a link, marked for a moment. */
+.doc-editor .is-linked {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--sf-accent) 14%, transparent);
+  transition: background 0.6s;
 }
 /* Under a pasted link: link, title, card or import. */
 .doc-link-paste {

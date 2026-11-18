@@ -11,8 +11,11 @@ import {
   Copy,
   Download,
   FileDown,
+  FileText,
   FolderInput,
   History,
+  Image as ImageIcon,
+  Link2,
   MoreHorizontal,
   MoveHorizontal,
   Plus,
@@ -49,6 +52,15 @@ import {
 import { DocEditor } from './editor/DocEditor';
 import type { DocEnv, Pick } from './editor/env';
 import { markdownToPage, pageToMarkdown } from './markdown';
+import {
+  blockLink,
+  openDocTarget,
+  parseBlockLink,
+  revealBlock,
+  takePendingBlock,
+} from './blockLink';
+import { defaultCover, PageCover } from './cover';
+import { imageForWord, pageToDocx } from './docx';
 import { useNoteMigration } from './migrate';
 import {
   blockText,
@@ -166,6 +178,7 @@ export function DocsWorkspace({
     if (kind === 'move') return setDialog({ kind: 'move', page });
     if (kind === 'star') return runtime.star(page.id);
     if (kind === 'export') return exportMarkdown(page.id);
+    if (kind === 'exportWord') return exportWord(page.id);
     if (kind === 'delete') {
       const count = await runtime.trash(page.id);
       if (current && !pages.some((item) => item.id === current && !item.deletedAt))
@@ -194,6 +207,15 @@ export function DocsWorkspace({
       pageToMarkdown(page.title, page.blocks),
       images,
     );
+  }
+  async function exportWord(id: string) {
+    const page = runtime.store.getState().open[id]?.page ?? (await docs.read(project.id, id)).page;
+    const images = noteImages(project.id);
+    const bytes = await pageToDocx(page, {
+      image: async (asset) => imageForWord(await images.read(asset)).catch(() => null),
+    });
+    if (await docs.saveFile?.(page.title || t('无标题'), 'docx', bytes))
+      setNotice(t('已导出 Word 文档'));
   }
   async function importMarkdown() {
     const files = (await docs.importMarkdown?.()) ?? [];
@@ -254,6 +276,8 @@ export function DocsWorkspace({
             runtime={runtime}
             id={current}
             onError={setError}
+            onNotice={setNotice}
+            wordExport={!!docs.saveFile}
             project={project}
             library={library}
             readOnly={readOnly}
@@ -459,9 +483,14 @@ function DocPage({
   onAction,
   onExport,
   onError,
+  onNotice,
+  wordExport,
   compact = false,
 }: {
   onError(message: string): void;
+  onNotice(message: string): void;
+  /** Whether pages can be saved as Word documents here (the app, not the browser preview). */
+  wordExport: boolean;
   runtime: DocsRuntime;
   id: string;
   project: Project;
@@ -537,10 +566,14 @@ function DocPage({
       saveImage: (file) => images.save(file),
       attachFiles: (files) => Promise.all(files.map((file) => saveAttachment(project.id, file))),
       pickAttachments: () => pickAttachments(project.id),
-      openUrl: (url) =>
+      openUrl: (url) => {
+        const target = parseBlockLink(url);
+        if (target) return openDocTarget(target, { projectId: project.id, pageId: id });
         window.dispatchEvent(
           new CustomEvent('scientify-preview-url', { detail: { projectId: project.id, url } }),
-        ),
+        );
+      },
+      notify: onNotice,
       previewLink: (url) => linkPreview(url),
       importLink: async (url) => {
         const imported = await linkImport(url);
@@ -586,6 +619,7 @@ function DocPage({
       members,
       onDialog,
       onError,
+      onNotice,
       onOpenPage,
       pages,
       project.id,
@@ -616,6 +650,14 @@ function DocPage({
     const timer = setTimeout(() => describe(), 400);
     return () => clearTimeout(timer);
   }, [describe]);
+  // A link to one of this page's blocks brings it into view once the page is shown.
+  const shown = !!page;
+  useEffect(() => {
+    const block = shown ? takePendingBlock(id) : null;
+    if (!block) return;
+    const frame = requestAnimationFrame(() => revealBlock(block));
+    return () => cancelAnimationFrame(frame);
+  }, [id, shown]);
 
   if (!open || !page) return <div className="doc-scroll" />;
   const summary = pages.find((item) => item.id === id);
@@ -632,7 +674,7 @@ function DocPage({
         : [userLabel(page.updatedBy ?? ''), when(page.updatedAt)].filter(Boolean).join(' · ');
   return (
     <div
-      className={`doc-page${compact ? ' is-compact' : ''}`}
+      className={`doc-page${compact ? ' is-compact' : ''}${page.cover ? ' has-cover' : ''}`}
       data-width={page.width ?? 'standard'}
     >
       <header className="doc-top">
@@ -685,8 +727,41 @@ function DocPage({
         </Button>
       </header>
       <div className="doc-scroll">
+        {page.cover ? (
+          <PageCover
+            cover={page.cover}
+            readOnly={readOnly}
+            loadImage={env.loadImage}
+            saveImage={env.saveImage}
+            onChange={(cover) => runtime.edit(id, { cover })}
+          />
+        ) : null}
         <article className="doc-column">
           <div className="doc-head">
+            {readOnly || (page.icon && page.cover) ? null : (
+              <div className="doc-head-actions">
+                {page.icon ? null : (
+                  <button
+                    type="button"
+                    className="doc-add-icon"
+                    onClick={() => summary && onDialog({ kind: 'icon', page: summary })}
+                  >
+                    <Smile size={14} />
+                    {t('添加图标')}
+                  </button>
+                )}
+                {page.cover ? null : (
+                  <button
+                    type="button"
+                    className="doc-add-icon"
+                    onClick={() => runtime.edit(id, { cover: defaultCover() })}
+                  >
+                    <ImageIcon size={14} />
+                    {t('添加封面')}
+                  </button>
+                )}
+              </div>
+            )}
             {page.icon ? (
               <button
                 type="button"
@@ -697,16 +772,7 @@ function DocPage({
               >
                 {page.icon}
               </button>
-            ) : readOnly ? null : (
-              <button
-                type="button"
-                className="doc-add-icon"
-                onClick={() => summary && onDialog({ kind: 'icon', page: summary })}
-              >
-                <Smile size={14} />
-                {t('添加图标')}
-              </button>
-            )}
+            ) : null}
             <textarea
               className="doc-title"
               rows={1}
@@ -815,11 +881,34 @@ function DocPage({
               <History size={14} />
               {t('历史记录')}
             </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenu(null);
+                void navigator.clipboard
+                  .writeText(blockLink({ projectId: project.id, pageId: id }))
+                  .then(() => onNotice(t('已复制链接')));
+              }}
+            >
+              <Link2 size={14} />
+              {t('复制链接')}
+            </button>
             <div role="separator" className="sf-menu-separator" />
             <button type="button" role="menuitem" onClick={() => (setMenu(null), onExport(id))}>
               <Download size={14} />
               {t('导出 Markdown')}
             </button>
+            {wordExport ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => summary && (setMenu(null), onAction('exportWord', summary))}
+              >
+                <FileText size={14} />
+                {t('导出 Word')}
+              </button>
+            ) : null}
             <button
               type="button"
               role="menuitem"

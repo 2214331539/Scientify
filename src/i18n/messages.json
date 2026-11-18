@@ -1,4 +1,19 @@
 {
+  "复制链接": ["复制链接", "Copy link"],
+  "已复制链接": ["已复制链接", "Link copied"],
+  "编辑链接": ["编辑链接", "Edit link"],
+  "移除链接": ["移除链接", "Remove link"],
+  "添加封面": ["添加封面", "Add cover"],
+  "更换封面": ["更换封面", "Change cover"],
+  "移除封面": ["移除封面", "Remove cover"],
+  "封面 {n}": ["封面 {n}", "Cover {n}"],
+  "上传图片": ["上传图片", "Upload image"],
+  "图片没能保存，请换一张再试。": [
+    "图片没能保存，请换一张再试。",
+    "The image couldn't be saved. Try another one."
+  ],
+  "导出 Word": ["导出 Word", "Export Word"],
+  "已导出 Word 文档": ["已导出 Word 文档", "Exported as a Word document"],
   "发送错误报告": ["发送错误报告", "Send error reports"],
   "出错时把错误信息发给我们，用来修复问题。不含文件内容。": [
     "出错时把错误信息发给我们，用来修复问题。不含文件内容。",

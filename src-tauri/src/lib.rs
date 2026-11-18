@@ -399,6 +399,7 @@ pub fn run() {
             docs::docs_history,
             docs::docs_merge,
             docs::docs_export,
+            docs::docs_save_file,
             docs::docs_import,
             docs::docs_agent_respond,
             research::research_import_pdf,

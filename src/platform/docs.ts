@@ -30,6 +30,8 @@ export interface DocsBackend {
   ): Promise<boolean>;
   /** Markdown files the person chooses. */
   importMarkdown?(): Promise<{ name: string; content: string }[]>;
+  /** Saves a file made from a page (a Word document) where the person chooses; false when cancelled. */
+  saveFile?(name: string, extension: 'docx', data: Uint8Array): Promise<boolean>;
 }
 
 /** The message the native side gives when a page changed since it was read. */
@@ -60,6 +62,12 @@ export const nativeDocs: DocsBackend = {
   exportMarkdown: (projectId, name, markdown, images) =>
     invoke('docs_export', { projectId, name, markdown, images }),
   importMarkdown: () => invoke('docs_import'),
+  saveFile: (name, extension, data) => {
+    let binary = '';
+    for (let at = 0; at < data.length; at += 0x8000)
+      binary += String.fromCharCode(...data.subarray(at, at + 0x8000));
+    return invoke('docs_save_file', { name, extension, data: btoa(binary) });
+  },
 };
 
 /**

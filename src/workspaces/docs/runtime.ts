@@ -196,7 +196,7 @@ export class DocsRuntime {
   /** An edit from the editor or the page header; saved shortly after the last one. */
   edit(
     id: string,
-    change: Partial<Pick<Page, 'title' | 'icon' | 'blocks' | 'width'>>,
+    change: Partial<Pick<Page, 'title' | 'icon' | 'blocks' | 'width' | 'cover'>>,
     external = false,
   ) {
     const open = this.state.open[id];

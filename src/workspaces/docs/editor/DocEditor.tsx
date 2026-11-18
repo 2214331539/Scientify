@@ -33,6 +33,8 @@ import { DocEnvContext, type DocEnv } from './env';
 import { Mascot } from '../../../components/ai/Mascot';
 import { docExtensions } from './extensions';
 import { LinkPasteMenu, isLink, type PastedLink } from './LinkPaste';
+import { LinkBubble } from './LinkBubble';
+import { blockLink, parseBlockLink } from '../blockLink';
 import type { EditorView } from '@tiptap/pm/view';
 
 export const TEXT_COLORS: [string, string | null][] = [
@@ -83,12 +85,30 @@ export function DocEditor({
   const pasteLink = useRef<(view: EditorView, event: ClipboardEvent) => boolean>(() => false);
   pasteLink.current = (view, event) => {
     const text = event.clipboardData?.getData('text/plain')?.trim() ?? '';
-    if (readOnly || !isLink(text) || event.clipboardData?.files.length) return false;
+    const page = parseBlockLink(text);
+    if (readOnly || !(page || isLink(text)) || event.clipboardData?.files.length) return false;
     const { from, to } = view.state.selection;
     const mark = view.state.schema.marks.link?.create({ href: text });
     if (!mark) return false;
-    view.dispatch(view.state.tr.insertText(text, from, to).addMark(from, from + text.length, mark));
-    setPasted({ from, to: from + text.length, url: text });
+    // A link to a page reads as the page's title.
+    const label = page
+      ? env.pages.find((item) => item.id === page.pageId)?.title || t('无标题')
+      : text;
+    view.dispatch(
+      view.state.tr.insertText(label, from, to).addMark(from, from + label.length, mark),
+    );
+    if (!page) setPasted({ from, to: from + text.length, url: text });
+    return true;
+  };
+  // Links open from their bubble; with Ctrl/⌘, or in a page that can't be edited, on click.
+  const clickLink = useRef<(view: EditorView, event: MouseEvent) => boolean>(() => false);
+  clickLink.current = (view, event) => {
+    if (view.editable && !event.ctrlKey && !event.metaKey) return false;
+    const anchor = (event.target as HTMLElement | null)?.closest?.('a[href]');
+    const href = anchor?.getAttribute('href');
+    if (!href) return false;
+    event.preventDefault();
+    envRef.current.openUrl(href);
     return true;
   };
   const editorRef = useRef<Editor | null>(null);
@@ -103,6 +123,8 @@ export function DocEditor({
     editorProps: {
       attributes: { class: 'doc-prose', spellcheck: 'false' },
       handlePaste: (view: EditorView, event: ClipboardEvent) => pasteLink.current(view, event),
+      handleClick: (view: EditorView, _pos: number, event: MouseEvent) =>
+        clickLink.current(view, event),
     },
     onUpdate: ({
       editor,
@@ -167,6 +189,16 @@ export function DocEditor({
       .focus()
       .insertContentAt(at.pos + at.node.nodeSize, at.node.toJSON())
       .run();
+  }
+  /** A link to this block, as Feishu's "复制链接"; a list links to its first item. */
+  function copyLink(at: Handle) {
+    const id = String(at.node.attrs.id ?? at.node.firstChild?.attrs.id ?? '');
+    const href = blockLink({
+      projectId: env.projectId,
+      pageId: env.pageId,
+      ...(id ? { blockId: id } : {}),
+    });
+    void navigator.clipboard.writeText(href).then(() => env.notify(t('已复制链接')));
   }
   function remove(at: Handle) {
     editor
@@ -291,6 +323,17 @@ export function DocEditor({
               <Copy size={14} />
               {t('创建副本')}
             </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                copyLink(menu.at);
+                setMenu(null);
+              }}
+            >
+              <Link2 size={14} />
+              {t('复制链接')}
+            </button>
             {textblock ? (
               <button
                 type="button"
@@ -375,6 +418,9 @@ export function DocEditor({
         ) : null}
       </Menu>
       {readOnly ? null : <TableToolbar editor={editor} backgrounds={BACKGROUNDS} />}
+      {menu || colors ? null : (
+        <LinkBubble editor={editor} env={env} readOnly={readOnly} onEdit={() => void link()} />
+      )}
       {pasted && !readOnly ? (
         <LinkPasteMenu
           editor={editor}
