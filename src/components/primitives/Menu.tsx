@@ -16,11 +16,14 @@ export function Menu({
   label,
   children,
   onClose,
+  nested = false,
 }: {
   anchor: MenuAnchor | null;
   label: string;
   children: ReactNode;
   onClose(): void;
+  /** Opened from inside another menu (a right-click on one of its items): using it keeps that menu open. */
+  nested?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [present, setPresent] = useState(!!anchor);
@@ -69,7 +72,9 @@ export function Menu({
   useEffect(() => {
     if (!anchor) return;
     const outside = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) close.current();
+      const target = event.target as Element | null;
+      if (ref.current?.contains(target) || target?.closest?.('[data-nested-menu]')) return;
+      close.current();
     };
     const dismiss = () => close.current();
     const scroll = (event: Event) => {
@@ -103,6 +108,7 @@ export function Menu({
       aria-hidden={!anchor || undefined}
       inert={!anchor}
       data-native-overlay={anchor ? 'true' : undefined}
+      data-nested-menu={nested || undefined}
       onContextMenu={(event) => event.preventDefault()}
       onClickCapture={(event) => {
         const item = (event.target as HTMLElement).closest<HTMLButtonElement>(

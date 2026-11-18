@@ -178,7 +178,6 @@ export function AssistantTranscript({
       text={message.text}
       attachments={message.attachments}
       skills={message.skills}
-      context={message.context}
       onOpenLink={onOpenLink}
       onOpenFile={local ? onOpenFile : undefined}
       loadImage={local ? loadImage : undefined}

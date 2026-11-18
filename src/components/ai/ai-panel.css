@@ -1077,17 +1077,6 @@
   background: transparent;
   padding: 0;
 }
-.sf-chat-user .sf-ai-context-excerpt {
-  margin-top: 2px;
-  text-align: right;
-  font-size: 11px;
-  opacity: 0;
-  transition: opacity var(--sf-motion-feedback) var(--sf-ease-standard);
-}
-.sf-chat-user:is(:hover, :focus-within) .sf-ai-context-excerpt,
-.sf-chat-user .sf-ai-context-excerpt[open] {
-  opacity: 1;
-}
 /* Answers: full width, no bubble; actions show on hover. */
 .sf-chat-assistant {
   width: 100%;

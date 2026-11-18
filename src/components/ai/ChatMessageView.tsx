@@ -5,12 +5,7 @@ import { usePreferences } from '../../i18n/preferences';
 import { Markdown } from '../../features/notes/Markdown';
 import { Button } from '../primitives';
 import type { AgentSkillRef } from '../../platform/agent';
-import {
-  attachmentNote,
-  contextMaterial,
-  type ChatAttachment,
-  type ContextSnapshot,
-} from '../../features/assistant/model';
+import { attachmentNote, type ChatAttachment } from '../../features/assistant/model';
 
 /** Presentation only: copying never includes hidden research context or changes the conversation. */
 export const ChatMessageView = memo(function ChatMessageView({
@@ -19,7 +14,6 @@ export const ChatMessageView = memo(function ChatMessageView({
   streaming = false,
   attachments = [],
   skills = [],
-  context,
   onOpenLink,
   onOpenFile,
   loadImage,
@@ -33,7 +27,6 @@ export const ChatMessageView = memo(function ChatMessageView({
   streaming?: boolean;
   attachments?: ChatAttachment[];
   skills?: AgentSkillRef[];
-  context?: ContextSnapshot;
   onOpenLink?: (url: string) => void;
   /** Local files named in an answer open in the center; pictures show inline. */
   onOpenFile?: (path: string) => void;
@@ -124,12 +117,6 @@ export const ChatMessageView = memo(function ChatMessageView({
       >
         {streaming ? displayedText : text}
       </Markdown>
-      {context && role === 'user' ? (
-        <details className="sf-ai-context-excerpt">
-          <summary>{t('本轮材料来源')}</summary>
-          <pre>{contextMaterial(context)}</pre>
-        </details>
-      ) : null}
       <div className="sf-message-actions">
         <Button
           variant="ghost"

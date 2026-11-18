@@ -192,12 +192,12 @@ export function AssistantConversations({
                     if (disabled) return;
                     event.preventDefault();
                     event.stopPropagation();
+                    // The list stays open under the right-click menu.
                     setAction({
                       id: item.id,
                       anchor: menuAnchor(event),
                       list: menu?.anchor.trigger,
                     });
-                    onCloseMenu();
                   }}
                   onKeyDown={(event) => {
                     if (
@@ -210,7 +210,6 @@ export function AssistantConversations({
                         anchor: menuAnchor(event),
                         list: menu?.anchor.trigger,
                       });
-                      onCloseMenu();
                     }
                   }}
                   onClick={() => onSelect(item.id)}
@@ -228,7 +227,12 @@ export function AssistantConversations({
             })}
         </div>
       </Menu>
-      <Menu anchor={action?.anchor ?? null} label={t('对话操作')} onClose={() => setAction(null)}>
+      <Menu
+        anchor={action?.anchor ?? null}
+        label={t('对话操作')}
+        nested
+        onClose={() => setAction(null)}
+      >
         {action ? (
           <>
             <Button

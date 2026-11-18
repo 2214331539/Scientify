@@ -257,7 +257,8 @@ export function TurnProcess({
       ? t('已处理 {time}', { time: duration(elapsed) })
       : t('处理过程');
   return (
-    <details className={`sf-ai-process${running ? ' is-running' : ''}`} open={running}>
+    // Folded until asked for, while running too; the line above shows what it is doing.
+    <details className={`sf-ai-process${running ? ' is-running' : ''}`}>
       <summary>
         {running ? <Mascot size={16} mood="working" /> : null}
         <span>{label}</span>
