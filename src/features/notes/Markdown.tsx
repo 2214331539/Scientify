@@ -20,6 +20,7 @@ function plainText(node: ReactNode): string {
     .join('');
 }
 import { mathRemarkPlugins, mathRehypePlugins, normalizeMathDelimiters } from './math';
+import { openDocTarget, parseBlockLink } from '../../workspaces/docs/blockLink';
 
 const remarkPlugins = [remarkGfm, ...mathRemarkPlugins];
 
@@ -68,7 +69,10 @@ export function Markdown({
       <ReactMarkdown
         urlTransform={
           rich
-            ? (url) => (/^(https?:|mailto:|#)/i.test(url) || LOCAL.test(url) ? url : '')
+            ? (url) =>
+                /^(https?:|mailto:|#)/i.test(url) || LOCAL.test(url) || parseBlockLink(url)
+                  ? url
+                  : ''
             : onPage || notePreview
               ? (url, key) =>
                   notePreview && key === 'src' && !/^(?:[a-z][\w+.-]*:|[\\/])/i.test(url)
@@ -147,6 +151,20 @@ export function Markdown({
             const path = rich && href ? localPath(href) : null;
             // A local file shows as its name with an icon, never as a raw path.
             if (path) return <FileChip path={path} label={plainText(label)} onOpen={onOpenFile} />;
+            // A project document (blockLink.ts) opens in the documents module.
+            const doc = rich && href ? parseBlockLink(href) : null;
+            if (doc)
+              return (
+                <a
+                  href={href}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openDocTarget(doc, { projectId: '', pageId: '' });
+                  }}
+                >
+                  {label}
+                </a>
+              );
             return (
               <a
                 href={href}

@@ -774,13 +774,17 @@ pub async fn agent_start_thread(
             session
         };
         let mut plan = thread_plan(&root, connection.model, domain, record);
-        let custom = custom_instructions(&app.state::<AppState>().storage, &project_id);
-        if !custom.is_empty() {
+        let mut extra = custom_instructions(&app.state::<AppState>().storage, &project_id);
+        // A click on such a link in the answer opens the page (blockLink.ts).
+        if domain != "inbox" {
+            extra += &format!("项目文档：回答里提到本项目的文档页时，写成 [页面标题](scientify://docs/{project_id}/<页面 id>)，用户点了会打开那一页；指向页面里的某一块时在后面加 #<块 id>。");
+        }
+        if !extra.is_empty() {
             let base = plan.params["developerInstructions"]
                 .as_str()
                 .unwrap_or_default()
                 .to_owned();
-            plan.params["developerInstructions"] = json!(base + &custom);
+            plan.params["developerInstructions"] = json!(base + &extra);
         }
         plan.params["approvalPolicy"] = json!(permission.approval_policy());
         plan.params["sandbox"] = json!(permission.sandbox_mode());

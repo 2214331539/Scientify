@@ -12,6 +12,19 @@ it('reads local paths from links and image sources', () => {
   expect(localPath('//cdn.example.com/a.png')).toBeNull();
 });
 
+it('opens a project document linked in an answer', async () => {
+  const user = userEvent.setup();
+  const opened = vi.fn();
+  const listener = (event: Event) => opened((event as CustomEvent).detail);
+  window.addEventListener('scientify-open-source', listener);
+  render(<Markdown rich>{'见[组会纪要](scientify://docs/p1/page9#b2)。'}</Markdown>);
+  await user.click(screen.getByRole('link', { name: '组会纪要' }));
+  window.removeEventListener('scientify-open-source', listener);
+  expect(opened).toHaveBeenCalledWith(
+    expect.objectContaining({ projectId: 'p1', workspace: 'notes', resourceId: 'page9' }),
+  );
+});
+
 it('opens local files from answers and shows the pictures the AI made', async () => {
   const user = userEvent.setup();
   const onOpenFile = vi.fn();
