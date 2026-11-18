@@ -213,6 +213,7 @@ fn project_places(
     places.push(writing_root(storage, files, project)?);
     places.push(ai_root(storage, project)?);
     places.push(project_root(storage, files, project)?);
+    places.push(crate::attachments::root(storage, project)?);
     Ok(places
         .into_iter()
         .filter_map(|place| place.canonicalize().ok())

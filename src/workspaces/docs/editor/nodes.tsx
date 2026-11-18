@@ -12,6 +12,7 @@ import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { BookOpen, Copy, FileText, ImageIcon, NotebookPen, TriangleAlert } from 'lucide-react';
 import { t } from '../../../i18n';
 import { useDocEnv } from './env';
+import { fileIcon } from '../../../components/ai/FileChip';
 
 const atomBlock = (name: string, attrs: string[], view: ComponentType<ReactNodeViewProps>) =>
   Node.create({
@@ -268,6 +269,43 @@ function FileView({ node }: ReactNodeViewProps) {
   );
 }
 export const FileBlock = atomBlock('fileBlock', ['path', 'title'], FileView);
+
+const size = (bytes: number) =>
+  bytes < 1024
+    ? `${bytes} B`
+    : bytes < 1024 * 1024
+      ? `${(bytes / 1024).toFixed(1)} KB`
+      : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+/** A file attached to the page: its icon, name and size; click to see it in the center. */
+function AttachmentView({ node }: ReactNodeViewProps) {
+  const env = useDocEnv();
+  const asset = String(node.attrs.asset ?? '');
+  const name = String(node.attrs.name || asset.split('/').pop());
+  const Icon = fileIcon(name);
+  const bytes = Number(node.attrs.size) || 0;
+  return (
+    <NodeViewWrapper className="doc-card doc-attachment" data-drag-handle="">
+      <button
+        type="button"
+        contentEditable={false}
+        title={t('在中间预览')}
+        onClick={() => env.openAttachment(asset)}
+      >
+        <Icon size={18} />
+        <span>
+          <b>{name}</b>
+          <small>{bytes ? size(bytes) : t('附件')}</small>
+        </span>
+      </button>
+    </NodeViewWrapper>
+  );
+}
+export const AttachmentBlock = atomBlock(
+  'attachmentBlock',
+  ['asset', 'name', 'size'],
+  AttachmentView,
+);
 
 // ---------- Mentions ----------
 function MentionView({ node }: ReactNodeViewProps) {

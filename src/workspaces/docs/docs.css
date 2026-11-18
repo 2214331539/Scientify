@@ -1456,3 +1456,8 @@ dialog.doc-dialog > .doc-dialog-note + * {
   outline: 2px solid var(--sf-link);
   outline-offset: 1px;
 }
+/* A file attached to a page. */
+.doc-attachment button svg {
+  flex: none;
+  color: var(--sf-link);
+}

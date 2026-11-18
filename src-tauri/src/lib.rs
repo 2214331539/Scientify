@@ -6,6 +6,7 @@ use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
 mod agent;
 mod ai;
+mod attachments;
 mod browser;
 mod collaboration;
 mod credentials;
@@ -374,6 +375,7 @@ pub fn run() {
             research::research_read_binary,
             research::research_reveal,
             research::project_folders,
+            attachments::doc_attachment,
             research::research_locate,
             research::research_open_system,
             writing::writing_tex_status,

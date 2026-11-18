@@ -1,4 +1,7 @@
 {
+  "在中间预览": ["在中间预览", "Preview in the center"],
+  "附件": ["附件", "Attachment"],
+  "文件": ["文件", "File"],
   "上方插入行": ["上方插入行", "Insert row above"],
   "下方插入行": ["下方插入行", "Insert row below"],
   "左侧插入列": ["左侧插入列", "Insert column left"],

@@ -37,6 +37,8 @@ export type BlockType =
   | 'paper'
   | 'paperNote'
   | 'file'
+  /** A file of any kind attached to the page (stored with the note assets). */
+  | 'attachment'
   | 'conflict';
 export type Block = {
   id: string;
@@ -175,7 +177,9 @@ export function blockText(block: Block): string {
               .join('\n')
           : block.type === 'paper' || block.type === 'paperNote' || block.type === 'file'
             ? String(block.props?.title ?? block.props?.path ?? '')
-            : inlineText(block.content);
+            : block.type === 'attachment'
+              ? String(block.props?.name ?? '')
+              : inlineText(block.content);
   return [own, ...(block.children ?? []).map(blockText)].filter(Boolean).join('\n');
 }
 export const pageText = (page: Page) => [page.title, ...page.blocks.map(blockText)].join('\n');

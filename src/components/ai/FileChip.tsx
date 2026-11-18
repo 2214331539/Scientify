@@ -17,6 +17,10 @@ const KINDS: [RegExp, LucideIcon][] = [
   [/\.(py|ipynb|js|ts|tsx|rs|c|cpp|h|java|go|sh|r|m|jl|json|ya?ml|toml|tex|bib)$/i, FileCode],
 ];
 
+/** The icon for a file, by its extension. */
+export const fileIcon = (path: string): LucideIcon =>
+  KINDS.find(([pattern]) => pattern.test(path))?.[1] ?? FileText;
+
 /** The last part of a path, whichever separators it uses. */
 export const baseName = (path: string) =>
   displayPath(path).split(/[\\/]/).filter(Boolean).at(-1) ?? path;

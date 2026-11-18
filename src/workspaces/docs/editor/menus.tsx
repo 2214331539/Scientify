@@ -27,6 +27,7 @@ import {
   ListOrdered,
   Minus,
   NotebookPen,
+  Paperclip,
   Quote,
   Sigma,
   Table,
@@ -140,6 +141,16 @@ function insertPicked(kind: 'paper' | 'paperNote' | 'file') {
       .run();
   };
 }
+/** Attaches files chosen with the system dialog, as cards. */
+async function attachFiles(editor: Editor, range: Range, env: DocEnv) {
+  start(editor, range).run();
+  const attached = await env.pickAttachments();
+  const nodes = attached.map((item) => ({
+    type: 'attachmentBlock',
+    attrs: { asset: item.asset, name: item.name, size: String(item.size) },
+  }));
+  if (nodes.length) editor.chain().focus().insertContent(nodes).run();
+}
 function chooseImage(editor: Editor, range: Range, env: DocEnv) {
   start(editor, range).run();
   const input = document.createElement('input');
@@ -174,6 +185,14 @@ export const SLASH: Slash[] = [
     keys: 'lwbj note biji',
     icon: icon(NotebookPen),
     run: insertPicked('paperNote'),
+  },
+  {
+    id: 'attachment',
+    group: '研究',
+    label: '文件',
+    keys: 'wj fj fujian file attachment upload',
+    icon: icon(Paperclip),
+    run: attachFiles,
   },
   {
     id: 'file',

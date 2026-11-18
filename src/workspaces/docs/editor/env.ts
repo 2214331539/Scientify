@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { PageSummary } from '../model';
+import type { Attached } from '../../../platform/attachments';
 
 export type Pick = { path: string; title: string };
 /** What the editor's blocks need from the rest of the app. */
@@ -15,6 +16,11 @@ export type DocEnv = {
   loadImage(asset: string): Promise<string>;
   /** Stores an image and returns its path. */
   saveImage(file: File): Promise<string>;
+  /** Attaches files of any kind: dropped or pasted ones, or chosen with the system dialog. */
+  attachFiles(files: File[]): Promise<Attached[]>;
+  pickAttachments(): Promise<Attached[]>;
+  /** Shows an attachment in the center. */
+  openAttachment(asset: string): void;
   paperNote(path: string): Promise<string>;
   /** Asks the person to choose a paper or a project file. */
   pick(kind: 'paper' | 'paperNote' | 'file'): Promise<Pick | null>;

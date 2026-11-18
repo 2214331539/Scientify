@@ -535,8 +535,15 @@ export function App({
   // Files named in AI answers (absolute paths) open over the current module too.
   useEffect(() => {
     const open = (event: Event) => {
-      const detail = (event as CustomEvent<{ projectId: string; path: string }>).detail;
+      const detail = (event as CustomEvent<{ projectId: string; path: string; root?: string }>)
+        .detail;
       if (!detail?.projectId || !detail.path) return;
+      // Already located (a document attachment): its folder and the path inside it.
+      if (detail.root) {
+        setPreview(null);
+        setFilePreview({ projectId: detail.projectId, root: detail.root, path: detail.path });
+        return;
+      }
       void locateFile(detail.projectId, detail.path)
         .then((located) => {
           if (!located) {

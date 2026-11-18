@@ -21,6 +21,7 @@ import {
   DocImage,
   DocMention,
   FileBlock,
+  AttachmentBlock,
   PaperBlock,
   PaperNoteBlock,
 } from './nodes';
@@ -44,6 +45,7 @@ const BLOCKS = [
   'paperBlock',
   'paperNote',
   'fileBlock',
+  'attachmentBlock',
   'conflict',
 ];
 
@@ -90,14 +92,33 @@ async function editLatex(
   else editor.chain().focus().updateInlineMath({ latex: next, pos }).run();
 }
 
-async function insertImages(editor: Editor, env: DocEnv, files: File[], pos?: number) {
+/** Dropped or pasted files: pictures become images, anything else an attachment card. */
+async function insertFiles(editor: Editor, env: DocEnv, files: File[], pos?: number) {
+  const insert = (node: Record<string, unknown>) =>
+    typeof pos === 'number'
+      ? editor.chain().focus().insertContentAt(pos, node).run()
+      : editor.chain().focus().insertContent(node).run();
+  const others = files.filter((file) => !IMAGE_TYPES.includes(file.type));
   for (const file of files) {
     if (!IMAGE_TYPES.includes(file.type)) continue;
-    const asset = await env.saveImage(file);
-    const node = { type: 'docImage', attrs: { asset, width: 1 } };
-    if (typeof pos === 'number') editor.chain().focus().insertContentAt(pos, node).run();
-    else editor.chain().focus().insertContent(node).run();
+    insert({ type: 'docImage', attrs: { asset: await env.saveImage(file), width: 1 } });
   }
+  if (others.length) insertAttachments(editor, await env.attachFiles(others), pos);
+}
+
+/** Attachment cards for stored files, at `pos` or the cursor. */
+export function insertAttachments(
+  editor: Editor,
+  attached: { asset: string; name: string; size: number }[],
+  pos?: number,
+) {
+  const nodes = attached.map((item) => ({
+    type: 'attachmentBlock',
+    attrs: { asset: item.asset, name: item.name, size: String(item.size) },
+  }));
+  if (!nodes.length) return;
+  if (typeof pos === 'number') editor.chain().focus().insertContentAt(pos, nodes).run();
+  else editor.chain().focus().insertContent(nodes).run();
 }
 
 /** Cells keep a background and an alignment besides their span and width, as in Feishu. */
@@ -159,6 +180,7 @@ export function docExtensions(env: () => DocEnv, editor: () => Editor | null) {
     PaperBlock,
     PaperNoteBlock,
     FileBlock,
+    AttachmentBlock,
     DocMention.configure({
       suggestions: mentionSuggestions(env),
       deleteTriggerWithBackspace: true,
@@ -176,9 +198,8 @@ export function docExtensions(env: () => DocEnv, editor: () => Editor | null) {
     }),
     UniqueID.configure({ types: BLOCKS, attributeName: 'id', generateID: () => blockId() }),
     FileHandler.configure({
-      allowedMimeTypes: IMAGE_TYPES,
-      onPaste: (current, files) => void insertImages(current, env(), files),
-      onDrop: (current, files, pos) => void insertImages(current, env(), files, pos),
+      onPaste: (current, files) => void insertFiles(current, env(), files).catch(() => {}),
+      onDrop: (current, files, pos) => void insertFiles(current, env(), files, pos).catch(() => {}),
     }),
   ];
 }

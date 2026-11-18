@@ -241,3 +241,19 @@ describe('tables', () => {
     expect(back.props?.cells).toEqual(table.props.cells);
   });
 });
+
+describe('attachments', () => {
+  it('round-trip through the editor and export as a link to the stored file', async () => {
+    const { blocksFromEditor } = await import('./convert');
+    const { blocksToMarkdown } = await import('./markdown');
+    const block = {
+      id: 'a1',
+      type: 'attachment' as const,
+      props: { asset: 'attachments/abc/结果.xlsx', name: '结果.xlsx', size: 2048 },
+    };
+    const [node] = blocksToEditor([block]);
+    expect(node.type).toBe('attachmentBlock');
+    expect(blocksFromEditor([node])).toEqual([block]);
+    expect(blocksToMarkdown([block])).toContain('[📎 结果.xlsx](attachments/abc/结果.xlsx)');
+  });
+});

@@ -192,6 +192,16 @@ function blockToEditor(block: Block): JSONContent {
         type: { paper: 'paperBlock', paperNote: 'paperNote', file: 'fileBlock' }[block.type],
         attrs: { id, path: String(p.path ?? ''), title: String(p.title ?? '') },
       };
+    case 'attachment':
+      return {
+        type: 'attachmentBlock',
+        attrs: {
+          id,
+          asset: String(p.asset ?? ''),
+          name: String(p.name ?? ''),
+          size: String(p.size ?? ''),
+        },
+      };
     case 'conflict': {
       const children = blocksToEditor(block.children ?? []);
       return {
@@ -386,6 +396,18 @@ function blockFromEditor(node: JSONContent): Block[] {
           type:
             node.type === 'paperBlock' ? 'paper' : node.type === 'paperNote' ? 'paperNote' : 'file',
           props: { path: String(node.attrs?.path ?? ''), title: String(node.attrs?.title ?? '') },
+        },
+      ];
+    case 'attachmentBlock':
+      return [
+        {
+          id,
+          type: 'attachment',
+          props: {
+            asset: String(node.attrs?.asset ?? ''),
+            name: String(node.attrs?.name ?? ''),
+            size: Number(node.attrs?.size) || 0,
+          },
         },
       ];
     case 'conflict':

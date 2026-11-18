@@ -1,3 +1,4 @@
+import { locateAttachment, pickAttachments, saveAttachment } from '../../platform/attachments';
 /**
  * The documents module: a project's knowledge base. The sidebar holds the page tree; the main
  * area shows the documents home or one page with its block editor.
@@ -251,6 +252,7 @@ export function DocsWorkspace({
             key={current}
             runtime={runtime}
             id={current}
+            onError={setError}
             project={project}
             library={library}
             readOnly={readOnly}
@@ -455,8 +457,10 @@ function DocPage({
   onDialog,
   onAction,
   onExport,
+  onError,
   compact = false,
 }: {
+  onError(message: string): void;
   runtime: DocsRuntime;
   id: string;
   project: Project;
@@ -530,6 +534,18 @@ function DocPage({
         return cached;
       },
       saveImage: (file) => images.save(file),
+      attachFiles: (files) => Promise.all(files.map((file) => saveAttachment(project.id, file))),
+      pickAttachments: () => pickAttachments(project.id),
+      openAttachment: (asset) =>
+        void locateAttachment(project.id, asset)
+          .then((located) =>
+            window.dispatchEvent(
+              new CustomEvent('scientify-preview-file', {
+                detail: { projectId: project.id, ...located },
+              }),
+            ),
+          )
+          .catch((reason) => onError(errorMessage(reason))),
       paperNote: async (path) => {
         const paper = await library.open(project.id, path);
         return (await library.note(project.id, paper.id)).content;
@@ -553,6 +569,7 @@ function DocPage({
       me,
       members,
       onDialog,
+      onError,
       onOpenPage,
       pages,
       project.id,

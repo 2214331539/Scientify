@@ -100,6 +100,8 @@ function blockToMarkdown(block: Block, index: number, options: MarkdownOptions):
       return `[📝 ${escape(String(p.title || p.path || ''))}](${p.path ?? ''})`;
     case 'file':
       return `[📎 ${escape(String(p.title || p.path || ''))}](${p.path ?? ''})`;
+    case 'attachment':
+      return `[📎 ${escape(String(p.name ?? ''))}](${p.asset ?? ''})`;
     case 'conflict':
       return indent(`⚠️ ${String(p.from ?? '')}\n\n${children}`, '> ');
     default:

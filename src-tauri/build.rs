@@ -38,6 +38,7 @@ fn main() {
             "research_read_binary",
             "research_reveal",
             "project_folders",
+            "doc_attachment",
             "research_locate",
             "research_open_system",
             "writing_tex_status",
