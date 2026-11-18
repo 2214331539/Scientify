@@ -1,4 +1,29 @@
 {
+  "MCP 工具": ["MCP 工具", "MCP tools"],
+  "接入 MCP 服务后，AI 能用它们提供的工具，例如读 Zotero、查数据库。对新任务生效。": [
+    "接入 MCP 服务后，AI 能用它们提供的工具，例如读 Zotero、查数据库。对新任务生效。",
+    "With MCP servers connected, the AI can use their tools, such as reading Zotero or querying a database. Applies to new tasks."
+  ],
+  "名称只能用英文字母、数字、- 和 _。": [
+    "名称只能用英文字母、数字、- 和 _。",
+    "Names may use letters, digits, - and _ only."
+  ],
+  "已经有同名的服务。": ["已经有同名的服务。", "A server with this name already exists."],
+  "请填写服务网址。": ["请填写服务网址。", "Enter the server's URL."],
+  "请填写启动命令。": ["请填写启动命令。", "Enter the command that starts it."],
+  "删除 {name}": ["删除 {name}", "Remove {name}"],
+  "名称，例如 zotero": ["名称，例如 zotero", "Name, e.g. zotero"],
+  "连接方式": ["连接方式", "Connection"],
+  "本机命令": ["本机命令", "Local command"],
+  "启动命令，例如 npx": ["启动命令，例如 npx", "Command, e.g. npx"],
+  "启动命令": ["启动命令", "Command"],
+  "参数，一行一个": ["参数，一行一个", "Arguments, one per line"],
+  "环境变量，一行一个 KEY=value": [
+    "环境变量，一行一个 KEY=value",
+    "Environment, one KEY=value per line"
+  ],
+  "环境变量": ["环境变量", "Environment"],
+  "添加 MCP 服务": ["添加 MCP 服务", "Add MCP server"],
   "链接显示方式": ["链接显示方式", "Link display"],
   "正在读取网页…": ["正在读取网页…", "Reading the page…"],
   "卡片": ["卡片", "Card"],

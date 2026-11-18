@@ -41,6 +41,64 @@ fn quoted(value: &str) -> String {
     out
 }
 
+/// A server name usable as a bare TOML key.
+fn mcp_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 40
+        && name
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || b"_-".contains(&c))
+}
+
+/// `-c` overrides adding the MCP servers turned on in Settings, the tools the
+/// Agent gets beyond Scientify's own: a command it starts (with arguments and
+/// environment) or a server it reaches by URL.
+pub fn mcp_arguments(servers: &serde_json::Value) -> Vec<String> {
+    let mut args = Vec::new();
+    for server in servers.as_array().into_iter().flatten() {
+        let name = server["name"].as_str().unwrap_or_default();
+        if server["enabled"] == false || !mcp_name(name) {
+            continue;
+        }
+        let key = format!("mcp_servers.{name}");
+        let text = |field: &str| {
+            server[field]
+                .as_str()
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+        };
+        let mut values = Vec::new();
+        if let Some(url) = text("url") {
+            values.push(format!("{key}.url={}", quoted(url)));
+        } else if let Some(command) = text("command") {
+            values.push(format!("{key}.command={}", quoted(command)));
+            let list: Vec<String> = server["args"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|arg| arg.as_str().map(quoted))
+                .collect();
+            values.push(format!("{key}.args=[{}]", list.join(",")));
+            let env: Vec<String> = server["env"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .filter(|(name, _)| mcp_name(name))
+                .filter_map(|(name, value)| value.as_str().map(|v| format!("{name}={}", quoted(v))))
+                .collect();
+            if !env.is_empty() {
+                values.push(format!("{key}.env={{{}}}", env.join(",")));
+            }
+        } else {
+            continue;
+        }
+        for value in values {
+            args.extend(["-c".to_string(), value]);
+        }
+    }
+    args
+}
+
 fn check_model(model: &str) -> Result<(), String> {
     if model.trim().is_empty() {
         return Err("请先选择模型。".into());
@@ -119,6 +177,35 @@ pub fn environment(connection: &Connection<'_>) -> Vec<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mcp_servers_become_engine_overrides() {
+        let servers = serde_json::json!([
+            {"name":"files","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","C:\\data"],
+             "env":{"TOKEN":"a\"b"},"enabled":true},
+            {"name":"zotero","url":"http://127.0.0.1:23119/mcp"},
+            {"name":"off","command":"x","enabled":false},
+            {"name":"bad name","command":"x"},
+            {"name":"empty"}
+        ]);
+        let args = mcp_arguments(&servers);
+        let values: Vec<&str> = args
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| i % 2 == 1)
+            .map(|(_, v)| v.as_str())
+            .collect();
+        assert_eq!(
+            values,
+            [
+                "mcp_servers.files.command=\"npx\"",
+                "mcp_servers.files.args=[\"-y\",\"@modelcontextprotocol/server-filesystem\",\"C:\\\\data\"]",
+                "mcp_servers.files.env={TOKEN=\"a\\\"b\"}",
+                "mcp_servers.zotero.url=\"http://127.0.0.1:23119/mcp\"",
+            ]
+        );
+        assert!(args.iter().step_by(2).all(|flag| flag == "-c"));
+    }
 
     fn connection<'a>(
         provider: &'a str,

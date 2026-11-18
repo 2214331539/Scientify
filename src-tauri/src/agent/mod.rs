@@ -197,6 +197,22 @@ impl ConnectionInput {
         }
     }
 }
+/// The MCP servers set in Settings → AI.
+fn mcp_servers<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Value {
+    app.state::<AppState>()
+        .storage
+        .load()
+        .ok()
+        .flatten()
+        .map(|data| data["settings"]["mcpServers"].clone())
+        .unwrap_or(Value::Null)
+}
+fn mcp_fingerprint(servers: &Value) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    config::mcp_arguments(servers).hash(&mut hasher);
+    hasher.finish()
+}
 fn fingerprint(connection: &config::Connection<'_>) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -530,7 +546,8 @@ fn create_engine(
     root: &std::path::Path,
     connection: &config::Connection<'_>,
 ) -> Result<EngineSession, String> {
-    let args = config::arguments(connection)?;
+    let mut args = config::arguments(connection)?;
+    args.extend(config::mcp_arguments(&mcp_servers(app)));
     let app_copy = app.clone();
     let project = project.to_string();
     let domain_copy = domain.to_string();
@@ -671,7 +688,8 @@ pub async fn agent_start_thread(
         }
         let connection = connection.as_connection();
         config::prepare(&connection)?;
-        let fp = fingerprint(&connection);
+        // Changing the MCP servers in Settings restarts the engine with them.
+        let fp = fingerprint(&connection) ^ mcp_fingerprint(&mcp_servers(&app));
         if let Some(entry) = guard.as_mut() {
             if entry.owner != owner && entry.active_turn.is_some() {
                 return Err("此会话正在另一个窗口运行。".into());

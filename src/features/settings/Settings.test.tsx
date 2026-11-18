@@ -138,3 +138,11 @@ it('schedules a storage move without replacing live data, and supports cancellat
     '请先保存内容并结束任务',
   );
 });
+
+it('reads MCP environment lines as KEY=value pairs', async () => {
+  const { parseEnv } = await import('./McpServers');
+  expect(parseEnv('TOKEN=a=b\n  # note\nPATH_X=/usr/bin\nbad line')).toEqual({
+    TOKEN: 'a=b',
+    PATH_X: '/usr/bin',
+  });
+});
