@@ -1,41 +1,265 @@
-/* The AI assistant's ball (Mascot.tsx): blinking, glancing and bobbing. */
+/* The AI assistant's ball (Mascot.tsx). Each layer animates on its own so the motions
+   combine: float (hops, tilts) > body (breath, squash) > gaze (where it looks) > eyes (blinks). */
 .sf-mascot {
   flex: none;
   overflow: visible;
 }
-.sf-mascot-eyes {
+.sf-mascot-float,
+.sf-mascot-body,
+.sf-mascot-gaze,
+.sf-mascot-eyes,
+.sf-mascot-shadow {
   transform-box: fill-box;
-  transform-origin: center;
-  animation: sf-mascot-blink 5.2s ease-in-out infinite;
 }
+.sf-mascot-float,
 .sf-mascot-body {
-  transform-box: fill-box;
   transform-origin: 50% 100%;
 }
-.sf-mascot.is-thinking .sf-mascot-eyes {
+.sf-mascot-gaze,
+.sf-mascot-eyes,
+.sf-mascot-shadow {
+  transform-origin: center;
+}
+
+/* Every mood breathes and blinks, sometimes twice. */
+.sf-mascot-body {
+  animation: sf-mascot-breathe 4.8s ease-in-out infinite;
+}
+.sf-mascot-eyes {
+  animation: sf-mascot-blink 6.4s ease-in-out infinite;
+}
+
+/* Idle: looks aside with a curious tilt, then now and then hops. */
+.sf-mascot.is-idle .sf-mascot-float {
+  animation: sf-mascot-idle 13s ease-in-out infinite;
+}
+.sf-mascot.is-idle .sf-mascot-gaze {
+  animation: sf-mascot-look 13s ease-in-out infinite;
+}
+.sf-mascot.is-idle .sf-mascot-shadow {
+  animation: sf-mascot-idle-shadow 13s ease-in-out infinite;
+}
+
+/* Greeting: a hello hop and wiggle with a happy squint, then the idle loop. */
+.sf-mascot.is-greeting .sf-mascot-float {
   animation:
-    sf-mascot-glance 2.6s ease-in-out infinite,
-    sf-mascot-blink 5.2s ease-in-out infinite;
+    sf-mascot-hello 1.6s cubic-bezier(0.32, 0.72, 0, 1) 0.2s 1 both,
+    sf-mascot-idle 13s ease-in-out 1.8s infinite;
+}
+.sf-mascot.is-greeting .sf-mascot-gaze {
+  animation:
+    sf-mascot-squint 1.6s ease-in-out 0.2s 1,
+    sf-mascot-look 13s ease-in-out 1.8s infinite;
+}
+.sf-mascot.is-greeting .sf-mascot-shadow {
+  animation:
+    sf-mascot-hello-shadow 1.6s cubic-bezier(0.32, 0.72, 0, 1) 0.2s 1 both,
+    sf-mascot-idle-shadow 13s ease-in-out 1.8s infinite;
+}
+
+/* Pointing at a button that carries the ball makes it jump, pleased. */
+:is(button, a, [role='button']):hover .sf-mascot:is(.is-idle, .is-greeting) .sf-mascot-float,
+.sf-mascot:is(.is-idle, .is-greeting):hover .sf-mascot-float {
+  animation: sf-mascot-hop 0.7s cubic-bezier(0.32, 0.72, 0, 1) 1;
+}
+:is(button, a, [role='button']):hover .sf-mascot:is(.is-idle, .is-greeting) .sf-mascot-gaze,
+.sf-mascot:is(.is-idle, .is-greeting):hover .sf-mascot-gaze {
+  animation: sf-mascot-squint 0.7s ease-in-out 1;
+}
+
+/* Thinking: tilts this way and that while glancing up and around. */
+.sf-mascot.is-thinking .sf-mascot-float {
+  animation: sf-mascot-ponder 2.6s ease-in-out infinite;
+}
+.sf-mascot.is-thinking .sf-mascot-gaze {
+  animation: sf-mascot-glance 2.6s ease-in-out infinite;
+}
+
+/* Working: bobs and sways while its eyes scan. */
+.sf-mascot.is-working .sf-mascot-float {
+  animation: sf-mascot-sway 2.2s ease-in-out infinite;
 }
 .sf-mascot.is-working .sf-mascot-body {
   animation: sf-mascot-bob 1.1s ease-in-out infinite;
 }
-.sf-mascot.is-working .sf-mascot-eyes {
+.sf-mascot.is-working .sf-mascot-gaze {
   animation: sf-mascot-scan 2.2s ease-in-out infinite;
 }
 .sf-mascot.is-working .sf-mascot-shadow {
-  transform-box: fill-box;
-  transform-origin: center;
   animation: sf-mascot-shadow 1.1s ease-in-out infinite;
+}
+
+@keyframes sf-mascot-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.02, 0.98);
+  }
 }
 @keyframes sf-mascot-blink {
   0%,
-  92%,
+  44%,
+  48%,
+  90%,
+  94%,
+  98%,
   100% {
     transform: scaleY(1);
   }
-  95% {
+  46%,
+  92%,
+  96% {
     transform: scaleY(0.12);
+  }
+}
+@keyframes sf-mascot-look {
+  0%,
+  22%,
+  56%,
+  100% {
+    transform: translate(0, 0);
+  }
+  26%,
+  38% {
+    transform: translate(-13px, 1px);
+  }
+  42%,
+  52% {
+    transform: translate(-5px, -7px);
+  }
+}
+@keyframes sf-mascot-idle {
+  0%,
+  24%,
+  44%,
+  82%,
+  95%,
+  100% {
+    transform: translateY(0) rotate(0) scale(1, 1);
+  }
+  29%,
+  38% {
+    transform: translateY(0) rotate(-7deg) scale(1, 1);
+  }
+  85% {
+    transform: translateY(0) rotate(0) scale(1.06, 0.94);
+  }
+  88% {
+    transform: translateY(-10px) rotate(0) scale(0.97, 1.04);
+  }
+  91% {
+    transform: translateY(0) rotate(0) scale(1.05, 0.95);
+  }
+  93% {
+    transform: translateY(-3px) rotate(0) scale(1, 1);
+  }
+}
+@keyframes sf-mascot-idle-shadow {
+  0%,
+  82%,
+  95%,
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  85%,
+  91% {
+    transform: scaleX(1.06);
+    opacity: 1;
+  }
+  88% {
+    transform: scaleX(0.72);
+    opacity: 0.55;
+  }
+  93% {
+    transform: scaleX(0.9);
+    opacity: 0.85;
+  }
+}
+@keyframes sf-mascot-hello {
+  0% {
+    transform: translateY(0) rotate(0) scale(1, 1);
+  }
+  14% {
+    transform: translateY(0) rotate(0) scale(1.07, 0.93);
+  }
+  32% {
+    transform: translateY(-18px) rotate(-6deg) scale(0.96, 1.05);
+  }
+  48% {
+    transform: translateY(0) rotate(0) scale(1.06, 0.94);
+  }
+  60% {
+    transform: translateY(-6px) rotate(6deg) scale(1, 1);
+  }
+  72% {
+    transform: translateY(0) rotate(-4deg) scale(1, 1);
+  }
+  86% {
+    transform: translateY(0) rotate(2deg) scale(1, 1);
+  }
+  100% {
+    transform: translateY(0) rotate(0) scale(1, 1);
+  }
+}
+@keyframes sf-mascot-hello-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  14%,
+  48% {
+    transform: scaleX(1.08);
+    opacity: 1;
+  }
+  32% {
+    transform: scaleX(0.66);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scaleX(0.88);
+    opacity: 0.8;
+  }
+}
+@keyframes sf-mascot-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  22% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+  52% {
+    transform: translateY(-12px) scale(0.95, 1.06);
+  }
+  78% {
+    transform: translateY(0) scale(1.05, 0.95);
+  }
+}
+/* Eyes squashed into a smile. */
+@keyframes sf-mascot-squint {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  25%,
+  75% {
+    transform: translateY(-1px) scale(1.06, 0.42);
+  }
+}
+@keyframes sf-mascot-ponder {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  30% {
+    transform: translateY(-2px) rotate(-8deg);
+  }
+  65% {
+    transform: translateY(-3px) rotate(4deg);
   }
 }
 @keyframes sf-mascot-glance {
@@ -48,6 +272,15 @@
   }
   60% {
     transform: translate(-4px, -10px);
+  }
+}
+@keyframes sf-mascot-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
   }
 }
 @keyframes sf-mascot-scan {
@@ -83,8 +316,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sf-mascot *,
-  .sf-mascot.is-working .sf-mascot-body {
+  .sf-mascot * {
     animation: none !important;
   }
 }

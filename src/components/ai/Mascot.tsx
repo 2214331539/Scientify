@@ -6,11 +6,13 @@ import './mascot.css';
  * out of the "开箱" logo come alive. Drawn in SVG so it stays sharp from a 14 px
  * button icon to the empty-state portrait.
  *
- * - `idle`: looks ahead and blinks now and then;
- * - `thinking`: glances up and around;
- * - `working`: bobs gently while its eyes scan.
+ * - `idle`: breathes, blinks, looks around with a tilt and now and then hops;
+ *   inside a hovered button it jumps with a happy squint;
+ * - `greeting`: hops and wiggles hello once, then idles;
+ * - `thinking`: tilts and glances up and around;
+ * - `working`: bobs and sways while its eyes scan.
  */
-export type MascotMood = 'idle' | 'thinking' | 'working';
+export type MascotMood = 'idle' | 'greeting' | 'thinking' | 'working';
 
 export type MascotPalette = { light: string; mid: string; edge: string; glow: string };
 
@@ -86,33 +88,38 @@ export function Mascot({
           fill={`url(#${id}-shadow)`}
         />
       ) : null}
-      <g className="sf-mascot-body">
-        <circle cx="50" cy="48" r="44" fill={`url(#${id}-body)`} />
-        <circle cx="50" cy="48" r="44" fill={`url(#${id}-glow)`} />
-        <circle cx="50" cy="48" r="44" fill={`url(#${id}-rim)`} />
-        <ellipse
-          cx="33"
-          cy="27"
-          rx="17"
-          ry="10"
-          transform="rotate(-32 33 27)"
-          fill={`url(#${id}-shine)`}
-        />
-        {/* Small icons get bolder eyes, or they vanish below 24 px. */}
-        <g className="sf-mascot-eyes" fill="#1c1b1f">
-          {size < 24 ? (
-            <>
-              <rect x="51" y="33" width="13" height="27" rx="6.5" />
-              <rect x="71" y="33" width="13" height="27" rx="6.5" />
-            </>
-          ) : (
-            <>
-              <rect x="54" y="37" width="8.5" height="19" rx="4.25" />
-              <rect x="71" y="37" width="8.5" height="19" rx="4.25" />
-              <ellipse cx="57.2" cy="41" rx="1.6" ry="2.4" fill="#ffffff" opacity="0.3" />
-              <ellipse cx="74.2" cy="41" rx="1.6" ry="2.4" fill="#ffffff" opacity="0.3" />
-            </>
-          )}
+      {/* Each layer moves on its own so motions combine (mascot.css). */}
+      <g className="sf-mascot-float">
+        <g className="sf-mascot-body">
+          <circle cx="50" cy="48" r="44" fill={`url(#${id}-body)`} />
+          <circle cx="50" cy="48" r="44" fill={`url(#${id}-glow)`} />
+          <circle cx="50" cy="48" r="44" fill={`url(#${id}-rim)`} />
+          <ellipse
+            cx="33"
+            cy="27"
+            rx="17"
+            ry="10"
+            transform="rotate(-32 33 27)"
+            fill={`url(#${id}-shine)`}
+          />
+          {/* Small icons get bolder eyes, or they vanish below 24 px. */}
+          <g className="sf-mascot-gaze">
+            <g className="sf-mascot-eyes" fill="#1c1b1f">
+              {size < 24 ? (
+                <>
+                  <rect x="51" y="33" width="13" height="27" rx="6.5" />
+                  <rect x="71" y="33" width="13" height="27" rx="6.5" />
+                </>
+              ) : (
+                <>
+                  <rect x="54" y="37" width="8.5" height="19" rx="4.25" />
+                  <rect x="71" y="37" width="8.5" height="19" rx="4.25" />
+                  <ellipse cx="57.2" cy="41" rx="1.6" ry="2.4" fill="#ffffff" opacity="0.3" />
+                  <ellipse cx="74.2" cy="41" rx="1.6" ry="2.4" fill="#ffffff" opacity="0.3" />
+                </>
+              )}
+            </g>
+          </g>
         </g>
       </g>
     </svg>

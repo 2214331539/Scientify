@@ -528,6 +528,8 @@ export function App({
   // Links in AI answers open over the current module; in literature, as its own tab.
   const [preview, setPreview] = useState<WebPreviewTarget | null>(null);
   const [filePreview, setFilePreview] = useState<FilePreviewTarget | null>(null);
+  // The title bar's globe: the project whose literature module should open a new browser tab.
+  const [browserRequest, setBrowserRequest] = useState<string | null>(null);
   useEffect(() => {
     setPreview(null);
     setFilePreview(null);
@@ -974,7 +976,7 @@ export function App({
           [target.id]: {
             ...(s.locations[target.id] ?? locationDefault),
             workspace: 'literature',
-            view: 'subscriptions',
+            view: 'local',
             browserId: detail.tabId,
           },
         },
@@ -1070,8 +1072,8 @@ export function App({
       backend={backend}
       requestedPaper={location.paperId}
       requestedBrowser={location.browserId}
-      view={view}
-      onView={(view) => patchLocation({ view })}
+      requestedNewBrowser={browserRequest === project.id}
+      onNewBrowserHandled={() => setBrowserRequest(null)}
       width={resourceWidth}
       resize={
         <ResizeHandle
@@ -1223,12 +1225,12 @@ export function App({
     ) : project ? (
       <Button
         variant="ghost"
-        className="sf-titlebar-tool"
+        iconOnly
+        aria-label={t('共享')}
         disabled={!ready || !canEditProject(project)}
         onClick={() => setSharing(project.id)}
       >
         <UsersRound />
-        <span>{t('共享')}</span>
       </Button>
     ) : undefined;
   // Signed out, Scientify is only the account page: at first launch and after signing out.
@@ -1275,6 +1277,14 @@ export function App({
                   open: ui.dockOpen,
                   notesAvailable: workspace !== 'notes',
                   onTool: toggleTool,
+                }
+              : undefined
+          }
+          onBrowser={
+            project
+              ? () => {
+                  setBrowserRequest(project.id);
+                  navigate('literature');
                 }
               : undefined
           }

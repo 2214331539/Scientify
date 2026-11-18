@@ -70,7 +70,6 @@ import {
   translationTab,
 } from '../../features/translation/paper-translation';
 import { BrowserPane } from './BrowserPane';
-import { SubscriptionSidebar, type BookmarkRequest } from './SubscriptionSidebar';
 import { FeaturePlaceholder } from '../../components/workspace/FeaturePlaceholder';
 import TextMarkdownPreview from '../files/MarkdownPreview';
 import '../files/files.css';
@@ -112,33 +111,32 @@ export function LocalLiterature({
   store,
   backend,
   library = nativeLibrary,
-  view,
-  onView,
   width,
   resize,
   onContext,
   requestedPaper,
   requestedBrowser,
+  requestedNewBrowser,
+  onNewBrowserHandled,
 }: {
   project: Project;
   store: WorkspaceStore;
   backend: ResearchBackend;
   library?: LibraryBackend;
-  view: string;
-  onView: (view: string) => void;
   width: number;
   resize?: ReactNode;
   onContext: (context: WorkContext) => void;
   requestedPaper?: string | null;
   requestedBrowser?: string;
+  /** The title bar asked for a new browser tab; open one and report it handled. */
+  requestedNewBrowser?: boolean;
+  onNewBrowserHandled?: () => void;
 }) {
   const readOnly = !canEditProject(project, 'library');
   const viewActive = useActiveView();
   // Inside a project the folder tree lives in the app sidebar while this module is showing.
   const slot = useSidebarSlot();
   const workspaceBusy = useStore(store, (s) => s.busy);
-  const webSources = useStore(store, (s) => s.data?.webSources);
-  const [bookmark, setBookmark] = useState<BookmarkRequest | null>(null);
   const [scan, setScan] = useState<LibraryScan>({
     root: null,
     entries: [],
@@ -157,6 +155,11 @@ export function LocalLiterature({
       setSession((current) => ({ ...current, active: requestedBrowser }));
     }
   }, [requestedBrowser, session.tabs]);
+  useEffect(() => {
+    if (!requestedNewBrowser) return;
+    onNewBrowserHandled?.();
+    void openWebTab().catch((e) => setError(errorMessage(e)));
+  }, [requestedNewBrowser]);
   const [query, setQuery] = useState(''),
     [searchOpen, setSearchOpen] = useState(false),
     [showNotes, setShowNotes] = useState(false),
@@ -437,15 +440,19 @@ export function LocalLiterature({
       }
     });
   }
+  async function openWebTab() {
+    const tab = await browserCommand<BrowserTab>({ op: 'open', project_id: project.id });
+    setSession((s) => ({
+      ...s,
+      tabs: [
+        ...s.tabs.filter((existing) => existing.id !== tab.id),
+        { id: tab.id, title: t('浏览器新页'), kind: 'web' },
+      ],
+      active: tab.id,
+    }));
+  }
   async function newWeb() {
-    await run(async () => {
-      const tab = await browserCommand<BrowserTab>({ op: 'open', project_id: project.id });
-      setSession((s) => ({
-        ...s,
-        tabs: [...s.tabs, { id: tab.id, title: t('浏览器新页'), kind: 'web' }],
-        active: tab.id,
-      }));
-    });
+    await run(openWebTab);
   }
   function importFiles(files: File[], folder: string, hasDirectory = false) {
     return run(async () => {
@@ -824,225 +831,185 @@ export function LocalLiterature({
       style={{ '--literature-sidebar-width': `${width}px` } as CSSProperties}
       aria-label={t('本地文献目录')}
     >
-      <nav className="literature-sidebar-views">
-        <Button
-          variant="ghost"
-          aria-current={view !== 'subscriptions' ? 'page' : undefined}
-          onClick={() => onView('local')}
-        >
-          {t('Library')}
-        </Button>
-        <Button
-          variant="ghost"
-          aria-current={view === 'subscriptions' ? 'page' : undefined}
-          onClick={() => onView('subscriptions')}
-        >
-          {t('Subscriptions')}
-        </Button>
-      </nav>
-      {view === 'subscriptions' ? (
-        <SubscriptionSidebar
-          store={store}
-          bookmark={bookmark}
-          onBookmarkHandled={() => setBookmark(null)}
-          onNewBrowser={() => void newWeb()}
-          onOpen={async (address) => {
-            const tab = await browserCommand<BrowserTab>({
-              op: 'openUrl',
-              project_id: project.id,
-              address,
-            });
-            setSession((s) => ({
-              ...s,
-              active: tab.id,
-              tabs: [
-                ...s.tabs.filter((t) => t.id !== tab.id),
-                { id: tab.id, title: tab.title || tab.url, url: tab.url, kind: 'web' },
-              ],
-            }));
-          }}
-        />
-      ) : (
-        <div className="library-directory">
-          <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
-            {searchOpen ? (
-              <Input
-                ref={search}
-                className="library-toolbar-search"
-                autoFocus
+      <div className="library-directory">
+        <div className="library-root-toolbar" aria-label={t('文献目录工具')}>
+          {searchOpen ? (
+            <Input
+              ref={search}
+              className="library-toolbar-search"
+              autoFocus
+              aria-label={t('搜索文献')}
+              placeholder={t('搜索文件名和路径')}
+              value={query}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                if (e.target.value) setCollapsed(new Set());
+              }}
+              onBlur={() => setSearchOpen(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') {
+                  e.preventDefault();
+                  if (e.key === 'Escape') setQuery('');
+                  setSearchOpen(false);
+                  requestAnimationFrame(() => {
+                    if (!search.current) searchTrigger.current?.focus();
+                  });
+                }
+              }}
+            />
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                iconOnly
+                aria-label={t('打开文献文件夹')}
+                onClick={() => void choose()}
+                disabled={busy}
+              >
+                <FolderOpen />
+              </Button>
+              <div className="library-root-title">
+                <span className="truncate" title={scan.root ?? ''}>
+                  {scan.root ? filename(scan.root) : t('文献库')}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                iconOnly
                 aria-label={t('搜索文献')}
-                placeholder={t('搜索文件名和路径')}
-                value={query}
-                onFocus={(e) => e.currentTarget.select()}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  if (e.target.value) setCollapsed(new Set());
+                ref={searchTrigger}
+                onClick={() => {
+                  setSearchOpen(true);
                 }}
-                onBlur={() => setSearchOpen(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
-                    e.preventDefault();
-                    if (e.key === 'Escape') setQuery('');
-                    setSearchOpen(false);
-                    requestAnimationFrame(() => {
-                      if (!search.current) searchTrigger.current?.focus();
-                    });
+              >
+                <Search />
+              </Button>
+              <Button
+                variant="ghost"
+                iconOnly
+                aria-label={t('更多操作')}
+                onClick={(e) =>
+                  void showMenu(
+                    '',
+                    e.currentTarget.getBoundingClientRect().left,
+                    e.currentTarget.getBoundingClientRect().bottom,
+                  )
+                }
+              >
+                <MoreHorizontal />
+              </Button>
+              <Button
+                variant="ghost"
+                iconOnly
+                aria-label={t('新建文件夹')}
+                disabled={readOnly || !scan.root || busy}
+                onClick={() => startFolder(directory)}
+              >
+                <FolderPlus />
+              </Button>
+            </>
+          )}
+        </div>
+        <div
+          className={`local-file-tree${dropTarget !== null ? ' is-file-dragging' : ''}`}
+          {...fileEvents}
+          onClick={(event) => {
+            // Clicking empty space clears the selection, so new folders go to the root.
+            if ((event.target as Element).closest('[data-tree-id], button, input, a')) return;
+            setSelected('');
+            setSelectedPaths(new Set());
+          }}
+        >
+          <TreeView
+            label={t('项目文献')}
+            items={tree}
+            draft={
+              draft
+                ? {
+                    ...draft,
+                    label: t('文件夹名称'),
+                    onChange: (value) => setDraft({ ...draft, value, error: undefined }),
+                    onCommit: commitFolder,
+                    onCancel: () => setDraft(null),
                   }
-                }}
-              />
-            ) : (
-              <>
+                : null
+            }
+            selectedId={selected}
+            selectedIds={selectedPaths}
+            onSelectionChange={(paths, active) => {
+              setSelectedPaths(paths);
+              setSelected(active);
+            }}
+            dropTargetId={dropTarget}
+            collapsed={collapsed}
+            onToggle={(id) => {
+              setSelected(id);
+              setCollapsed((s) => {
+                const n = new Set(s);
+                if (n.has(id)) n.delete(id);
+                else n.add(id);
+                return n;
+              });
+            }}
+            onOpen={(path) => void open(path)}
+            onContextMenu={(path, event) => void showMenu(path, event.clientX, event.clientY)}
+          />
+          {dropTarget !== null && (
+            <div className="library-drop-hint">
+              {t('复制到 {folder}', {
+                folder: dropTarget || filename(scan.root ?? t('文献库')),
+              })}
+            </div>
+          )}
+          {!scan.root && (
+            <div className="library-unmounted">
+              <Button onClick={() => void choose()}>{t('打开文献文件夹')}</Button>
+              <p>{t('选择真实目录，PDF 与笔记保存在原位置。')}</p>
+            </div>
+          )}
+          {scan.papers
+            .filter((p) => !scan.entries.some((e) => e.path === p.path))
+            .map((p) => (
+              <div key={p.id} className="missing-paper-row">
                 <Button
                   variant="ghost"
-                  iconOnly
-                  aria-label={t('打开文献文件夹')}
-                  onClick={() => void choose()}
-                  disabled={busy}
-                >
-                  <FolderOpen />
-                </Button>
-                <div className="library-root-title">
-                  <span className="truncate" title={scan.root ?? ''}>
-                    {scan.root ? filename(scan.root) : t('文献库')}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  iconOnly
-                  aria-label={t('搜索文献')}
-                  ref={searchTrigger}
+                  className="missing-paper"
                   onClick={() => {
-                    setSearchOpen(true);
+                    setDialog({ kind: 'relink', path: p.id, value: p.path });
                   }}
                 >
-                  <Search />
+                  {t('重新关联')} · {filename(p.path)}
                 </Button>
                 <Button
                   variant="ghost"
                   iconOnly
-                  aria-label={t('更多操作')}
-                  onClick={(e) =>
-                    void showMenu(
-                      '',
-                      e.currentTarget.getBoundingClientRect().left,
-                      e.currentTarget.getBoundingClientRect().bottom,
-                    )
-                  }
-                >
-                  <MoreHorizontal />
-                </Button>
-                <Button
-                  variant="ghost"
-                  iconOnly
-                  aria-label={t('新建文件夹')}
-                  disabled={readOnly || !scan.root || busy}
-                  onClick={() => startFolder(directory)}
-                >
-                  <FolderPlus />
-                </Button>
-              </>
-            )}
-          </div>
-          <div
-            className={`local-file-tree${dropTarget !== null ? ' is-file-dragging' : ''}`}
-            {...fileEvents}
-            onClick={(event) => {
-              // Clicking empty space clears the selection, so new folders go to the root.
-              if ((event.target as Element).closest('[data-tree-id], button, input, a')) return;
-              setSelected('');
-              setSelectedPaths(new Set());
-            }}
-          >
-            <TreeView
-              label={t('项目文献')}
-              items={tree}
-              draft={
-                draft
-                  ? {
-                      ...draft,
-                      label: t('文件夹名称'),
-                      onChange: (value) => setDraft({ ...draft, value, error: undefined }),
-                      onCommit: commitFolder,
-                      onCancel: () => setDraft(null),
-                    }
-                  : null
-              }
-              selectedId={selected}
-              selectedIds={selectedPaths}
-              onSelectionChange={(paths, active) => {
-                setSelectedPaths(paths);
-                setSelected(active);
-              }}
-              dropTargetId={dropTarget}
-              collapsed={collapsed}
-              onToggle={(id) => {
-                setSelected(id);
-                setCollapsed((s) => {
-                  const n = new Set(s);
-                  if (n.has(id)) n.delete(id);
-                  else n.add(id);
-                  return n;
-                });
-              }}
-              onOpen={(path) => void open(path)}
-              onContextMenu={(path, event) => void showMenu(path, event.clientX, event.clientY)}
-            />
-            {dropTarget !== null && (
-              <div className="library-drop-hint">
-                {t('复制到 {folder}', {
-                  folder: dropTarget || filename(scan.root ?? t('文献库')),
-                })}
-              </div>
-            )}
-            {!scan.root && (
-              <div className="library-unmounted">
-                <Button onClick={() => void choose()}>{t('打开文献文件夹')}</Button>
-                <p>{t('选择真实目录，PDF 与笔记保存在原位置。')}</p>
-              </div>
-            )}
-            {scan.papers
-              .filter((p) => !scan.entries.some((e) => e.path === p.path))
-              .map((p) => (
-                <div key={p.id} className="missing-paper-row">
-                  <Button
-                    variant="ghost"
-                    className="missing-paper"
-                    onClick={() => {
-                      setDialog({ kind: 'relink', path: p.id, value: p.path });
-                    }}
-                  >
-                    {t('重新关联')} · {filename(p.path)}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    size="sm"
-                    aria-label={t('移除失联记录')}
-                    title={t('移除失联记录')}
-                    onClick={async () => {
-                      if (
-                        await confirmAction(
-                          t('移除“{name}”的失联记录？不会删除仍存在的文件。', {
-                            name: filename(p.path),
-                          }),
-                        )
+                  size="sm"
+                  aria-label={t('移除失联记录')}
+                  title={t('移除失联记录')}
+                  onClick={async () => {
+                    if (
+                      await confirmAction(
+                        t('移除“{name}”的失联记录？不会删除仍存在的文件。', {
+                          name: filename(p.path),
+                        }),
                       )
-                        void mutate({ op: 'pruneMissing', id: p.id });
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              ))}
-          </div>
-          <div className="library-bottom">
-            <span role={importProgress ? 'status' : undefined}>
-              {importProgress || `${scan.entries.filter((e) => e.pdf).length} PDF`}
-            </span>
-            <span className="spacer" />
-          </div>
+                    )
+                      void mutate({ op: 'pruneMissing', id: p.id });
+                  }}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            ))}
         </div>
-      )}
+        <div className="library-bottom">
+          <span role={importProgress ? 'status' : undefined}>
+            {importProgress || `${scan.entries.filter((e) => e.pdf).length} PDF`}
+          </span>
+          <span className="spacer" />
+        </div>
+      </div>
     </aside>
   );
   // The note beside a paper may take the room the AI panel can: all but a
@@ -1124,11 +1091,6 @@ export function LocalLiterature({
                   key={active.id}
                   id={active.id}
                   initialUrl={active.url}
-                  isBookmarked={(url) => !!webSources?.items.some((item) => item.url === url)}
-                  onBookmark={(tab) => {
-                    onView('subscriptions');
-                    setBookmark({ title: tab.title || tab.url, url: tab.url });
-                  }}
                   onChanged={(tab) =>
                     setSession((s) => ({
                       ...s,

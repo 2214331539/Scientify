@@ -126,7 +126,8 @@ export function ProjectSyncControl({
     <>
       <Button
         variant="ghost"
-        className={trigger === 'share' ? 'sf-titlebar-tool' : 'project-sync-trigger'}
+        iconOnly={trigger === 'share'}
+        className={trigger === 'share' ? undefined : 'project-sync-trigger'}
         aria-label={
           trigger === 'share'
             ? t('共享与同步：{status}', { status })
@@ -138,10 +139,7 @@ export function ProjectSyncControl({
         }}
       >
         {trigger === 'share' ? (
-          <>
-            <UsersRound size={15} />
-            <span>{t('共享')}</span>
-          </>
+          <UsersRound />
         ) : (
           <>
             {sync.syncing ? (

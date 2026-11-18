@@ -2,13 +2,13 @@ import { act, cleanup, render, screen, waitFor, within, fireEvent } from '@testi
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { useState } from 'react';
 import { LocalLiterature } from './LocalLiterature';
 import { emptyWorkspace } from '../../domain/workspace';
 import { createWorkspaceStore } from '../../stores/workspace';
 import type { WorkspaceBackend } from '../../platform/desktop';
 import type { ResearchBackend } from '../../platform/research';
 import type { LibraryBackend, LibraryScan } from '../../platform/library';
+import { browserCommand } from '../../platform/browser-pane';
 import { emptyLocalSession, openLocalPdf, closeLocalTab, paperNote } from './local-session';
 import { getFileRuntime } from '../../editor/sessions';
 import { noteFiles } from '../../platform/library';
@@ -140,8 +140,13 @@ async function fixture(requestedPaper?: string) {
     askAI: async () => '',
   };
   const onContext = vi.fn();
-  function Host() {
-    const [view, onView] = useState('local');
+  function Host({
+    requestedNewBrowser,
+    onNewBrowserHandled,
+  }: {
+    requestedNewBrowser?: boolean;
+    onNewBrowserHandled?: () => void;
+  }) {
     return (
       <LocalLiterature
         project={project}
@@ -149,8 +154,8 @@ async function fixture(requestedPaper?: string) {
         backend={backend}
         library={library}
         requestedPaper={requestedPaper}
-        view={view}
-        onView={onView}
+        requestedNewBrowser={requestedNewBrowser}
+        onNewBrowserHandled={onNewBrowserHandled}
         width={240}
         onContext={onContext}
       />
@@ -256,13 +261,12 @@ it('closes PDF and note tabs only after a paired deletion succeeds', async () =>
   expect(library.command).toHaveBeenCalledWith(project.id, { op: 'delete', path: 'a.pdf' });
   expect(getFileRuntime(noteFiles(library)).sessions.size).toBe(0);
 });
-it('offers deletion from PDF tabs in subscriptions and preserves notes on failure', async () => {
+it('offers deletion from PDF tabs and preserves notes on failure', async () => {
   const { Host, library, user } = await fixture();
   render(<Host />);
   const entry = await screen.findByRole('treeitem', { name: 'a.pdf' });
   await user.click(entry);
   await screen.findByRole('textbox', { name: '论文笔记正文' });
-  await user.click(screen.getByRole('button', { name: '订阅' }));
   vi.mocked(library.command).mockRejectedValueOnce(new Error('trash unavailable'));
   const tab = within(screen.getByRole('tablist', { name: '文献标签页' })).getByRole('tab', {
     name: 'a.pdf',
@@ -426,7 +430,7 @@ it('replaces the entire directory toolbar during search and restores it on Enter
   expect((screen.getByRole('textbox', { name: '搜索文献' }) as HTMLInputElement).value).toBe(
     'a.pdf',
   );
-  await user.click(screen.getByRole('button', { name: '文献库' }));
+  await user.click(screen.getByRole('complementary', { name: '本地文献目录' }));
   expect(screen.queryByRole('textbox', { name: '搜索文献' })).toBeNull();
   await user.click(screen.getByRole('button', { name: '搜索文献' }));
   await user.keyboard('{Escape}');
@@ -483,18 +487,41 @@ it('keeps failed note saves visible and blocks closing the note', async () => {
     'existing note draft',
   );
 });
-it('opens a real context menu and restores the embedded browser subscription entry', async () => {
+it('opens a real context menu and shows only the library in the sidebar', async () => {
   const { Host, user, library } = await fixture();
   render(<Host />);
   const entry = await screen.findByRole('treeitem', { name: 'a.pdf' });
   fireEvent.contextMenu(entry, { clientX: 100, clientY: 100 });
   await screen.findByRole('menuitem', { name: '打开论文笔记' });
   await user.click(screen.getByRole('menuitem', { name: '复制' }));
-  await user.click(screen.getByRole('button', { name: '订阅' }));
-  // No recommendation service yet, so no placeholder entry.
-  expect(screen.queryByRole('button', { name: /消息推荐/ })).toBeNull();
-  expect(screen.getByRole('button', { name: '打开浏览器' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: '订阅' })).toBeNull();
   expect(library.command).toHaveBeenCalledWith(expect.any(String), { op: 'scan' });
+});
+it('opens a new browser tab when the title bar asks for one', async () => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.mocked(browserCommand).mockImplementation(async (request) =>
+    request.op === 'open'
+      ? ({ id: 'web-1', projectId: '', url: '', title: '' } as never)
+      : ([] as never),
+  );
+  const { Host } = await fixture();
+  const handled = vi.fn();
+  render(<Host requestedNewBrowser onNewBrowserHandled={handled} />);
+  expect(
+    await within(screen.getByRole('tablist', { name: '文献标签页' })).findByRole('tab', {
+      name: '浏览器新页',
+    }),
+  ).toBeTruthy();
+  expect(handled).toHaveBeenCalledTimes(1);
+  expect(browserCommand).toHaveBeenCalledWith(expect.objectContaining({ op: 'open' }));
+  vi.mocked(browserCommand).mockImplementation(async () => [] as never);
+  vi.unstubAllGlobals();
 });
 it('keeps pairing behavior independent from titles and retains note buffers after leaving a view', async () => {
   let s = openLocalPdf(emptyLocalSession(), 'id', 'old.pdf');

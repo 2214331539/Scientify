@@ -18,25 +18,6 @@
   background: var(--sf-surface-chrome);
   overflow: hidden;
 }
-.literature-sidebar-views {
-  display: flex;
-  height: 36px;
-  border-bottom: 1px solid var(--sf-border-subtle);
-}
-.literature-sidebar-views .sf-button {
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  font-size: 12px;
-  padding-inline: 4px;
-}
-.literature-sidebar-views .sf-button[aria-current='page'] {
-  border-bottom-color: var(--sf-text-secondary);
-  color: var(--sf-text-primary);
-  background: var(--sf-surface-canvas);
-}
 .literature-blank {
   display: flex;
   flex: 1;
@@ -386,32 +367,6 @@
   height: 100%;
   min-height: 0;
   background: transparent;
-}
-.literature-sidebar.is-docked .literature-sidebar-views {
-  display: flex;
-  flex: none;
-  gap: 2px;
-  height: auto;
-  padding: 2px;
-  margin-bottom: 8px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--sf-surface-hover);
-}
-.literature-sidebar.is-docked .literature-sidebar-views .sf-button {
-  height: 24px;
-  min-height: 24px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--sf-text-secondary);
-}
-.literature-sidebar.is-docked .literature-sidebar-views .sf-button[aria-current='page'] {
-  background: var(--sf-surface-canvas);
-  color: var(--sf-text-primary);
-  box-shadow:
-    0 0 0 1px var(--sf-border-subtle),
-    0 1px 2px rgb(0 0 0 / 5%);
 }
 .literature-sidebar.is-docked .library-directory {
   flex: 1;

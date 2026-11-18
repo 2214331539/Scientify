@@ -203,7 +203,7 @@ export function AssistantTranscript({
           <AssistantRuns key={conversation.id} projectId={scope} conversationId={conversation.id} />
           {!messages.length ? (
             <div className="sf-ai-conversation-empty">
-              <Mascot size={56} shadow />
+              <Mascot size={56} mood="greeting" shadow />
               {t('提问，或直接描述要在当前工作区完成的任务')}
             </div>
           ) : (

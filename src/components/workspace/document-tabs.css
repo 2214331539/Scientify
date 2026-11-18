@@ -20,24 +20,25 @@
   min-width: 110px;
   max-width: 240px;
   border-right: 1px solid var(--sf-border-subtle);
-  border-top: 2px solid transparent;
   border-radius: var(--sf-radius) var(--sf-radius) 0 0;
+  color: var(--sf-text-secondary);
   transition:
     background-color var(--sf-motion-feedback) var(--sf-ease-standard),
-    border-color var(--sf-motion-feedback) var(--sf-ease-standard),
     transform var(--sf-motion-feedback) var(--sf-ease-apple);
 }
 .document-tab:hover {
   background: var(--sf-surface-hover);
 }
+/* The open tab joins the page below it: same background, darker label, no accent bar. */
 .document-tab.is-active {
   background: var(--sf-surface-canvas);
-  border-top-color: var(--sf-text-secondary);
+  color: var(--sf-text-primary);
 }
 .document-tab .sf-button {
   border: 0;
   border-radius: var(--sf-radius) var(--sf-radius) 0 0;
   background: transparent;
+  color: inherit;
 }
 .document-tab [role='tab'] {
   min-width: 0;

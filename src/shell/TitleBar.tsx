@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, FileText, PanelLeft, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, Globe, PanelLeft, Search } from 'lucide-react';
 import { Mascot } from '../components/ai/Mascot';
 import type { ReactNode } from 'react';
 import { Button } from '../components/primitives';
@@ -21,6 +21,7 @@ export function TitleBar({
   share,
   notifications,
   dock,
+  onBrowser,
   onHome,
   onBack,
   onForward,
@@ -41,6 +42,8 @@ export function TitleBar({
     notesAvailable: boolean;
     onTool(tool: 'assistant' | 'notes'): void;
   };
+  /** Opens a new browser tab in the project's literature module. */
+  onBrowser?(): void;
   onHome(): void;
   onBack(): void;
   onForward(): void;
@@ -116,8 +119,19 @@ export function TitleBar({
         <kbd>{`${mod}K`}</kbd>
       </button>
       <div className="sf-titlebar-right" data-tauri-drag-region>
+        {onBrowser ? (
+          <Button
+            variant="ghost"
+            iconOnly
+            aria-label={t('打开浏览器')}
+            disabled={!ready}
+            onClick={onBrowser}
+          >
+            <Globe />
+          </Button>
+        ) : null}
         {share}
-        {share ? <span className="sf-titlebar-sep" /> : null}
+        {share || onBrowser ? <span className="sf-titlebar-sep" /> : null}
         {notifications}
         {dock ? (
           <>
@@ -125,27 +139,25 @@ export function TitleBar({
               <Button
                 id="notes-toggle"
                 variant="ghost"
-                className="sf-titlebar-tool"
+                iconOnly
                 aria-label={t('文档')}
                 aria-pressed={dock.open && dock.tool === 'notes'}
                 disabled={!ready}
                 onClick={() => dock.onTool('notes')}
               >
                 <FileText />
-                <span>{t('文档')}</span>
               </Button>
             ) : null}
             <Button
               id="assistant-toggle"
               variant="ghost"
-              className="sf-titlebar-tool"
+              iconOnly
               aria-label={t('AI 助手')}
               aria-pressed={dock.open && dock.tool === 'assistant'}
               disabled={!ready}
               onClick={() => dock.onTool('assistant')}
             >
-              <Mascot size={16} />
-              <span>AI</span>
+              <Mascot size={18} />
             </Button>
           </>
         ) : null}

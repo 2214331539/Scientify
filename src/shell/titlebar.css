@@ -51,10 +51,6 @@
   width: 20px;
   height: 20px;
 }
-.sf-titlebar-tool.sf-button {
-  gap: 6px;
-  padding: 0 8px;
-}
 .sf-titlebar-sep {
   width: 1px;
   height: 18px;
@@ -141,10 +137,4 @@ button.sf-crumb:hover {
 .sf-titlebar .window-controls {
   align-self: stretch;
   margin-left: 6px;
-}
-
-@media (max-width: 1240px) {
-  .sf-titlebar-tool.sf-button span {
-    display: none;
-  }
 }

@@ -363,12 +363,9 @@ it('opens manuscripts in writing and keeps the assistant draft across modules', 
   const draft = screen.getByRole('textbox', { name: '向 AI 提问' });
   await user.type(draft, 'Keep my question');
   await user.click(rail().getByRole('button', { name: t('Literature') }));
-  await user.click(screen.getByRole('button', { name: t('Subscriptions') }));
-  expect(
-    within(screen.getByRole('region', { name: t('文献订阅') })).getByRole('button', {
-      name: /打开浏览器/,
-    }),
-  ).toBeTruthy();
+  // The literature sidebar is the library alone; the browser opens from the title bar.
+  expect(screen.queryByRole('button', { name: t('Subscriptions') })).toBeNull();
+  expect(screen.getByRole('button', { name: '打开浏览器' })).toBeTruthy();
   expect(screen.getByRole('textbox', { name: '向 AI 提问' })).toBe(draft);
   expect((draft as HTMLTextAreaElement).value).toBe('Keep my question');
   expect(backend.askAI).not.toHaveBeenCalled();
