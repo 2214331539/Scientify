@@ -43,7 +43,16 @@ export function AssistantConversations({
   onRename,
   onDelete,
 }: Props) {
-  const [action, setAction] = useState<{ id: string; anchor: MenuAnchor } | null>(null);
+  // `list` is the button that opened the conversation list: after renaming or
+  // deleting from the right-click menu the list opens again, as it was.
+  const [action, setAction] = useState<{
+    id: string;
+    anchor: MenuAnchor;
+    list?: HTMLElement | null;
+  } | null>(null);
+  const reopen = (list?: HTMLElement | null) => {
+    if (list instanceof HTMLButtonElement && list.isConnected) onOpenMenu('sessions', list);
+  };
   // Finds past chats by title or by what was said in them.
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
@@ -183,8 +192,12 @@ export function AssistantConversations({
                     if (disabled) return;
                     event.preventDefault();
                     event.stopPropagation();
+                    setAction({
+                      id: item.id,
+                      anchor: menuAnchor(event),
+                      list: menu?.anchor.trigger,
+                    });
                     onCloseMenu();
-                    setAction({ id: item.id, anchor: menuAnchor(event) });
                   }}
                   onKeyDown={(event) => {
                     if (
@@ -192,8 +205,12 @@ export function AssistantConversations({
                       !disabled
                     ) {
                       event.preventDefault();
+                      setAction({
+                        id: item.id,
+                        anchor: menuAnchor(event),
+                        list: menu?.anchor.trigger,
+                      });
                       onCloseMenu();
-                      setAction({ id: item.id, anchor: menuAnchor(event) });
                     }
                   }}
                   onClick={() => onSelect(item.id)}
@@ -218,7 +235,7 @@ export function AssistantConversations({
               variant="ghost"
               role="menuitem"
               disabled={disabled}
-              onClick={() => void onRename(action.id)}
+              onClick={() => void onRename(action.id).finally(() => reopen(action.list))}
             >
               <Pencil size={14} />
               {t('重命名对话')}
@@ -229,7 +246,7 @@ export function AssistantConversations({
               role="menuitem"
               className="sf-menu-danger"
               disabled={deleteDisabled}
-              onClick={() => void onDelete(action.id)}
+              onClick={() => void onDelete(action.id).finally(() => reopen(action.list))}
             >
               <Trash2 size={14} />
               {t('删除对话')}
