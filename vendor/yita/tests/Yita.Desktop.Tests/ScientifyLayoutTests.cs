@@ -19,6 +19,15 @@ namespace Yita.Desktop.Tests;
 
 public sealed class ScientifyLayoutTests
 {
+    [Fact]
+    public void APopupGoingToAScreenOfAnotherScaleIsRescaledFirst()
+    {
+        // A 150% side screen and a 100% main one: hidden moves between them keep the old scale.
+        Assert.True(TranslationPopupWindow.NeedsRescale(1.0, 1.5));
+        Assert.True(TranslationPopupWindow.NeedsRescale(1.5, 1.0));
+        Assert.False(TranslationPopupWindow.NeedsRescale(1.25, 1.25));
+    }
+
     [AvaloniaFact]
     public void PopupStartsCompactAndKeepsItsWidthWhileTranslationStreams()
     {

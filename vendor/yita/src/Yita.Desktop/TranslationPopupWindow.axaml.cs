@@ -265,8 +265,22 @@ public sealed partial class TranslationPopupWindow : Window
             MinHeight = Math.Min(104, MaxHeight);
             Width = Math.Clamp(Width, MinWidth, MaxWidth);
         }
+        // Moved while hidden, a window keeps the scale of the screen it was last shown on, so
+        // after a 150% screen it comes up half as large again on a 100% one. Shown unseen
+        // before the move, it is told the new screen's scale like a window being dragged over.
+        var rescale = screen is not null && !IsVisible && NeedsRescale(screen.Scaling, RenderScaling);
+        if (rescale)
+        {
+            Opacity = 0;
+            Show();
+        }
         PlaceAtPreferredOffset();
+        if (rescale) Opacity = 1;
     }
+
+    /// <summary>Whether the window's scale is not the scale of the screen it is about to show on.</summary>
+    internal static bool NeedsRescale(double screenScaling, double windowScaling) =>
+        Math.Abs(screenScaling - windowScaling) > 0.01;
 
     private void RefreshText()
     {
