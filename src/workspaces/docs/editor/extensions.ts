@@ -1,7 +1,7 @@
 import { Extension, InputRule, type Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
-import { TableKit } from '@tiptap/extension-table';
+import { TableCell, TableHeader, TableKit } from '@tiptap/extension-table';
 import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details';
 import { Mathematics } from '@tiptap/extension-mathematics';
 import { BackgroundColor, Color, TextStyle } from '@tiptap/extension-text-style';
@@ -100,6 +100,27 @@ async function insertImages(editor: Editor, env: DocEnv, files: File[], pos?: nu
   }
 }
 
+/** Cells keep a background and an alignment besides their span and width, as in Feishu. */
+function cellAttributes(this: { parent?: () => Record<string, unknown> }) {
+  return {
+    ...this.parent?.(),
+    background: {
+      default: null,
+      parseHTML: (element: HTMLElement) => element.getAttribute('data-background'),
+      renderHTML: (attrs: { background?: string | null }) =>
+        attrs.background
+          ? { 'data-background': attrs.background, style: `background-color: ${attrs.background}` }
+          : {},
+    },
+    align: {
+      default: null,
+      parseHTML: (element: HTMLElement) => element.getAttribute('data-align'),
+      renderHTML: (attrs: { align?: string | null }) =>
+        attrs.align ? { 'data-align': attrs.align, style: `text-align: ${attrs.align}` } : {},
+    },
+  };
+}
+
 export function docExtensions(env: () => DocEnv, editor: () => Editor | null) {
   return [
     StarterKit.configure({
@@ -110,7 +131,9 @@ export function docExtensions(env: () => DocEnv, editor: () => Editor | null) {
     }),
     TaskList,
     TaskItem.configure({ nested: true }),
-    TableKit.configure({ table: { resizable: true } }),
+    TableKit.configure({ table: { resizable: true }, tableCell: false, tableHeader: false }),
+    TableCell.extend({ addAttributes: cellAttributes }),
+    TableHeader.extend({ addAttributes: cellAttributes }),
     Details.configure({ persist: true, HTMLAttributes: { class: 'doc-toggle' } }),
     DetailsSummary,
     DetailsContent,

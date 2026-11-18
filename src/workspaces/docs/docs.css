@@ -1420,3 +1420,39 @@ dialog.doc-dialog > .doc-dialog-note + * {
 .doc-page.is-compact .doc-template-row {
   display: none;
 }
+/* The table toolbar above a table while the cursor is in it. */
+.doc-table-toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.doc-toolbar .doc-toolbar-danger:hover {
+  color: var(--sf-status-danger);
+}
+.doc-table-colours {
+  position: relative;
+  display: inline-flex;
+}
+.doc-table-swatches {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-raised);
+  box-shadow: var(--sf-shadow-popover);
+  transform: translateX(-50%);
+}
+.doc-table-swatches .doc-swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--sf-border-control);
+  border-radius: 4px;
+}
+.doc-table-swatches .doc-swatch[aria-checked='true'] {
+  outline: 2px solid var(--sf-link);
+  outline-offset: 1px;
+}

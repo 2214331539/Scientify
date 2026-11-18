@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
+import { TableToolbar } from './TableToolbar';
 import DragHandle from '@tiptap/extension-drag-handle-react';
 import type { Node as PmNode } from '@tiptap/pm/model';
 import {
@@ -355,6 +356,7 @@ export function DocEditor({
           </>
         ) : null}
       </Menu>
+      {readOnly ? null : <TableToolbar editor={editor} backgrounds={BACKGROUNDS} />}
       {readOnly ? null : (
         <BubbleMenu
           editor={editor}

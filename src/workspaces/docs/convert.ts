@@ -7,6 +7,14 @@
 import type { JSONContent } from '@tiptap/core';
 import { blockId, type Block, type BlockType, type Inline, type Marks } from './model';
 
+/** A table cell's extras: its merge span, background and alignment. */
+export type TableCellProps = {
+  colspan?: number;
+  rowspan?: number;
+  bg?: string;
+  align?: 'center' | 'right';
+};
+
 const LISTS: Partial<Record<BlockType, { list: string; item: string }>> = {
   bullet: { list: 'bulletList', item: 'listItem' },
   numbered: { list: 'orderedList', item: 'listItem' },
@@ -136,16 +144,29 @@ function blockToEditor(block: Block): JSONContent {
     case 'table': {
       const rows = (p.rows as Inline[][][] | undefined) ?? [[[]]];
       const widths = (p.widths as (number | null)[] | undefined) ?? [];
+      const cells = (p.cells as (TableCellProps | null)[][] | undefined) ?? [];
       return {
         type: 'table',
         attrs: { id },
         content: rows.map((row, r) => ({
           type: 'tableRow',
-          content: row.map((cell, c) => ({
-            type: r === 0 && p.header !== false ? 'tableHeader' : 'tableCell',
-            attrs: { colspan: 1, rowspan: 1, colwidth: widths[c] ? [widths[c]] : null },
-            content: [paragraph(`${id}-${r}-${c}`, cell)],
-          })),
+          content: row.map((cell, c) => {
+            const extra = cells[r]?.[c] ?? {};
+            return {
+              type:
+                (r === 0 && p.header !== false) || (c === 0 && p.headerCol === true)
+                  ? 'tableHeader'
+                  : 'tableCell',
+              attrs: {
+                colspan: extra.colspan ?? 1,
+                rowspan: extra.rowspan ?? 1,
+                colwidth: widths[c] ? [widths[c]] : null,
+                background: extra.bg ?? null,
+                align: extra.align ?? null,
+              },
+              content: [paragraph(`${id}-${r}-${c}`, cell)],
+            };
+          }),
         })),
       };
     }
@@ -309,14 +330,32 @@ function blockFromEditor(node: JSONContent): Block[] {
       const widths = first.map((cell) =>
         Array.isArray(cell.attrs?.colwidth) ? (cell.attrs!.colwidth[0] ?? null) : null,
       );
+      // Merges, backgrounds and alignment, only where a cell has one.
+      const cells = (node.content ?? []).map((row) =>
+        (row.content ?? []).map((cell) => {
+          const a = cell.attrs ?? {};
+          const extra: TableCellProps = {
+            ...(Number(a.colspan) > 1 ? { colspan: Number(a.colspan) } : {}),
+            ...(Number(a.rowspan) > 1 ? { rowspan: Number(a.rowspan) } : {}),
+            ...(typeof a.background === 'string' && a.background ? { bg: a.background } : {}),
+            ...(a.align === 'center' || a.align === 'right' ? { align: a.align } : {}),
+          };
+          return Object.keys(extra).length ? extra : null;
+        }),
+      );
+      const later = (node.content ?? []).slice(1);
+      const headerCol =
+        later.length > 0 && later.every((row) => row.content?.[0]?.type === 'tableHeader');
       return [
         {
           id,
           type: 'table',
           props: {
-            header: first[0]?.type === 'tableHeader',
+            header: first.length > 0 && first.every((cell) => cell.type === 'tableHeader'),
             rows,
+            ...(headerCol ? { headerCol } : {}),
             ...(widths.some(Boolean) ? { widths } : {}),
+            ...(cells.some((row) => row.some(Boolean)) ? { cells } : {}),
           },
         },
       ];

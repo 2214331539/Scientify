@@ -210,3 +210,34 @@ describe('Markdown', () => {
     expect(page.blocks.map((block) => block.type)).toEqual(['paragraph', 'bullet']);
   });
 });
+
+describe('tables', () => {
+  it('keep merged cells, colours, alignment and a header column through the editor', async () => {
+    const { blocksFromEditor } = await import('./convert');
+    const table = {
+      id: 't1',
+      type: 'table' as const,
+      props: {
+        header: true,
+        headerCol: true,
+        rows: [
+          [[{ text: '方法' }], [{ text: '结果' }]],
+          [[{ text: 'A' }], [{ text: '91%' }]],
+        ],
+        cells: [
+          [{ colspan: 2 }, null],
+          [null, { bg: 'rgba(64, 192, 87, 0.18)', align: 'right' as const }],
+        ],
+      },
+    };
+    const editor = blocksToEditor([table]);
+    const rows = editor[0].content!;
+    expect(rows[0].content![0].attrs?.colspan).toBe(2);
+    expect(rows[1].content![0].type).toBe('tableHeader');
+    expect(rows[1].content![1].attrs?.align).toBe('right');
+    const [back] = blocksFromEditor(editor);
+    expect(back.props?.headerCol).toBe(true);
+    expect(back.props?.header).toBe(true);
+    expect(back.props?.cells).toEqual(table.props.cells);
+  });
+});
