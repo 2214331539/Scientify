@@ -14,7 +14,9 @@ use crate::library::{trusted, LibraryState};
 use crate::AppState;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
+use std::io::Write;
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -89,6 +91,16 @@ struct Local {
     known: BTreeMap<String, BTreeSet<String>>,
     #[serde(default)]
     failures: BTreeMap<String, u32>,
+    /// The engine those failures happened with; a new one tries the papers again.
+    #[serde(default)]
+    engine: String,
+}
+
+/// The engine as shipped: its folder, the interpreter inside it and its build stamp.
+struct Engine {
+    dir: PathBuf,
+    executable: PathBuf,
+    stamp: String,
 }
 
 enum Failure {
@@ -147,7 +159,7 @@ fn base_url(model: &Model) -> Result<String, String> {
 }
 
 /// The engine in the installer (or, while developing, in `release-resources`).
-fn engine<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<(PathBuf, PathBuf)> {
+fn engine<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<Engine> {
     let bundled = app
         .path()
         .resource_dir()
@@ -170,9 +182,99 @@ fn engine<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<(PathBuf, Path
             {
                 return None;
             }
-            let python = dir.join(relative);
-            python.is_file().then(|| (python, dir.join("assets")))
+            dir.join(relative).is_file().then(|| Engine {
+                executable: relative.to_path_buf(),
+                stamp: stamp["stamp"].as_str().unwrap_or_default().to_string(),
+                dir,
+            })
         })
+}
+
+fn quarantined(path: &Path) -> bool {
+    Command::new("/usr/bin/xattr")
+        .args(["-p", "com.apple.quarantine"])
+        .arg(path)
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
+/// Where the engine runs from. macOS refuses code carrying the download quarantine of
+/// an app that is not notarized, which Scientify cannot be yet. A quarantined engine
+/// is cloned into the data folder (an APFS clone takes no extra space), the mark taken
+/// off the copy, and run from there; once per version, without asking anything.
+fn runnable(engine: &Engine, base: &Path) -> Result<PathBuf, String> {
+    if !cfg!(target_os = "macos") || !quarantined(&engine.dir.join(&engine.executable)) {
+        return Ok(engine.dir.clone());
+    }
+    let copies = base.join("engine");
+    let copy = copies.join(engine.stamp.chars().take(16).collect::<String>());
+    if copy.join(".ready").is_file() {
+        return Ok(copy);
+    }
+    // Older versions and an interrupted copy go first.
+    let _ = std::fs::remove_dir_all(&copies);
+    std::fs::create_dir_all(&copies).map_err(|e| e.to_string())?;
+    let partial = copies.join("partial");
+    let copied = |flags: &str| {
+        Command::new("/bin/cp")
+            .arg(flags)
+            .arg(&engine.dir)
+            .arg(&partial)
+            .status()
+            .is_ok_and(|status| status.success())
+    };
+    // `cp -c` clones on APFS; on another volume a plain copy does the job.
+    if !copied("-cR") {
+        let _ = std::fs::remove_dir_all(&partial);
+        if !copied("-R") {
+            return Err("无法复制翻译组件。".into());
+        }
+    }
+    let _ = Command::new("/usr/bin/xattr")
+        .args(["-dr", "com.apple.quarantine"])
+        .arg(&partial)
+        .status();
+    if quarantined(&partial.join(&engine.executable)) {
+        return Err("无法去掉翻译组件的下载隔离标记。".into());
+    }
+    std::fs::rename(&partial, &copy).map_err(|e| e.to_string())?;
+    std::fs::write(copy.join(".ready"), &engine.stamp).map_err(|e| e.to_string())?;
+    Ok(copy)
+}
+
+fn base<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
+    app.state::<crate::data_location::DataLocation>()
+        .container
+        .join("translator")
+}
+
+/// Why translations failed, kept for diagnosis; nobody is shown it.
+fn log(base: &Path, line: &str) {
+    let path = base.join("translator.log");
+    if std::fs::metadata(&path).is_ok_and(|m| m.len() > 256 * 1024) {
+        let _ = std::fs::remove_file(&path);
+    }
+    let _ = std::fs::create_dir_all(base);
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    {
+        let tail: String = line
+            .chars()
+            .rev()
+            .take(600)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect();
+        let _ = writeln!(
+            file,
+            "{} {}",
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+            tail.replace('\n', " ")
+        );
+    }
 }
 
 /// The model translation calls: the assistant's, or another saved one for a ChatGPT sign-in.
@@ -305,10 +407,7 @@ fn write_claims(folder: &Path, claims: &Claims) -> Result<(), String> {
 }
 
 fn local_path<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
-    app.state::<crate::data_location::DataLocation>()
-        .container
-        .join("translator")
-        .join("state.json")
+    base(app).join("state.json")
 }
 fn load_local<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Local {
     std::fs::read(local_path(app))
@@ -383,9 +482,9 @@ pub fn start<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 /// One look over every literature folder: decide what this device translates, claim it,
 /// and keep the worker going.
 fn pass<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    if engine(app).is_none() {
+    let Some(engine) = engine(app) else {
         return;
-    }
+    };
     let state = app.state::<AppState>();
     let Ok(Some(data)) = state.storage.load() else {
         return;
@@ -413,6 +512,12 @@ fn pass<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     };
     let mut local = load_local(app);
     let mut remembered = false;
+    // Papers that failed with an earlier engine (perhaps a broken one) are tried again.
+    if local.engine != engine.stamp {
+        local.engine = engine.stamp.clone();
+        local.failures.clear();
+        remembered = true;
+    }
     let mut first: Vec<Job> = Vec::new();
     let mut arrived: Vec<Job> = Vec::new();
     let mut older: Vec<Job> = Vec::new();
@@ -584,7 +689,10 @@ fn work<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
             wake(&app);
             let outcome = match model(&app) {
                 Ok(model) => translate(&app, &job, &model, &stop),
-                Err(message) => Err(Failure::Model(message)),
+                Err(message) => {
+                    log(&base(&app), &format!("model: {message}"));
+                    Err(Failure::Model(message))
+                }
             };
             settle(&app, &job, outcome);
         }
@@ -635,19 +743,32 @@ fn translate<R: tauri::Runtime>(
     model: &Model,
     stop: &AtomicBool,
 ) -> Result<(), Failure> {
-    let (python, assets) = engine(app).ok_or_else(|| Failure::Model("翻译组件缺失。".into()))?;
-    let base = app
-        .state::<crate::data_location::DataLocation>()
-        .container
-        .join("translator");
+    let base = base(app);
+    let engine = engine(app).ok_or_else(|| Failure::Model("翻译组件缺失。".into()))?;
+    let dir = runnable(&engine, &base).map_err(|message| {
+        log(&base, &format!("engine: {message}"));
+        Failure::Model(message)
+    })?;
     notify(app, job, Status::new("translating", 0.0));
-    let result = run_engine(&python, &assets, &base, job, model, stop, |value| {
-        notify(app, job, Status::new("translating", value))
-    });
+    let result = run_engine(
+        &dir.join(&engine.executable),
+        &dir.join("assets"),
+        &base,
+        job,
+        model,
+        stop,
+        |value| notify(app, job, Status::new("translating", value)),
+    );
     if stop.load(Ordering::SeqCst) {
         return Err(Failure::Stopped);
     }
     result.map_err(|message| {
+        let shown = if model.api_key.is_empty() {
+            message.clone()
+        } else {
+            message.replace(&model.api_key, "[key]")
+        };
+        log(&base, &format!("{}: {shown}", job.fingerprint));
         if message.contains("401") && model.official {
             if let Ok(mut inner) = app.state::<TranslatorState>().inner.lock() {
                 inner.stale_token = Some(model.api_key.clone());
@@ -993,6 +1114,29 @@ mod tests {
         assert!(!dir.path().join("device-1.claims.partial").exists());
         write_claims(dir.path(), &claims("device-1", 6, &[])).unwrap();
         assert!(!dir.path().join("device-1.claims.json").exists());
+    }
+
+    #[test]
+    fn an_engine_without_the_download_mark_runs_where_it_is() {
+        let dir = tempfile::tempdir().unwrap();
+        let engine = Engine {
+            dir: dir.path().join("babeldoc"),
+            executable: PathBuf::from("python/python.exe"),
+            stamp: "abc".into(),
+        };
+        assert_eq!(runnable(&engine, dir.path()).unwrap(), engine.dir);
+        assert!(!dir.path().join("engine").exists());
+    }
+
+    #[test]
+    fn the_diagnostic_log_stays_small_and_on_one_line_per_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        log(dir.path(), "first\nsecond");
+        log(dir.path(), &"x".repeat(2000));
+        let text = std::fs::read_to_string(dir.path().join("translator.log")).unwrap();
+        assert_eq!(text.lines().count(), 2);
+        assert!(text.lines().next().unwrap().ends_with("first second"));
+        assert!(text.lines().nth(1).unwrap().len() < 700);
     }
 
     #[test]
