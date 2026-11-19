@@ -15,8 +15,13 @@ const rid =
       : null;
 if (!rid) throw new Error('Yita selection translation currently supports Windows and macOS.');
 const dotnet = process.env.SCIENTIFY_DOTNET ?? 'dotnet';
+// macOS ties privacy grants (Accessibility, Input Monitoring) and Keychain access to the
+// signature. With APPLE_SIGNING_IDENTITY set, the helper and the component are signed
+// with it, so grants survive updates; a different identity builds them again.
+const identity = process.platform === 'darwin' ? (process.env.APPLE_SIGNING_IDENTITY ?? '') : '';
 const fingerprint = createHash('sha256')
   .update(rid)
+  .update(identity)
   .update(readFileSync(fileURLToPath(import.meta.url)));
 function hashDirectory(path) {
   for (const entry of readdirSync(path, { withFileTypes: true }).sort((a, b) =>
@@ -118,7 +123,10 @@ if (!existsSync(exe) || !existsSync(stamp) || readFileSync(stamp, 'utf8') !== ha
     ]);
   publish('Yita.Desktop');
   if (process.platform === 'win32') publish('Yita.Native.Windows.UIA.Worker');
-  else run('bash', ['scripts/Build-Mac-Helper.sh', output]);
+  else {
+    run('bash', ['scripts/Build-Mac-Helper.sh', output]);
+    if (identity) run('codesign', ['--force', '--sign', identity, exe]);
+  }
   cpSync(join(source, 'LICENSE'), join(output, 'Yita-LICENSE.txt'));
   cpSync(join(source, 'UPSTREAM.json'), join(output, 'Yita-UPSTREAM.json'));
   cpSync(join(source, 'NOTICE.md'), join(output, 'Yita-NOTICE.md'));

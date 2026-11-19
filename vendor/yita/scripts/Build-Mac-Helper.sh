@@ -22,6 +22,9 @@ xcrun swiftc -swift-version 5 -O -warnings-as-errors -sdk "$sdk_path" \
   "$repo_root/src/Yita.Native.Mac.Helper/main.swift" -o "$helper_binary" \
   -framework AppKit -framework ApplicationServices -framework Carbon
 plutil -lint "$helper_app/Contents/Info.plist"
-codesign --force --sign - --identifier com.yita.desktop.native-helper "$helper_app"
+# Scientify signs with a fixed identity (APPLE_SIGNING_IDENTITY) when one is set, so
+# macOS keeps Accessibility and Input Monitoring grants across updates; ad hoc otherwise.
+identity="${APPLE_SIGNING_IDENTITY:--}"
+codesign --force --sign "$identity" --identifier com.yita.desktop.native-helper "$helper_app"
 codesign --verify --strict "$helper_app"
-printf 'Built development helper: %s\n' "$helper_app"
+printf 'Built helper (%s): %s\n' "$identity" "$helper_app"
