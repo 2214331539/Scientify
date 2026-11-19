@@ -213,7 +213,6 @@
 }
 .local-note-group {
   flex-shrink: 0;
-  max-width: 48%;
   min-width: 220px;
 }
 .paper-note-editor {

@@ -98,7 +98,7 @@ type RecordStore = import('../../reader/PdfReader').RecordStore;
 /** The pinned first tab: the library table itself. */
 const HOME = '__library__';
 /** The narrowest the paper may get beside its note (the AI panel leaves 320 to the center). */
-const MIN_READER_WIDTH = 360;
+const MIN_NOTE_WIDTH = 240;
 const parent = (path: string) => path.split('/').slice(0, -1).join('/');
 const filename = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 const join = (folder: string, name: string) => (folder ? `${folder}/${name}` : name);
@@ -198,6 +198,17 @@ export function LocalLiterature({
     const element = host.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => setHostWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  // The area the paper and its note share, and whether this drag already closed one.
+  const splitArea = useRef<HTMLDivElement>(null);
+  const splitClosed = useRef(false);
+  const [splitWidth, setSplitWidth] = useState(0);
+  useEffect(() => {
+    const element = splitArea.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setSplitWidth(element.clientWidth));
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
@@ -1070,9 +1081,29 @@ export function LocalLiterature({
       </div>
     </aside>
   );
-  // The note beside a paper may take the room the AI panel can: all but a
-  // readable column for the paper.
-  const noteMax = Math.max(500, hostWidth - MIN_READER_WIDTH);
+  // The paper and its note share the area: either may take up to 80% of it. Dragging
+  // past 85% closes the page that got small (the paper's tab, or the note pane).
+  const area = splitWidth || hostWidth;
+  const noteMax = Math.max(MIN_NOTE_WIDTH, Math.round(area * 0.8));
+  const noteMin = Math.min(noteMax, Math.max(MIN_NOTE_WIDTH, Math.round(area * 0.2)));
+  function resizeNotes(next: number) {
+    if (splitClosed.current || !area) return;
+    if (next > area * 0.85 && active) {
+      splitClosed.current = true;
+      void closeTab(active.id).catch((e) => setError(errorMessage(e)));
+      setSession((s) => ({ ...s, noteWidth: Math.round(area / 2) }));
+      return;
+    }
+    if (next < area * 0.15) {
+      splitClosed.current = true;
+      setSession((s) => ({ ...s, showNotes: false }));
+      return;
+    }
+    setSession((s) => ({
+      ...s,
+      noteWidth: Math.round(Math.min(noteMax, Math.max(noteMin, next))),
+    }));
+  }
   return (
     <div
       className="literature-studio local-library"
@@ -1114,7 +1145,7 @@ export function LocalLiterature({
             </Button>
           </div>
         )}
-        <div className="local-editor-groups">
+        <div className="local-editor-groups" ref={splitArea}>
           <div className="local-reading-group">
             <DocumentTabs
               tabs={[
@@ -1248,11 +1279,14 @@ export function LocalLiterature({
             <>
               <ResizeHandle
                 value={Math.min(session.noteWidth, noteMax)}
-                min={240}
-                max={noteMax}
+                min={0}
+                max={Math.max(noteMax, area)}
                 side="right"
                 label={t('调整论文笔记宽度')}
-                onChange={(noteWidth) => setSession((s) => ({ ...s, noteWidth }))}
+                onChange={resizeNotes}
+                onEnd={() => {
+                  splitClosed.current = false;
+                }}
               />
               <div
                 className="local-note-group"

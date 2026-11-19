@@ -7,6 +7,7 @@ export function ResizeHandle({
   onChange,
   side,
   label,
+  onEnd,
 }: {
   value: number;
   min: number;
@@ -14,6 +15,8 @@ export function ResizeHandle({
   onChange: (value: number) => void;
   side: 'left' | 'right';
   label: string;
+  /** The drag ended. */
+  onEnd?: () => void;
 }) {
   const upper = Math.max(min, max);
   const cleanup = useRef<(() => void) | null>(null);
@@ -40,6 +43,7 @@ export function ResizeHandle({
       delete target.dataset.resizing;
       delete target.dataset.nativeOverlay;
       cleanup.current = null;
+      onEnd?.();
     };
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerup', stop);
