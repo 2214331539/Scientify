@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-record"
+description = "Enables the library_record command without any pre-configured scope."
+commands.allow = ["library_record"]
+
+[[permission]]
+identifier = "deny-library-record"
+description = "Denies the library_record command without any pre-configured scope."
+commands.deny = ["library_record"]

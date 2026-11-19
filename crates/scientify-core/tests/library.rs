@@ -446,3 +446,111 @@ fn folder_transfer_updates_descendants_and_recycle_manifest() {
     assert!(destination.join("0/a.notes.md").exists());
     assert!(lib.scan("project").unwrap().papers.is_empty());
 }
+
+#[test]
+fn imported_pdfs_skip_duplicates_and_records_merge_without_losing_highlights() {
+    use scientify_core::references::{Annotation, Reference};
+    let (temp, lib, root) = fixture();
+    let root = root.canonicalize().unwrap();
+    let outside = temp.path().join("zotero/storage/K1");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("Paper.pdf"), b"%PDF-1.4 imported").unwrap();
+    fs::write(outside.join("Copy of a.pdf"), b"%PDF-1.4 first").unwrap();
+    // The same bytes as `a.pdf`, once bound, are the same paper.
+    lib.open("project", "a.pdf").unwrap();
+    let (same, new) = lib
+        .add_pdf(
+            "project",
+            "Zotero",
+            &outside.join("Copy of a.pdf"),
+            "Copy of a.pdf",
+            None,
+        )
+        .unwrap();
+    assert!(!new);
+    assert_eq!(same.path, "a.pdf");
+    let (paper, new) = lib
+        .add_pdf(
+            "project",
+            "Zotero/Robots",
+            &outside.join("Paper.pdf"),
+            "Paper.pdf",
+            Some("Key idea"),
+        )
+        .unwrap();
+    assert!(new);
+    assert_eq!(paper.path, "Zotero/Robots/Paper.pdf");
+    assert_eq!(
+        fs::read_to_string(root.join("Zotero/Robots/Paper.notes.md")).unwrap(),
+        "Key idea"
+    );
+    let (_, again) = lib
+        .add_pdf(
+            "project",
+            "Zotero/Robots",
+            &outside.join("Paper.pdf"),
+            "Paper.pdf",
+            None,
+        )
+        .unwrap();
+    assert!(!again, "importing twice does not copy twice");
+
+    let reference = Reference {
+        title: "Learning".into(),
+        key: "k".into(),
+        ..Default::default()
+    };
+    let highlight = Annotation {
+        id: "zotero:A".into(),
+        kind: "highlight".into(),
+        page: 1,
+        rects: vec![[1.0, 2.0, 3.0, 4.0]],
+        ..Default::default()
+    };
+    assert_eq!(
+        lib.merge_record(
+            "project",
+            &paper.fingerprint,
+            &reference,
+            &[highlight.clone()]
+        )
+        .unwrap(),
+        1
+    );
+    assert_eq!(
+        lib.merge_record("project", &paper.fingerprint, &reference, &[highlight])
+            .unwrap(),
+        0
+    );
+    let mut record = lib.record("project", &paper.id).unwrap();
+    assert_eq!(record["reference"]["title"], "Learning");
+    record["annotations"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({"id": "mine", "kind": "highlight", "page": 0}));
+    lib.save_record("project", &paper.id, &record).unwrap();
+    let listed = lib.references("project").unwrap();
+    assert_eq!(listed[&paper.fingerprint]["title"], "Learning");
+    assert!(lib.record("project", &same.id).unwrap().is_null());
+
+    let entries = vec![(
+        "k".to_string(),
+        "@misc{k,\n  title = {Learning}\n}\n".to_string(),
+    )];
+    assert_eq!(
+        lib.merge_bibliography("project", "Zotero/references.bib", &entries)
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        lib.merge_bibliography("project", "Zotero/references.bib", &entries)
+            .unwrap(),
+        0
+    );
+    assert!(lib
+        .add_text("project", "Zotero/Reading list.md", "# Reading list")
+        .unwrap());
+    assert!(!lib
+        .add_text("project", "Zotero/Reading list.md", "other")
+        .unwrap());
+}

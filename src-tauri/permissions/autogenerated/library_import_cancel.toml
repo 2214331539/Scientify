@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-import-cancel"
+description = "Enables the library_import_cancel command without any pre-configured scope."
+commands.allow = ["library_import_cancel"]
+
+[[permission]]
+identifier = "deny-library-import-cancel"
+description = "Denies the library_import_cancel command without any pre-configured scope."
+commands.deny = ["library_import_cancel"]

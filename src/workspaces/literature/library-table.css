@@ -136,3 +136,26 @@
     display: none;
   }
 }
+
+/* A paper a reference manager knows: its title, then who and when. */
+.library-name-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.library-name-text > span,
+.library-name-text > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.library-name-text > small {
+  color: var(--sf-text-muted);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+.library-table-empty-actions {
+  display: flex;
+  gap: 8px;
+}

@@ -1158,7 +1158,266 @@ impl LocalLibrary {
         let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
         self.resolve(&root, path, true)
     }
+
+    /// Copies a PDF from outside the library into `folder` (created as needed),
+    /// unless the library already has the same PDF. A note is written beside a
+    /// new paper only where none exists. Returns the paper and whether it is new.
+    pub fn add_pdf(
+        &self,
+        project: &str,
+        folder: &str,
+        source: &Path,
+        name: &str,
+        note: Option<&str>,
+    ) -> Result<(Binding, bool)> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let mut index = self.index(&root)?;
+        let bytes = bounded(source, PDF_LIMIT)?;
+        if !bytes[..bytes.len().min(1024)]
+            .windows(5)
+            .any(|v| v == b"%PDF-")
+        {
+            return Err("不是有效的 PDF 文件。".into());
+        }
+        let fingerprint = digest(&bytes);
+        if let Some(existing) = index
+            .papers
+            .iter()
+            .find(|p| p.fingerprint == fingerprint && root.join(&p.path).is_file())
+        {
+            return Ok((existing.clone(), false));
+        }
+        let directory = self.resolve(&root, folder, true)?;
+        fs::create_dir_all(&directory).map_err(err)?;
+        relative(name, false)?;
+        let stem = name
+            .strip_suffix(".pdf")
+            .or(name.strip_suffix(".PDF"))
+            .unwrap_or(name);
+        let mut number = 0;
+        let (path, full) = loop {
+            let candidate = if number == 0 {
+                format!("{stem}.pdf")
+            } else {
+                format!("{stem} ({number}).pdf")
+            };
+            let path = if folder.is_empty() {
+                candidate
+            } else {
+                format!("{folder}/{candidate}")
+            };
+            let full = self.resolve(&root, &path, false)?;
+            if !full.exists()
+                && !root.join(sidecar(&path)).exists()
+                && !index.papers.iter().any(|p| {
+                    p.path.eq_ignore_ascii_case(&path) || p.note_path.eq_ignore_ascii_case(&path)
+                })
+            {
+                break (path, full);
+            }
+            number += 1;
+        };
+        write_atomic(&full, &bytes, false)?;
+        let binding = Binding {
+            id: Uuid::new_v4().to_string(),
+            path: path.clone(),
+            note_path: sidecar(&path),
+            fingerprint,
+        };
+        index.papers.push(binding.clone());
+        if let Err(error) = self.write_index(&root, &index) {
+            fs::remove_file(&full).map_err(err)?;
+            return Err(error);
+        }
+        if let Some(note) = note.filter(|n| !n.trim().is_empty()) {
+            let file = self.resolve(&root, &binding.note_path, false)?;
+            if !file.exists() {
+                write_atomic(&file, note.as_bytes(), false)?;
+            }
+        }
+        Ok((binding, true))
+    }
+
+    /// Writes a text file inside the library unless one is already there.
+    pub fn add_text(&self, project: &str, path: &str, content: &str) -> Result<bool> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let full = self.resolve(&root, path, false)?;
+        if full.exists() {
+            return Ok(false);
+        }
+        if let Some(parent) = full.parent() {
+            fs::create_dir_all(parent).map_err(err)?;
+        }
+        write_atomic(&full, content.as_bytes(), false)?;
+        Ok(true)
+    }
+
+    /// Adds BibTeX entries to `path`, skipping keys the file already has.
+    pub fn merge_bibliography(
+        &self,
+        project: &str,
+        path: &str,
+        entries: &[(String, String)],
+    ) -> Result<usize> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let full = self.resolve(&root, path, false)?;
+        let mut text = if full.exists() {
+            String::from_utf8(bounded(&full, 32 * 1024 * 1024)?).map_err(err)?
+        } else {
+            String::new()
+        };
+        let mut keys: HashSet<String> = crate::references::bibtex::entries(&text)
+            .into_iter()
+            .map(|(_, key, _)| key.to_lowercase())
+            .collect();
+        let mut added = 0;
+        for (key, entry) in entries {
+            if keys.insert(key.to_lowercase()) {
+                if !text.is_empty() && !text.ends_with("\n\n") {
+                    text.push_str(if text.ends_with('\n') { "\n" } else { "\n\n" });
+                }
+                text.push_str(entry);
+                added += 1;
+            }
+        }
+        if added > 0 {
+            if let Some(parent) = full.parent() {
+                fs::create_dir_all(parent).map_err(err)?;
+            }
+            write_atomic(&full, text.as_bytes(), true)?;
+        }
+        Ok(added)
+    }
+
+    /// `.scientify/papers/<fingerprint>.json`: what a paper is and the highlights
+    /// on it, keyed by content so it follows the PDF through moves and syncs.
+    fn record_file(root: &Path, fingerprint: &str) -> Result<PathBuf> {
+        if fingerprint.len() != 64 || !fingerprint.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err("文献标识无效。".into());
+        }
+        let folder = root.join(".scientify").join("papers");
+        reject_links(&folder)?;
+        Ok(folder.join(format!("{fingerprint}.json")))
+    }
+    fn read_record(path: &Path) -> Result<Option<serde_json::Value>> {
+        if !path.exists() {
+            return Ok(None);
+        }
+        let bytes = bounded(path, RECORD_LIMIT)?;
+        Ok(Some(serde_json::from_slice(&bytes).map_err(err)?))
+    }
+    fn write_record(path: &Path, record: &serde_json::Value) -> Result<()> {
+        let bytes = serde_json::to_vec_pretty(record).map_err(err)?;
+        if bytes.len() as u64 > RECORD_LIMIT {
+            return Err("批注太多，记录超过 4 MiB。".into());
+        }
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(err)?;
+        }
+        write_atomic(path, &bytes, true)
+    }
+    fn binding_fingerprint(&self, root: &Path, id: &str) -> Result<String> {
+        self.index(root)?
+            .papers
+            .into_iter()
+            .find(|p| p.id == id)
+            .map(|p| p.fingerprint)
+            .ok_or_else(|| "文献绑定不存在。".to_string())
+    }
+    /// The paper's record, or `null` when nothing is known about it yet.
+    pub fn record(&self, project: &str, id: &str) -> Result<serde_json::Value> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let file = Self::record_file(&root, &self.binding_fingerprint(&root, id)?)?;
+        Ok(Self::read_record(&file)?.unwrap_or(serde_json::Value::Null))
+    }
+    pub fn save_record(&self, project: &str, id: &str, record: &serde_json::Value) -> Result<()> {
+        let _g = self.gate.lock().map_err(err)?;
+        if !record.is_object() {
+            return Err("文献记录格式无效。".into());
+        }
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let file = Self::record_file(&root, &self.binding_fingerprint(&root, id)?)?;
+        Self::write_record(&file, record)
+    }
+    /// Adds an imported reference and highlights to a paper's record. What the
+    /// record already says wins; highlights already there (same id) are kept.
+    /// Returns how many highlights were new.
+    pub fn merge_record(
+        &self,
+        project: &str,
+        fingerprint: &str,
+        reference: &crate::references::Reference,
+        annotations: &[crate::references::Annotation],
+    ) -> Result<usize> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let file = Self::record_file(&root, fingerprint)?;
+        let mut record = Self::read_record(&file)?
+            .filter(|r| r.is_object())
+            .unwrap_or_else(|| serde_json::json!({ "version": 1 }));
+        if record["reference"]["title"]
+            .as_str()
+            .unwrap_or("")
+            .is_empty()
+        {
+            record["reference"] = serde_json::to_value(reference).map_err(err)?;
+        }
+        if !record["annotations"].is_array() {
+            record["annotations"] = serde_json::json!([]);
+        }
+        let list = record["annotations"].as_array_mut().unwrap();
+        let known: HashSet<String> = list
+            .iter()
+            .filter_map(|a| a["id"].as_str().map(String::from))
+            .collect();
+        let mut added = 0;
+        for annotation in annotations {
+            if !known.contains(&annotation.id) {
+                list.push(serde_json::to_value(annotation).map_err(err)?);
+                added += 1;
+            }
+        }
+        Self::write_record(&file, &record)?;
+        Ok(added)
+    }
+    /// What the library knows about its papers: fingerprint → reference.
+    pub fn references(&self, project: &str) -> Result<BTreeMap<String, serde_json::Value>> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let folder = root.join(".scientify").join("papers");
+        let mut out = BTreeMap::new();
+        let Ok(entries) = fs::read_dir(&folder) else {
+            return Ok(out);
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let Some(fingerprint) = name.strip_suffix(".json") else {
+                continue;
+            };
+            let Ok(file) = Self::record_file(&root, fingerprint) else {
+                continue;
+            };
+            if let Ok(Some(record)) = Self::read_record(&file) {
+                if let Some(reference) = record["reference"].as_object() {
+                    // The table shows who and when; abstracts stay in the record.
+                    let mut reference = reference.clone();
+                    reference.remove("abstract");
+                    out.insert(
+                        fingerprint.to_string(),
+                        serde_json::Value::Object(reference),
+                    );
+                }
+            }
+        }
+        Ok(out)
+    }
 }
+
+const RECORD_LIMIT: u64 = 4 * 1024 * 1024;
 fn validate_tree(path: &Path) -> Result<()> {
     reject_links(path)?;
     if path.is_dir() {

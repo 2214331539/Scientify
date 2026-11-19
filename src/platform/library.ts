@@ -26,6 +26,37 @@ export type LibraryOperation =
   | { op: 'transfer'; path: string; destination: string; copy: boolean }
   | { op: 'relink'; id: string; path: string };
 export type LibraryNote = { content: string; revision: string | null };
+/** What a paper is, as a reference manager knows it. */
+export type PaperReference = {
+  kind?: string;
+  key?: string;
+  title?: string;
+  authors?: string[];
+  year?: string;
+  venue?: string;
+  doi?: string;
+  url?: string;
+  abstract?: string;
+  tags?: string[];
+  fields?: Record<string, string>;
+};
+/** A highlight, underline or note on a page; rects are PDF points, origin bottom left. */
+export type PaperAnnotation = {
+  id: string;
+  kind: 'highlight' | 'underline' | 'note';
+  page: number;
+  rects: [number, number, number, number][];
+  text: string;
+  comment: string;
+  color: string;
+  createdAt?: string;
+};
+/** `.scientify/papers/<fingerprint>.json`: synced with the PDF wherever it moves. */
+export type PaperRecord = {
+  version?: number;
+  reference?: PaperReference;
+  annotations?: PaperAnnotation[];
+};
 export type LibraryFile = { path: string; content: string; version: string };
 export interface LibraryBackend {
   choose(projectId: string): Promise<LibraryScan | null>;
@@ -44,6 +75,10 @@ export interface LibraryBackend {
   external(projectId: string, path: string, open: boolean): Promise<void>;
   importFile(projectId: string, folder: string, file: File): Promise<LibraryScan>;
   changed(callback: (projectId: string, error?: string) => void): Promise<() => void>;
+  /** References of the library's papers, by PDF fingerprint. */
+  references?(projectId: string): Promise<Record<string, PaperReference>>;
+  record?(projectId: string, id: string): Promise<PaperRecord | null>;
+  saveRecord?(projectId: string, id: string, record: PaperRecord): Promise<PaperRecord>;
 }
 export function localCommand<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) return Promise.reject(new Error('请在桌面应用中使用本地文献目录和内嵌浏览器。'));
@@ -73,6 +108,9 @@ export const nativeLibrary: LibraryBackend = {
       headers: { 'x-scientify-file': metadata },
     });
   },
+  references: (projectId) => localCommand('library_references', { projectId }),
+  record: (projectId, id) => localCommand('library_record', { projectId, id, record: null }),
+  saveRecord: (projectId, id, record) => localCommand('library_record', { projectId, id, record }),
   changed: (callback) =>
     isTauri()
       ? listen<{ projectId: string; error?: string }>('library-changed', (event) =>

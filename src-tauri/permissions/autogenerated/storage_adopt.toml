@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-storage-adopt"
+description = "Enables the storage_adopt command without any pre-configured scope."
+commands.allow = ["storage_adopt"]
+
+[[permission]]
+identifier = "deny-storage-adopt"
+description = "Denies the storage_adopt command without any pre-configured scope."
+commands.deny = ["storage_adopt"]

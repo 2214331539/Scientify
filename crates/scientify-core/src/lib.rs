@@ -1,4 +1,5 @@
 pub mod library;
+pub mod references;
 pub mod research;
 pub mod storage;
 pub mod storage_location;

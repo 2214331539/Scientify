@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-references"
+description = "Enables the library_references command without any pre-configured scope."
+commands.allow = ["library_references"]
+
+[[permission]]
+identifier = "deny-library-references"
+description = "Denies the library_references command without any pre-configured scope."
+commands.deny = ["library_references"]

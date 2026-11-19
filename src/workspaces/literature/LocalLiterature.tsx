@@ -90,6 +90,8 @@ import type {
 import { BookOpen } from 'lucide-react';
 import { useSidebarSlot } from '../../shell/Sidebar';
 import { LibraryTable } from './LibraryTable';
+import { ImportLibrary } from './ImportLibrary';
+import type { PaperReference } from '../../platform/library';
 
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
 /** The pinned first tab: the library table itself. */
@@ -144,6 +146,9 @@ export function LocalLiterature({
     warnings: [],
   });
   const [session, setSession] = useState(() => readLocalSession(project.id));
+  const [importOpen, setImportOpen] = useState(false);
+  // Title, authors and year of papers that came from a reference manager, by fingerprint.
+  const [references, setReferences] = useState<Record<string, PaperReference>>({});
   const browserRequest = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (
@@ -272,6 +277,19 @@ export function LocalLiterature({
   useEffect(() => {
     saveLocalSession(project.id, session);
   }, [project.id, session]);
+  useEffect(() => {
+    if (!scan.root || !library.references) return;
+    let live = true;
+    library
+      .references(project.id)
+      .then((next) => {
+        if (live) setReferences(next);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [library, project.id, scan]);
   useEffect(() => {
     if (!viewActive) return;
     if (active?.kind !== 'web') void browserLayout({ op: 'hideAll' }).catch(() => {});
@@ -1028,6 +1046,16 @@ export function LocalLiterature({
       }}
     >
       {slot ? (viewActive ? createPortal(resources, slot) : null) : resources}
+      {importOpen ? (
+        <ImportLibrary
+          projectId={project.id}
+          onClose={() => setImportOpen(false)}
+          onDone={() => {
+            requestProjectSync(project.id);
+            void refresh();
+          }}
+        />
+      ) : null}
       {slot ? null : resize}
       <div className="local-library-center">
         {(error || scan.warnings.length > 0) && (
@@ -1166,6 +1194,8 @@ export function LocalLiterature({
                   onOpen={(path) => void open(path)}
                   onChoose={() => void choose()}
                   onImport={(files) => void importFiles(files, directory)}
+                  onImportLibrary={readOnly ? undefined : () => setImportOpen(true)}
+                  references={references}
                   fileEvents={fileEvents}
                 />
               )}

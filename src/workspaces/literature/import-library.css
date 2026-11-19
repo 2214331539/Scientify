@@ -1,0 +1,245 @@
+/* Importing a reference library (ImportLibrary.tsx). */
+dialog.import-library {
+  width: min(560px, calc(100vw - 40px));
+}
+.import-library .dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.import-library .spacer {
+  flex: 1;
+}
+.import-library .error-text {
+  margin: 0 20px 12px;
+}
+
+.import-sources {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 20px;
+}
+.import-source {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 132px;
+  padding: 16px;
+  border: 1px solid var(--sf-border-control);
+  border-radius: var(--sf-radius-overlay);
+  background: var(--sf-surface-raised);
+  color: var(--sf-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--sf-motion-feedback, 120ms) ease,
+    background-color var(--sf-motion-feedback, 120ms) ease;
+}
+.import-source:hover:not(:disabled) {
+  border-color: var(--sf-border-hover);
+  background: var(--sf-surface-sunken);
+}
+.import-source:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.import-source svg {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 6px;
+  color: var(--sf-text-secondary);
+}
+.import-source strong {
+  font-size: 14px;
+}
+.import-source span {
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+.import-other {
+  justify-self: start;
+}
+.import-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--sf-text-muted);
+}
+
+.import-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(60vh, 520px);
+  padding: 16px 20px;
+  overflow: auto;
+}
+.import-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+}
+.import-location span {
+  overflow: hidden;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.import-location svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--sf-text-secondary);
+}
+.import-stats,
+.import-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+.import-stats div,
+.import-summary div {
+  padding: 10px 12px;
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface-sunken);
+}
+.import-stats dt,
+.import-summary dt {
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.import-stats dd,
+.import-summary dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.import-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.import-collections {
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  margin: 0;
+  padding: 4px 0;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius);
+  overflow: auto;
+}
+.import-collections legend {
+  padding: 0 6px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.import-collection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 12px 0 8px;
+  cursor: pointer;
+}
+.import-collection:hover {
+  background: var(--sf-surface-hover);
+}
+.import-collection span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.import-collection em {
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+.import-folder {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+
+.import-running {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 28px 20px;
+}
+.import-running p {
+  margin: 0;
+}
+.import-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--sf-surface-selected);
+  overflow: hidden;
+}
+.import-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sf-accent);
+  transition: width 200ms ease;
+}
+.import-current {
+  overflow: hidden;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-done {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+.import-done-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.import-done-title svg {
+  width: 18px;
+  height: 18px;
+  color: #16a34a;
+}
+.import-summary {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.import-failed summary {
+  color: var(--sf-text-secondary);
+  cursor: pointer;
+}
+.import-failed ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}

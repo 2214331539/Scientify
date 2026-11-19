@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-import-sources"
+description = "Enables the library_import_sources command without any pre-configured scope."
+commands.allow = ["library_import_sources"]
+
+[[permission]]
+identifier = "deny-library-import-sources"
+description = "Denies the library_import_sources command without any pre-configured scope."
+commands.deny = ["library_import_sources"]

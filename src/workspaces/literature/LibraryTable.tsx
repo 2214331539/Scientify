@@ -1,8 +1,8 @@
 import { useRef, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
-import { FileText, FolderOpen, NotebookPen, Upload } from 'lucide-react';
+import { FileText, FolderOpen, Library, NotebookPen, Upload } from 'lucide-react';
 import { Button } from '../../components/primitives';
 import { t } from '../../i18n';
-import type { LibraryEntry, LibraryPaper } from '../../platform/library';
+import type { LibraryEntry, LibraryPaper, PaperReference } from '../../platform/library';
 import './library-table.css';
 
 const filename = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
@@ -24,6 +24,13 @@ function lastPage(paperId: string | null) {
   }
 }
 
+/** "Vaswani, Shazeer et al. · 2017": who and when, as a reference list shows them. */
+export function byline(reference: PaperReference) {
+  const names = (reference.authors ?? []).map((name) => name.split(',')[0].trim());
+  const who = names.length > 2 ? `${names[0]}, ${names[1]} ${t('等')}` : names.join(', ');
+  return [who, reference.venue, reference.year].filter(Boolean).join(' · ');
+}
+
 /** Every document in the chosen folder, with what the library actually knows about it. */
 export function LibraryTable({
   root,
@@ -39,6 +46,8 @@ export function LibraryTable({
   onOpen,
   onChoose,
   onImport,
+  onImportLibrary,
+  references = {},
   fileEvents,
 }: {
   root: string | null;
@@ -54,6 +63,10 @@ export function LibraryTable({
   onOpen(path: string): void;
   onChoose(): void;
   onImport(files: File[]): void;
+  /** Opens the Zotero / BibTeX / RIS import. */
+  onImportLibrary?(): void;
+  /** What reference managers said about papers, by PDF fingerprint. */
+  references?: Record<string, PaperReference>;
   /** Drag, drop, clipboard and menu handlers shared with the folder tree. */
   fileEvents: {
     onContextMenu(event: MouseEvent<HTMLElement>): void;
@@ -73,14 +86,24 @@ export function LibraryTable({
       .filter((paper) => present.has(paper.notePath.toLowerCase()))
       .map((paper) => paper.path.toLowerCase()),
   );
+  const fingerprints = new Map(papers.map((paper) => [paper.id, paper.fingerprint]));
+  const referenceOf = (entry: LibraryEntry) =>
+    entry.paperId ? references[fingerprints.get(entry.paperId) ?? ''] : undefined;
   const term = query.trim().toLocaleLowerCase();
+  const matches = (entry: LibraryEntry) => {
+    if (!term) return true;
+    const reference = referenceOf(entry);
+    return [entry.path, reference?.title, ...(reference?.authors ?? []), reference?.year]
+      .filter(Boolean)
+      .some((text) => text!.toLocaleLowerCase().includes(term));
+  };
   const rows = entries.filter(
     (entry) =>
       !entry.directory &&
       (entry.pdf || /\.(md|markdown|txt)$/i.test(entry.name)) &&
       !entry.note &&
       (!folder || entry.path.startsWith(`${folder}/`)) &&
-      (!term || entry.path.toLocaleLowerCase().includes(term)),
+      matches(entry),
   );
   const title = folder ? filename(folder) : t('全部论文');
   function move(event: KeyboardEvent<HTMLElement>) {
@@ -109,6 +132,17 @@ export function LibraryTable({
         </h1>
         <span className="spacer" />
         {importing ? <span role="status">{importing}</span> : null}
+        {onImportLibrary ? (
+          <Button
+            variant="ghost"
+            disabled={!root || busy}
+            tooltip={t('也支持 BibTeX、RIS')}
+            onClick={onImportLibrary}
+          >
+            <Library />
+            {t('从 Zotero 导入')}
+          </Button>
+        ) : null}
         <Button
           variant="primary"
           disabled={!root || readOnly || busy}
@@ -144,6 +178,18 @@ export function LibraryTable({
         <div className="library-table-empty" data-tree-id={folder} {...fileEvents}>
           <FileText />
           <strong>{term ? t('没有符合条件的文献') : t('这里还没有文献')}</strong>
+          {!term && !readOnly && onImportLibrary ? (
+            <div className="library-table-empty-actions">
+              <Button variant="primary" disabled={busy} onClick={onImportLibrary}>
+                <Library />
+                {t('从 Zotero 导入')}
+              </Button>
+              <Button disabled={busy} onClick={() => picker.current?.click()}>
+                <Upload />
+                {t('导入文件')}
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div
@@ -166,6 +212,7 @@ export function LibraryTable({
           {rows.map((entry) => {
             const page = lastPage(entry.paperId);
             const where = folderOf(entry.path);
+            const reference = referenceOf(entry);
             return (
               <div
                 key={entry.path}
@@ -181,7 +228,14 @@ export function LibraryTable({
               >
                 <span role="gridcell" className="library-name">
                   <FileText />
-                  <span title={entry.path}>{stem(entry.name)}</span>
+                  {reference?.title ? (
+                    <span className="library-name-text" title={entry.path}>
+                      <span>{reference.title}</span>
+                      <small>{byline(reference)}</small>
+                    </span>
+                  ) : (
+                    <span title={entry.path}>{stem(entry.name)}</span>
+                  )}
                 </span>
                 <span role="gridcell" className="library-meta" title={where}>
                   {where ? filename(where) : '—'}

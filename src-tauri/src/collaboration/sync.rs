@@ -581,13 +581,16 @@ fn include(domain: Domain, rel: &str, name: &str, dir: bool) -> bool {
         return false;
     }
     match domain {
-        // The library index and operation marker are per device; note images travel.
+        // The library index and operation marker are per device; note images and
+        // paper records (references and highlights, one file per PDF) travel.
         Domain::Library => {
             if rel == ".scientify" {
                 return dir;
             }
             if let Some(rest) = rel.strip_prefix(".scientify/") {
-                return (dir && rest == "note-assets") || rest.starts_with("note-assets/");
+                return (dir && matches!(rest, "note-assets" | "papers"))
+                    || rest.starts_with("note-assets/")
+                    || (!dir && rest.starts_with("papers/") && rest.ends_with(".json"));
             }
             !name.starts_with('.')
         }
@@ -2073,6 +2076,18 @@ mod tests {
             Domain::Library,
             ".scientify/note-assets/x.png",
             "x.png",
+            false
+        ));
+        assert!(include(
+            Domain::Library,
+            ".scientify/papers",
+            "papers",
+            true
+        ));
+        assert!(include(
+            Domain::Library,
+            ".scientify/papers/ab12.json",
+            "ab12.json",
             false
         ));
         assert!(!include(

@@ -30,6 +30,7 @@ mod archive;
 #[cfg(test)]
 mod ipc_smoke;
 mod library;
+mod library_import;
 #[cfg(debug_assertions)]
 mod literature_smoke;
 mod notes;
@@ -253,6 +254,7 @@ pub fn run() {
         .manage(translation_window::WindowState::default())
         .manage(yita::YitaState::default())
         .manage(agent::papers::PaperState::default())
+        .manage(library_import::ImportState::default())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 if let Some(chat) = window.app_handle().try_state::<ai::stream::ChatState>() {
@@ -353,6 +355,13 @@ pub fn run() {
             library::library_pdf,
             library::library_read_file,
             library::library_note,
+            library::library_record,
+            library::library_references,
+            library_import::library_import_sources,
+            library_import::library_import_pick,
+            library_import::library_import_preview,
+            library_import::library_import_run,
+            library_import::library_import_cancel,
             notes::note_image,
             library::library_external,
             library::library_import_bytes,

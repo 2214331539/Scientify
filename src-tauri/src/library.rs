@@ -30,7 +30,7 @@ pub fn trusted<R: tauri::Runtime>(view: &tauri::Webview<R>) -> Result<(), String
         Err("网页不能调用应用接口。".into())
     }
 }
-fn project(state: &AppState, id: &str) -> Result<(), String> {
+pub(crate) fn project(state: &AppState, id: &str) -> Result<(), String> {
     let data = state.storage.load()?.ok_or("请先保存项目。")?;
     if data["projects"]
         .as_array()
@@ -173,6 +173,49 @@ pub async fn library_read_file(
     trusted(&view)?;
     let service = app.state::<LibraryState>().service.clone();
     tauri::async_runtime::spawn_blocking(move || service.read_file(&project_id, &path))
+        .await
+        .map_err(|e| e.to_string())?
+}
+/// A paper's record (reference and highlights); with `record`, saves it.
+#[tauri::command]
+pub async fn library_record<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    view: tauri::Webview<R>,
+    project_id: String,
+    id: String,
+    record: Option<serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    trusted(&view)?;
+    if record.is_some() {
+        crate::collaboration::permissions::require_write(
+            &app.state::<AppState>().storage,
+            &project_id,
+            "library",
+        )?;
+    }
+    let service = app.state::<LibraryState>().service.clone();
+    tauri::async_runtime::spawn_blocking(move || match record {
+        Some(record) => {
+            let root = service.root(&project_id)?.ok_or("请先打开文献文件夹。")?;
+            let _lease = crate::code::Lease::write(&root)?;
+            service.save_record(&project_id, &id, &record)?;
+            Ok(record)
+        }
+        None => service.record(&project_id, &id),
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+/// What the library knows about its papers, by fingerprint, for the table.
+#[tauri::command]
+pub async fn library_references<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    view: tauri::Webview<R>,
+    project_id: String,
+) -> Result<std::collections::BTreeMap<String, serde_json::Value>, String> {
+    trusted(&view)?;
+    let service = app.state::<LibraryState>().service.clone();
+    tauri::async_runtime::spawn_blocking(move || service.references(&project_id))
         .await
         .map_err(|e| e.to_string())?
 }
