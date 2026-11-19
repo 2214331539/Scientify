@@ -512,7 +512,7 @@ fn imported_pdfs_skip_duplicates_and_records_merge_without_losing_highlights() {
             "project",
             &paper.fingerprint,
             &reference,
-            &[highlight.clone()]
+            std::slice::from_ref(&highlight)
         )
         .unwrap(),
         1

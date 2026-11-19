@@ -410,7 +410,7 @@ pub(crate) fn import(
             None => Some((item, item.collections.first().cloned())),
             Some(set) => {
                 if item.collections.is_empty() {
-                    set.contains("").then(|| (item, None))
+                    set.contains("").then_some((item, None))
                 } else {
                     item.collections
                         .iter()
@@ -440,7 +440,7 @@ pub(crate) fn import(
             if item.standalone {
                 let name = safe_name(&item.reference.title, "笔记");
                 if service.add_text(
-                    &id,
+                    id,
                     &join(&target, &format!("{name}.md")),
                     &item.notes.join("\n\n"),
                 )? {
@@ -459,7 +459,7 @@ pub(crate) fn import(
                 let note =
                     (n == 0 && !item.notes.is_empty()).then(|| item.notes.join("\n\n---\n\n"));
                 let (binding, new) =
-                    service.add_pdf(&id, &target, &pdf.path, &name, note.as_deref())?;
+                    service.add_pdf(id, &target, &pdf.path, &name, note.as_deref())?;
                 if new {
                     report.papers += 1;
                     if note.is_some() {
@@ -469,7 +469,7 @@ pub(crate) fn import(
                     report.duplicates += 1;
                 }
                 report.highlights += service.merge_record(
-                    &id,
+                    id,
                     &binding.fingerprint,
                     &item.reference,
                     &pdf.annotations,
@@ -495,7 +495,7 @@ pub(crate) fn import(
                 if !item.notes.is_empty() {
                     let name = safe_name(&item.reference.title, "条目");
                     if service.add_text(
-                        &id,
+                        id,
                         &join(&target, &format!("{name}.md")),
                         &card(&item.reference, &item.notes),
                     )? {
@@ -522,8 +522,7 @@ pub(crate) fn import(
         }
     }
     if !bib.is_empty() {
-        report.references =
-            service.merge_bibliography(&id, &join(&base, "references.bib"), &bib)?;
+        report.references = service.merge_bibliography(id, &join(&base, "references.bib"), &bib)?;
     }
     progress(total, total, "");
     Ok(report)

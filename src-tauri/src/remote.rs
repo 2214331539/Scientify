@@ -315,8 +315,7 @@ fn greet(session: &Session) -> Result<String, String> {
         Ok((0, output)) => Ok(String::from_utf8_lossy(&output)
             .lines()
             .map(str::trim)
-            .filter(|line| line.starts_with('/'))
-            .last()
+            .rfind(|line| line.starts_with('/'))
             .unwrap_or("/")
             .to_string()),
         Ok((code, output)) => Err(format!(
