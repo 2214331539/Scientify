@@ -146,3 +146,30 @@ it('reads MCP environment lines as KEY=value pairs', async () => {
     PATH_X: '/usr/bin',
   });
 });
+
+it('uses another installation’s data after a restart and can undo it', async () => {
+  const { user, store, adapter } = await fixture();
+  const original = String.raw`\\?\D:\Scientify\ScientifyData`;
+  let directory = original;
+  adapter.storageLocation = vi.fn(async () => ({ directory, pending: null, cleanup: [] }));
+  adapter.scheduleStorage = vi.fn();
+  adapter.cancelStorage = vi.fn();
+  adapter.adoptStorage = vi.fn(async (next) => {
+    directory = next;
+    return { directory, pending: null, cleanup: [] };
+  });
+  adapter.chooseDirectory = vi.fn(async () => 'E:/OtherInstall/ScientifyData');
+  cleanup();
+  render(<SettingsDialog store={store} onClose={vi.fn()} initialSection="data" />);
+  // The long-path prefix Windows uses internally is not shown.
+  expect(await screen.findByText(String.raw`D:\Scientify\ScientifyData`)).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '选择数据目录' }));
+  expect(adapter.adoptStorage).toHaveBeenCalledWith('E:/OtherInstall/ScientifyData');
+  expect(await screen.findByText('E:/OtherInstall/ScientifyData')).toBeTruthy();
+  expect(screen.getByText('重启后使用')).toBeTruthy();
+  expect(screen.getByRole('button', { name: '立即重启' })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: '取消' }));
+  expect(adapter.adoptStorage).toHaveBeenLastCalledWith(original);
+  await waitFor(() => expect(screen.queryByText('重启后使用')).toBeNull());
+  expect(adapter.scheduleStorage).not.toHaveBeenCalled();
+});

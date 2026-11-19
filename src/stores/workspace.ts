@@ -24,7 +24,8 @@ interface WorkspaceState {
   exportWorkspace(): Promise<void>;
   chooseDirectory(): Promise<string | null>;
   storageLocation(): Promise<StorageLocation | null>;
-  changeStorage(directory: string | null): Promise<StorageLocation>;
+  /** Moves the data to an empty folder, or with `adopt` uses one that already has data; null cancels. */
+  changeStorage(directory: string | null, adopt?: boolean): Promise<StorageLocation>;
   setAgentTask(id: string, project: string | null): void;
   setDirty(dirty: boolean): void;
   setDirtySource(source: string, dirty: boolean): void;
@@ -224,17 +225,19 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
     async storageLocation() {
       return backend.storageLocation ? backend.storageLocation() : null;
     },
-    async changeStorage(directory) {
+    async changeStorage(directory, adopt = false) {
       if (get().busy || get().dirty || Object.keys(get().agentTasks).length)
         throw new Error(t('请先保存内容并结束任务，再更改数据位置。'));
-      if (!backend.scheduleStorage || !backend.cancelStorage)
+      if (!backend.scheduleStorage || !backend.cancelStorage || (adopt && !backend.adoptStorage))
         throw new Error(t('请在 Scientify 桌面版更改数据位置。'));
       exclusive = true;
       set({ busy: true });
       try {
         return await (directory === null
           ? backend.cancelStorage()
-          : backend.scheduleStorage(directory));
+          : adopt
+            ? backend.adoptStorage!(directory)
+            : backend.scheduleStorage(directory));
       } finally {
         exclusive = false;
         set({ busy: false });

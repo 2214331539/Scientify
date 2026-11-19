@@ -10,7 +10,6 @@ import { confirmAction } from '../../components/prompts';
 import { Modal } from '../../components/Modal';
 import { BrandMark } from '../../components/layout/BrandMark';
 import type { WorkspaceStore } from '../../stores/workspace';
-import type { StorageLocation } from '../../platform/desktop';
 import {
   Bot,
   CircleHelp,
@@ -23,6 +22,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { ShortcutsSettings } from './ShortcutsSettings';
+import { DataLocationRows } from './DataLocation';
 import { AccountPreferences } from './AccountPreferences';
 import { CollaborationPreferences } from './CollaborationPreferences';
 import { ModelPreferences } from './ModelPreferences';
@@ -64,39 +64,7 @@ function ErrorReportsRow() {
 
 function DataPreferences({ store }: { store: WorkspaceStore }) {
   const state = useStore(store);
-  const [location, setLocation] = useState<StorageLocation | null>(null);
-  const [locationError, setLocationError] = useState('');
-  const [changing, setChanging] = useState(false);
-  const blocked = state.busy || state.dirty || changing || !!Object.keys(state.agentTasks).length;
-  useEffect(() => {
-    let disposed = false;
-    void store
-      .getState()
-      .storageLocation()
-      .then((value) => {
-        if (!disposed) setLocation(value);
-      })
-      .catch((error) => {
-        if (!disposed) setLocationError(String(error));
-      });
-    return () => {
-      disposed = true;
-    };
-  }, [store]);
-  async function changeLocation(cancel = false) {
-    if (blocked) return;
-    setChanging(true);
-    setLocationError('');
-    try {
-      const directory = cancel ? null : await state.chooseDirectory();
-      if (!cancel && !directory) return;
-      setLocation(await store.getState().changeStorage(directory));
-    } catch (error) {
-      setLocationError(String(error));
-    } finally {
-      setChanging(false);
-    }
-  }
+  const blocked = state.busy || state.dirty || !!Object.keys(state.agentTasks).length;
   const confirmReplace = async (
     kind: 'restore' | 'migrateLegacy' | 'importWorkspace',
     text: string,
@@ -106,35 +74,7 @@ function DataPreferences({ store }: { store: WorkspaceStore }) {
   return (
     <div className="settings-data">
       <p className="muted">{t('应用数据保存在本机。已关联的项目和文献目录保留原位置。')}</p>
-      <label>
-        {t('当前目录')}
-        <code className="data-path">{location?.directory || state.directory || t('尚未载入')}</code>
-      </label>
-      <section className="setting-row">
-        <div>
-          <h3>{t('数据存储位置')}</h3>
-          <p>
-            {t('选择空文件夹。保存并退出应用后，下次启动将迁移数据、托管代码、AI 历史和浏览缓存。')}
-          </p>
-        </div>
-        <Button disabled={blocked || !location} onClick={() => void changeLocation()}>
-          {t('更改位置')}
-        </Button>
-      </section>
-      {location?.pending ? (
-        <div className="storage-pending" role="status">
-          <span>{t('下次启动迁移到')}</span>
-          <code className="data-path">{location.pending}</code>
-          <Button disabled={blocked} variant="ghost" onClick={() => void changeLocation(true)}>
-            {t('取消迁移')}
-          </Button>
-        </div>
-      ) : null}
-      {locationError ? (
-        <p role="alert" className="error-text">
-          {translateError(locationError)}
-        </p>
-      ) : null}
+      <DataLocationRows store={store} />
       <section className="setting-row">
         <div>
           <h3>{t('迁移 Electron 数据')}</h3>

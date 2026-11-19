@@ -31,6 +31,7 @@ fn main() {
             "storage_location",
             "storage_schedule",
             "storage_cancel",
+            "storage_adopt",
             "research_list_files",
             "research_read_file",
             "research_write_file",

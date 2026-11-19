@@ -369,6 +369,7 @@ pub fn run() {
             data_location::storage_location,
             data_location::storage_schedule,
             data_location::storage_cancel,
+            data_location::storage_adopt,
             research::research_list_files,
             research::research_read_file,
             research::research_write_file,

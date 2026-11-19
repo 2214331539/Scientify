@@ -13,6 +13,8 @@ export interface WorkspaceBackend {
   storageLocation?(): Promise<StorageLocation>;
   scheduleStorage?(directory: string): Promise<StorageLocation>;
   cancelStorage?(): Promise<StorageLocation>;
+  /** From the next start, use a folder that already holds Scientify data. */
+  adoptStorage?(directory: string): Promise<StorageLocation>;
 }
 
 export interface StorageLocation {
@@ -40,4 +42,5 @@ export const desktop: WorkspaceBackend = {
   storageLocation: () => command('storage_location'),
   scheduleStorage: (directory) => command('storage_schedule', { directory }),
   cancelStorage: () => command('storage_cancel'),
+  adoptStorage: (directory) => command('storage_adopt', { directory }),
 };

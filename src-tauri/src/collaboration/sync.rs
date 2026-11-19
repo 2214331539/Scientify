@@ -278,7 +278,8 @@ pub(crate) struct Device<'a> {
     pub files: &'a ResearchFiles,
     pub library: &'a LocalLibrary,
     pub device_id: String,
-    /// A new device puts a synced project's literature folder under here.
+    /// A new device puts a synced project's literature folder under here:
+    /// `Literature` in the data folder.
     pub documents: PathBuf,
 }
 
@@ -1004,14 +1005,11 @@ fn ensure_library(device: &Device<'_>, project: &str, info: &Value) -> Result<Pa
         .take(60)
         .collect();
     let short: String = project.chars().take(8).collect();
-    let folder = device
-        .documents
-        .join("Scientify")
-        .join(if clean.is_empty() {
-            format!("project-{short}")
-        } else {
-            format!("{clean} ({short})")
-        });
+    let folder = device.documents.join(if clean.is_empty() {
+        format!("project-{short}")
+    } else {
+        format!("{clean} ({short})")
+    });
     fs::create_dir_all(&folder).map_err(|error| format!("无法创建文献文件夹：{error}"))?;
     device.library.mount(project, &folder)?;
     Ok(folder)

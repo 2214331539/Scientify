@@ -93,14 +93,30 @@ pub fn prepare() -> Result<(PathBuf, DataLocation), String> {
 
 #[tauri::command]
 pub fn storage_location(state: State<'_, DataLocation>) -> Result<Location, String> {
-    match &state.locator {
-        Some(locator) => locator.location(),
-        None => Ok(Location {
+    let location = match &state.locator {
+        Some(locator) => locator.location()?,
+        None => Location {
             directory: state.container.clone(),
             pending: None,
             cleanup: vec![],
-        }),
+        },
+    };
+    Ok(location.for_display())
+}
+
+/// Running work keeps its files open; a new data location waits until it ends.
+fn protect_running<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
+    app.state::<crate::agent::AgentState>()
+        .protect(None, None, None)?;
+    app.state::<crate::experiments::ExperimentState>()
+        .protect(None, None)?;
+    if let Some(terminal) = app.try_state::<crate::experiments::terminal::TerminalState>() {
+        terminal.protect(None, None)?;
     }
+    if let Some(python) = app.try_state::<crate::experiments::python::PythonState>() {
+        python.protect(None, None)?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -114,17 +130,27 @@ pub async fn storage_schedule<R: tauri::Runtime>(
         .as_ref()
         .ok_or("开发版使用隔离数据目录，请在正式版更改存储位置。")?;
     // This schedules a future move; it never swaps live services or saved drafts.
-    app.state::<crate::agent::AgentState>()
-        .protect(None, None, None)?;
-    app.state::<crate::experiments::ExperimentState>()
-        .protect(None, None)?;
-    if let Some(terminal) = app.try_state::<crate::experiments::terminal::TerminalState>() {
-        terminal.protect(None, None)?;
-    }
-    if let Some(python) = app.try_state::<crate::experiments::python::PythonState>() {
-        python.protect(None, None)?;
-    }
-    locator.schedule(&state.container, Path::new(&directory))
+    protect_running(&app)?;
+    locator
+        .schedule(&state.container, Path::new(&directory))
+        .map(|location| location.for_display())
+}
+
+/// Uses a folder that already holds Scientify data from the next start on.
+#[tauri::command]
+pub async fn storage_adopt<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    state: State<'_, DataLocation>,
+    directory: String,
+) -> Result<Location, String> {
+    let locator = state
+        .locator
+        .as_ref()
+        .ok_or("开发版使用隔离数据目录，请在正式版更改存储位置。")?;
+    protect_running(&app)?;
+    locator
+        .adopt(Path::new(&directory))
+        .map(|location| location.for_display())
 }
 
 #[tauri::command]
@@ -134,6 +160,7 @@ pub fn storage_cancel(state: State<'_, DataLocation>) -> Result<Location, String
         .as_ref()
         .ok_or("开发版使用隔离数据目录。")?
         .cancel()
+        .map(|location| location.for_display())
 }
 
 pub fn migrate_offline() -> Result<(), String> {

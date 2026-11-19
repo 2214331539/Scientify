@@ -101,6 +101,24 @@ fn regular(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// The plain form of a canonical Windows path for people to read: `D:\data`
+/// rather than `\\?\D:\data`. Stored data keeps the canonical form it was saved with.
+pub fn simplified(path: &Path) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let text = path.to_string_lossy();
+        if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+            return PathBuf::from(format!(r"\\{rest}"));
+        }
+        if let Some(rest) = text.strip_prefix(r"\\?\") {
+            if rest.as_bytes().get(1) == Some(&b':') {
+                return PathBuf::from(rest);
+            }
+        }
+    }
+    path.to_path_buf()
+}
+
 fn normalized(path: &Path) -> Result<PathBuf, String> {
     if !path.is_absolute()
         || path
@@ -410,6 +428,17 @@ fn rewrite_database(path: &Path, mappings: &[(PathBuf, PathBuf)]) -> Result<(), 
         .map_err(err)
 }
 
+impl Location {
+    /// The same location with plain paths, for the settings page.
+    pub fn for_display(&self) -> Self {
+        Self {
+            directory: simplified(&self.directory),
+            pending: self.pending.as_deref().map(simplified),
+            cleanup: self.cleanup.iter().map(|path| simplified(path)).collect(),
+        }
+    }
+}
+
 impl Locator {
     pub fn new(installation: PathBuf, previous_roaming: PathBuf, previous_local: PathBuf) -> Self {
         Self {
@@ -453,6 +482,29 @@ impl Locator {
         fs::write(&probe, b"Scientify").map_err(err)?;
         fs::remove_file(probe).map_err(err)?;
         location.pending = Some(target);
+        write_json(&self.config(), &location)?;
+        Ok(location)
+    }
+    /// Points the next start at a folder that already holds Scientify data, such as
+    /// another installation's, instead of copying into an empty one. The current
+    /// folder stays where it is; adopting it again undoes the choice.
+    pub fn adopt(&self, target: &Path) -> Result<Location, String> {
+        let mut location = self.location()?;
+        let target = normalized(target)?;
+        reject_linked_worktrees(&target)?;
+        // A data folder has `workspace/`, and either saved projects or the `.gitignore`
+        // every prepared data folder gets (a fresh one has not saved anything yet).
+        let work = target.join("workspace");
+        if !work.is_dir()
+            || !(work.join("workspace.json").is_file() || target.join(".gitignore").is_file())
+        {
+            return Err(
+                "这个文件夹里没有 Scientify 数据。请选择包含 workspace 文件夹的数据目录。".into(),
+            );
+        }
+        location.directory = target;
+        location.pending = None;
+        location.cleanup.clear();
         write_json(&self.config(), &location)?;
         Ok(location)
     }
@@ -687,6 +739,49 @@ mod tests {
             b"saved"
         );
         assert!(!original.directory.exists());
+    }
+    #[test]
+    fn adopting_existing_data_switches_without_copying_and_can_be_undone() {
+        let (dir, locator) = fixture();
+        let original = locator.prepare().unwrap();
+        let empty = dir.path().join("empty");
+        fs::create_dir_all(&empty).unwrap();
+        assert!(locator
+            .adopt(&empty)
+            .unwrap_err()
+            .contains("没有 Scientify 数据"));
+        let other = dir.path().join("other-install");
+        fs::create_dir_all(other.join("workspace")).unwrap();
+        fs::write(other.join("workspace/workspace.json"), b"{}").unwrap();
+        let adopted = locator.adopt(&other).unwrap();
+        assert_eq!(adopted.directory, normalized(&other).unwrap());
+        assert!(original.directory.join("workspace").exists());
+        assert_eq!(
+            locator.prepare().unwrap().directory,
+            normalized(&other).unwrap()
+        );
+        assert!(
+            original.directory.exists(),
+            "adopting never removes the old folder"
+        );
+        locator.adopt(&original.directory).unwrap();
+        assert_eq!(
+            locator.prepare().unwrap().directory,
+            normalized(&original.directory).unwrap()
+        );
+    }
+    #[cfg(windows)]
+    #[test]
+    fn displayed_paths_drop_the_long_path_prefix() {
+        assert_eq!(
+            simplified(Path::new(r"\\?\D:\Data")),
+            PathBuf::from(r"D:\Data")
+        );
+        assert_eq!(
+            simplified(Path::new(r"\\?\UNC\server\share")),
+            PathBuf::from(r"\\server\share")
+        );
+        assert_eq!(simplified(Path::new(r"D:\Data")), PathBuf::from(r"D:\Data"));
     }
     #[test]
     fn relocation_protects_managed_worktree_links_before_changing_the_pointer() {

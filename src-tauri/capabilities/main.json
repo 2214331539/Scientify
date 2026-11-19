@@ -26,6 +26,7 @@
     "allow-storage-location",
     "allow-storage-schedule",
     "allow-storage-cancel",
+    "allow-storage-adopt",
     "allow-research-list-files",
     "allow-research-read-file",
     "allow-research-write-file",

@@ -889,11 +889,11 @@ pub async fn collaboration_sync_project<R: tauri::Runtime>(
     }
     let _ = app.emit("collaboration-updated", json!({"projectId": project_id}));
     let library = app.state::<crate::library::LibraryState>();
+    // New literature folders stay with the rest of the data, on the disk the user chose.
     let documents = app
-        .path()
-        .document_dir()
-        .or_else(|_| app.path().home_dir())
-        .map_err(|error| error.to_string())?;
+        .state::<crate::data_location::DataLocation>()
+        .container
+        .join("Literature");
     let device = sync::Device {
         storage: &state.storage,
         files: &state.files,
