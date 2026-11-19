@@ -265,6 +265,7 @@ pub fn run() {
         .manage(library_import::ImportState::default())
         .manage(remote::RemoteState::default())
         .manage(translator::TranslatorState::default())
+        .manage(agent::account::AccountState::default())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 if let Some(chat) = window.app_handle().try_state::<ai::stream::ChatState>() {
@@ -464,6 +465,12 @@ pub fn run() {
             ai::stream::research_chat_cancel,
             agent::agent_status,
             agent::agent_handshake,
+            agent::account::chatgpt_account,
+            agent::account::chatgpt_login,
+            agent::account::chatgpt_login_cancel,
+            agent::account::chatgpt_logout,
+            agent::account::chatgpt_usage,
+            agent::account::chatgpt_models,
             agent::agent_domains,
             agent::materials::agent_context,
             agent::skills::agent_skills,

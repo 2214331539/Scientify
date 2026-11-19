@@ -4421,5 +4421,40 @@
     "Translate the whole paper, keeping its layout, formulas and figures."
   ],
   "翻译进度": ["翻译进度", "Translation progress"],
-  "译文保留原文排版": ["译文保留原文排版", "Translation in the original layout"]
+  "译文保留原文排版": ["译文保留原文排版", "Translation in the original layout"],
+  "每周额度": ["每周额度", "Weekly limit"],
+  "{days} 天额度": ["{days} 天额度", "{days}-day limit"],
+  "{hours} 小时额度": ["{hours} 小时额度", "{hours}-hour limit"],
+  "用量": ["用量", "Usage"],
+  "登录没有完成。": ["登录没有完成。", "Sign-in did not finish."],
+  "ChatGPT 账号": ["ChatGPT 账号", "ChatGPT account"],
+  "正在读取账号…": ["正在读取账号…", "Reading the account…"],
+  "已用 {percent}%": ["已用 {percent}%", "{percent}% used"],
+  "请在浏览器里完成登录": ["请在浏览器里完成登录", "Finish signing in in your browser"],
+  "用你的 ChatGPT 订阅驱动 AI 助手": [
+    "用你的 ChatGPT 订阅驱动 AI 助手",
+    "Run the AI assistant on your ChatGPT plan"
+  ],
+  "用 ChatGPT 登录": ["用 ChatGPT 登录", "Sign in with ChatGPT"],
+  "请先登录 ChatGPT 账号。": ["请先登录 ChatGPT 账号。", "Sign in to ChatGPT first."],
+  "获取模型": ["获取模型", "Get models"],
+  "请求从这台电脑发出，用你的订阅额度。划词翻译和全文翻译仍用其他模型。": [
+    "请求从这台电脑发出，用你的订阅额度。划词翻译和全文翻译仍用其他模型。",
+    "Requests go from this computer and use your plan. Selection and full-text translation keep using another model."
+  ],
+  "ChatGPT 账号只用于 AI 助手。全文翻译需要另一个模型，请在模型设置里再添加一个。": [
+    "ChatGPT 账号只用于 AI 助手。全文翻译需要另一个模型，请在模型设置里再添加一个。",
+    "The ChatGPT account only runs the AI assistant. Full-text translation needs another model; add one in model settings."
+  ],
+  "ChatGPT 账号只用于 AI 助手。划词翻译需要另一个模型，请在模型设置里再添加一个（如 Scientify 官方模型）。": [
+    "ChatGPT 账号只用于 AI 助手。划词翻译需要另一个模型，请在模型设置里再添加一个（如 Scientify 官方模型）。",
+    "The ChatGPT account only runs the AI assistant. Selection translation needs another model; add one in model settings (such as the Scientify official model)."
+  ],
+  "请先在模型设置里登录 ChatGPT 账号。": [
+    "请先在模型设置里登录 ChatGPT 账号。",
+    "Sign in to ChatGPT in model settings first."
+  ],
+  "ChatGPT 账号（Plus / Pro）": ["ChatGPT 账号（Plus / Pro）", "ChatGPT account (Plus / Pro)"],
+  "豆包 · 火山方舟": ["豆包 · 火山方舟", "Doubao · Volcano Ark"],
+  "智谱 GLM": ["智谱 GLM", "Zhipu GLM"]
 }

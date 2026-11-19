@@ -71,7 +71,9 @@ fn configuration<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<Value, 
         .load()?
         .unwrap_or_default();
     // Include provider/endpoint in Yita's in-memory cache identity, without transferring any secret.
-    let model = model_identity(&data["settings"]["model"]);
+    let model = model_identity(
+        &crate::ai::text_connection(&data).unwrap_or_else(|_| data["settings"]["model"].clone()),
+    );
     Ok(
         json!({"type":"configure", "model":model, "legacy":data["settings"]["translation"].as_object().cloned().unwrap_or_default(), "language":"zh-CN"}),
     )
@@ -262,7 +264,7 @@ async fn model_request<R: tauri::Runtime>(
 ) -> Result<(crate::ai::AIRequest, Option<String>), String> {
     let state = app.state::<crate::AppState>();
     let data = state.storage.load()?.ok_or("请先配置 AI 模型。")?;
-    let model = &data["settings"]["model"];
+    let model = &crate::ai::text_connection(&data)?;
     if body["model"] != model_identity(model) {
         return Err("模型配置已更新，请重新翻译。".into());
     }

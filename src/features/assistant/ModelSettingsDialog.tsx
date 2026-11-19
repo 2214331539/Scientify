@@ -7,6 +7,8 @@ import type { AIModel, ResearchBackend } from '../../platform/research';
 import type { AISettings } from './model';
 import type { AIProtocol, ModelProfile } from '../../domain/workspace';
 import { modelServices, serviceFor } from './providers';
+import { ChatGPTAccount } from './ChatGPTAccount';
+import { chatgpt as nativeChatGPT, type ChatGPTBackend } from '../../platform/chatgpt';
 import { errorMessage } from '../../domain/errors';
 import '../settings/settings.css';
 import './model-settings.css';
@@ -103,6 +105,7 @@ interface FormProps {
   /** Inside another scrolling page (Settings) rather than its own dialog. */
   embedded?: boolean;
   note?: string;
+  chatgpt?: ChatGPTBackend;
 }
 
 /** Provider, endpoint, key and model of one connection; saving verifies chat and Agent. */
@@ -125,8 +128,12 @@ export function ModelConnectionForm({
   officialEndpoint,
   embedded,
   note,
+  chatgpt = nativeChatGPT,
 }: FormProps) {
   const service = serviceFor(value);
+  // A ChatGPT plan signs in through the browser; it has no address or key.
+  const account = service.id === 'chatgpt';
+  const [signedIn, setSignedIn] = useState(false);
   const [models, setModels] = useState<AIModel[]>([]);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'verifying'>('idle');
   const [failure, setFailure] = useState('');
@@ -151,6 +158,10 @@ export function ModelConnectionForm({
     invalidate();
     setCapability(value.verification);
   }, [profileId]);
+  // Signing in is enough to pick a model.
+  useEffect(() => {
+    if (account && signedIn) void discover();
+  }, [account, signedIn]);
 
   function invalidate() {
     generation.current++;
@@ -176,7 +187,7 @@ export function ModelConnectionForm({
     const ticket = ++keyTicket.current;
     setRecalled(false);
     onKeyChange('');
-    if (!next.endpoint.trim()) return;
+    if (!next.endpoint.trim() || next.provider === 'chatgpt') return;
     let stored: string;
     try {
       stored = await loadKey(next);
@@ -195,7 +206,11 @@ export function ModelConnectionForm({
   }
   async function discover() {
     if (pending.current || disabled) return;
-    if (!value.endpoint.trim() || (value.provider !== 'ollama' && !apiKey.trim())) {
+    if (account && !signedIn) {
+      setFailure(t('请先登录 ChatGPT 账号。'));
+      return;
+    }
+    if (!account && (!value.endpoint.trim() || (value.provider !== 'ollama' && !apiKey.trim()))) {
       setFailure(t('请填写服务地址和 API 密钥。'));
       return;
     }
@@ -206,11 +221,13 @@ export function ModelConnectionForm({
     setFailure('');
     setPhase('loading');
     try {
-      const found = await backend.listModels({
-        endpoint: value.endpoint.trim(),
-        provider: value.provider,
-        apiKey: apiKey.trim() || undefined,
-      });
+      const found = account
+        ? await chatgpt.models()
+        : await backend.listModels({
+            endpoint: value.endpoint.trim(),
+            provider: value.provider,
+            apiKey: apiKey.trim() || undefined,
+          });
       if (ticket !== generation.current) return;
       if (!found.length) throw new Error(t('服务未返回可选的聊天模型。'));
       setModels(found);
@@ -247,14 +264,17 @@ export function ModelConnectionForm({
         apiKey: apiKey.trim() || undefined,
         model: value.model.trim(),
       };
-      const verified = backend.verifyModel
-        ? await backend.verifyModel(request)
-        : await backend.testModel(request).then(() => ({
-            chat: true,
-            agent: false,
-            agentError: undefined,
-            chatError: undefined,
-          }));
+      // The engine itself checks a ChatGPT sign-in when a chat starts.
+      const verified = account
+        ? { chat: false, agent: true, agentError: undefined, chatError: undefined }
+        : backend.verifyModel
+          ? await backend.verifyModel(request)
+          : await backend.testModel(request).then(() => ({
+              chat: true,
+              agent: false,
+              agentError: undefined,
+              chatError: undefined,
+            }));
       if (!verified.chat && !verified.agent)
         throw new Error(
           [verified.chatError, verified.agentError].filter(Boolean).join('\n') ||
@@ -275,7 +295,7 @@ export function ModelConnectionForm({
           model: request.model,
           serviceId: service.id,
           modelCatalog: models.length ? models.map((m) => m.id) : [request.model],
-          verification: backend.verifyModel ? verification : undefined,
+          verification: backend.verifyModel && !account ? verification : undefined,
         },
         apiKey.trim(),
       );
@@ -361,7 +381,14 @@ export function ModelConnectionForm({
                 </Dropdown>
               </label>
             )}
-            {service.endpoints.length > 1 && (
+            {account ? (
+              <ChatGPTAccount
+                disabled={disabled}
+                backend={chatgpt}
+                onAccount={(current) => setSignedIn(current.signedIn)}
+              />
+            ) : null}
+            {!account && service.endpoints.length > 1 && (
               <label className="sf-model-settings-row">
                 <span>{t('服务区域')}</span>
                 <Dropdown
@@ -388,45 +415,49 @@ export function ModelConnectionForm({
                 </Dropdown>
               </label>
             )}
-            <label className="sf-model-settings-row">
-              <span>{t('服务地址')}</span>
-              <Input
-                type="url"
-                required
-                spellCheck={false}
-                disabled={disabled}
-                value={value.endpoint}
-                placeholder="https://api.example.com/v1"
-                onChange={(event) => {
-                  onKeyChange('');
-                  changeConnection({ ...value, endpoint: event.target.value });
-                }}
-              />
-            </label>
-            <label className="sf-model-settings-row">
-              <span>
-                {t('API 密钥')}
-                {value.provider === 'ollama' ? ' · ' + t('可选') : ''}
-              </span>
-              <Input
-                aria-label={t('API 密钥')}
-                type="password"
-                autoComplete="off"
-                disabled={disabled}
-                value={apiKey}
-                onChange={(event) => {
-                  setRecalled(false);
-                  invalidate();
-                  onKeyChange(event.target.value);
-                }}
-                placeholder={t('只存在这台电脑上')}
-              />
-              {recalled ? (
-                <span className="sf-model-key-hint" role="status">
-                  {t('已读取本机保存的密钥。')}
-                </span>
-              ) : null}
-            </label>
+            {account ? null : (
+              <>
+                <label className="sf-model-settings-row">
+                  <span>{t('服务地址')}</span>
+                  <Input
+                    type="url"
+                    required
+                    spellCheck={false}
+                    disabled={disabled}
+                    value={value.endpoint}
+                    placeholder="https://api.example.com/v1"
+                    onChange={(event) => {
+                      onKeyChange('');
+                      changeConnection({ ...value, endpoint: event.target.value });
+                    }}
+                  />
+                </label>
+                <label className="sf-model-settings-row">
+                  <span>
+                    {t('API 密钥')}
+                    {value.provider === 'ollama' ? ' · ' + t('可选') : ''}
+                  </span>
+                  <Input
+                    aria-label={t('API 密钥')}
+                    type="password"
+                    autoComplete="off"
+                    disabled={disabled}
+                    value={apiKey}
+                    onChange={(event) => {
+                      setRecalled(false);
+                      invalidate();
+                      onKeyChange(event.target.value);
+                    }}
+                    placeholder={t('只存在这台电脑上')}
+                  />
+                  {recalled ? (
+                    <span className="sf-model-key-hint" role="status">
+                      {t('已读取本机保存的密钥。')}
+                    </span>
+                  ) : null}
+                </label>
+              </>
+            )}
           </div>
           <div className="sf-model-discovery-actions">
             <Button
@@ -439,7 +470,7 @@ export function ModelConnectionForm({
               ) : (
                 <RefreshCw size={14} />
               )}
-              {phase === 'loading' ? t('正在获取模型…') : t('测试连接')}
+              {phase === 'loading' ? t('正在获取模型…') : account ? t('获取模型') : t('测试连接')}
             </Button>
             <span role="status" className="sf-model-status">
               {phase === 'ready' ? (
@@ -452,7 +483,7 @@ export function ModelConnectionForm({
               ) : null}
             </span>
           </div>
-          {capability ? (
+          {capability && !account ? (
             <div className="sf-model-capabilities" role="status">
               <span>{capability.chat ? t('聊天验证通过') : t('聊天接口不可用')}</span>
               <span>{capability.agent ? t('Agent 工具验证通过') : t('Agent 连接验证未通过')}</span>
@@ -461,7 +492,11 @@ export function ModelConnectionForm({
               ) : null}
             </div>
           ) : null}
-          <p className="settings-note">{t('密钥只存在这台电脑上，不随项目同步。')}</p>
+          <p className="settings-note">
+            {account
+              ? t('请求从这台电脑发出，用你的订阅额度。划词翻译和全文翻译仍用其他模型。')
+              : t('密钥只存在这台电脑上，不随项目同步。')}
+          </p>
         </section>
         <section aria-label={t('聊天模型')}>
           <h3 className="settings-section-heading">{t('聊天模型')}</h3>
@@ -524,7 +559,9 @@ export function ModelConnectionForm({
               </label>
             )}
           </div>
-          <p className="settings-note">{t('保存时验证聊天和 Agent，只发送测试内容。')}</p>
+          {account ? null : (
+            <p className="settings-note">{t('保存时验证聊天和 Agent，只发送测试内容。')}</p>
+          )}
         </section>
         {(failure || error) && (
           <p role="alert" className="sf-model-settings-error">

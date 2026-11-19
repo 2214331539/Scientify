@@ -145,3 +145,48 @@ dialog.settings-dialog.sf-model-settings-dialog {
     margin-left: auto;
   }
 }
+/* A ChatGPT account takes the place of the address and key in the connection box. */
+.sf-chatgpt-account {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px;
+  border-top: 1px solid var(--sf-border-subtle);
+  font-size: 12px;
+}
+.sf-chatgpt-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  min-height: 28px;
+}
+.sf-chatgpt-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sf-chatgpt-name em {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--sf-surface-hover);
+  color: var(--sf-text-secondary);
+  font-size: 11px;
+  font-style: normal;
+}
+.sf-chatgpt-usage {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  color: var(--sf-text-secondary);
+}
+.sf-chatgpt-usage .settings-meter span {
+  min-width: 64px;
+}
+.sf-chatgpt-account .sf-model-settings-error {
+  margin: 0;
+}

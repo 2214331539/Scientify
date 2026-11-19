@@ -15,6 +15,13 @@ export const modelServices: {
     endpoints: [{ name: '协作服务器', url: 'http://127.0.0.1:8081' }],
   },
   {
+    // Signs in with a ChatGPT plan; the Agent engine sends requests from this computer.
+    id: 'chatgpt',
+    name: 'ChatGPT 账号（Plus / Pro）',
+    provider: 'chatgpt',
+    endpoints: [{ name: 'ChatGPT', url: 'https://chatgpt.com/backend-api/codex' }],
+  },
+  {
     id: 'openai',
     name: 'OpenAI',
     provider: 'openai',
@@ -54,6 +61,21 @@ export const modelServices: {
     endpoints: [
       { name: '中国内地', url: 'https://api.moonshot.cn/v1' },
       { name: '国际', url: 'https://api.moonshot.ai/v1' },
+    ],
+  },
+  {
+    id: 'doubao',
+    name: '豆包 · 火山方舟',
+    provider: 'openai',
+    endpoints: [{ name: '默认', url: 'https://ark.cn-beijing.volces.com/api/v3' }],
+  },
+  {
+    id: 'zhipu',
+    name: '智谱 GLM',
+    provider: 'openai',
+    endpoints: [
+      { name: '中国内地', url: 'https://open.bigmodel.cn/api/paas/v4' },
+      { name: '国际', url: 'https://api.z.ai/api/paas/v4' },
     ],
   },
   {

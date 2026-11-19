@@ -142,7 +142,9 @@ export function AssistantPanel({
   const keyStored = credential.slot === selectedSlot && credential.stored;
   const credentialsReady = officialModel
     ? credential.slot === selectedSlot && !!credential.key
-    : credential.slot === selectedSlot || settings.provider === 'ollama';
+    : credential.slot === selectedSlot ||
+      settings.provider === 'ollama' ||
+      settings.provider === 'chatgpt';
   // Keys read back once per provider endpoint; a second open of the dialog must
   // not wait on the disk again.
   const keyCache = useRef(new Map<string, string>());
@@ -401,6 +403,7 @@ export function AssistantPanel({
         keyCache.current.set(slot, token);
         return token;
       }
+      if (provider === 'chatgpt') return '';
       const remembered = keyCache.current.get(slot);
       if (remembered !== undefined) return remembered;
       if (credentials === nativeCredentials && !isTauri()) return '';

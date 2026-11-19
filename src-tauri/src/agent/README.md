@@ -31,3 +31,10 @@ After a Windows release build, `node scripts/verify-experiment-runner.mjs`
 verifies the production entrypoint through the real bundled Codex sandbox.
 It uses disposable directories, observes live logs, reads the result JSON,
 and checks that writing an external test file is rejected. No model is called.
+
+`account.rs` signs in with a ChatGPT plan through the engine's own
+`account/login/start` flow (browser page, local callback). Such conversations
+start threads on the built-in `openai` provider with
+`forced_login_method="chatgpt"`; no key is passed. The sign-in lives in
+`auth.json` of each engine home, and the newest copy is shared to a home before
+its engine starts, so a token renewal in one home reaches the others.

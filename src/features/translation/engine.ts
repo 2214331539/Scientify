@@ -11,9 +11,24 @@ const seenKey = (projectId: string) => `scientify.translate.seen.${projectId}`;
 /** More new papers than this at once (an import) are translated on request. */
 export const AUTO_LIMIT = 5;
 
-/** The assistant's model, for the translation engine to call. */
+/**
+ * The assistant's model, for the translation engine to call. A ChatGPT sign-in only
+ * drives the Agent, so translation then uses another saved connection, the official
+ * model first.
+ */
 export async function translationModel(store: WorkspaceStore): Promise<TranslationModel> {
-  const settings = store.getState().data?.settings.model as AISettings | undefined;
+  const data = store.getState().data;
+  let settings = data?.settings.model as AISettings | undefined;
+  if (settings?.provider === 'chatgpt') {
+    const others = (data?.settings.modelProfiles ?? []).filter(
+      (profile) => profile.provider !== 'chatgpt' && profile.model,
+    );
+    settings = others.find((profile) => profile.serviceId === 'scientify') ?? others[0];
+    if (!settings)
+      throw new Error(
+        t('ChatGPT 账号只用于 AI 助手。全文翻译需要另一个模型，请在模型设置里再添加一个。'),
+      );
+  }
   if (!settings?.model) throw new Error(t('请先在设置里选好 AI 模型。'));
   const apiKey = await loadConnectionKey(settings);
   const endpoint =

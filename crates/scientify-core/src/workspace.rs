@@ -55,7 +55,7 @@ fn model_connection(value: &Value) -> Result<(), String> {
         || !value["model"].as_str().is_some_and(|s| s.len() <= 256)
         || !matches!(
             value["provider"].as_str(),
-            Some("ollama" | "openai" | "anthropic" | "gemini")
+            Some("ollama" | "openai" | "anthropic" | "gemini" | "chatgpt")
         )
         || value.get("apiKey").is_some()
         || value.get("api_key").is_some()

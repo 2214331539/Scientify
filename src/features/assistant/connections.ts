@@ -16,6 +16,8 @@ export async function loadConnectionKey(
   credentials: CredentialBackend = nativeCredentials,
 ) {
   if (value.serviceId === 'scientify') return collaboration.modelToken();
+  // A ChatGPT plan is signed in to the Agent engine and has no key.
+  if (value.provider === 'chatgpt') return '';
   if (credentials === nativeCredentials && !isTauri()) return '';
   return (
     (await credentials.load({ provider: value.provider, endpoint: value.endpoint.trim() })) ?? ''
@@ -33,6 +35,8 @@ export async function storeConnectionKey(
       // The model token stays in memory; never persist it in the provider
       // credential store.
       await collaboration.modelToken();
+    } else if (value.provider === 'chatgpt') {
+      // Signed in through the browser; nothing to keep here.
     } else if (key.trim())
       await credentials.save({ provider: value.provider, endpoint: value.endpoint }, key.trim());
     else if (value.provider !== 'ollama') throw new Error(t('请填写 API 密钥。'));

@@ -104,7 +104,7 @@ export interface AgentConnection {
  * Gemini need a translating proxy before they can be used here. Exposing the
  * list lets the panel explain that instead of failing at request time.
  */
-export const ENGINE_PROTOCOLS: readonly AIProtocol[] = ['openai', 'ollama'];
+export const ENGINE_PROTOCOLS: readonly AIProtocol[] = ['openai', 'ollama', 'chatgpt'];
 
 export const engineSupports = (protocol: AIProtocol) => ENGINE_PROTOCOLS.includes(protocol);
 

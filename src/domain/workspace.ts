@@ -1,8 +1,8 @@
 import { validateWebSources } from './web-sources';
 import type { ShortcutSettings } from '../platform/shortcuts';
 export type Entity = { id: string; [key: string]: unknown };
-/** Wire protocols a model service can speak. */
-export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini';
+/** Wire protocols a model service can speak; `chatgpt` is a ChatGPT plan signed in to the Agent engine. */
+export type AIProtocol = 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'chatgpt';
 export type ModelSettings = {
   endpoint: string;
   model: string;

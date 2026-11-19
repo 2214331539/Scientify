@@ -14,6 +14,19 @@ pub const KEY_ENV: &str = "SCIENTIFY_AGENT_KEY";
 /// Provider id passed in per-process configuration overrides.
 const PROVIDER_ID: &str = "scientify";
 
+/// Signed in with a ChatGPT plan instead of an API key (account.rs). The engine's
+/// built-in OpenAI provider then talks to ChatGPT with that sign-in.
+pub const CHATGPT: &str = "chatgpt";
+
+/// The provider a thread starts with.
+pub fn provider_id(connection: &Connection<'_>) -> &'static str {
+    if connection.provider == CHATGPT {
+        "openai"
+    } else {
+        PROVIDER_ID
+    }
+}
+
 pub struct Connection<'a> {
     pub endpoint: &'a str,
     pub model: &'a str,
@@ -116,6 +129,11 @@ pub fn prepare(connection: &Connection<'_>) -> Result<reqwest::Url, String> {
         // Both expose an OpenAI-shaped surface; anything else would need a
         // translating proxy that this project does not ship.
         "openai" | "ollama" => {}
+        CHATGPT => {
+            check_model(connection.model)?;
+            return reqwest::Url::parse("https://chatgpt.com/backend-api/codex")
+                .map_err(|e| e.to_string());
+        }
         "anthropic" | "gemini" => {
             return Err(
                 "内置 Agent 引擎使用 OpenAI Responses 协议，暂不支持该服务商的原始协议。请选择 OpenAI 兼容的服务商。"
@@ -134,23 +152,20 @@ pub fn arguments(connection: &Connection<'_>) -> Result<Vec<String>, String> {
     let endpoint = prepare(connection)?;
     let endpoint = endpoint.as_str().trim_end_matches('/');
     let mut args = vec!["app-server".into(), "--listen".into(), "stdio://".into()];
-    for value in [
+    let mut values = vec![
         // Conversation history is the memory boundary. Do not synthesize or
         // import cross-thread memory in a CODEX_HOME shared by several projects.
         "features.memories=false".to_string(),
         "features.external_agent_memory_import=false".to_string(),
         format!("model={}", quoted(connection.model.trim())),
-        format!("model_provider={}", quoted(PROVIDER_ID)),
-        format!("model_providers.{PROVIDER_ID}.name=\"Scientify\""),
-        format!(
-            "model_providers.{PROVIDER_ID}.base_url={}",
-            quoted(endpoint)
-        ),
-        format!("model_providers.{PROVIDER_ID}.wire_api=\"responses\""),
-        format!("model_providers.{PROVIDER_ID}.requires_openai_auth=false"),
-        // Always override a possible env_key left by older Scientify versions.
-        format!("model_providers.{PROVIDER_ID}.env_key={}", quoted(KEY_ENV)),
-    ] {
+        format!("model_provider={}", quoted(provider_id(connection))),
+    ];
+    if connection.provider == CHATGPT {
+        values.extend(super::account::OVERRIDES.map(String::from));
+    } else {
+        values.extend(provider_overrides(endpoint));
+    }
+    for value in values {
         args.extend(["-c".into(), value]);
     }
     if cfg!(windows) {
@@ -162,8 +177,25 @@ pub fn arguments(connection: &Connection<'_>) -> Result<Vec<String>, String> {
     Ok(args)
 }
 
+fn provider_overrides(endpoint: &str) -> [String; 5] {
+    [
+        format!("model_providers.{PROVIDER_ID}.name=\"Scientify\""),
+        format!(
+            "model_providers.{PROVIDER_ID}.base_url={}",
+            quoted(endpoint)
+        ),
+        format!("model_providers.{PROVIDER_ID}.wire_api=\"responses\""),
+        format!("model_providers.{PROVIDER_ID}.requires_openai_auth=false"),
+        // Always override a possible env_key left by older Scientify versions.
+        format!("model_providers.{PROVIDER_ID}.env_key={}", quoted(KEY_ENV)),
+    ]
+}
+
 /// Environment entries the engine process needs.
 pub fn environment(connection: &Connection<'_>) -> Vec<(String, String)> {
+    if connection.provider == CHATGPT {
+        return Vec::new();
+    }
     match connection
         .api_key
         .map(str::trim)
@@ -244,6 +276,22 @@ mod tests {
         assert!(prepare(&connection("openai", "api.openai.com", None)).is_err());
         assert!(prepare(&connection("openai", "https://a b/v1", None)).is_err());
         assert!(prepare(&connection("openai", "", None)).is_err());
+    }
+
+    #[test]
+    fn a_chatgpt_sign_in_uses_the_built_in_provider_and_no_key() {
+        let chatgpt = connection(CHATGPT, "", None);
+        assert!(prepare(&chatgpt).is_ok());
+        let args = arguments(&chatgpt).unwrap().join(
+            "
+",
+        );
+        assert!(args.contains("model_provider=\"openai\""));
+        assert!(args.contains("forced_login_method=\"chatgpt\""));
+        assert!(!args.contains("model_providers."));
+        assert_eq!(provider_id(&chatgpt), "openai");
+        assert!(environment(&chatgpt).is_empty());
+        assert_eq!(provider_id(&connection("openai", "", None)), PROVIDER_ID);
     }
 
     #[test]

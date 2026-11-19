@@ -249,6 +249,33 @@ async fn response(call: RequestBuilder, limit: usize) -> Result<Value, String> {
 pub(crate) fn valid_model(model: &str) -> bool {
     !model.trim().is_empty() && model.len() <= 256 && !model.chars().any(char::is_control)
 }
+/// The connection for one-shot text features such as selection translation. A
+/// ChatGPT sign-in only drives the Agent, so these use another saved connection,
+/// the official model first.
+pub(crate) fn text_connection(data: &Value) -> Result<Value, String> {
+    let model = &data["settings"]["model"];
+    if model["provider"] != "chatgpt" {
+        return Ok(model.clone());
+    }
+    data["settings"]["modelProfiles"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|p| p["provider"] != "chatgpt" && p["model"].as_str().is_some_and(valid_model))
+        .min_by_key(|p| p["serviceId"] != "scientify")
+        .map(|p| {
+            let mut value = p.clone();
+            if let Some(fields) = value.as_object_mut() {
+                fields.remove("id");
+                fields.remove("name");
+            }
+            value
+        })
+        .ok_or_else(|| {
+            "ChatGPT 账号只用于 AI 助手。划词翻译需要另一个模型，请在模型设置里再添加一个（如 Scientify 官方模型）。"
+                .into()
+        })
+}
 fn text_model(value: &Value, provider: Provider) -> bool {
     if matches!(provider, Provider::Gemini) {
         return value["supportedGenerationMethods"]
@@ -815,6 +842,23 @@ pub(crate) mod tests {
         });
         (address, handle)
     }
+    #[test]
+    fn text_features_leave_a_chatgpt_sign_in_to_the_agent() {
+        let own = json!({"provider":"openai","endpoint":"https://a.example/v1","model":"m"});
+        let mut data = json!({"settings":{"model":own.clone()}});
+        assert_eq!(text_connection(&data).unwrap(), own);
+        data["settings"]["model"] = json!({"provider":"chatgpt","endpoint":"","model":"gpt"});
+        assert!(text_connection(&data).is_err());
+        data["settings"]["modelProfiles"] = json!([
+            {"id":"c","name":"ChatGPT","provider":"chatgpt","endpoint":"","model":"gpt"},
+            {"id":"o","name":"Own","provider":"openai","endpoint":"https://a.example/v1","model":"m"},
+            {"id":"s","name":"Official","provider":"openai","serviceId":"scientify","endpoint":"https://s.example","model":"s"},
+        ]);
+        let chosen = text_connection(&data).unwrap();
+        assert_eq!(chosen["model"], "s");
+        assert!(chosen.get("id").is_none());
+    }
+
     #[test]
     fn bases_keep_custom_prefixes_and_reject_credentials_in_urls() {
         for (url, provider, expected) in [

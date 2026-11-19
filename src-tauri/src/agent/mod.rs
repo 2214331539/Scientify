@@ -1,5 +1,6 @@
 //! Local Codex runtime. A conversation owns its thread, command lock and process.
 //! Native tasks outlive panels. Slow I/O only runs on Tauri's blocking pool.
+pub(crate) mod account;
 mod config;
 mod docs;
 pub(crate) mod execution;
@@ -548,6 +549,12 @@ fn create_engine(
 ) -> Result<EngineSession, String> {
     let mut args = config::arguments(connection)?;
     args.extend(config::mcp_arguments(&mcp_servers(app)));
+    if connection.provider == config::CHATGPT {
+        account::share(
+            app.state::<AppState>().storage.directory(),
+            &codex_home(app, domain)?,
+        )?;
+    }
     let app_copy = app.clone();
     let project = project.to_string();
     let domain_copy = domain.to_string();
@@ -774,6 +781,7 @@ pub async fn agent_start_thread(
             session
         };
         let mut plan = thread_plan(&root, connection.model, domain, record);
+        plan.params["modelProvider"] = json!(config::provider_id(&connection));
         let mut extra = custom_instructions(&app.state::<AppState>().storage, &project_id);
         // A click on such a link in the answer opens the page (blockLink.ts).
         if domain != "inbox" {
