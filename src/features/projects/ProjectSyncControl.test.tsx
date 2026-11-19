@@ -162,3 +162,41 @@ it('allows reviewers to edit project notes only and leaves viewer trash for an e
   data.records[0].deletedAt = '2020-01-01';
   expect(expiredNotes(data)).toEqual([]);
 });
+
+it('shares from a card under the button: invite, change a role, remove someone', async () => {
+  vi.spyOn(collaboration, 'syncProject').mockResolvedValue({
+    pulled: 0,
+    applied: 0,
+    pushed: 0,
+    conflicts: 0,
+    skipped: 0,
+    deferred: 0,
+    errors: [],
+    changed: [],
+    libraryRoot: null,
+    lastSyncAt: '2026-11-19T08:00:00Z',
+  } as never);
+  const members = vi.spyOn(collaboration, 'members').mockResolvedValue({
+    members: [
+      { id: 'u', phone: '18200000000', role: 'owner' },
+      { id: 'm', phone: '13800001234', role: 'editor' },
+    ],
+  });
+  const invite = vi.spyOn(collaboration, 'inviteMember').mockResolvedValue({ ok: true });
+  const remove = vi.spyOn(collaboration, 'removeMember').mockResolvedValue({ ok: true });
+  const { store } = await fixture();
+  const user = userEvent.setup();
+  render(<ProjectSyncControl project={project} store={store} trigger="share" />);
+  await user.click(await screen.findByRole('button', { name: /共享与同步/ }));
+  expect(screen.getByRole('heading', { name: '共享「Study」' })).toBeTruthy();
+  expect(await screen.findByText('我')).toBeTruthy();
+  await user.type(screen.getByRole('textbox', { name: '成员手机号' }), '13900005678{Enter}');
+  await waitFor(() => expect(invite).toHaveBeenCalledWith('p', '13900005678', 'editor'));
+  await user.click(screen.getByRole('button', { name: /138\*{4}1234 的角色/ }));
+  await user.click(await screen.findByRole('menuitemradio', { name: /查看者/ }));
+  await waitFor(() => expect(invite).toHaveBeenLastCalledWith('p', '13800001234', 'viewer'));
+  await user.click(screen.getByRole('button', { name: /138\*{4}1234 的角色/ }));
+  await user.click(await screen.findByRole('menuitem', { name: '移出项目' }));
+  await waitFor(() => expect(remove).toHaveBeenCalledWith('p', 'm'));
+  expect(members).toHaveBeenCalled();
+});

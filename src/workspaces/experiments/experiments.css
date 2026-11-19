@@ -173,7 +173,6 @@
   flex: 1;
   height: auto;
   max-height: none;
-  resize: none;
 }
 .sf-experiment-bottom > header {
   flex-shrink: 0;
@@ -217,19 +216,17 @@
   min-height: 0;
 }
 .sf-experiment-bottom {
+  position: relative;
   height: 225px;
-  min-height: 110px;
-  max-height: 55%;
+  min-height: 33px;
   display: flex;
+  flex: none;
   flex-direction: column;
   border-top: 1px solid var(--sf-border-subtle);
-  overflow: auto;
-  resize: vertical;
 }
 .sf-experiment-bottom.is-collapsed {
   height: 34px;
   min-height: 34px;
-  resize: none;
 }
 .sf-experiment-bottom > header {
   display: flex;

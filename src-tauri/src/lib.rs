@@ -202,10 +202,16 @@ async fn workspace_export(
 }
 
 #[tauri::command]
-async fn choose_directory(app: tauri::AppHandle) -> Result<Option<String>, String> {
+async fn choose_directory(
+    app: tauri::AppHandle,
+    start: Option<String>,
+) -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .file()
+        let mut dialog = app.dialog().file();
+        if let Some(start) = start.filter(|s| std::path::Path::new(s).is_dir()) {
+            dialog = dialog.set_directory(start);
+        }
+        dialog
             .blocking_pick_folder()
             .map(|p| {
                 p.into_path()

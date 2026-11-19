@@ -1062,7 +1062,8 @@ export function FileResources({
           <p>{search ? t('没有匹配的文件') : t('暂无文件')}</p>
         )}
       </div>
-      {root ? (
+      {/* The code workbench names its folder in the title bar widget instead. */}
+      {root && mode !== 'experiments' ? (
         <div className="sf-resource-root" title={displayPath(root)}>
           {displayPath(root)}
         </div>

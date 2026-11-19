@@ -27,6 +27,7 @@ import {
 import { Button, Input, Textarea } from '../../components/primitives';
 import { Modal } from '../../components/Modal';
 import { WorkspaceFrame } from '../../components/workspace/WorkspaceFrame';
+import { PanelSash } from '../../components/workspace/PanelSash';
 import { useActiveView } from '../../components/workspace/ViewTransition';
 import { confirmAction, requestText } from '../../components/prompts';
 import type { Project, Experiment } from '../../domain/workspace';
@@ -82,6 +83,7 @@ const TerminalPanel = lazy(() =>
 
 /** Editor tabs that are not files. */
 const RUNS_TAB = 'scientify:runs';
+const PANEL_HEIGHT_KEY = 'scientify.experiments.panelHeight';
 const GIT_TAB = 'scientify:git';
 const FOLDERS_TAB = 'scientify:folders';
 const diffTab = (path: string, staged: boolean) =>
@@ -189,7 +191,8 @@ export function ExperimentWorkspace({
   }
   async function openFolder() {
     try {
-      const directory = await store.getState().chooseDirectory();
+      // The picker starts where the current experiment is, not wherever the app started.
+      const directory = await store.getState().chooseDirectory(experiment?.root || undefined);
       if (!directory) return;
       const existing = catalog.find((item) => sameCodeRoot(item.root, directory));
       pick(
@@ -262,6 +265,15 @@ export function ExperimentWorkspace({
   const [error, setError] = useState('');
   const [panelOpen, setPanelOpen] = useState(true);
   const [panelMaximized, setPanelMaximized] = useState(false);
+  // The panel's height, dragged at its top edge and kept across sessions.
+  const [panelHeight, setPanelHeight] = useState(() => {
+    try {
+      return Number(localStorage.getItem(PANEL_HEIGHT_KEY)) || 225;
+    } catch {
+      return 225;
+    }
+  });
+  const codeArea = useRef<HTMLDivElement>(null);
   const [panelTab, setPanelTab] = useState<'terminal' | 'runs'>('runs');
   const [logRun, setLogRun] = useState('');
   const [terminalId, setTerminalId] = useState('');
@@ -855,7 +867,7 @@ export function ExperimentWorkspace({
         </div>
       )}
       {experiment ? (
-        <div className="sf-experiment-code">
+        <div className="sf-experiment-code" ref={codeArea}>
           <div className="sf-experiment-editor" hidden={panelOpen && panelMaximized}>
             {code.ready ? (
               <FileWorkspace
@@ -890,7 +902,26 @@ export function ExperimentWorkspace({
               (!panelOpen ? 'is-collapsed' : '') +
               (panelOpen && panelMaximized ? ' is-maximized' : '')
             }
+            style={panelOpen && !panelMaximized ? { height: panelHeight } : undefined}
           >
+            <PanelSash
+              label={t('调整面板高度')}
+              height={panelHeight}
+              open={panelOpen && !panelMaximized}
+              max={() => codeArea.current?.clientHeight ?? 600}
+              onResize={(height) => {
+                setPanelMaximized(false);
+                setPanelHeight(height);
+              }}
+              onOpen={setPanelOpen}
+              onEnd={(height) => {
+                try {
+                  localStorage.setItem(PANEL_HEIGHT_KEY, String(height));
+                } catch {
+                  /* The height is only a preference. */
+                }
+              }}
+            />
             <header>
               <div role="tablist" aria-label={t('面板')} className="sf-ide-panel-tabs">
                 {(['terminal', 'runs'] as const).map((value) => (

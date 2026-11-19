@@ -4357,5 +4357,23 @@
   "等": ["等", "et al."],
   "也支持 BibTeX、RIS": ["也支持 BibTeX、RIS", "BibTeX and RIS work too"],
   "从 Zotero 导入": ["从 Zotero 导入", "Import from Zotero"],
-  "导入文件": ["导入文件", "Import files"]
+  "导入文件": ["导入文件", "Import files"],
+  "{count} 处冲突待处理": ["{count} 处冲突待处理", "{count} conflicts to resolve"],
+  "{count} 项等任务结束后同步": [
+    "{count} 项等任务结束后同步",
+    "{count} items sync when running tasks finish"
+  ],
+  "{name} 的角色：{role}": ["{name} 的角色：{role}", "Role of {name}: {role}"],
+  "上次同步 {time}": ["上次同步 {time}", "Last synced {time}"],
+  "共享「{name}」": ["共享「{name}」", "Share “{name}”"],
+  "协作者": ["协作者", "Collaborators"],
+  "撤销邀请": ["撤销邀请", "Withdraw invitation"],
+  "移出项目": ["移出项目", "Remove from project"],
+  "调整面板高度": ["调整面板高度", "Resize panel"],
+  "跳过 {count} 项（超过 200 MB）": [
+    "跳过 {count} 项（超过 200 MB）",
+    "{count} items skipped (over 200 MB)"
+  ],
+  "输入手机号，邀请协作者": ["输入手机号，邀请协作者", "Phone number to invite"],
+  "邀请角色：{role}": ["邀请角色：{role}", "Invite as: {role}"]
 }

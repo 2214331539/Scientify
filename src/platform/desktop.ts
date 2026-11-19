@@ -9,7 +9,7 @@ export interface WorkspaceBackend {
   migrateLegacy(): Promise<Workspace>;
   importWorkspace(): Promise<Workspace | null>;
   exportWorkspace(): Promise<boolean>;
-  chooseDirectory(): Promise<string | null>;
+  chooseDirectory(start?: string): Promise<string | null>;
   storageLocation?(): Promise<StorageLocation>;
   scheduleStorage?(directory: string): Promise<StorageLocation>;
   cancelStorage?(): Promise<StorageLocation>;
@@ -38,7 +38,7 @@ export const desktop: WorkspaceBackend = {
   migrateLegacy: () => command('workspace_migrate_legacy'),
   importWorkspace: () => command('workspace_import'),
   exportWorkspace: () => command('workspace_export'),
-  chooseDirectory: () => command('choose_directory'),
+  chooseDirectory: (start) => command('choose_directory', { start: start ?? null }),
   storageLocation: () => command('storage_location'),
   scheduleStorage: (directory) => command('storage_schedule', { directory }),
   cancelStorage: () => command('storage_cancel'),

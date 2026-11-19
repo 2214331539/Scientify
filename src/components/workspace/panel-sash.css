@@ -1,0 +1,29 @@
+/* The draggable top edge of a bottom panel (PanelSash.tsx). */
+.sf-panel-sash {
+  position: absolute;
+  top: -3px;
+  right: 0;
+  left: 0;
+  z-index: 5;
+  height: 7px;
+  cursor: row-resize;
+  touch-action: none;
+}
+.sf-panel-sash::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: transparent;
+  transition: background-color 120ms ease 80ms;
+}
+.sf-panel-sash:hover::after,
+.sf-panel-sash:focus-visible::after,
+.sf-panel-sash[data-resizing='true']::after {
+  background: var(--sf-accent);
+}
+.sf-panel-sash:focus-visible {
+  outline: none;
+}

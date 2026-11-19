@@ -12,6 +12,69 @@ import { errorMessage } from '../../domain/errors';
 import '@xterm/xterm/css/xterm.css';
 import './development.css';
 
+/**
+ * The sixteen terminal colors for a light or a dark page (GitHub's, chosen to read
+ * on their background). xterm's defaults assume a dark page, so on white its
+ * yellow, cyan and white could not be read.
+ */
+const PALETTES = {
+  light: {
+    black: '#24292f',
+    red: '#cf222e',
+    green: '#116329',
+    yellow: '#7d4e00',
+    blue: '#0969da',
+    magenta: '#8250df',
+    cyan: '#1b7c83',
+    white: '#6e7781',
+    brightBlack: '#57606a',
+    brightRed: '#a40e26',
+    brightGreen: '#1a7f37',
+    brightYellow: '#633c01',
+    brightBlue: '#218bff',
+    brightMagenta: '#a475f9',
+    brightCyan: '#3192aa',
+    brightWhite: '#8c959f',
+    selectionBackground: 'rgba(9, 105, 218, 0.22)',
+  },
+  dark: {
+    black: '#484f58',
+    red: '#ff7b72',
+    green: '#3fb950',
+    yellow: '#d29922',
+    blue: '#58a6ff',
+    magenta: '#bc8cff',
+    cyan: '#39c5cf',
+    white: '#b1bac4',
+    brightBlack: '#6e7681',
+    brightRed: '#ffa198',
+    brightGreen: '#56d364',
+    brightYellow: '#e3b341',
+    brightBlue: '#79c0ff',
+    brightMagenta: '#d2a8ff',
+    brightCyan: '#56d4dd',
+    brightWhite: '#f0f6fc',
+    selectionBackground: 'rgba(56, 139, 253, 0.32)',
+  },
+};
+
+/** Colors for the page as it is now drawn, light or dark. */
+export function terminalTheme() {
+  const css = getComputedStyle(document.documentElement);
+  const dark = document.documentElement.classList.contains('dark');
+  const background =
+    css.getPropertyValue('--sf-surface-canvas').trim() || (dark ? '#0d1117' : '#fff');
+  const foreground =
+    css.getPropertyValue('--sf-text-primary').trim() || (dark ? '#e6edf3' : '#1f2328');
+  return {
+    ...PALETTES[dark ? 'dark' : 'light'],
+    background,
+    foreground,
+    cursor: foreground,
+    cursorAccent: background,
+  };
+}
+
 type Controller = {
   terminal: Terminal;
   fit: FitAddon;
@@ -31,6 +94,8 @@ function controller(info: TerminalInfo, onError: (error: string) => void) {
     fontFamily: 'Consolas, monospace',
     cursorBlink: true,
     scrollback: 5000,
+    // Any program's colors stay readable on this page's background.
+    minimumContrastRatio: 4.5,
     allowProposedApi: false,
   });
   const fit = new FitAddon();
@@ -131,12 +196,7 @@ function TerminalSurface({ info, onError }: { info: TerminalInfo; onError(error:
     const view = controller(info, onError);
     host.current?.append(view.element);
     const theme = () => {
-      const css = getComputedStyle(document.documentElement);
-      view.terminal.options.theme = {
-        background: css.getPropertyValue('--sf-surface-canvas').trim() || '#fff',
-        foreground: css.getPropertyValue('--sf-text-primary').trim() || '#202020',
-        cursor: css.getPropertyValue('--sf-text-primary').trim() || '#202020',
-      };
+      view.terminal.options.theme = terminalTheme();
       view.resize();
     };
     const size = new ResizeObserver(() => view.resize());

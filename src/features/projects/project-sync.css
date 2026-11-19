@@ -1,4 +1,7 @@
 dialog.project-sync-dialog {
+  width: min(460px, calc(100vw - 40px));
+}
+dialog.sync-compare-dialog {
   width: min(900px, calc(100vw - 40px));
 }
 @layer components {
@@ -113,4 +116,209 @@ dialog.project-sync-dialog {
       display: none;
     }
   }
+}
+
+/* The share card (SharePanel.tsx): invite, the people in the project, sync at the foot. */
+.sf-panel-popover:has(> .share-panel) {
+  padding: 0;
+}
+.share-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.share-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px 10px;
+}
+.share-head h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.share-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sf-surface-sunken);
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+}
+.share-status.is-warning {
+  background: color-mix(in srgb, #ff8800 12%, transparent);
+  color: #b25e00;
+}
+.share-alert {
+  margin: 0 18px 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #f54a45 9%, transparent);
+  color: #c4302b;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.share-invite {
+  display: flex;
+  gap: 8px;
+  padding: 4px 18px 12px;
+}
+.share-invite-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid var(--sf-border-control);
+  border-radius: 6px;
+  background: var(--sf-surface-canvas);
+  transition: border-color 120ms ease;
+}
+.share-invite-field:focus-within {
+  border-color: var(--sf-accent);
+}
+.share-invite-field .sf-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.share-role-pick {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sf-text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.share-role-pick:hover {
+  background: var(--sf-surface-hover);
+  color: var(--sf-text-primary);
+}
+.share-people,
+.share-conflicts {
+  padding: 4px 10px 8px;
+}
+.share-people h3,
+.share-conflicts h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.share-people ul,
+.share-conflicts ul {
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow: auto;
+  list-style: none;
+}
+.share-people li,
+.share-conflicts li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.share-people li:hover {
+  background: var(--sf-surface-hover);
+}
+.share-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--avatar);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.share-person {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.share-person strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.share-person small {
+  color: var(--sf-text-muted);
+  font-size: 11.5px;
+}
+.share-role {
+  padding: 0 8px;
+  color: var(--sf-text-muted);
+  font-size: 12.5px;
+}
+.share-muted {
+  margin: 4px 8px 8px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.share-conflicts {
+  border-top: 1px solid var(--sf-border-subtle);
+}
+.share-conflicts h3 {
+  color: #b25e00;
+}
+.share-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 18px 12px;
+  border-top: 1px solid var(--sf-border-subtle);
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.share-role-option {
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 220px;
+  text-align: left;
+}
+.share-role-option > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.share-role-option small {
+  color: var(--sf-text-muted);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+.share-role-check {
+  display: inline-flex;
+  width: 16px;
+  padding-top: 1px;
 }

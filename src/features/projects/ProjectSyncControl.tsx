@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { Cloud, CloudOff, RefreshCw, AlertCircle, UsersRound } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/primitives';
+import { Popover } from '../../components/primitives/Popover';
 import { confirmAction } from '../../components/prompts';
-import { t, locale, translateError } from '../../i18n';
+import { t, translateError } from '../../i18n';
 import type { Project } from '../../domain/workspace';
 import type { WorkspaceStore } from '../../stores/workspace';
 import {
@@ -18,8 +19,7 @@ import {
   type CollaborationMember,
 } from '../../platform/collaboration';
 import { useProjectSync } from './useProjectSync';
-import { maskPhone } from '../account/account';
-import { InviteList, roleName, type InviteRole } from './ProjectDialogs';
+import { SharePanel } from './SharePanel';
 import './project-sync.css';
 
 function Version({ label, version }: { label: string; version: ConflictVersion }) {
@@ -58,7 +58,7 @@ export function ProjectSyncControl({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [members, setMembers] = useState<CollaborationMember[] | null>(null);
-  const [invites, setInvites] = useState<{ phone: string; role: InviteRole }[]>([]);
+  const button = useRef<HTMLButtonElement>(null);
   const [comparison, setComparison] = useState<{
     conflict: SyncConflict;
     preview: ConflictPreview;
@@ -122,9 +122,34 @@ export function ProjectSyncControl({
       requestProjectSync(project.id);
       setComparison(null);
     });
+  const panel = (
+    <SharePanel
+      project={project}
+      userId={sync.account?.userId}
+      members={signedIn ? members : []}
+      status={status}
+      state={info}
+      syncing={sync.syncing}
+      online={sync.online}
+      error={error || sync.error || translateError(info?.lastError ?? '')}
+      busy={busy}
+      onMembers={setMembers}
+      onCompare={(conflict) =>
+        void run(async () =>
+          setComparison({
+            conflict,
+            preview: await collaboration.conflictPreview(project.id, conflict),
+          }),
+        )
+      }
+      run={run}
+    />
+  );
+  const close = () => setOpen(false);
   return (
     <>
       <Button
+        ref={button}
         variant="ghost"
         iconOnly={trigger === 'share'}
         data-tour={trigger === 'share' ? 'share' : undefined}
@@ -134,8 +159,9 @@ export function ProjectSyncControl({
             ? t('共享与同步：{status}', { status })
             : t('项目同步：{status}', { status })
         }
+        aria-expanded={open}
         onClick={() => {
-          setOpen(true);
+          setOpen((value) => !value);
           void sync.refresh();
         }}
       >
@@ -156,174 +182,76 @@ export function ProjectSyncControl({
           </>
         )}
       </Button>
-      {open && (
+      {/* In the title bar the panel drops down from its button, as share cards do. */}
+      {open && trigger === 'share' ? (
+        <Popover
+          anchor={button.current}
+          label={t('共享与同步')}
+          width={440}
+          align="end"
+          onClose={close}
+        >
+          {panel}
+        </Popover>
+      ) : null}
+      {open && trigger !== 'share' ? (
+        <Modal title={t('项目同步')} className="project-sync-dialog" busy={busy} onClose={close}>
+          {panel}
+        </Modal>
+      ) : null}
+      {comparison ? (
         <Modal
-          title={comparison ? t('冲突对比') : trigger === 'share' ? t('共享与同步') : t('项目同步')}
-          className="project-sync-dialog"
+          title={t('冲突对比')}
+          className="sync-compare-dialog"
           busy={busy}
-          onClose={() => {
-            setOpen(false);
-            setComparison(null);
-          }}
+          onClose={() => setComparison(null)}
         >
           <div className="project-sync-content">
-            <div className="project-sync-heading">
-              <strong>{project.name}</strong>
-              <span role="status">{status}</span>
-            </div>
-            {error || sync.error || info?.lastError ? (
+            {error ? (
               <p role="alert" className="error-text">
-                {error || sync.error || translateError(info?.lastError ?? '')}
+                {error}
               </p>
             ) : null}
-            {comparison ? (
-              <>
-                <Button variant="ghost" onClick={() => setComparison(null)}>
-                  {t('返回同步面板')}
-                </Button>
-                <p className="sync-conflict-path">{comparison.conflict.path}</p>
-                <p className="muted">
-                  {t('右侧是当前已接收的远端版本；如果内容再次变化，需要重新打开对比。')}
-                </p>
-                <div className="sync-comparison">
-                  <Version label={t('本机冲突副本')} version={comparison.preview.local} />
-                  <Version label={t('远端版本')} version={comparison.preview.remote} />
-                </div>
-                {blocked && (
-                  <p role="status">{t('请先保存草稿并结束此项目的 AI 任务，再处理冲突。')}</p>
-                )}
-                {!canEditProject(project, comparison.conflict.domain) && (
-                  <p>{t('当前角色只能查看此冲突。')}</p>
-                )}
-                <div className="sync-actions">
-                  {(['local', 'remote', 'both'] as const).map((choice) => (
-                    <Button
-                      key={choice}
-                      disabled={
-                        busy ||
-                        blocked ||
-                        !canEditProject(project, comparison.conflict.domain) ||
-                        (choice === 'local' && !comparison.preview.canKeepLocal) ||
-                        (choice === 'both' && !comparison.preview.canKeepBoth)
-                      }
-                      onClick={() => void resolve(choice)}
-                    >
-                      {t(
-                        choice === 'local'
-                          ? '保留本机'
-                          : choice === 'remote'
-                            ? '保留远端'
-                            : '两份都保留',
-                      )}
-                    </Button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <dl className="sync-summary">
-                  <dt>{t('上次同步')}</dt>
-                  <dd>
-                    {info?.lastSyncAt
-                      ? new Date(info.lastSyncAt).toLocaleString(locale())
-                      : t('尚未同步')}
-                  </dd>
-                </dl>
-                {!!info?.skipped && (
-                  <p role="status">
-                    {t('上次同步跳过 {count} 项（例如超过 200 MB 的文件）。', {
-                      count: info.skipped,
-                    })}
-                  </p>
-                )}
-                {!!info?.deferred && (
-                  <p role="status">
-                    {t('{count} 项暂缓同步，请等待目录中的任务结束后重试。', {
-                      count: info.deferred,
-                    })}
-                  </p>
-                )}
-                {project.collaborationRole === 'owner' && signedIn ? (
-                  <section>
-                    <h3>{t('邀请成员')}</h3>
-                    <InviteList invites={invites} onChange={setInvites} disabled={busy} />
-                    <div className="sync-actions">
-                      <Button
-                        variant="primary"
-                        disabled={busy || !invites.length}
-                        onClick={() =>
-                          void run(async () => {
-                            for (const invite of invites)
-                              await collaboration.inviteMember(
-                                project.id,
-                                invite.phone,
-                                invite.role,
-                              );
-                            setInvites([]);
-                            setMembers((await collaboration.members(project.id)).members);
-                          })
-                        }
-                      >
-                        {t('邀请')}
-                      </Button>
-                    </div>
-                  </section>
-                ) : null}
-                {members && (
-                  <section>
-                    <h3>{t('成员')}</h3>
-                    <ul className="sync-conflicts">
-                      {members.map((member) => (
-                        <li key={member.id}>
-                          <div>
-                            <strong>
-                              {member.id === sync.account?.userId
-                                ? t('我')
-                                : maskPhone(member.phone)}
-                            </strong>
-                            <small>
-                              {roleName(member.role)}
-                              {member.pending ? ` · ${t('待注册')}` : ''}
-                            </small>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                <h3>{t('待处理冲突')}</h3>
-                {!info?.conflicts.length ? (
-                  <p className="muted">{t('没有待处理冲突')}</p>
-                ) : (
-                  <ul className="sync-conflicts">
-                    {info.conflicts.map((conflict) => (
-                      <li key={`${conflict.domain}:${conflict.path}:${conflict.at}`}>
-                        <div>
-                          <strong>{conflict.path}</strong>
-                          <small>{new Date(conflict.at).toLocaleString(locale())}</small>
-                        </div>
-                        <Button
-                          disabled={busy || sync.syncing}
-                          onClick={() =>
-                            void run(async () =>
-                              setComparison({
-                                conflict,
-                                preview: await collaboration.conflictPreview(project.id, conflict),
-                              }),
-                            )
-                          }
-                        >
-                          {t('查看对比')}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
+            <p className="sync-conflict-path">{comparison.conflict.path}</p>
+            <p className="muted">
+              {t('右侧是当前已接收的远端版本；如果内容再次变化，需要重新打开对比。')}
+            </p>
+            <div className="sync-comparison">
+              <Version label={t('本机冲突副本')} version={comparison.preview.local} />
+              <Version label={t('远端版本')} version={comparison.preview.remote} />
+            </div>
+            {blocked && (
+              <p role="status">{t('请先保存草稿并结束此项目的 AI 任务，再处理冲突。')}</p>
             )}
+            {!canEditProject(project, comparison.conflict.domain) && (
+              <p>{t('当前角色只能查看此冲突。')}</p>
+            )}
+            <div className="sync-actions">
+              {(['local', 'remote', 'both'] as const).map((choice) => (
+                <Button
+                  key={choice}
+                  disabled={
+                    busy ||
+                    blocked ||
+                    !canEditProject(project, comparison.conflict.domain) ||
+                    (choice === 'local' && !comparison.preview.canKeepLocal) ||
+                    (choice === 'both' && !comparison.preview.canKeepBoth)
+                  }
+                  onClick={() => void resolve(choice)}
+                >
+                  {t(
+                    choice === 'local'
+                      ? '保留本机'
+                      : choice === 'remote'
+                        ? '保留远端'
+                        : '两份都保留',
+                  )}
+                </Button>
+              ))}
+            </div>
           </div>
         </Modal>
-      )}
+      ) : null}
     </>
   );
 }

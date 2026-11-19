@@ -47,6 +47,8 @@ export function Popover({
     if (!anchor) return;
     const outside = (event: PointerEvent) => {
       const target = event.target as Node;
+      // Menus and confirmations opened from the panel belong to it.
+      if ((target as Element).closest?.('[data-nested-menu], dialog[open]')) return;
       if (!ref.current?.contains(target) && !anchor.contains(target)) close.current();
     };
     const key = (event: KeyboardEvent) => {

@@ -22,7 +22,8 @@ interface WorkspaceState {
   update(edit: (draft: Workspace) => void): Promise<boolean>;
   replace(kind: 'restore' | 'migrateLegacy' | 'importWorkspace'): Promise<boolean>;
   exportWorkspace(): Promise<void>;
-  chooseDirectory(): Promise<string | null>;
+  /** A folder picker, starting in `start` when given. */
+  chooseDirectory(start?: string): Promise<string | null>;
   storageLocation(): Promise<StorageLocation | null>;
   /** Moves the data to an empty folder, or with `adopt` uses one that already has data; null cancels. */
   changeStorage(directory: string | null, adopt?: boolean): Promise<StorageLocation>;
@@ -214,9 +215,9 @@ export function createWorkspaceStore(backend: WorkspaceBackend) {
         set({ busy: false });
       }
     },
-    async chooseDirectory() {
+    async chooseDirectory(start) {
       try {
-        return await backend.chooseDirectory();
+        return await backend.chooseDirectory(start);
       } catch (error) {
         set({ error: errorMessage(error) });
         return null;
