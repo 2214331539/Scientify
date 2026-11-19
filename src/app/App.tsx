@@ -86,6 +86,7 @@ import { AppFrame } from '../shell/AppFrame';
 import { TitleBar, type Crumb } from '../shell/TitleBar';
 import { Notifications } from '../shell/Notifications';
 import { setExitGuard, startUpdateChecks } from '../features/update/updater';
+import { Onboarding } from '../features/onboarding/Onboarding';
 import {
   CenterNavigation,
   ProjectNavigation,
@@ -1233,6 +1234,7 @@ export function App({
         variant="ghost"
         iconOnly
         aria-label={t('共享')}
+        data-tour="share"
         disabled={!ready || !canEditProject(project)}
         onClick={() => setSharing(project.id)}
       >
@@ -1408,6 +1410,9 @@ export function App({
           />
         )}
       </SidebarSlotProvider>
+      {windowMode === 'main' ? (
+        <Onboarding store={store} ready={!!ready} inProject={!!project} />
+      ) : null}
     </AppFrame>
   );
 }

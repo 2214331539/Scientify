@@ -137,6 +137,7 @@ export function LibraryTable({
             variant="ghost"
             disabled={!root || busy}
             tooltip={t('也支持 BibTeX、RIS')}
+            data-tour="import-library"
             onClick={onImportLibrary}
           >
             <Library />

@@ -4238,5 +4238,124 @@
   "人工调整": ["人工调整", "Adjustment"],
   "加油包": ["加油包", "Top-up"],
   "套餐月度额度": ["套餐月度额度", "Monthly plan points"],
-  "免费版月度额度": ["免费版月度额度", "Monthly free points"]
+  "免费版月度额度": ["免费版月度额度", "Monthly free points"],
+  "便签：{text}": ["便签：{text}", "Note: {text}"],
+  "批注列表": ["批注列表", "Annotations"],
+  "高亮颜色": ["高亮颜色", "Highlight color"],
+  "{color}高亮": ["{color}高亮", "Highlight in {color}"],
+  "批注": ["批注", "Comment"],
+  "摘录到笔记": ["摘录到笔记", "Quote in note"],
+  "批注内容": ["批注内容", "Comment text"],
+  "写批注…": ["写批注…", "Add a comment…"],
+  "删除批注": ["删除批注", "Delete annotation"],
+  "便签": ["便签", "Note"],
+  "选中文字即可高亮或批注": ["选中文字即可高亮或批注", "Select text to highlight or comment"],
+  "功能导览": ["功能导览", "Feature tour"],
+  "数据保存在": ["数据保存在", "Data is saved in"],
+  "重启后使用": ["重启后使用", "Use after restart"],
+  "换个位置": ["换个位置", "Choose another place"],
+  "使用已有数据": ["使用已有数据", "Use existing data"],
+  "欢迎使用 Scientify": ["欢迎使用 Scientify", "Welcome to Scientify"],
+  "读文献、写代码、写论文，都在一个窗口里。花一分钟认识一下。": [
+    "读文献、写代码、写论文，都在一个窗口里。花一分钟认识一下。",
+    "Read papers, write code and write your paper in one window. Here is a one-minute tour."
+  ],
+  "一个课题，一个项目": ["一个课题，一个项目", "One topic, one project"],
+  "文献、代码、稿件和 AI 对话都放在项目里。": [
+    "文献、代码、稿件和 AI 对话都放在项目里。",
+    "Papers, code, manuscripts and AI conversations live in the project."
+  ],
+  "搜索与命令": ["搜索与命令", "Search and commands"],
+  "Ctrl K 找项目、论文和笔记，也能直接执行命令。": [
+    "Ctrl K 找项目、论文和笔记，也能直接执行命令。",
+    "Ctrl K finds projects, papers and notes, and runs commands."
+  ],
+  "选择 AI 模型、数据位置和界面语言。": [
+    "选择 AI 模型、数据位置和界面语言。",
+    "Choose the AI model, where data is kept and the language."
+  ],
+  "随时回看": ["随时回看", "See it again any time"],
+  "在帮助里能再看一遍导览。打开一个项目，继续认识里面的功能。": [
+    "在帮助里能再看一遍导览。打开一个项目，继续认识里面的功能。",
+    "Help shows this tour again. Open a project to see what is inside."
+  ],
+  "四个模块": ["四个模块", "Four modules"],
+  "文献、代码、写作、文档，在这里切换。": [
+    "文献、代码、写作、文档，在这里切换。",
+    "Switch between literature, code, writing and documents here."
+  ],
+  "从 Zotero 搬过来": ["从 Zotero 搬过来", "Bring your Zotero library"],
+  "导入 Zotero 文库或 BibTeX、RIS，分类、PDF、笔记和高亮都会带上。": [
+    "导入 Zotero 文库或 BibTeX、RIS，分类、PDF、笔记和高亮都会带上。",
+    "Import a Zotero library, BibTeX or RIS with its collections, PDFs, notes and highlights."
+  ],
+  "内置浏览器": ["内置浏览器", "Built-in browser"],
+  "查资料、下论文，不用离开 Scientify。": [
+    "查资料、下论文，不用离开 Scientify。",
+    "Search and download papers without leaving Scientify."
+  ],
+  "邀请同学或同事，一起读、一起写。": [
+    "邀请同学或同事，一起读、一起写。",
+    "Invite classmates or colleagues to read and write together."
+  ],
+  "随手记想法，块、表格和链接都支持。": [
+    "随手记想法，块、表格和链接都支持。",
+    "Jot down ideas with blocks, tables and links."
+  ],
+  "它能读你的论文和代码，帮你查、帮你改。读论文时选中文字，可以高亮、批注或直接问它。": [
+    "它能读你的论文和代码，帮你查、帮你改。读论文时选中文字，可以高亮、批注或直接问它。",
+    "It reads your papers and code and helps you look things up and make changes. Select text in a paper to highlight it, comment on it or ask about it."
+  ],
+  "第 {n} 步，共 {total} 步": ["第 {n} 步，共 {total} 步", "Step {n} of {total}"],
+  "跳过": ["跳过", "Skip"],
+  "选择另一个安装版本的数据目录，重启后直接使用，不复制。": [
+    "选择另一个安装版本的数据目录，重启后直接使用，不复制。",
+    "Choose the data folder of another installation. It is used as it is after a restart, without copying."
+  ],
+  "选择数据目录": ["选择数据目录", "Choose data folder"],
+  "立即重启": ["立即重启", "Restart now"],
+  "导入文献库": ["导入文献库", "Import a library"],
+  "正在查找…": ["正在查找…", "Looking…"],
+  "已找到 {path}": ["已找到 {path}", "Found {path}"],
+  "选择 Zotero 数据文件夹": ["选择 Zotero 数据文件夹", "Choose the Zotero data folder"],
+  "Mendeley、EndNote、JabRef 等导出的 .bib 或 .ris": [
+    "Mendeley、EndNote、JabRef 等导出的 .bib 或 .ris",
+    ".bib or .ris exported from Mendeley, EndNote, JabRef and others"
+  ],
+  "选择其他 Zotero 文件夹": ["选择其他 Zotero 文件夹", "Choose another Zotero folder"],
+  "导入进度": ["导入进度", "Import progress"],
+  "正在导入 {done}/{total}": ["正在导入 {done}/{total}", "Importing {done}/{total}"],
+  "正在准备…": ["正在准备…", "Preparing…"],
+  "开始导入": ["开始导入", "Import"],
+  "完成": ["完成", "Done"],
+  "条目": ["条目", "Items"],
+  "高亮": ["高亮", "Highlights"],
+  "Zotero 正在运行，读到的是它最近一次的备份。": [
+    "Zotero 正在运行，读到的是它最近一次的备份。",
+    "Zotero is running, so this is its most recent backup."
+  ],
+  "关闭 Zotero 后重新读取": ["关闭 Zotero 后重新读取", "Read again after closing Zotero"],
+  "{count} 条没有 PDF，只写入 references.bib": [
+    "{count} 条没有 PDF，只写入 references.bib",
+    "{count} items have no PDF and only go into references.bib"
+  ],
+  "{count} 个 PDF 不在本机，可能还没从云端下载": [
+    "{count} 个 PDF 不在本机，可能还没从云端下载",
+    "{count} PDFs are not on this computer, perhaps not yet downloaded from the cloud"
+  ],
+  "分类": ["分类", "Collections"],
+  "未分类": ["未分类", "Unfiled"],
+  "放到文献目录下的": ["放到文献目录下的", "Into this folder of the literature folder"],
+  "目标文件夹": ["目标文件夹", "Target folder"],
+  "文献目录根部": ["文献目录根部", "Top of the literature folder"],
+  "新增论文": ["新增论文", "New papers"],
+  "已在文献库，未重复复制": ["已在文献库，未重复复制", "Already in the library, not copied again"],
+  "写入 references.bib": ["写入 references.bib", "Added to references.bib"],
+  "已停止，已导入的内容保留": ["已停止，已导入的内容保留", "Stopped; what was imported stays"],
+  "导入完成": ["导入完成", "Import finished"],
+  "{count} 条没有导入": ["{count} 条没有导入", "{count} items were not imported"],
+  "等": ["等", "et al."],
+  "也支持 BibTeX、RIS": ["也支持 BibTeX、RIS", "BibTeX and RIS work too"],
+  "从 Zotero 导入": ["从 Zotero 导入", "Import from Zotero"],
+  "导入文件": ["导入文件", "Import files"]
 }

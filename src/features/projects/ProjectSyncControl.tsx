@@ -127,6 +127,7 @@ export function ProjectSyncControl({
       <Button
         variant="ghost"
         iconOnly={trigger === 'share'}
+        data-tour={trigger === 'share' ? 'share' : undefined}
         className={trigger === 'share' ? undefined : 'project-sync-trigger'}
         aria-label={
           trigger === 'share'

@@ -1,0 +1,140 @@
+/* The guided look at the window (Tour.tsx): one control lit, a short card beside it. */
+.sf-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+.sf-tour-dim,
+.sf-tour-spot {
+  position: fixed;
+  pointer-events: none;
+}
+.sf-tour-dim {
+  inset: 0;
+  background: rgb(12 12 14 / 46%);
+  animation: sf-tour-fade 200ms ease-out;
+}
+.sf-tour-spot {
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 92%),
+    0 0 0 9999px rgb(12 12 14 / 46%);
+  transition:
+    top 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    left 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    width 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    height 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sf-tour-spot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgb(255 255 255 / 55%);
+  animation: sf-tour-pulse 1.8s ease-out infinite;
+}
+.sf-tour-card {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 300px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--sf-surface-raised);
+  color: var(--sf-text-primary);
+  box-shadow:
+    0 18px 48px rgb(0 0 0 / 22%),
+    0 2px 6px rgb(0 0 0 / 10%);
+  transition:
+    top 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    left 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  animation: sf-tour-rise 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sf-tour-card.is-centered {
+  width: 360px;
+}
+.sf-tour-card h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.sf-tour-card p {
+  margin: 0;
+  color: var(--sf-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sf-tour-card footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.sf-tour-spacer {
+  flex: 1;
+}
+.sf-tour-progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.sf-tour-progress span {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--sf-border-control);
+  transition:
+    width 200ms ease,
+    background-color 200ms ease;
+}
+.sf-tour-progress span.is-current {
+  width: 16px;
+  background: var(--sf-accent);
+}
+.sf-tour-data {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--sf-surface-sunken);
+  font-size: 12px;
+}
+.sf-tour-data code {
+  overflow-wrap: anywhere;
+  color: var(--sf-text-primary);
+}
+.sf-tour-data div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+@keyframes sf-tour-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sf-tour-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes sf-tour-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 55%);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 10px rgb(255 255 255 / 0%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-tour *,
+  .sf-tour-spot::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

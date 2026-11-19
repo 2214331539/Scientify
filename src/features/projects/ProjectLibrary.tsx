@@ -194,7 +194,7 @@ export function ProjectLibrary({
   return (
     <section className="center-page" aria-label={t('我的项目')}>
       <CenterHeader title={t('我的项目')}>
-        <Button variant="primary" disabled={busy} onClick={onNew}>
+        <Button variant="primary" disabled={busy} onClick={onNew} data-tour="new-project">
           <FolderPlus />
           {t('新建项目')}
         </Button>

@@ -124,6 +124,7 @@ export function TitleBar({
             variant="ghost"
             iconOnly
             aria-label={t('打开浏览器')}
+            data-tour="browser"
             disabled={!ready}
             onClick={onBrowser}
           >
@@ -141,6 +142,7 @@ export function TitleBar({
                 variant="ghost"
                 iconOnly
                 aria-label={t('文档')}
+                data-tour="notes"
                 aria-pressed={dock.open && dock.tool === 'notes'}
                 disabled={!ready}
                 onClick={() => dock.onTool('notes')}
@@ -153,6 +155,7 @@ export function TitleBar({
               variant="ghost"
               iconOnly
               aria-label={t('AI 助手')}
+              data-tour="assistant"
               aria-pressed={dock.open && dock.tool === 'assistant'}
               disabled={!ready}
               onClick={() => dock.onTool('assistant')}

@@ -162,6 +162,7 @@ export function SidebarFooter({ onSettings }: { onSettings(section: SettingsSect
         variant="ghost"
         iconOnly
         aria-label={t('帮助')}
+        data-tour="help"
         aria-haspopup="menu"
         onClick={(event) =>
           setMenu({ kind: 'help', anchor: anchorBelow(event.currentTarget, 'top') })
@@ -169,7 +170,13 @@ export function SidebarFooter({ onSettings }: { onSettings(section: SettingsSect
       >
         <CircleHelp />
       </Button>
-      <Button variant="ghost" iconOnly aria-label={t('设置')} onClick={() => onSettings('general')}>
+      <Button
+        variant="ghost"
+        iconOnly
+        aria-label={t('设置')}
+        data-tour="settings"
+        onClick={() => onSettings('general')}
+      >
         <Settings />
       </Button>
       <Menu
@@ -203,6 +210,16 @@ export function SidebarFooter({ onSettings }: { onSettings(section: SettingsSect
       >
         <Button role="menuitem" variant="ghost" onClick={() => openExternal(guideUrl)}>
           {t('使用说明')}
+        </Button>
+        <Button
+          role="menuitem"
+          variant="ghost"
+          onClick={() => {
+            setMenu(null);
+            window.dispatchEvent(new Event('scientify-start-tour'));
+          }}
+        >
+          {t('功能导览')}
         </Button>
         <Button role="menuitem" variant="ghost" onClick={() => onSettings('shortcuts')}>
           {t('快捷键')}
