@@ -94,6 +94,7 @@ import { ImportLibrary } from './ImportLibrary';
 import type { PaperReference } from '../../platform/library';
 
 const PdfReader = lazy(() => import('../../reader/PdfReader'));
+type RecordStore = import('../../reader/PdfReader').RecordStore;
 /** The pinned first tab: the library table itself. */
 const HOME = '__library__';
 /** The narrowest the paper may get beside its note (the AI panel leaves 320 to the center). */
@@ -222,6 +223,45 @@ export function LocalLiterature({
   const active = session.tabs.find((t) => t.id === session.active),
     paper = scan.papers.find((p) => p.id === active?.paperId);
   const [selection, setSelection] = useState<WorkContext>();
+  // The open paper's highlights live in its record, which follows the PDF.
+  const paperId = paper?.id;
+  const recordStore = useMemo<RecordStore | undefined>(
+    () =>
+      paperId && library.record && library.saveRecord
+        ? {
+            load: () => library.record!(project.id, paperId),
+            save: async (record) => {
+              const saved = await library.saveRecord!(project.id, paperId, record);
+              requestProjectSync(project.id);
+              return saved;
+            },
+          }
+        : undefined,
+    [library, project.id, paperId],
+  );
+  /** Adds a passage to the end of the paper's note and shows the note. */
+  async function quote(id: string, text: string, page: number) {
+    try {
+      const note = paperNote(library, project.id, id);
+      if (note.getSnapshot().phase !== 'ready') await note.load();
+      const current = note.getSnapshot().content.trimEnd();
+      const passage = text
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n');
+      note.edit(
+        `${current}${current ? '\n\n' : ''}${passage}\n>\n> —— ${t('第 {page} 页', { page })}\n`,
+      );
+      setSession((s) => ({
+        ...s,
+        notes: s.notes.includes(id) ? s.notes : [...s.notes, id],
+        activeNote: id,
+        showNotes: true,
+      }));
+    } catch (reason) {
+      setError(errorMessage(reason));
+    }
+  }
   const requestedPath = scan.papers.find((p) => p.id === requestedPaper)?.path;
   useEffect(() => {
     if (requestedPath) void open(requestedPath);
@@ -1160,6 +1200,9 @@ export function LocalLiterature({
                     projectId={project.id}
                     backend={reader}
                     compact
+                    record={recordStore}
+                    readOnly={readOnly}
+                    onQuote={(text, page) => void quote(paper.id, text, page)}
                     onContext={(value) => {
                       // Name the open PDF so the agent can read the whole paper, not just this page.
                       const next = { ...value, paperPath: paper.path };

@@ -507,3 +507,229 @@
   min-width: 0;
   container-type: inline-size;
 }
+
+/* Highlights, underlines and notes on the page; the page text stays selectable under them. */
+.pdf-highlights {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.pdf-highlight-group {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: multiply;
+  opacity: 0.42;
+}
+.pdf-highlight-group.is-underline {
+  opacity: 0.9;
+}
+.pdf-highlight-group.is-active {
+  opacity: 0.62;
+}
+.pdf-highlight {
+  position: absolute;
+  border-radius: 2px;
+  background: var(--highlight);
+}
+.is-underline > .pdf-highlight {
+  border-bottom: 2px solid var(--highlight);
+  border-radius: 0;
+  background: none;
+}
+.pdf-note-pin {
+  position: absolute;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px 4px 4px 0;
+  background: var(--highlight);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.pdf-note-pin.is-active {
+  outline: 2px solid var(--sf-accent);
+  outline-offset: 1px;
+}
+
+/* What a selection can become, and one highlight opened. */
+.pdf-selection-toolbar,
+.pdf-annotation-popover {
+  position: fixed;
+  z-index: 60;
+  border: 1px solid var(--sf-border-control);
+  border-radius: 10px;
+  background: var(--sf-surface-raised);
+  box-shadow:
+    0 10px 28px rgb(0 0 0 / 14%),
+    0 1px 3px rgb(0 0 0 / 8%);
+  transform: translateX(-50%);
+  animation: pdf-pop 120ms ease-out;
+}
+.pdf-selection-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+}
+.pdf-swatches {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 5px;
+}
+.pdf-swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+  cursor: pointer;
+  transition: transform 100ms ease;
+}
+.pdf-swatch:hover {
+  transform: scale(1.15);
+}
+.pdf-swatch[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--sf-surface-raised),
+    0 0 0 3.5px var(--swatch);
+}
+.pdf-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--sf-border-subtle);
+}
+.pdf-annotation-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 290px;
+  padding: 10px;
+}
+.pdf-annotation-popover blockquote {
+  display: -webkit-box;
+  margin: 0;
+  padding-left: 8px;
+  overflow: hidden;
+  border-left: 3px solid var(--sf-border-control);
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.pdf-annotation-popover textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+.pdf-annotation-actions {
+  display: flex;
+  align-items: center;
+}
+.pdf-annotation-actions .spacer {
+  flex: 1;
+}
+@keyframes pdf-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+}
+
+/* Every highlight in the paper, beside the page. */
+.pdf-annotations {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 260px;
+  min-height: 0;
+  border-left: 1px solid var(--sf-border-subtle);
+  background: var(--sf-surface-canvas);
+}
+.pdf-annotations header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sf-border-subtle);
+  font-weight: 600;
+}
+.pdf-annotations header span {
+  color: var(--sf-text-muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.pdf-annotations ol {
+  flex: 1;
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  list-style: none;
+}
+.pdf-annotation-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 10px 8px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sf-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.pdf-annotation-item::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 5px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--highlight);
+}
+.pdf-annotation-item:hover,
+.pdf-annotation-item.is-active {
+  background: var(--sf-surface-hover);
+}
+.pdf-annotation-text {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.pdf-annotation-text svg {
+  width: 13px;
+  height: 13px;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+.pdf-annotation-comment {
+  color: var(--sf-text-secondary);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.pdf-annotation-page {
+  color: var(--sf-text-muted);
+  font-size: 11px;
+}
+.pdf-annotations-empty {
+  margin: 0;
+  padding: 16px 12px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+}
+.pdf-annotations-toggle span {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}

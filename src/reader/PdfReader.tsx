@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import {
   ChevronLeft,
   ChevronRight,
+  Highlighter,
   Maximize,
   MessageSquare,
   NotebookPen,
@@ -17,7 +18,10 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import type { PdfBackend } from '../platform/research';
 import type { WorkContext } from '../domain/context';
-import { PdfPageSurface } from './PdfPageSurface';
+import { PdfPageSurface, type PageSelection } from './PdfPageSurface';
+import type { PaperAnnotation, PaperRecord } from '../platform/library';
+import { newAnnotation } from './annotations';
+import { AnnotationList, AnnotationPopover, SelectionToolbar } from './ReaderAnnotations';
 import { destinationOffset, ReaderLinkService, type PdfLinkTarget } from './pdf-links';
 import { errorMessage } from '../domain/errors';
 import './reader.css';
@@ -28,6 +32,11 @@ type ReadingMode = 'paged' | 'continuous';
 // top is the offset inside the current page, not the whole continuous document.
 type ReadingPosition = { page: number; zoom: number; top: number; left: number; mode: ReadingMode };
 const readingPositions = new WeakMap<PdfBackend, Map<string, ReadingPosition>>();
+/** Where a paper's highlights are kept: its record in the literature folder. */
+export type RecordStore = {
+  load(): Promise<PaperRecord | null>;
+  save(record: PaperRecord): Promise<PaperRecord>;
+};
 export default function PdfReader({
   assetId,
   title,
@@ -37,6 +46,9 @@ export default function PdfReader({
   onContext,
   onTool,
   compact = false,
+  record,
+  readOnly = false,
+  onQuote,
 }: {
   assetId: string;
   title: string;
@@ -46,6 +58,11 @@ export default function PdfReader({
   onContext: (context: WorkContext) => void;
   onTool: (tool: 'assistant' | 'notes') => void;
   compact?: boolean;
+  /** Highlights and notes are made only where they can be kept. */
+  record?: RecordStore;
+  readOnly?: boolean;
+  /** Adds a passage to the paper's note. */
+  onQuote?: (text: string, page: number) => void;
 }) {
   const scroll = useRef<HTMLDivElement>(null);
   const onContextRef = useRef(onContext);
@@ -83,6 +100,48 @@ export default function PdfReader({
     [selection, setSelection] = useState(''),
     [selectionPage, setSelectionPage] = useState(initial.page);
   const [visible, setVisible] = useState<Set<number>>(new Set([initial.page]));
+  const [annotations, setAnnotations] = useState<PaperAnnotation[]>([]);
+  const saved = useRef<PaperRecord>({});
+  const saving = useRef(Promise.resolve());
+  const [picked, setPicked] = useState<
+    ({ page: number; text: string } & PageSelection & { box: DOMRect }) | null
+  >(null);
+  const [opened, setOpened] = useState<{ id: string; at: DOMRect; edit: boolean } | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const canAnnotate = !!record && !readOnly;
+  useEffect(() => {
+    let live = true;
+    void record
+      ?.load()
+      .then((value) => {
+        if (!live) return;
+        saved.current = value ?? {};
+        setAnnotations(value?.annotations ?? []);
+      })
+      .catch((reason) => live && setError(errorMessage(reason)));
+    return () => {
+      live = false;
+    };
+  }, [record]);
+  /** Shows the change at once and saves in order, the newest list last. */
+  function commit(next: PaperAnnotation[]) {
+    setAnnotations(next);
+    if (!record) return;
+    saving.current = saving.current
+      .then(() => record.save({ ...saved.current, version: 1, annotations: next }))
+      .then((value) => {
+        saved.current = value;
+      })
+      .catch((reason) => setError(errorMessage(reason)));
+  }
+  function annotate(kind: PaperAnnotation['kind'], color: string, edit = false) {
+    if (!picked?.rects.length) return;
+    const made = newAnnotation(kind, picked.page - 1, picked.rects, picked.text, color);
+    commit([...annotations, made]);
+    window.getSelection()?.removeAllRanges();
+    setPicked(null);
+    if (edit) setOpened({ id: made.id, at: picked.box, edit: true });
+  }
   const [pageText, setPageText] = useState('');
   const texts = useRef(new Map<number, string>());
   const position = useRef(initial),
@@ -417,6 +476,18 @@ export default function PdfReader({
       >
         <Maximize />
       </Button>
+      {record ? (
+        <Button
+          variant="ghost"
+          aria-label={t('批注列表')}
+          aria-pressed={listOpen}
+          className="pdf-annotations-toggle"
+          onClick={() => setListOpen((open) => !open)}
+        >
+          <Highlighter />
+          {annotations.length ? <span>{annotations.length}</span> : null}
+        </Button>
+      ) : null}
       {!compact && (
         <>
           <span className="spacer" />
@@ -460,6 +531,7 @@ export default function PdfReader({
           ref={scroll}
           aria-label={t('PDF 阅读区域')}
           onScroll={(event) => {
+            setPicked(null);
             if (pendingScroll.current) return;
             const host = event.currentTarget;
             let number = current.current.page;
@@ -500,9 +572,20 @@ export default function PdfReader({
                 visible={mode === 'paged' || visible.has(number) || number === page}
                 onReady={ready}
                 onError={setError}
-                onSelection={(page, text, value) => {
+                annotations={annotations.filter((a) => a.page === number - 1)}
+                activeAnnotation={opened?.id ?? null}
+                onAnnotation={(id, at) => {
+                  setPicked(null);
+                  setOpened({ id, at, edit: false });
+                }}
+                onSelection={(page, text, value, where) => {
                   setSelection(value);
                   setSelectionPage(page);
+                  setPicked(
+                    value && where?.box && where.rects.length
+                      ? { page, text: value, rects: where.rects, box: where.box }
+                      : null,
+                  );
                   onContextRef.current({
                     projectId,
                     workspace: 'literature',
@@ -516,7 +599,76 @@ export default function PdfReader({
               />
             ))}
         </div>
+        {listOpen && record ? (
+          <AnnotationList
+            annotations={annotations}
+            active={opened?.id ?? null}
+            onOpen={(annotation) => {
+              navigate(annotation.page + 1);
+              requestAnimationFrame(() => {
+                const mark = scroll.current?.querySelector(
+                  `[data-annotation="${CSS.escape(annotation.id)}"]`,
+                );
+                mark?.scrollIntoView({ block: 'center' });
+                const at = mark?.getBoundingClientRect();
+                if (at) setOpened({ id: annotation.id, at, edit: false });
+              });
+            }}
+          />
+        ) : null}
       </div>
+      {picked ? (
+        <SelectionToolbar
+          box={picked.box}
+          canAnnotate={canAnnotate}
+          onHighlight={(color) => annotate('highlight', color)}
+          onUnderline={() => annotate('underline', '#ff6666')}
+          onComment={() => annotate('highlight', '#ffd400', true)}
+          onCopy={() => {
+            void navigator.clipboard?.writeText(picked.text);
+            setPicked(null);
+          }}
+          onAsk={() => {
+            const quote = picked.text
+              .split('\n')
+              .map((line) => `> ${line}`)
+              .join('\n');
+            window.dispatchEvent(
+              new CustomEvent('scientify-assistant-ask', {
+                detail: {
+                  scope: projectId,
+                  draft: `${quote}\n> —— ${title}，${t('第 {page} 页', { page: picked.page })}\n\n`,
+                },
+              }),
+            );
+            setPicked(null);
+          }}
+          onQuote={
+            onQuote && !readOnly
+              ? () => {
+                  onQuote(picked.text, picked.page);
+                  setPicked(null);
+                }
+              : undefined
+          }
+          onClose={() => setPicked(null)}
+        />
+      ) : null}
+      {opened && annotations.some((a) => a.id === opened.id) ? (
+        <AnnotationPopover
+          key={opened.id}
+          annotation={annotations.find((a) => a.id === opened.id)!}
+          at={opened.at}
+          readOnly={!canAnnotate}
+          focusComment={opened.edit}
+          onChange={(next) => commit(annotations.map((a) => (a.id === next.id ? next : a)))}
+          onDelete={() => {
+            commit(annotations.filter((a) => a.id !== opened.id));
+            setOpened(null);
+          }}
+          onClose={() => setOpened(null)}
+        />
+      ) : null}
       {controls}
       <div className="pdf-status">
         {selection

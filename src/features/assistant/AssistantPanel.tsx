@@ -1077,6 +1077,18 @@ export function AssistantPanel({
     window.addEventListener('scientify-assistant-open-session', open);
     return () => window.removeEventListener('scientify-assistant-open-session', open);
   });
+  // "Ask AI" on a passage: the question starts with it, ready to finish and send.
+  useEffect(() => {
+    const ask = (event: Event) => {
+      const detail = (event as CustomEvent<{ scope: string; draft: string }>).detail;
+      if (detail?.scope !== scope) return;
+      const current = drafts.current.get(activeConversationId.current)?.trim();
+      setPrompt([current, detail.draft].filter(Boolean).join('\n\n'));
+      requestAnimationFrame(() => composerRef.current?.focus());
+    };
+    window.addEventListener('scientify-assistant-ask', ask);
+    return () => window.removeEventListener('scientify-assistant-ask', ask);
+  });
 
   async function setupWindowsSandbox() {
     if (!agentProject || !domain || !agent.setupSandbox) return;

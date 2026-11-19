@@ -682,6 +682,12 @@ export function App({
     if (tool === 'notes' && workspace === 'notes') return;
     setUI((s) => ({ ...s, dock: tool, dockOpen: s.dock !== tool || !s.dockOpen }));
   }
+  // A passage sent to the AI opens its panel; the panel itself takes the draft.
+  useEffect(() => {
+    const open = () => setUI((s) => ({ ...s, dock: 'assistant', dockOpen: true }));
+    window.addEventListener('scientify-assistant-ask', open);
+    return () => window.removeEventListener('scientify-assistant-ask', open);
+  }, []);
   useEffect(() => {
     const onShortcut = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return;

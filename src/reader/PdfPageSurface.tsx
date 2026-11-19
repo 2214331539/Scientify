@@ -1,7 +1,25 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { AnnotationLayer, AnnotationType, TextLayer, type PDFDocumentProxy } from 'pdfjs-dist';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
+import {
+  AnnotationLayer,
+  AnnotationType,
+  TextLayer,
+  type PageViewport,
+  type PDFDocumentProxy,
+} from 'pdfjs-dist';
 import { pdfLinkLabel, type ReaderLinkService } from './pdf-links';
 import { t } from '../i18n';
+import type { PaperAnnotation } from '../platform/library';
+import { annotationAt, toBox, toPdfRects, type PdfRect } from './annotations';
+
+/** A selection on one page: its text, where it is in PDF points and on screen. */
+export type PageSelection = { rects: PdfRect[]; box: DOMRect | null };
 
 /** Keep geometry while releasing canvases and text layers far from the viewport. */
 export function PdfPageSurface({
@@ -15,6 +33,9 @@ export function PdfPageSurface({
   onReady,
   onError,
   onSelection,
+  annotations,
+  activeAnnotation,
+  onAnnotation,
 }: {
   document: PDFDocumentProxy;
   page: number;
@@ -25,11 +46,26 @@ export function PdfPageSurface({
   linkService: ReaderLinkService;
   onReady(page: number, text: string): void;
   onError(message: string): void;
-  onSelection(page: number, text: string, selection: string): void;
+  onSelection(page: number, text: string, selection: string, where?: PageSelection): void;
+  /** This page's highlights and notes. */
+  annotations?: PaperAnnotation[];
+  activeAnnotation?: string | null;
+  /** A highlight or note on this page was clicked. */
+  onAnnotation?(id: string, at: DOMRect): void;
 }) {
   const surface = useRef<HTMLDivElement>(null);
   const [base, setBase] = useState({ width: 600, height: 800 });
   const [loading, setLoading] = useState(true);
+  // The page at scale 1: PDF points to CSS pixels and back, rotation included.
+  const [unit, setUnit] = useState<PageViewport | null>(null);
+  const unitRef = useRef<PageViewport | null>(null);
+  useEffect(() => {
+    // A drag may end anywhere; the page stops covering itself when it does.
+    const stop = () =>
+      surface.current?.querySelector('.textLayer.selecting')?.classList.remove('selecting');
+    window.addEventListener('mouseup', stop);
+    return () => window.removeEventListener('mouseup', stop);
+  }, []);
   const callbacks = useRef({ onReady, onError, onSelection });
   callbacks.current = { onReady, onError, onSelection };
   const text = useRef('');
@@ -89,6 +125,8 @@ export function PdfPageSurface({
             if (stale) return;
             const original = pdfPage.getViewport({ scale: 1 });
             setBase({ width: original.width, height: original.height });
+            unitRef.current = original;
+            setUnit(original);
             const scale = Math.max(0.25, Math.min(3, width / original.width)) * zoom;
             const viewport = pdfPage.getViewport({ scale });
             frame.style.width = `${viewport.width}px`;
@@ -144,6 +182,12 @@ export function PdfPageSurface({
               } catch (error) {
                 console.warn('PDF text layer failed:', error);
               }
+              // As pdf.js's own viewer does: while a drag is selecting, this block covers
+              // the page, so leaving a column does not select the rest of the page.
+              const end = dom.createElement('div');
+              end.className = 'endOfContent';
+              textNode.append(end);
+              textNode.addEventListener('mousedown', () => textNode.classList.add('selecting'));
             }
             if (annotations.length) {
               const linkViewport = viewport.clone({ dontFlip: true });
@@ -222,9 +266,38 @@ export function PdfPageSurface({
   }, [document, page, width, zoom, visible, linkService]);
   function select() {
     const selected = window.getSelection();
-    if (!selected || !surface.current?.querySelector('.textLayer')?.contains(selected.anchorNode))
-      return;
-    callbacks.current.onSelection(page, text.current, selected.toString().trim().slice(0, 16000));
+    const layer = surface.current?.querySelector<HTMLElement>('.textLayer');
+    if (!selected || !layer?.contains(selected.anchorNode)) return;
+    const value = selected.toString().trim().slice(0, 16000);
+    const where: PageSelection = { rects: [], box: null };
+    if (value && selected.rangeCount && unitRef.current) {
+      const range = selected.getRangeAt(0);
+      const bounds = layer.getBoundingClientRect();
+      // Only this page's part of a selection that runs across pages, and not the
+      // text layer's own end-of-content block.
+      const parts = [...range.getClientRects()].filter(
+        (r) =>
+          r.height < bounds.height * 0.2 &&
+          r.top + r.height / 2 > bounds.top &&
+          r.top + r.height / 2 < bounds.bottom,
+      );
+      where.rects = toPdfRects(parts, bounds, unitRef.current);
+      where.box = range.getBoundingClientRect();
+    }
+    callbacks.current.onSelection(page, text.current, value, where);
+  }
+  function open(event: ReactMouseEvent<HTMLDivElement>) {
+    const layer = surface.current?.querySelector<HTMLElement>('.textLayer') ?? surface.current;
+    if (!onAnnotation || !annotations?.length || !unitRef.current || !layer) return;
+    if (window.getSelection()?.toString().trim()) return;
+    const bounds = layer.getBoundingClientRect();
+    const scaleNow = bounds.width / unitRef.current.width;
+    const [x, y] = unitRef.current.convertToPdfPoint(
+      (event.clientX - bounds.left) / scaleNow,
+      (event.clientY - bounds.top) / scaleNow,
+    );
+    const hit = annotationAt(annotations, page - 1, x, y);
+    if (hit) onAnnotation(hit.id, new DOMRect(event.clientX, event.clientY, 0, 0));
   }
   return (
     <div
@@ -246,7 +319,55 @@ export function PdfPageSurface({
               {t('正在读取 PDF…')}
             </span>
           )}
-          <div className="pdf-page-surface" ref={surface} onMouseUp={select} onKeyUp={select} />
+          <div
+            className="pdf-page-surface"
+            ref={surface}
+            onMouseUp={select}
+            onKeyUp={select}
+            onClick={open}
+          />
+          {unit && annotations?.length ? (
+            <div className="pdf-highlights">
+              {annotations.map((annotation) =>
+                annotation.kind === 'note' ? (
+                  <button
+                    key={annotation.id}
+                    type="button"
+                    className={`pdf-note-pin${annotation.id === activeAnnotation ? ' is-active' : ''}`}
+                    aria-label={t('便签：{text}', { text: annotation.comment || annotation.text })}
+                    style={
+                      {
+                        ...toBox(annotation.rects[0] ?? [0, 0, 0, 0], unit, scale),
+                        '--highlight': annotation.color,
+                      } as CSSProperties
+                    }
+                    onClick={(event) =>
+                      onAnnotation?.(annotation.id, event.currentTarget.getBoundingClientRect())
+                    }
+                  />
+                ) : (
+                  // One group per highlight: its line boxes blend as one, so where
+                  // they touch the color does not darken.
+                  <span
+                    key={annotation.id}
+                    className={`pdf-highlight-group is-${annotation.kind}${
+                      annotation.id === activeAnnotation ? ' is-active' : ''
+                    }`}
+                    style={{ '--highlight': annotation.color } as CSSProperties}
+                  >
+                    {annotation.rects.map((rect, index) => (
+                      <span
+                        key={index}
+                        className="pdf-highlight"
+                        data-annotation={index === 0 ? annotation.id : undefined}
+                        style={toBox(rect, unit, scale)}
+                      />
+                    ))}
+                  </span>
+                ),
+              )}
+            </div>
+          ) : null}
         </>
       )}
     </div>
