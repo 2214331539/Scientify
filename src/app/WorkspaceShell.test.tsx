@@ -168,7 +168,7 @@ async function selectProject(user: ReturnType<typeof userEvent.setup>, name: str
   );
 }
 
-it('provides four project modules, title bar tools and starts with AI closed', async () => {
+it('provides the project modules, title bar tools and starts with AI closed', async () => {
   const { store, backend } = fixture();
   const user = userEvent.setup();
   render(<App store={store} backend={backend} />);
@@ -178,7 +178,7 @@ it('provides four project modules, title bar tools and starts with AI closed', a
     rail()
       .getAllByRole('button')
       .map((button) => button.textContent),
-  ).toEqual(['文献', '文档', '实验', '写作']);
+  ).toEqual(['文献', '文档', '实验', '写作', '云主机']);
   expect(rail().getByRole('button', { name: '文献' }).getAttribute('aria-current')).toBe('page');
   const titlebar = within(screen.getByRole('button', { name: '回到项目中心' }).closest('header')!);
   expect(screen.queryByRole('contentinfo')).toBeNull();

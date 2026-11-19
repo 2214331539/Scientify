@@ -182,10 +182,7 @@ export function SharePanel({
               const manage = owner && !me && member.role !== 'owner';
               return (
                 <li key={member.id}>
-                  <Avatar
-                    seed={member.phone || member.id}
-                    label={member.phone.slice(-2) || '·'}
-                  />
+                  <Avatar seed={member.phone || member.id} label={member.phone.slice(-2) || '·'} />
                   <span className="share-person">
                     <strong>{name}</strong>
                     {member.pending ? <small>{t('待注册')}</small> : null}

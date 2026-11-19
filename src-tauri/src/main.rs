@@ -1,5 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 fn main() {
+    // OpenSSH asks for a password through SSH_ASKPASS; for a cloud host connection
+    // Scientify is that program and answers with the password it was handed.
+    if std::env::var_os("SCIENTIFY_ASKPASS").is_some() {
+        use std::io::Write;
+        let secret = std::env::var("SCIENTIFY_ASKPASS_SECRET").unwrap_or_default();
+        let mut out = std::io::stdout();
+        let _ = writeln!(out, "{secret}");
+        let _ = out.flush();
+        std::process::exit(0);
+    }
     let args: Vec<_> = std::env::args_os().collect();
     if args
         .get(1)

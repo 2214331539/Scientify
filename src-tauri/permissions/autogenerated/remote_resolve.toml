@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-remote-resolve"
+description = "Enables the remote_resolve command without any pre-configured scope."
+commands.allow = ["remote_resolve"]
+
+[[permission]]
+identifier = "deny-remote-resolve"
+description = "Denies the remote_resolve command without any pre-configured scope."
+commands.deny = ["remote_resolve"]

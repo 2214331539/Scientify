@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-remote-connect"
+description = "Enables the remote_connect command without any pre-configured scope."
+commands.allow = ["remote_connect"]
+
+[[permission]]
+identifier = "deny-remote-connect"
+description = "Denies the remote_connect command without any pre-configured scope."
+commands.deny = ["remote_connect"]

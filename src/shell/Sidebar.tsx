@@ -9,6 +9,7 @@ import {
   LogOut,
   FileText,
   PenLine,
+  Server,
   Plus,
   Settings,
   SlidersHorizontal,
@@ -316,6 +317,7 @@ export const projectModules = [
   { id: 'notes', label: '文档', icon: FileText },
   { id: 'experiments', label: '实验', icon: FlaskConical },
   { id: 'writing', label: '写作', icon: PenLine },
+  { id: 'remote', label: '云主机', icon: Server },
 ] as const satisfies readonly { id: WorkspaceId; label: string; icon: unknown }[];
 
 /** Inside a project: the way back, the project switcher, four modules and their resources. */

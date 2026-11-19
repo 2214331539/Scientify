@@ -87,6 +87,7 @@ import { TitleBar, type Crumb } from '../shell/TitleBar';
 import { Notifications } from '../shell/Notifications';
 import { setExitGuard, startUpdateChecks } from '../features/update/updater';
 import { Onboarding } from '../features/onboarding/Onboarding';
+import { RemoteWorkspace } from '../workspaces/remote/RemoteWorkspace';
 import {
   CenterNavigation,
   ProjectNavigation,
@@ -1150,6 +1151,8 @@ export function App({
         />
       }
     />
+  ) : workspace === 'remote' ? (
+    <RemoteWorkspace key={project.id} project={project} onContext={receiveContext} />
   ) : (
     <WritingWorkspace
       key={project.id}

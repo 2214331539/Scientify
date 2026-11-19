@@ -1,4 +1,5 @@
-export type WorkspaceId = 'overview' | 'literature' | 'notes' | 'experiments' | 'writing' | 'files';
+export type WorkspaceId =
+  'overview' | 'literature' | 'notes' | 'experiments' | 'writing' | 'remote' | 'files';
 export type WorkContext = {
   experimentId?: string;
   projectId?: string;

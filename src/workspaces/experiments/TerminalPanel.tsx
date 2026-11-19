@@ -223,6 +223,7 @@ export function TerminalPanel({
   activeId,
   onActive,
   onError,
+  onCreate,
 }: {
   projectId: string;
   experimentId: string;
@@ -230,6 +231,8 @@ export function TerminalPanel({
   activeId: string;
   onActive(id: string): void;
   onError(error: string): void;
+  /** Opens another kind of terminal, such as a shell on a cloud host; no local shell picker. */
+  onCreate?: () => Promise<TerminalInfo | null>;
 }) {
   useEffect(() => {
     const known = new Set(developmentStore.getState().terminals.map((item) => item.id));
@@ -252,7 +255,9 @@ export function TerminalPanel({
   async function create(split = false) {
     setBusy(true);
     try {
-      const info = await openTerminal(projectId, experimentId, profile);
+      const info = onCreate
+        ? await onCreate()
+        : await openTerminal(projectId, experimentId, profile);
       if (info) {
         if (split && current) setSplitId(current.id);
         onActive(info.id);
@@ -293,18 +298,20 @@ export function TerminalPanel({
             </Button>
           ))}
         </div>
-        <Dropdown
-          value={profile}
-          aria-label={t('终端类型')}
-          onChange={(event) => setProfile(event.target.value)}
-        >
-          {platform === 'windows' && <option value="powershell">PowerShell</option>}
-          <option value="pwsh">PowerShell 7</option>
-          {platform === 'windows' && <option value="cmd">Command Prompt</option>}
-          <option value="python">Python REPL</option>
-          {platform === 'macos' && <option value="zsh">zsh</option>}
-          {platform !== 'windows' && <option value="bash">bash</option>}
-        </Dropdown>
+        {onCreate ? null : (
+          <Dropdown
+            value={profile}
+            aria-label={t('终端类型')}
+            onChange={(event) => setProfile(event.target.value)}
+          >
+            {platform === 'windows' && <option value="powershell">PowerShell</option>}
+            <option value="pwsh">PowerShell 7</option>
+            {platform === 'windows' && <option value="cmd">Command Prompt</option>}
+            <option value="python">Python REPL</option>
+            {platform === 'macos' && <option value="zsh">zsh</option>}
+            {platform !== 'windows' && <option value="bash">bash</option>}
+          </Dropdown>
+        )}
         <Button
           variant="ghost"
           iconOnly

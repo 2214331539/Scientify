@@ -35,6 +35,7 @@ mod library_import;
 mod literature_smoke;
 mod notes;
 mod reader;
+mod remote;
 mod research;
 mod writing;
 
@@ -261,6 +262,7 @@ pub fn run() {
         .manage(yita::YitaState::default())
         .manage(agent::papers::PaperState::default())
         .manage(library_import::ImportState::default())
+        .manage(remote::RemoteState::default())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 if let Some(chat) = window.app_handle().try_state::<ai::stream::ChatState>() {
@@ -368,6 +370,17 @@ pub fn run() {
             library_import::library_import_preview,
             library_import::library_import_run,
             library_import::library_import_cancel,
+            remote::remote_hosts,
+            remote::remote_connect,
+            remote::remote_disconnect,
+            remote::remote_list,
+            remote::remote_resolve,
+            remote::remote_read,
+            remote::remote_write,
+            remote::remote_create,
+            remote::remote_rename,
+            remote::remote_delete,
+            remote::remote_terminal,
             notes::note_image,
             library::library_external,
             library::library_import_bytes,

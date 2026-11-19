@@ -11,5 +11,6 @@ export const secondaryViews: Record<WorkspaceId, { id: string; label: string }[]
     { id: 'runs', label: 'Runs' },
   ],
   writing: [{ id: 'files', label: 'Manuscript' }],
+  remote: [],
   files: [{ id: 'files', label: 'All files' }],
 };

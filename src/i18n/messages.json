@@ -4375,5 +4375,37 @@
     "{count} items skipped (over 200 MB)"
   ],
   "输入手机号，邀请协作者": ["输入手机号，邀请协作者", "Phone number to invite"],
-  "邀请角色：{role}": ["邀请角色：{role}", "Invite as: {role}"]
+  "邀请角色：{role}": ["邀请角色：{role}", "Invite as: {role}"],
+  "SSH 配置里的主机": ["SSH 配置里的主机", "Hosts in SSH config"],
+  "{target} 的密码": ["{target} 的密码", "Password for {target}"],
+  "主机": ["主机", "Host"],
+  "云主机": ["云主机", "Cloud host"],
+  "云主机文件": ["云主机文件", "Files on the host"],
+  "从云主机上删除 {name}？不能撤销。": [
+    "从云主机上删除 {name}？不能撤销。",
+    "Delete {name} from the host? This cannot be undone."
+  ],
+  "作为文件夹打开": ["作为文件夹打开", "Open as folder"],
+  "名称里不能有 /。": ["名称里不能有 /。", "A name cannot contain /."],
+  "在终端中打开": ["在终端中打开", "Open in terminal"],
+  "复制路径": ["复制路径", "Copy path"],
+  "放弃对 {name} 的修改？": ["放弃对 {name} 的修改？", "Discard changes to {name}?"],
+  "文件名": ["文件名", "File name"],
+  "文件夹路径": ["文件夹路径", "Folder path"],
+  "文件操作": ["文件操作", "File actions"],
+  "断开连接": ["断开连接", "Disconnect"],
+  "新名称": ["新名称", "New name"],
+  "最近连接": ["最近连接", "Recent"],
+  "正在连接 {target}…": ["正在连接 {target}…", "Connecting to {target}…"],
+  "用户名@主机，或 SSH 配置里的主机名": [
+    "用户名@主机，或 SSH 配置里的主机名",
+    "user@host, or a host name from your SSH config"
+  ],
+  "这个文件夹是空的": ["这个文件夹是空的", "This folder is empty"],
+  "连接云主机": ["连接云主机", "Connect to a cloud host"],
+  "通过 SSH 打开主机上的文件夹，在这里浏览、编辑文件和使用终端。": [
+    "通过 SSH 打开主机上的文件夹，在这里浏览、编辑文件和使用终端。",
+    "Open a folder on a host over SSH to browse and edit its files and use a terminal here."
+  ],
+  "重命名…": ["重命名…", "Rename…"]
 }
