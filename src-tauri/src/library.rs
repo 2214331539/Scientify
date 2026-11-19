@@ -56,7 +56,7 @@ pub fn watch<R: tauri::Runtime>(app: &tauri::AppHandle<R>, project_id: &str) -> 
         if let Ok(event)=&event {if event.paths.iter().all(|p|p.components().any(|c|c.as_os_str()==".scientify")){return;}service.invalidate_fingerprints(&event.paths);}
         // Coalesce bursts with one trailing event; no busy-loop polling of the file system.
         let mut last=last.lock().unwrap();if last.elapsed()<Duration::from_millis(250){return;}*last=Instant::now();
-        let app=app.clone();let project=project.clone();std::thread::spawn(move||{std::thread::sleep(Duration::from_millis(300));let _=app.emit("library-changed",serde_json::json!({"projectId":project,"error":event.err().map(|e|e.to_string())}));});
+        let app=app.clone();let project=project.clone();std::thread::spawn(move||{std::thread::sleep(Duration::from_millis(300));let _=app.emit("library-changed",serde_json::json!({"projectId":project,"error":event.err().map(|e|e.to_string())}));crate::translator::wake(&app);});
     }).map_err(|e|e.to_string())?;
     watcher
         .watch(&root, RecursiveMode::Recursive)

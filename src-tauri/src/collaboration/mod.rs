@@ -131,6 +131,11 @@ fn valid_token(value: &str, max: usize) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
 }
 
+/// This device's id and the collaboration server, for background work.
+pub(crate) fn device(state: &AppState) -> Result<CollaborationState, String> {
+    snapshot(state)
+}
+
 fn snapshot(state: &AppState) -> Result<CollaborationState, String> {
     let mut current = read(state)?;
     if current.client_id.is_empty() {

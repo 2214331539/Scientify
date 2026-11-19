@@ -48,6 +48,7 @@ jobs:
         run: pnpm run build
         env:
           SCIENTIFY_TEX_WARMUP: skip # bundled TeX packages are for release builds
+          SCIENTIFY_SKIP_BABELDOC: '1' # so is the full-text translation engine
       - name: Formatting
         run: pnpm format:check
       - name: Type checking

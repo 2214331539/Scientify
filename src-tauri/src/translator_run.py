@@ -7,11 +7,42 @@ object per line: {"type": "progress", "value": 0-100, "stage": ...}, then
 
 import asyncio
 import json
+import os
 import sys
+from pathlib import Path
 
 
 def emit(kind, **fields):
     print(json.dumps({"type": kind, **fields}, ensure_ascii=False), flush=True)
+
+
+def use_bundled_assets():
+    """Fonts, the layout model and tokenizer data ship with Scientify; BabelDOC would
+    otherwise look for them, and download them, in its cache under the home folder."""
+    folder = os.environ.get("SCIENTIFY_BABELDOC_ASSETS")
+    if not folder:
+        return
+    bundled = Path(folder)
+    import babeldoc.assets.assets as assets
+    import babeldoc.const as const
+
+    original = const.get_cache_file_path
+
+    def lookup(filename, sub_folder=None):
+        if sub_folder:
+            candidate = bundled / sub_folder.strip("/") / filename
+            if candidate.is_file():
+                return candidate
+        return original(filename, sub_folder)
+
+    assets.get_cache_file_path = lookup
+    if (bundled / "tiktoken").is_dir():
+        os.environ["TIKTOKEN_CACHE_DIR"] = str(bundled / "tiktoken")
+
+
+# pdf2zh-next translates in a child process, which loads this file again (without
+# running the block at the end), so the redirect happens on load.
+use_bundled_assets()
 
 
 async def translate():

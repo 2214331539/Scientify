@@ -24,29 +24,19 @@
       }
     ],
     "security": {
-      "capabilities": [
-        "main",
-        "workspace-window"
-      ],
+      "capabilities": ["main", "workspace-window"],
       "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-src 'none'",
       "devCsp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:1420; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-src 'none'"
     }
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis"
-    ],
-    "icon": [
-      "icons/icon.ico"
-    ],
-    "externalBin": [
-      "binaries/codex",
-      "binaries/tectonic",
-      "binaries/uv"
-    ],
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "externalBin": ["binaries/codex", "binaries/tectonic"],
     "licenseFile": "../LICENSE",
     "resources": {
+      "release-resources/babeldoc/": "babeldoc/",
       "release-resources/licenses/": "licenses/",
       "release-resources/tectonic-cache/": "tectonic-cache/",
       "release-resources/yita/": "yita/"
@@ -58,10 +48,7 @@
       },
       "nsis": {
         "installMode": "currentUser",
-        "languages": [
-          "SimpChinese",
-          "English"
-        ],
+        "languages": ["SimpChinese", "English"],
         "displayLanguageSelector": true
       }
     }

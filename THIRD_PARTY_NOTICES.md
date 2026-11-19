@@ -22,6 +22,14 @@ The executable is not committed to this repository. A binary distribution contai
 
 The executable is not committed to this repository. Changing the pinned version requires reviewing the new release's license.
 
+## Bundled full-text translation engine
+
+- Projects: [BabelDOC](https://github.com/funstory-ai/BabelDOC) `0.6.2` and [PDFMathTranslate-next](https://github.com/PDFMathTranslate/PDFMathTranslate-next) (`pdf2zh-next`) `2.9.0`, with a standalone [CPython](https://github.com/astral-sh/python-build-standalone) `3.11` and their Python dependencies; the pins are in [babeldoc.json](scripts/babeldoc.json).
+- Integration: unmodified packages installed by [prepare-babeldoc.mjs](scripts/prepare-babeldoc.mjs) into `babeldoc/` of release builds, and run as a separate process to translate papers. BabelDOC's fonts and layout model ship in `babeldoc/assets/`.
+- Licenses: BabelDOC and pdf2zh-next are AGPL-3.0; Python is under the PSF license; each package keeps its license file in its `*.dist-info` folder, and each font its own (mostly OFL).
+
+These files are not committed to this repository.
+
 ## Main application dependencies
 
 | Project                                                     | Use                                 | Upstream license                             |

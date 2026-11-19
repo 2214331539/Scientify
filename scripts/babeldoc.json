@@ -1,0 +1,75 @@
+{
+  "python": "3.11.15",
+  "packages": [
+    "pdf2zh-next==2.9.0",
+    "babeldoc==0.6.2",
+    "pymupdf==1.25.2",
+    "uharfbuzz==0.55.0",
+    "bitstring>=4.3,<5"
+  ],
+  "remove": [
+    "gradio",
+    "gradio-client",
+    "gradio-i18n",
+    "gradio-pdf",
+    "groovy",
+    "ffmpy",
+    "pydub",
+    "safehttpx",
+    "semantic-version",
+    "python-multipart",
+    "fastapi",
+    "starlette",
+    "sse-starlette",
+    "uvicorn",
+    "aiofiles",
+    "pandas",
+    "ruff",
+    "azure-ai-translation-text",
+    "azure-core",
+    "deepl",
+    "tencentcloud-sdk-python-tmt",
+    "tencentcloud-sdk-python-common",
+    "xinference-client"
+  ],
+  "imports": [
+    "pdf2zh_next.high_level",
+    "pdf2zh_next.config",
+    "pdf2zh_next.translator.translator_impl.openai",
+    "babeldoc.assets.assets"
+  ],
+  "language": "zh-CN",
+  "prune": {
+    "win32": [
+      "Lib/tkinter",
+      "Lib/idlelib",
+      "Lib/turtledemo",
+      "Lib/test",
+      "Lib/ensurepip",
+      "tcl",
+      "include",
+      "libs",
+      "Scripts",
+      "DLLs/_tkinter.pyd",
+      "DLLs/tcl86t.dll",
+      "DLLs/tk86t.dll"
+    ],
+    "darwin": [
+      "lib/python3.11/tkinter",
+      "lib/python3.11/idlelib",
+      "lib/python3.11/turtledemo",
+      "lib/python3.11/test",
+      "lib/python3.11/ensurepip",
+      "lib/tcl8.6",
+      "lib/tk8.6",
+      "lib/itcl4.2.4",
+      "lib/thread2.8.9",
+      "include",
+      "share"
+    ]
+  },
+  "mirrors": {
+    "python": "https://registry.npmmirror.com/-/binary/python-build-standalone",
+    "packages": "https://mirrors.aliyun.com/pypi/simple/"
+  }
+}

@@ -1408,6 +1408,33 @@ impl LocalLibrary {
             binding.fingerprint,
         ))
     }
+    /// Every PDF in the library with its fingerprint, and the folder their translations
+    /// go in. Reads only; `None` without a literature folder.
+    pub fn translation_candidates(
+        &self,
+        project: &str,
+    ) -> Result<Option<(PathBuf, Vec<(PathBuf, String)>)>> {
+        let (root, entries) = {
+            let _g = self.gate.lock().map_err(err)?;
+            let Some(root) = self.root(project)? else {
+                return Ok(None);
+            };
+            let entries = self.walk(&root)?;
+            (root, entries)
+        };
+        let folder = root.join(".scientify").join("translations");
+        reject_links(&folder)?;
+        // Hashing reads each new PDF once; outside the gate the library stays responsive.
+        let pdfs = entries
+            .into_iter()
+            .filter(|entry| entry.pdf)
+            .filter_map(|entry| {
+                let path = root.join(&entry.path);
+                self.fingerprint(&path).ok().map(|hash| (path, hash))
+            })
+            .collect();
+        Ok(Some((folder, pdfs)))
+    }
     pub fn translation_bytes(&self, project: &str, id: &str) -> Result<Vec<u8>> {
         let (_, target, _) = self.translation_paths(project, id)?;
         if !target.is_file() {

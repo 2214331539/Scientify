@@ -3,21 +3,12 @@ import { listen } from '@tauri-apps/api/event';
 
 /** Where a paper's full-text translation stands. */
 export type TranslationStatus = {
-  state: 'idle' | 'queued' | 'preparing' | 'translating' | 'done' | 'failed';
+  state: 'done' | 'translating' | 'waiting';
   /** 0–100 while translating. */
   progress: number;
-  message: string;
-};
-/** The model a translation calls: the assistant's, as the settings name it. */
-export type TranslationModel = {
-  provider: string;
-  endpoint: string;
-  model: string;
-  apiKey: string;
 };
 export type TranslationEvent = {
   projectId: string;
-  paperId: string;
   fingerprint: string;
   status: TranslationStatus;
 };
@@ -27,14 +18,15 @@ function command<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   return invoke<T>(name, args);
 }
 
-/** BabelDOC full-text translation, run on this computer one paper at a time. */
+/**
+ * BabelDOC full-text translation. It runs in the background by itself; opening a paper
+ * in translation only moves that paper to the front.
+ */
 export const translator = {
   status: (projectId: string, paperId: string) =>
     command<TranslationStatus>('translation_status', { projectId, paperId }),
-  request: (projectId: string, paperId: string, model: TranslationModel, force = false) =>
-    command<TranslationStatus>('translation_request', { projectId, paperId, model, force }),
-  cancel: (projectId: string, paperId: string) =>
-    command<void>('translation_cancel', { projectId, paperId }),
+  open: (projectId: string, paperId: string) =>
+    command<TranslationStatus>('translation_open', { projectId, paperId }),
   pdf: async (projectId: string, paperId: string) =>
     new Uint8Array(await command<ArrayBuffer>('translation_pdf', { projectId, paperId })),
   events: (callback: (event: TranslationEvent) => void) =>

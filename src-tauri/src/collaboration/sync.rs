@@ -591,7 +591,10 @@ fn include(domain: Domain, rel: &str, name: &str, dir: bool) -> bool {
                 return (dir && matches!(rest, "note-assets" | "papers" | "translations"))
                     || rest.starts_with("note-assets/")
                     || (!dir && rest.starts_with("papers/") && rest.ends_with(".json"))
-                    || (!dir && rest.starts_with("translations/") && rest.ends_with(".pdf"));
+                    || (!dir && rest.starts_with("translations/") && rest.ends_with(".pdf"))
+                    || (!dir
+                        && rest.starts_with("translations/")
+                        && rest.ends_with(".claims.json"));
             }
             !name.starts_with('.')
         }
@@ -2089,6 +2092,22 @@ mod tests {
             Domain::Library,
             ".scientify/papers/ab12.json",
             "ab12.json",
+            false
+        ));
+        // Full-text translations and each device's claims on the papers it translates.
+        for (path, name) in [
+            (".scientify/translations/ab12.pdf", "ab12.pdf"),
+            (
+                ".scientify/translations/device-1.claims.json",
+                "device-1.claims.json",
+            ),
+        ] {
+            assert!(include(Domain::Library, path, name, false));
+        }
+        assert!(!include(
+            Domain::Library,
+            ".scientify/translations/device-1.claims.partial",
+            "device-1.claims.partial",
             false
         ));
         assert!(!include(

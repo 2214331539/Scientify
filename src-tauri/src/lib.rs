@@ -349,6 +349,7 @@ pub fn run() {
                 .build()?;
             if !isolated_smoke {
                 tray::install(app.handle())?;
+                translator::start(app.handle());
             }
             yita::refresh(app.handle());
             #[cfg(debug_assertions)]
@@ -385,8 +386,7 @@ pub fn run() {
             remote::remote_delete,
             remote::remote_terminal,
             translator::translation_status,
-            translator::translation_request,
-            translator::translation_cancel,
+            translator::translation_open,
             translator::translation_pdf,
             notes::note_image,
             library::library_external,

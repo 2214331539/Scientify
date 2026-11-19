@@ -64,8 +64,6 @@ import {
 } from './local-session';
 import { PaperNotes } from './PaperNotes';
 import { PaperTranslation } from './PaperTranslation';
-import { translateArrivals } from '../../features/translation/engine';
-import { translator } from '../../platform/translator';
 import {
   isTranslationTab,
   paperOfTab,
@@ -330,19 +328,6 @@ export function LocalLiterature({
   useEffect(() => {
     saveLocalSession(project.id, session);
   }, [project.id, session]);
-  // PDFs that arrive are translated once in the background; the translation opens
-  // from the paper's right-click menu.
-  useEffect(() => {
-    if (readOnly || !scan.root) return;
-    const pdfs = scan.entries.filter((entry) => entry.pdf).map((entry) => entry.path);
-    void translateArrivals(
-      project.id,
-      pdfs,
-      (path) => library.open(project.id, path),
-      store,
-      translator,
-    ).catch(() => {});
-  }, [library, project.id, readOnly, scan, store]);
   useEffect(() => {
     if (!scan.root || !library.references) return;
     let live = true;
@@ -1339,8 +1324,6 @@ export function LocalLiterature({
                         scan.papers.find((p) => p.id === paperOfTab(session.activeNote!))?.path ??
                           '',
                       ).replace(/\.pdf$/i, '')}
-                      store={store}
-                      readOnly={readOnly}
                       onContext={(value) => {
                         setSelection(value);
                         changed.current(value);

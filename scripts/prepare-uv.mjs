@@ -15,9 +15,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { download } from './download.mjs';
 
-// uv sets up the full-text translation engine (BabelDOC) on first use: a private
-// Python and its packages in the data folder. It is redistributed as an unmodified
-// upstream release (MIT OR Apache-2.0); the manifest pins the version and checksums.
+// uv builds the full-text translation engine (BabelDOC) that ships in the installer
+// (prepare-babeldoc.mjs). It is a build tool only and is not redistributed; the
+// manifest pins the version and checksums.
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(readFileSync(join(root, 'scripts', 'uv-assets.json'), 'utf8'));
 

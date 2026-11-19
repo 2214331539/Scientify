@@ -10,11 +10,11 @@ New-Item -ItemType Directory -Path (Split-Path $marker) -Force | Out-Null
 Set-Content -LiteralPath $marker -Value 'preserve-research-data'
 function Install-Package {
     $process = Start-Process -FilePath $installerPath -ArgumentList "/S /D=$installDirectory" -PassThru -WindowStyle Hidden
-    if (-not $process.WaitForExit(180000)) { throw 'Installer timed out.' }
+    if (-not $process.WaitForExit(600000)) { throw 'Installer timed out.' }
     if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
 }
 Install-Package
-foreach ($relative in @('scientify.exe', 'codex.exe', 'tectonic.exe', 'uv.exe', 'licenses\Scientify-LICENSE', 'licenses\codex-LICENSE', 'licenses\codex-NOTICE', 'licenses\tectonic-LICENSE', 'licenses\uv-LICENSE-MIT', 'licenses\THIRD_PARTY_LICENSES.txt')) {
+foreach ($relative in @('scientify.exe', 'codex.exe', 'tectonic.exe', 'babeldoc\scientify-babeldoc.json', 'babeldoc\python\python.exe', 'licenses\Scientify-LICENSE', 'licenses\codex-LICENSE', 'licenses\codex-NOTICE', 'licenses\tectonic-LICENSE', 'licenses\THIRD_PARTY_LICENSES.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $installDirectory $relative))) { throw "Missing payload: $relative" }
 }
 & (Join-Path $installDirectory 'codex.exe') --version

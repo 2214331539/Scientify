@@ -154,20 +154,6 @@
   flex: 1;
   min-height: 0;
 }
-.paper-translation-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 4px 10px 4px 16px;
-  border-bottom: 1px solid var(--sf-border-subtle);
-}
-.paper-translation-bar:empty {
-  display: none;
-}
-.paper-translation-error {
-  margin: 8px 16px 0;
-}
 .paper-translation-empty {
   display: flex;
   flex-direction: column;
@@ -365,10 +351,7 @@
   display: none;
 }
 
-/* The translated PDF beside the paper, and the one-time progress while it is made. */
-.paper-translation-bar .spacer {
-  flex: 1;
-}
+/* The translated PDF beside the paper, and the progress while it is made. */
 .paper-translation-reader {
   display: flex;
   flex: 1;
@@ -391,13 +374,4 @@
   border-radius: inherit;
   background: var(--sf-accent);
   transition: width 300ms ease;
-}
-.paper-translation-auto {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  color: var(--sf-text-muted);
-  font-size: 12px;
-  cursor: pointer;
 }
