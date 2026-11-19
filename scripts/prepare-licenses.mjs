@@ -176,6 +176,7 @@ for (const [source, name] of [
   ['docs/licenses/codex-LICENSE', 'codex-LICENSE'],
   ['docs/licenses/codex-NOTICE', 'codex-NOTICE'],
   ['docs/licenses/tectonic-LICENSE', 'tectonic-LICENSE'],
+  ['docs/licenses/uv-LICENSE-MIT', 'uv-LICENSE-MIT'],
   ['docs/licenses/upstream/Yita-MIT.txt', 'Yita-MIT.txt'],
   ['docs/licenses/upstream/InstantTranslate-MIT.txt', 'InstantTranslate-MIT.txt'],
 ])

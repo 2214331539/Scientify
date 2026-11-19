@@ -37,6 +37,7 @@ mod notes;
 mod reader;
 mod remote;
 mod research;
+mod translator;
 mod writing;
 
 struct AppState {
@@ -263,6 +264,7 @@ pub fn run() {
         .manage(agent::papers::PaperState::default())
         .manage(library_import::ImportState::default())
         .manage(remote::RemoteState::default())
+        .manage(translator::TranslatorState::default())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 if let Some(chat) = window.app_handle().try_state::<ai::stream::ChatState>() {
@@ -381,6 +383,10 @@ pub fn run() {
             remote::remote_rename,
             remote::remote_delete,
             remote::remote_terminal,
+            translator::translation_status,
+            translator::translation_request,
+            translator::translation_cancel,
+            translator::translation_pdf,
             notes::note_image,
             library::library_external,
             library::library_import_bytes,
@@ -406,7 +412,6 @@ pub fn run() {
             research::research_reveal,
             research::project_folders,
             attachments::doc_attachment,
-            attachments::paper_translation,
             weblink::web_link_preview,
             weblink::web_link_import,
             research::research_locate,

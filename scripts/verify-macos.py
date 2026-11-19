@@ -80,7 +80,8 @@ if args.bundle:
     binary = app / 'Contents/MacOS' / metadata['CFBundleExecutable']
     engine = app / 'Contents/MacOS/codex'
     latex = app / 'Contents/MacOS/tectonic'
-    for executable in [binary, engine, latex]:
+    setup = app / 'Contents/MacOS/uv'
+    for executable in [binary, engine, latex, setup]:
         arch = run('lipo', '-archs', str(executable), capture_output=True).stdout.strip()
         if arch != 'arm64':
             raise SystemExit(f'Wrong architecture in {executable}: {arch}')
@@ -88,6 +89,7 @@ if args.bundle:
     run('codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app))
     run(str(engine), '--version')
     run(str(latex), '--version')
+    run(str(setup), '--version')
     if os.environ.get('MACOS_SIGNING') == 'developer-id':
         run('xcrun', 'stapler', 'validate', str(app))
         run('spctl', '--assess', '--type', 'execute', '--verbose=2', str(app))

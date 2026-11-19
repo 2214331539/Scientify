@@ -40,50 +40,6 @@ pub(crate) fn root(
     root.canonicalize().map_err(|e| e.to_string())
 }
 
-/// A paper's full-text translation, bound to the paper like its note:
-/// `note-assets/<project>/translations/<paper id>.md`, which syncs with the
-/// note assets. Reads (no `content`) give null when there is none yet.
-#[tauri::command]
-pub async fn paper_translation(
-    view: tauri::Webview,
-    state: State<'_, AppState>,
-    project_id: String,
-    paper_id: String,
-    content: Option<String>,
-) -> Result<Option<String>, String> {
-    crate::library::trusted(&view)?;
-    valid_project(&project_id)?;
-    valid_project(&paper_id).map_err(|_| "论文标识无效。")?;
-    if content.is_some() {
-        crate::collaboration::permissions::require_write(&state.storage, &project_id, "library")?;
-    }
-    let folder = state
-        .storage
-        .directory()
-        .join("note-assets")
-        .join(&project_id)
-        .join("translations");
-    tauri::async_runtime::spawn_blocking(move || {
-        let path = folder.join(format!("{paper_id}.md"));
-        match content {
-            Some(text) => {
-                if text.len() > 20 * 1024 * 1024 {
-                    return Err("译文过长。".into());
-                }
-                std::fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
-                scientify_core::storage::write_atomic_bytes(&path, text.as_bytes())?;
-                Ok(Some(text))
-            }
-            None if path.is_file() => std::fs::read_to_string(&path)
-                .map(Some)
-                .map_err(|e| e.to_string()),
-            None => Ok(None),
-        }
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
 /// A name safe on every system, keeping the extension.
 fn clean_name(name: &str) -> String {
     let name = Path::new(name)

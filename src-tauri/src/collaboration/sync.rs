@@ -588,9 +588,10 @@ fn include(domain: Domain, rel: &str, name: &str, dir: bool) -> bool {
                 return dir;
             }
             if let Some(rest) = rel.strip_prefix(".scientify/") {
-                return (dir && matches!(rest, "note-assets" | "papers"))
+                return (dir && matches!(rest, "note-assets" | "papers" | "translations"))
                     || rest.starts_with("note-assets/")
-                    || (!dir && rest.starts_with("papers/") && rest.ends_with(".json"));
+                    || (!dir && rest.starts_with("papers/") && rest.ends_with(".json"))
+                    || (!dir && rest.starts_with("translations/") && rest.ends_with(".pdf"));
             }
             !name.starts_with('.')
         }

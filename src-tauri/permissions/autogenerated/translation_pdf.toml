@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-translation-pdf"
+description = "Enables the translation_pdf command without any pre-configured scope."
+commands.allow = ["translation_pdf"]
+
+[[permission]]
+identifier = "deny-translation-pdf"
+description = "Denies the translation_pdf command without any pre-configured scope."
+commands.deny = ["translation_pdf"]

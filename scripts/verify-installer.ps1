@@ -14,7 +14,7 @@ function Install-Package {
     if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
 }
 Install-Package
-foreach ($relative in @('scientify.exe', 'codex.exe', 'tectonic.exe', 'licenses\Scientify-LICENSE', 'licenses\codex-LICENSE', 'licenses\codex-NOTICE', 'licenses\tectonic-LICENSE', 'licenses\THIRD_PARTY_LICENSES.txt')) {
+foreach ($relative in @('scientify.exe', 'codex.exe', 'tectonic.exe', 'uv.exe', 'licenses\Scientify-LICENSE', 'licenses\codex-LICENSE', 'licenses\codex-NOTICE', 'licenses\tectonic-LICENSE', 'licenses\uv-LICENSE-MIT', 'licenses\THIRD_PARTY_LICENSES.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $installDirectory $relative))) { throw "Missing payload: $relative" }
 }
 & (Join-Path $installDirectory 'codex.exe') --version

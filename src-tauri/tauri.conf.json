@@ -42,7 +42,8 @@
     ],
     "externalBin": [
       "binaries/codex",
-      "binaries/tectonic"
+      "binaries/tectonic",
+      "binaries/uv"
     ],
     "licenseFile": "../LICENSE",
     "resources": {

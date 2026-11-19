@@ -165,36 +165,8 @@
 .paper-translation-bar:empty {
   display: none;
 }
-.paper-translation-progress {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  color: var(--sf-text-secondary);
-  font-size: 12px;
-}
-.paper-translation-progress progress {
-  flex: 1;
-  max-width: 160px;
-  height: 4px;
-  accent-color: var(--sf-accent);
-}
 .paper-translation-error {
   margin: 8px 16px 0;
-}
-.paper-translation-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 12px 18px 40px;
-  line-height: 1.75;
-}
-.paper-translation-body h2 .sf-button {
-  padding: 0;
-  color: var(--sf-link);
-  font-size: 12px;
-  font-weight: 500;
 }
 .paper-translation-empty {
   display: flex;
@@ -391,4 +363,41 @@
 /* The table already offers to open a folder; the docked tree stays quiet. */
 .literature-sidebar.is-docked .library-unmounted {
   display: none;
+}
+
+/* The translated PDF beside the paper, and the one-time progress while it is made. */
+.paper-translation-bar .spacer {
+  flex: 1;
+}
+.paper-translation-reader {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.paper-translation-reader > .pdf-reader {
+  flex: 1;
+  width: 100%;
+}
+.paper-translation-meter {
+  width: 180px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sf-surface-selected);
+  overflow: hidden;
+}
+.paper-translation-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sf-accent);
+  transition: width 300ms ease;
+}
+.paper-translation-auto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  cursor: pointer;
 }

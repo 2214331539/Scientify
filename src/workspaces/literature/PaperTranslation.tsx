@@ -1,168 +1,175 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Languages, RotateCcw, Square } from 'lucide-react';
 import { Button } from '../../components/primitives';
 import { confirmAction } from '../../components/prompts';
 import { errorMessage } from '../../domain/errors';
+import type { WorkContext } from '../../domain/context';
 import { t } from '../../i18n';
-import { getPreferences } from '../../i18n/preferences';
-import type { LibraryBackend, LibraryPaper } from '../../platform/library';
-import type { ResearchBackend } from '../../platform/research';
+import type { LibraryPaper } from '../../platform/library';
+import { translator, type TranslationStatus, type Translator } from '../../platform/translator';
 import type { WorkspaceStore } from '../../stores/workspace';
-import { loadConnectionKey } from '../../features/assistant/connections';
-import type { AISettings } from '../../features/assistant/model';
-import { Markdown } from '../../features/notes/Markdown';
-import { loadTextPdf, pdfPageText } from '../../reader/pdf-text';
 import {
-  loadTranslation,
-  translatePaper,
-  translationJobs,
-} from '../../features/translation/paper-translation';
+  autoTranslate,
+  setAutoTranslate,
+  translationModel,
+} from '../../features/translation/engine';
+
+const PdfReader = lazy(() => import('../../reader/PdfReader'));
+const IDLE: TranslationStatus = { state: 'idle', progress: 0, message: '' };
 
 /**
- * A paper's full-text translation, in its note pane beside the PDF: made on
- * request with the assistant's model, kept with the paper, pages linking back.
+ * A paper's full-text translation beside it: a PDF with the original's layout,
+ * formulas and figures, made once (by itself for new papers) and kept with the paper.
  */
 export function PaperTranslation({
   projectId,
   paper,
   title,
-  library,
-  backend,
   store,
   readOnly,
-  onPage,
+  onContext,
+  engine = translator,
 }: {
   projectId: string;
   paper?: LibraryPaper;
   title: string;
-  library: LibraryBackend;
-  backend: ResearchBackend;
   store: WorkspaceStore;
   readOnly: boolean;
-  onPage(page: number): void;
+  onContext?: (context: WorkContext) => void;
+  engine?: Translator;
 }) {
   const paperId = paper?.id ?? '';
-  const job = useSyncExternalStore(
-    useCallback(
-      (listener: () => void) => translationJobs.subscribe(projectId, paperId, listener),
-      [projectId, paperId],
-    ),
-    () => translationJobs.get(projectId, paperId),
-  );
-  const [stored, setStored] = useState<string | null | undefined>(undefined);
+  const [status, setStatus] = useState<TranslationStatus | null>(null);
   const [error, setError] = useState('');
-  const [preparing, setPreparing] = useState(false);
+  const [version, setVersion] = useState(0);
+  const [auto, setAuto] = useState(autoTranslate);
   useEffect(() => {
     if (!paperId) return;
     let live = true;
-    void loadTranslation(projectId, paperId)
-      .then((content) => live && setStored(content))
-      .catch((reason) => live && (setStored(null), setError(errorMessage(reason))));
+    void engine
+      .status(projectId, paperId)
+      .then((value) => live && setStatus(value))
+      .catch((reason) => live && (setStatus(IDLE), setError(errorMessage(reason))));
+    const stop = engine.events((event) => {
+      if (event.projectId !== projectId || event.paperId !== paperId) return;
+      setStatus(event.status);
+      if (event.status.state === 'done') setVersion((n) => n + 1);
+    });
     return () => {
       live = false;
+      void stop.then((unlisten) => unlisten());
     };
-  }, [projectId, paperId]);
-  const content = job.content ?? stored;
-  const running = job.running || preparing;
+  }, [engine, projectId, paperId]);
+  const backend = useMemo(
+    () => ({ readPdf: () => engine.pdf(projectId, paperId) }),
+    [engine, projectId, paperId],
+  );
 
-  async function start() {
-    if (!paper || running) return;
-    if (content && !(await confirmAction(t('重新翻译会替换现有译文，继续吗？')))) return;
+  async function start(again = false) {
+    if (!paper) return;
+    if (again && !(await confirmAction(t('重新翻译会替换现有译文，继续吗？')))) return;
     setError('');
-    setPreparing(true);
     try {
-      const settings = store.getState().data?.settings.model as AISettings | undefined;
-      if (!settings?.model) throw new Error(t('请先在设置里选好 AI 模型。'));
-      const apiKey = await loadConnectionKey(settings);
-      const task = await loadTextPdf(await library.pdf(projectId, paper.id));
-      const pages: string[] = [];
-      try {
-        const pdf = await task.promise;
-        for (let page = 1; page <= pdf.numPages; page++) pages.push(await pdfPageText(pdf, page));
-      } finally {
-        void task.destroy();
-      }
-      const chinese = getPreferences().language === 'zh-CN';
-      setPreparing(false);
-      await translatePaper({
-        projectId,
-        paperId: paper.id,
-        title: t('{title}（全文翻译）', { title }),
-        pages,
-        ask: ({ messages }) =>
-          backend.askAI({
-            provider: settings.provider,
-            endpoint: settings.endpoint,
-            apiKey,
-            model: settings.model,
-            messages,
-          }),
-        language: chinese ? '简体中文' : 'English',
-        note: t('由 {model} 翻译，{date}。点页码回到原文。', {
-          model: settings.model,
-          date: new Date().toLocaleDateString(),
-        }),
-        pageLabel: (page) => t('第 {page} 页', { page }),
-        pending: t('（未翻译）'),
-      });
+      setStatus(await engine.request(projectId, paper.id, await translationModel(store), again));
     } catch (reason) {
       setError(errorMessage(reason));
-    } finally {
-      setPreparing(false);
+    }
+  }
+  async function stop() {
+    try {
+      await engine.cancel(projectId, paperId);
+      setStatus(IDLE);
+    } catch (reason) {
+      setError(errorMessage(reason));
     }
   }
 
-  const problem = error || job.error;
+  const running =
+    status?.state === 'queued' || status?.state === 'preparing' || status?.state === 'translating';
+  const problem = error || (status?.state === 'failed' ? status.message : '');
   return (
     <section className="paper-translation" aria-label={t('全文翻译')}>
-      <header className="paper-translation-bar">
-        {running ? (
-          <>
-            <span className="paper-translation-progress" role="status">
-              {preparing
-                ? t('正在读取论文…')
-                : t('正在翻译 {done}/{total} 段', { done: job.done, total: job.total })}
-              <progress max={job.total || 1} value={job.done} />
-            </span>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={preparing}
-              onClick={() => translationJobs.cancel(projectId, paperId)}
-            >
-              <Square size={13} />
-              {t('停止')}
-            </Button>
-          </>
-        ) : content ? (
-          <>
-            <span className="paper-translation-progress muted">{t('译文')}</span>
-            <Button size="sm" variant="ghost" disabled={readOnly || !paper} onClick={start}>
+      {status?.state === 'done' && paper ? (
+        <>
+          <header className="paper-translation-bar">
+            <span className="muted">{t('译文保留原文排版')}</span>
+            <span className="spacer" />
+            <Button size="sm" variant="ghost" disabled={readOnly} onClick={() => void start(true)}>
               <RotateCcw size={13} />
               {t('重新翻译')}
             </Button>
-          </>
-        ) : null}
-      </header>
-      {problem ? (
-        <p role="alert" className="error-text paper-translation-error">
-          {problem}
-        </p>
-      ) : null}
-      {content ? (
-        <div className="paper-translation-body">
-          <Markdown onPage={onPage}>{content}</Markdown>
-        </div>
-      ) : content === null && !running ? (
+          </header>
+          <div className="paper-translation-reader">
+            <Suspense fallback={<p className="muted">{t('正在打开阅读器…')}</p>}>
+              <PdfReader
+                key={version}
+                assetId={`translation:${paper.id}:${version}`}
+                paperId={paper.id}
+                title={t('{title}（译文）', { title })}
+                projectId={projectId}
+                backend={backend}
+                compact
+                onContext={(context) => onContext?.(context)}
+                onTool={() => {}}
+              />
+            </Suspense>
+          </div>
+        </>
+      ) : status === null ? (
+        <p className="muted paper-translation-empty">{t('正在读取…')}</p>
+      ) : (
         <div className="paper-translation-empty">
           <Languages size={22} aria-hidden="true" />
-          <p>{t('把整篇论文逐段翻译出来，保存在这篇论文名下，以后直接打开。')}</p>
-          <p className="muted">{t('会按段调用当前的 AI 模型，长论文需要几分钟。')}</p>
-          <Button variant="primary" disabled={readOnly || !paper} onClick={start}>
-            {t('开始翻译')}
-          </Button>
+          {running ? (
+            <>
+              <p role="status">
+                {status.state === 'translating'
+                  ? t('正在翻译 {progress}%', { progress: Math.round(status.progress) })
+                  : status.state === 'preparing'
+                    ? t('正在准备翻译组件，只需一次')
+                    : t('排队中')}
+              </p>
+              <div
+                className="paper-translation-meter"
+                role="progressbar"
+                aria-label={t('翻译进度')}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(status.progress)}
+              >
+                <span style={{ width: `${Math.max(3, status.progress)}%` }} />
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => void stop()}>
+                <Square size={12} />
+                {t('停止')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <p>{t('翻译整篇论文，保留原文的排版、公式和图表。')}</p>
+              {problem ? (
+                <p role="alert" className="error-text">
+                  {problem}
+                </p>
+              ) : null}
+              <Button variant="primary" disabled={readOnly || !paper} onClick={() => void start()}>
+                {status.state === 'failed' ? t('重试') : t('开始翻译')}
+              </Button>
+            </>
+          )}
+          <label className="paper-translation-auto">
+            <input
+              type="checkbox"
+              checked={auto}
+              onChange={(event) => {
+                setAuto(event.target.checked);
+                setAutoTranslate(event.target.checked);
+              }}
+            />
+            {t('新下载的论文自动翻译')}
+          </label>
         </div>
-      ) : null}
+      )}
     </section>
   );
 }

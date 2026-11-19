@@ -9,8 +9,8 @@
   },
   "description": "Scientify local desktop research workspace",
   "scripts": {
-    "predev": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs && node scripts/prepare-tectonic.mjs",
-    "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs && node scripts/prepare-tectonic.mjs && node scripts/prepare-licenses.mjs",
+    "predev": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs && node scripts/prepare-tectonic.mjs && node scripts/prepare-uv.mjs",
+    "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-pdf.mjs && node scripts/prepare-agent.mjs && node scripts/prepare-tectonic.mjs && node scripts/prepare-uv.mjs && node scripts/prepare-licenses.mjs",
     "prepare:agent": "node scripts/prepare-agent.mjs",
     "prepare:tectonic": "node scripts/prepare-tectonic.mjs",
     "start": "tauri dev",

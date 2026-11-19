@@ -1384,6 +1384,37 @@ impl LocalLibrary {
         Self::write_record(&file, &record)?;
         Ok(added)
     }
+    /// A paper's PDF, where its full-text translation goes
+    /// (`.scientify/translations/<fingerprint>.pdf`), and its fingerprint.
+    pub fn translation_paths(&self, project: &str, id: &str) -> Result<(PathBuf, PathBuf, String)> {
+        let _g = self.gate.lock().map_err(err)?;
+        let root = self.root(project)?.ok_or("请先打开文献文件夹。")?;
+        let binding = self
+            .index(&root)?
+            .papers
+            .into_iter()
+            .find(|p| p.id == id)
+            .ok_or("文献绑定不存在。")?;
+        let fingerprint = &binding.fingerprint;
+        if fingerprint.len() != 64 || !fingerprint.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err("文献标识无效。".into());
+        }
+        let source = self.resolve(&root, &binding.path, false)?;
+        let folder = root.join(".scientify").join("translations");
+        reject_links(&folder)?;
+        Ok((
+            source,
+            folder.join(format!("{fingerprint}.pdf")),
+            binding.fingerprint,
+        ))
+    }
+    pub fn translation_bytes(&self, project: &str, id: &str) -> Result<Vec<u8>> {
+        let (_, target, _) = self.translation_paths(project, id)?;
+        if !target.is_file() {
+            return Err("这篇论文还没有译文。".into());
+        }
+        bounded(&target, PDF_LIMIT)
+    }
     /// What the library knows about its papers: fingerprint → reference.
     pub fn references(&self, project: &str) -> Result<BTreeMap<String, serde_json::Value>> {
         let _g = self.gate.lock().map_err(err)?;

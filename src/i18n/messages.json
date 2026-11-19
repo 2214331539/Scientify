@@ -4407,5 +4407,19 @@
     "通过 SSH 打开主机上的文件夹，在这里浏览、编辑文件和使用终端。",
     "Open a folder on a host over SSH to browse and edit its files and use a terminal here."
   ],
-  "重命名…": ["重命名…", "Rename…"]
+  "重命名…": ["重命名…", "Rename…"],
+  "{title}（译文）": ["{title}（译文）", "{title} (translation)"],
+  "排队中": ["排队中", "Queued"],
+  "新下载的论文自动翻译": ["新下载的论文自动翻译", "Translate new papers automatically"],
+  "正在准备翻译组件，只需一次": [
+    "正在准备翻译组件，只需一次",
+    "Setting up the translator, only once"
+  ],
+  "正在翻译 {progress}%": ["正在翻译 {progress}%", "Translating {progress}%"],
+  "翻译整篇论文，保留原文的排版、公式和图表。": [
+    "翻译整篇论文，保留原文的排版、公式和图表。",
+    "Translate the whole paper, keeping its layout, formulas and figures."
+  ],
+  "翻译进度": ["翻译进度", "Translation progress"],
+  "译文保留原文排版": ["译文保留原文排版", "Translation in the original layout"]
 }
