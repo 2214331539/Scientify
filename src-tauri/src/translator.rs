@@ -3,9 +3,9 @@
 //! (`release-resources/babeldoc`, built by `scripts/prepare-babeldoc.mjs`) and runs from
 //! there; nothing is installed at run time.
 //!
-//! Translation happens in the background and never asks. Every PDF that arrives in a
-//! literature folder after this device first looked at it is translated once, and so
-//! is any paper someone opens in translation. Papers go one at a time; when the model
+//! Translation happens in the background and never asks. Every PDF in a literature
+//! folder is translated once: a paper someone opens in translation first, then papers
+//! that arrived, then the ones already there. Papers go one at a time; when the model
 //! is out of quota or unreachable the work pauses and resumes later. The result is
 //! `.scientify/translations/<fingerprint>.pdf`, which syncs, so the devices of one
 //! account share it: each device lists the papers it is about to translate in its own
@@ -83,7 +83,8 @@ struct Claims {
 /// What this device remembers, in its data folder.
 #[derive(Serialize, Deserialize, Default)]
 struct Local {
-    /// Per project, the papers that were already there when this device first looked.
+    /// Per project, the papers that were already there when this device first looked;
+    /// they wait behind papers that arrive later.
     #[serde(default)]
     known: BTreeMap<String, BTreeSet<String>>,
     #[serde(default)]
@@ -413,7 +414,8 @@ fn pass<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     let mut local = load_local(app);
     let mut remembered = false;
     let mut first: Vec<Job> = Vec::new();
-    let mut rest: Vec<Job> = Vec::new();
+    let mut arrived: Vec<Job> = Vec::new();
+    let mut older: Vec<Job> = Vec::new();
     let mut finished: Vec<String> = Vec::new();
     let mut claims: Vec<(PathBuf, BTreeMap<String, String>)> = Vec::new();
     let at = now();
@@ -442,9 +444,7 @@ fn pass<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
             }
             let wanted = wanted.contains(&fingerprint);
             if !wanted {
-                if known.contains(&fingerprint)
-                    || local.failures.get(&fingerprint).copied().unwrap_or(0) >= ATTEMPTS
-                {
+                if local.failures.get(&fingerprint).copied().unwrap_or(0) >= ATTEMPTS {
                     continue;
                 }
                 let seen = translator
@@ -478,8 +478,10 @@ fn pass<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
             ours.insert(fingerprint, mark.to_string());
             if wanted {
                 first.push(job);
+            } else if known.contains(&job.fingerprint) {
+                older.push(job);
             } else {
-                rest.push(job);
+                arrived.push(job);
             }
         }
         claims.push((folder, ours));
@@ -518,7 +520,8 @@ fn pass<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
         }
         inner.queue = first
             .into_iter()
-            .chain(rest)
+            .chain(arrived)
+            .chain(older)
             .filter(|job| running.as_ref() != Some(&job.target))
             .collect();
         let start = !paused && !inner.worker && !inner.queue.is_empty();
@@ -771,8 +774,7 @@ fn run_engine(
                 String::from_utf8_lossy(&std::fs::read(&log).unwrap_or_default()).into_owned();
             Err(text
                 .lines()
-                .filter(|l| !l.trim().is_empty())
-                .last()
+                .rfind(|l| !l.trim().is_empty())
                 .unwrap_or("翻译引擎意外退出。")
                 .to_string())
         }

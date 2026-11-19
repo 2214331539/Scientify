@@ -201,6 +201,8 @@ pub enum Operation {
         path: String,
     },
 }
+/// A library's translations folder, and each PDF in it with its fingerprint.
+pub type TranslationCandidates = (PathBuf, Vec<(PathBuf, String)>);
 pub struct LocalLibrary {
     data: PathBuf,
     gate: Mutex<()>,
@@ -1410,10 +1412,7 @@ impl LocalLibrary {
     }
     /// Every PDF in the library with its fingerprint, and the folder their translations
     /// go in. Reads only; `None` without a literature folder.
-    pub fn translation_candidates(
-        &self,
-        project: &str,
-    ) -> Result<Option<(PathBuf, Vec<(PathBuf, String)>)>> {
+    pub fn translation_candidates(&self, project: &str) -> Result<Option<TranslationCandidates>> {
         let (root, entries) = {
             let _g = self.gate.lock().map_err(err)?;
             let Some(root) = self.root(project)? else {
