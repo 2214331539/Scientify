@@ -72,7 +72,7 @@ it('opens on my projects, then filters, sorts and remembers the view', async () 
   data.runs.push({ id: 'r1', project: 'Beta', name: 'ablation', status: 'failed', updatedAt: now });
   const { user } = fixture(data);
   await screen.findByRole('region', { name: '我的项目' });
-  expect(screen.getByRole('button', { name: '登录' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: '账号与设置' })).toBeTruthy();
   // A failed run waits in the notifications instead of a home page.
   await user.click(screen.getByRole('button', { name: '通知（1）' }));
   const notices = within(screen.getByRole('dialog', { name: '通知' }));

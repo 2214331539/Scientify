@@ -114,7 +114,7 @@ export const userPage = {
       const sub = account.subscription;
       body = `<div class="grid g3">
         ${card('套餐', `<dl class="kv"><dt>当前</dt><dd>${planChip(account.plan.id, account.plan.name)}</dd><dt>本周期</dt><dd class="num">${date(account.period.start)} 至 ${date(account.period.end)}</dd><dt>到期</dt><dd class="num">${sub ? date(sub.endsAt) : '—'}</dd><dt>来源</dt><dd>${sub ? (SOURCE[sub.source] ?? esc(sub.source)) : '—'}</dd></dl>`, { actions: '<button class="btn sm" data-act="plan">更改套餐</button>' })}
-        ${card('官方模型额度', `<div class="num" style="font-size:22px;font-weight:600">${fmt(account.balance)} <span class="muted" style="font-size:13px;font-weight:400">点可用</span></div>${meter(account.usedThisPeriod, Math.max(account.plan.monthlyPoints, 1), `本周期已用 ${fmt(account.usedThisPeriod)} / ${fmt(account.plan.monthlyPoints)}`)}<dl class="kv" style="margin-top:12px"><dt>今天已用</dt><dd class="num">${fmt(account.usedToday)} / ${fmt(account.limits.dailyPoints)} 点</dd><dt>限制</dt><dd>${data.limits ? '单独设置' : '跟随套餐'}：每分钟 ${account.limits.rpm} 次，同时 ${account.limits.concurrency} 个</dd>${account.debt ? `<dt>欠额</dt><dd class="down">${fmt(account.debt)} 点</dd>` : ''}</dl>`, { actions: '<button class="btn sm" data-act="credit">调整额度</button>' })}
+        ${card('官方模型额度', `<div class="num" style="font-size:22px;font-weight:600">${fmt(account.balance)} <span class="muted" style="font-size:13px;font-weight:400">点可用</span></div>${meter(account.usedThisPeriod, Math.max(account.plan.monthlyPoints, 1), `本周期已用 ${fmt(account.usedThisPeriod)} / ${fmt(account.plan.monthlyPoints)}`)}${account.plan.monthlyPoints ? '<div style="margin-top:6px"><button class="link" data-act="reset-period">重置本周期额度</button></div>' : ''}<dl class="kv" style="margin-top:12px"><dt>今天已用</dt><dd class="num">${fmt(account.usedToday)} / ${fmt(account.limits.dailyPoints)} 点${account.usedToday ? ' <button class="link" data-act="reset-today">重置</button>' : ''}</dd><dt>限制</dt><dd>${data.limits ? '单独设置' : '跟随套餐'}：每分钟 ${account.limits.rpm} 次，同时 ${account.limits.concurrency} 个</dd>${account.debt ? `<dt>欠额</dt><dd class="down">${fmt(account.debt)} 点</dd>` : ''}</dl>`, { actions: '<button class="btn sm" data-act="refresh-period" title="补发本周期还没发的套餐点数">刷新</button><button class="btn sm" data-act="credit">调整额度</button>' })}
         ${card('同步空间', `${meter(account.storage.usedBytes, account.storage.limitBytes, `${bytes(account.storage.usedBytes)} / ${bytes(account.storage.limitBytes)}`)}<dl class="kv" style="margin-top:12px"><dt>拥有的项目</dt><dd>${data.projects.filter((p) => p.owned).length} 个</dd><dt>加入的项目</dt><dd>${data.projects.filter((p) => !p.owned).length} 个（不占自己的空间）</dd><dt>历史版本</dt><dd>保留 ${account.plan.historyDays} 天</dd></dl><div class="muted" style="margin-top:8px;font-size:12px">第一期只统计，不限制上传。</div>`)}
       </div>
       ${card('近 30 天用量', dailyChart(180), { sub: '点' })}`;
@@ -182,6 +182,45 @@ export const userPage = {
       await post(`/users/${encodeURIComponent(ctx.route.id)}/credits`, { delta: points * Number(f.sign), days: Number(f.days), reason: f.reason, note: f.note });
       ctx.close();
       toast(`已${Number(f.sign) > 0 ? '增加' : '扣减'} ${fmt(points)} 点，并记入审计`);
+      await ctx.reload();
+    },
+    async 'refresh-period'(_el, ctx) {
+      const { added } = await post(`/users/${encodeURIComponent(ctx.route.id)}/refresh-period`);
+      toast(added > 0 ? `已补发本周期 ${fmt(added)} 点` : '本周期的点数已经发过');
+      await ctx.reload();
+    },
+    'reset-period'(_el, ctx) {
+      const { account, user } = ctx.data;
+      ctx.dialog(
+        frame(
+          `重置本周期额度 · ${esc(user.name)}`,
+          `<div>把本周期（${date(account.period.start)} 至 ${date(account.period.end)}）的套餐点数恢复到满额 ${fmt(account.plan.monthlyPoints)} 点。注册赠送、兑换码和人工调整的额度包不变。</div>
+           <div class="form-row"><label>原因（必填，会记入审计）</label><input class="text" name="reason" placeholder="例如：服务故障补偿"></div>`,
+          '<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="do-reset-period">重置</button>',
+        ),
+      );
+    },
+    async 'do-reset-period'(_el, ctx) {
+      const { added } = await post(`/users/${encodeURIComponent(ctx.route.id)}/reset-period`, { reason: fields().reason });
+      ctx.close();
+      toast(added ? `已恢复 ${fmt(added)} 点，并记入审计` : '本周期的点数本来就是满的');
+      await ctx.reload();
+    },
+    'reset-today'(_el, ctx) {
+      const { account, user } = ctx.data;
+      ctx.dialog(
+        frame(
+          `重置今日用量 · ${esc(user.name)}`,
+          `<div>今天已用的 ${fmt(account.usedToday)} 点不再计入单日上限，用户今天可以重新用满 ${fmt(account.limits.dailyPoints)} 点。点数余额、用量统计和流水都不变。</div>
+           <div class="form-row"><label>原因（必填，会记入审计）</label><input class="text" name="reason" placeholder="例如：赶论文截止，临时放宽"></div>`,
+          '<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="do-reset-today">重置</button>',
+        ),
+      );
+    },
+    async 'do-reset-today'(_el, ctx) {
+      await post(`/users/${encodeURIComponent(ctx.route.id)}/reset-today`, { reason: fields().reason });
+      ctx.close();
+      toast('已重置今日用量，并记入审计');
       await ctx.reload();
     },
     plan(_el, ctx) {

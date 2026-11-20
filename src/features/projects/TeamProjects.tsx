@@ -153,7 +153,7 @@ export function TeamProjects({
     );
   const offline = !cloud.reachable;
   const header = (
-    <CenterHeader title={t('团队项目')} count={team.length}>
+    <CenterHeader title={t('团队项目')}>
       {team.length ? (
         <label className="center-search-field">
           <Search aria-hidden="true" />

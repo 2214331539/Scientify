@@ -99,6 +99,34 @@ export async function ensureGrants(client, userId, now = new Date()) {
     });
 }
 
+/**
+ * Fills the current period's plan points back up ("重置本周期额度"). Returns the points
+ * added, 0 when nothing was used, null when the plan gives no points per period.
+ */
+export async function resetPeriodGrant(client, userId, entry, now = new Date()) {
+  await ensureGrants(client, userId, now);
+  const { period } = await currentPlan(client, userId, now);
+  const result = await client.query(
+    'SELECT id, points, points_left FROM credit_grants WHERE user_id = $1 AND source_key = $2 FOR UPDATE',
+    [userId, period.key],
+  );
+  const grant = result.rows[0];
+  if (!grant) return null;
+  const added = Number(grant.points) - Number(grant.points_left);
+  if (added <= 0) return 0;
+  await client.query('UPDATE credit_grants SET points_left = points WHERE id = $1', [grant.id]);
+  await ledger(client, {
+    userId,
+    grantId: grant.id,
+    delta: added,
+    reason: 'adjust',
+    adminId: entry.adminId,
+    note: entry.note,
+  });
+  await settleDebt(client, userId, now);
+  return added;
+}
+
 /** Points that can be spent now: what is left of live grants, less any debt. */
 export async function balance(client, userId, now = new Date()) {
   const result = await client.query(

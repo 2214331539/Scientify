@@ -40,21 +40,10 @@ export function MiniCover({ color }: { color: string }) {
 }
 
 /** Page title and the page's actions. */
-export function CenterHeader({
-  title,
-  count,
-  children,
-}: {
-  title: string;
-  count?: number;
-  children?: ReactNode;
-}) {
+export function CenterHeader({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <header className="center-header">
-      <h1>
-        {title}
-        {count ? <span className="center-count">{count}</span> : null}
-      </h1>
+      <h1>{title}</h1>
       <div className="center-header-actions">{children}</div>
     </header>
   );

@@ -11,7 +11,18 @@ import { acquire, effectiveLimits } from './limits.mjs';
 import { charge, createMeter, promptChars } from './meter.mjs';
 import { recordUsage, usedToday } from './account.mjs';
 
-const KINDS = { '/v1/responses': 'responses', '/v1/models/responses': 'responses', '/v1/chat/completions': 'chat/completions' };
+const KINDS = {
+  '/v1/responses': 'responses',
+  '/v1/models/responses': 'responses',
+  '/v1/chat/completions': 'chat/completions',
+  '/v1/translate/chat/completions': 'chat/completions',
+};
+
+// Full-text translation sends one short request per paragraph, several at a time, in the
+// background. It gets its own allowance so it neither waits behind the plan's limit of a few
+// requests at once nor takes those slots from the user's conversations. Points and the daily
+// limit apply as usual.
+export const TRANSLATION_LIMITS = { rpm: 600, concurrency: 8 };
 
 export const isModelPath = (path) => path in KINDS;
 
@@ -54,7 +65,10 @@ export async function proxyModel(request, response, { config, db }, path, who) {
   if (available <= 0) throw fail(402, '官方模型额度已用完。', 'quota_exhausted');
   if ((await usedToday(db, userId, now)) >= limits.dailyPoints)
     throw fail(429, `今天的用量已到单日上限 ${limits.dailyPoints} 点，明天 0 点恢复。`, 'daily_limit');
-  const release = acquire(userId, limits);
+  const translating = path.startsWith('/v1/translate/');
+  const release = translating
+    ? acquire(`${userId}:translate`, TRANSLATION_LIMITS)
+    : acquire(userId, limits);
   try {
     await relay({ request, response, config, db, kind, input, model, channels, plan, userId });
   } finally {

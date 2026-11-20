@@ -22,11 +22,6 @@
   font-weight: 600;
   letter-spacing: -0.012em;
 }
-.library-table-count {
-  color: var(--sf-text-muted);
-  font-size: 12px;
-  font-weight: 400;
-}
 .library-table-head .spacer {
   flex: 1;
 }

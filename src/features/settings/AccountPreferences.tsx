@@ -10,14 +10,17 @@ import {
   type CollaborationState,
 } from '../../platform/collaboration';
 import { describeError, maskPhone } from '../account/account';
+import { loadProfile, saveName, useProfile } from '../account/profile';
 import { passwordProblem } from '../account/SignInPage';
 import { SubscriptionPreferences } from './SubscriptionPreferences';
 
-/** Settings → 账号与订阅: who is signed in, the password, the plan, and signing out. */
+/** Settings → 账号与订阅: who is signed in, their name, the password, the plan, and signing out. */
 export function AccountPreferences() {
   const [state, setState] = useState<CollaborationState | null>(null);
   const [hasPassword, setHasPassword] = useState<boolean | undefined>(undefined);
   const [changing, setChanging] = useState(false);
+  const [naming, setNaming] = useState(false);
+  const profile = useProfile();
   const [error, setError] = useState('');
   useEffect(() => {
     let alive = true;
@@ -29,6 +32,7 @@ export function AccountPreferences() {
       .account()
       .then((account) => alive && setHasPassword(account.hasPassword))
       .catch(() => {});
+    void loadProfile(true);
     return () => {
       alive = false;
     };
@@ -46,6 +50,13 @@ export function AccountPreferences() {
   return (
     <div className="settings-account">
       <dl>
+        <dt>{t('名字')}</dt>
+        <dd>
+          {profile.name || <span className="muted">{t('未设置')}</span>}
+          <Button size="sm" disabled={!phone} onClick={() => setNaming(true)}>
+            {t('修改')}
+          </Button>
+        </dd>
         <dt>{t('手机号')}</dt>
         <dd>{phone ? maskPhone(phone) : '—'}</dd>
         <dt>{t('密码')}</dt>
@@ -65,6 +76,7 @@ export function AccountPreferences() {
       <footer>
         <Button onClick={() => void signOut()}>{t('退出登录')}</Button>
       </footer>
+      {naming ? <NameDialog initial={profile.name} onClose={() => setNaming(false)} /> : null}
       {changing && state ? (
         <PasswordDialog
           endpoint={state.endpoint}
@@ -78,6 +90,61 @@ export function AccountPreferences() {
         />
       ) : null}
     </div>
+  );
+}
+
+/** The name shown in the sidebar and to other members of shared projects. */
+function NameDialog({ initial, onClose }: { initial: string; onClose(): void }) {
+  const nameId = useId();
+  const [name, setName] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function save() {
+    setBusy(true);
+    setError('');
+    try {
+      await saveName(name);
+      onClose();
+    } catch (reason) {
+      setError(describeError(reason));
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal title={t('修改名字')} busy={busy} onClose={onClose}>
+      <form
+        className="settings-password"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save();
+        }}
+      >
+        <label htmlFor={nameId}>{t('名字')}</label>
+        <Input
+          id={nameId}
+          autoFocus
+          maxLength={30}
+          placeholder={t('例如：张明')}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <p className="muted">{t('显示在侧边栏，共享项目的成员也能看到。留空则显示手机号。')}</p>
+        {error ? (
+          <p role="alert" className="error-text">
+            {error}
+          </p>
+        ) : null}
+        <footer>
+          <Button type="button" disabled={busy} onClick={onClose}>
+            {t('取消')}
+          </Button>
+          <Button type="submit" variant="primary" disabled={busy}>
+            {busy ? <LoaderCircle className="is-spinning" /> : null}
+            {t('保存')}
+          </Button>
+        </footer>
+      </form>
+    </Modal>
   );
 }
 

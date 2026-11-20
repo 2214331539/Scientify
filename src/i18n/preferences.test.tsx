@@ -77,7 +77,8 @@ it('switches both appearance and language immediately without saving or translat
   await screen.findByRole('button', { name: /^Notes/ });
   expect(within(titlebar()).queryByRole('button', { name: '全局搜索' })).toBeNull();
   expect(within(titlebar()).queryByRole('button', { name: '切换为英文' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: '设置' }));
+  await user.click(screen.getByRole('button', { name: '账号与设置' }));
+  await user.click(screen.getByRole('menuitem', { name: '设置' }));
   await user.click(
     within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', {
       name: '外观',

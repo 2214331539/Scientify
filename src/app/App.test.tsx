@@ -234,7 +234,8 @@ it.each([
     await waitFor(() => expect(store.getState().dirty).toBe(false));
     const savesBefore = save.mock.calls.length;
 
-    await user.click(screen.getByRole('button', { name: '设置' }));
+    await user.click(screen.getByRole('button', { name: '账号与设置' }));
+    await user.click(screen.getByRole('menuitem', { name: '设置' }));
     await user.click(screen.getByRole('button', { name: '数据与备份' }));
     await user.click(
       within(screen.getByRole('dialog', { name: '设置' })).getByRole('button', { name: action }),

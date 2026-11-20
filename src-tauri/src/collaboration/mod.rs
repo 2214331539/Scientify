@@ -490,6 +490,19 @@ pub async fn collaboration_account<R: tauri::Runtime>(
     auth_request(&state, &endpoint, "/me", reqwest::Method::GET, None).await
 }
 
+/// Changes the account's name: what the sidebar shows and other members see.
+#[tauri::command]
+pub async fn collaboration_set_name<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let endpoint = read(&state)?.endpoint;
+    let payload = serde_json::json!({ "name": name });
+    auth_request(&state, &endpoint, "/me", reqwest::Method::PATCH, Some(payload)).await
+}
+
 /// Keeps the tokens of a sign-in response and turns collaboration on.
 fn signed_in(
     state: &AppState,

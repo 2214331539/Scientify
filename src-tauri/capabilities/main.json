@@ -139,6 +139,7 @@
     "allow-collaboration-login",
     "allow-collaboration-sign-in",
     "allow-collaboration-account",
+    "allow-collaboration-set-name",
     "allow-collaboration-logout",
     "allow-collaboration-access-token",
     "allow-collaboration-model-token",

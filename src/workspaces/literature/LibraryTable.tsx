@@ -126,10 +126,7 @@ export function LibraryTable({
   return (
     <section className="library-table-page" aria-label={t('文献库')}>
       <header className="library-table-head">
-        <h1>
-          {title}
-          {rows.length ? <span className="library-table-count">{rows.length}</span> : null}
-        </h1>
+        <h1>{title}</h1>
         <span className="spacer" />
         {importing ? <span role="status">{importing}</span> : null}
         {onImportLibrary ? (

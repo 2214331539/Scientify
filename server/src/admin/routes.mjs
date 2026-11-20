@@ -12,9 +12,9 @@ import { normalizePhone } from '../sms.mjs';
 import { sendCode } from '../signin.mjs';
 import { forgetStatus } from '../auth.mjs';
 import { withAutoPrices } from '../billing/pricing.mjs';
-import { addGrant, debit, ensureGrants } from '../billing/ledger.mjs';
+import { addGrant, balance, debit, ensureGrants, resetPeriodGrant } from '../billing/ledger.mjs';
 import { addDays, plans as allPlans } from '../billing/plans.mjs';
-import { addOrder, codeHash, extendPlan, newCode } from '../billing/account.mjs';
+import { addOrder, codeHash, extendPlan, newCode, resetToday, usedToday } from '../billing/account.mjs';
 import { catalog, channelView, forgetModels, keyHint, openKey, sealKey } from '../billing/models.mjs';
 import { typical } from '../billing/meter.mjs';
 import { resetLimits } from '../billing/limits.mjs';
@@ -310,6 +310,32 @@ async function route(request, response, { config, db }, path, url) {
       });
       await record({ ...target, action: delta > 0 ? '增加额度' : '扣减额度', after: { points: delta, days: delta > 0 ? days : null }, reason: [reason, note].filter(Boolean).join('：') });
       return send(response, 200, { ok: true });
+    }
+    if (method === 'POST' && action === 'refresh-period') {
+      // Grants are added when the user next asks; this adds a missing one now.
+      const before = await balance(db, userId);
+      await withTransaction(db, (client) => ensureGrants(client, userId, new Date()));
+      const added = (await balance(db, userId)) - before;
+      await record({ ...target, action: '刷新本周期额度', after: { points: added } });
+      return send(response, 200, { added });
+    }
+    if (method === 'POST' && action === 'reset-period') {
+      const input = await body(request, 4096);
+      const reason = required(input.reason, 200, '原因');
+      const added = await withTransaction(db, (client) =>
+        resetPeriodGrant(client, userId, { adminId: admin.id, note: `重置本周期额度：${reason}` }),
+      );
+      if (added === null) throw fail(400, '当前套餐没有按周期发放的点数。');
+      await record({ ...target, action: '重置本周期额度', after: { points: added }, reason });
+      return send(response, 200, { added });
+    }
+    if (method === 'POST' && action === 'reset-today') {
+      const input = await body(request, 4096);
+      const reason = required(input.reason, 200, '原因');
+      const before = await usedToday(db, userId);
+      await resetToday(db, userId, admin.id);
+      await record({ ...target, action: '重置今日用量', before: { points: before }, reason });
+      return send(response, 200, { before });
     }
     if (method === 'POST' && action === 'plan') {
       const input = await body(request, 4096);

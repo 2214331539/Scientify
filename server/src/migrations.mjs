@@ -279,4 +279,20 @@ CREATE TABLE client_error_devices (
 );
 `,
   },
+  {
+    id: 3,
+    name: 'daily limit resets',
+    sql: `
+-- "重置今日用量" in the admin pages: the points used that day before the reset no
+-- longer count towards the daily limit. Usage and the ledger stay as they are.
+CREATE TABLE daily_resets (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day DATE NOT NULL,
+  points BIGINT NOT NULL,
+  admin_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, day)
+);
+`,
+  },
 ];

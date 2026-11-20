@@ -20,10 +20,27 @@ export async function storageUsed(db, userId) {
   return Number(result.rows[0].bytes);
 }
 
+/** Points counted towards today's limit: today's usage, less what an administrator reset. */
 export async function usedToday(db, userId, now = new Date()) {
   const result = await db.query(
-    'SELECT COALESCE(SUM(points), 0) AS points FROM usage_daily WHERE user_id = $1 AND day = $2',
+    `SELECT GREATEST(
+              COALESCE((SELECT SUM(points) FROM usage_daily WHERE user_id = $1 AND day = $2), 0)
+              - COALESCE((SELECT points FROM daily_resets WHERE user_id = $1 AND day = $2), 0),
+              0) AS points`,
     [userId, chinaDay(now)],
+  );
+  return Number(result.rows[0].points);
+}
+
+/** Lets a user use the whole daily limit again today; returns the points it set aside. */
+export async function resetToday(db, userId, adminId, now = new Date()) {
+  const result = await db.query(
+    `INSERT INTO daily_resets(user_id, day, points, admin_id)
+     SELECT $1, $2::date, COALESCE(SUM(points), 0), $3 FROM usage_daily WHERE user_id = $1 AND day = $2::date
+     ON CONFLICT (user_id, day) DO UPDATE
+       SET points = EXCLUDED.points, admin_id = EXCLUDED.admin_id, created_at = NOW()
+     RETURNING points`,
+    [userId, chinaDay(now), adminId],
   );
   return Number(result.rows[0].points);
 }

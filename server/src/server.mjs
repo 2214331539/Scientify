@@ -263,12 +263,21 @@ async function handle(request, response, context) {
 
     const user = await caller(request, context);
     if (request.method === 'GET' && path === '/v1/me') {
-      const result = await db.query('SELECT password_hash FROM users WHERE id = $1', [user.sub]);
+      const result = await db.query('SELECT password_hash, nickname FROM users WHERE id = $1', [user.sub]);
       return send(response, 200, {
         id: user.sub,
         phone: user.phone,
+        name: result.rows[0]?.nickname ?? '',
         hasPassword: !!result.rows[0]?.password_hash,
       });
+    }
+    if (request.method === 'PATCH' && path === '/v1/me') {
+      const input = await body(request, 4096);
+      // An empty name goes back to showing the masked phone number.
+      const name = String(input.name ?? '').replace(/\s+/g, ' ').trim();
+      if ([...name].length > 30) throw Object.assign(new Error('名字最多 30 个字。'), { status: 400 });
+      await db.query('UPDATE users SET nickname = $2, updated_at = NOW() WHERE id = $1', [user.sub, name || null]);
+      return send(response, 200, { id: user.sub, phone: user.phone, name });
     }
     if (request.method === 'POST' && path === '/v1/auth/logout') {
       const input = await body(request, 16_384);
@@ -342,11 +351,11 @@ async function handle(request, response, context) {
       if (request.method === 'GET' && suffix === 'members') {
         await requireMember(db, projectId, user.sub);
         const result = await db.query(
-          `SELECT u.id, u.phone, m.role, m.created_at AS "createdAt", FALSE AS pending
+          `SELECT u.id, u.phone, COALESCE(u.nickname, '') AS name, m.role, m.created_at AS "createdAt", FALSE AS pending
              FROM project_members m JOIN users u ON u.id = m.user_id
             WHERE m.project_id = $1
             UNION ALL
-           SELECT 'invite:' || i.phone, i.phone, i.role, i.created_at AS "createdAt", TRUE AS pending
+           SELECT 'invite:' || i.phone, i.phone, '', i.role, i.created_at AS "createdAt", TRUE AS pending
              FROM project_invitations i
             WHERE i.project_id = $1
             ORDER BY "createdAt"`,

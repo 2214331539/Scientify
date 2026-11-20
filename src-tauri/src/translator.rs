@@ -145,7 +145,7 @@ fn base_url(model: &Model) -> Result<String, String> {
     let url = tauri::Url::parse(endpoint).map_err(|_| "模型地址无效。".to_string())?;
     let origin = url.origin().ascii_serialization();
     let path = url.path().trim_end_matches('/');
-    Ok(match model.provider.as_str() {
+    let url: String = match model.provider.as_str() {
         "gemini" => "https://generativelanguage.googleapis.com/v1beta/openai".into(),
         "ollama" => format!("{origin}/v1"),
         _ => {
@@ -155,6 +155,12 @@ fn base_url(model: &Model) -> Result<String, String> {
                 .unwrap_or(path);
             format!("{origin}{}", if path.is_empty() { "/v1" } else { path })
         }
+    };
+    // The official service gives translation its own allowance, apart from conversations.
+    Ok(if model.official && url.ends_with("/v1") {
+        format!("{url}/translate")
+    } else {
+        url
     })
 }
 
@@ -1068,6 +1074,14 @@ mod tests {
         .unwrap()
         .ends_with("/openai"));
         assert!(base_url(&model("openai", "not a url")).is_err());
+        let official = Model {
+            official: true,
+            ..model("openai", "https://124.221.115.83:8443")
+        };
+        assert_eq!(
+            base_url(&official).unwrap(),
+            "https://124.221.115.83:8443/v1/translate"
+        );
     }
 
     fn claims(device: &str, at: u64, papers: &[(&str, &str)]) -> Claims {

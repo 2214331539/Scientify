@@ -1072,12 +1072,11 @@ export function LocalLiterature({
               </div>
             ))}
         </div>
-        <div className="library-bottom">
-          <span role={importProgress ? 'status' : undefined}>
-            {importProgress || `${scan.entries.filter((e) => e.pdf).length} PDF`}
-          </span>
-          <span className="spacer" />
-        </div>
+        {importProgress ? (
+          <div className="library-bottom">
+            <span role="status">{importProgress}</span>
+          </div>
+        ) : null}
       </div>
     </aside>
   );

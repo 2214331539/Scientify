@@ -74,14 +74,9 @@ export function centerSteps(store: WorkspaceStore, fresh: boolean): TourStep[] {
       body: t('Ctrl K 找项目、论文和笔记，也能直接执行命令。'),
     },
     {
-      target: '[data-tour="settings"]',
-      title: t('设置'),
-      body: t('选择 AI 模型、数据位置和界面语言。'),
-    },
-    {
-      target: '[data-tour="help"]',
-      title: t('随时回看'),
-      body: t('在帮助里能再看一遍导览。打开一个项目，继续认识里面的功能。'),
+      target: '[data-tour="account"]',
+      title: t('设置与帮助'),
+      body: t('AI 模型、数据位置、账号和帮助都在这里，也能再看一遍导览。打开一个项目，继续认识里面的功能。'),
     },
   ];
 }

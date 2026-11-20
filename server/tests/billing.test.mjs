@@ -225,6 +225,46 @@ test('the plan, the balance and the daily limit each stop a request with their o
   assert.equal(empty.body.code, 'quota_exhausted');
 });
 
+test('admins refill the period\'s points and reset the daily limit, each with a reason', options, async () => {
+  const user = await signUp('13700000020');
+  const token = await modelToken(user);
+  const admin = await adminSession('13700000021');
+  const act = (action, body) => call('POST', `/admin/api/users/${user.id}/${action}`, { headers: admin.headers, body });
+  await db.query('INSERT INTO user_limits(user_id, daily_points) VALUES ($1, 10)', [user.id]);
+  assert.equal((await ask(token)).status, 200);
+  assert.equal((await ask(token)).body.code, 'daily_limit');
+  assert.equal((await act('reset-today', {})).status, 400);
+  assert.equal((await act('reset-today', { reason: '赶截止' })).body.before, POINTS);
+  assert.equal((await ask(token)).status, 200);
+  assert.equal((await ask(token)).body.code, 'daily_limit');
+  // The free month's 300 points expire first, so both requests came out of them.
+  assert.equal((await act('refresh-period')).body.added, 0);
+  const before = await balanceOf(user);
+  assert.equal((await act('reset-period', { reason: '故障补偿' })).body.added, 2 * POINTS);
+  assert.equal(await balanceOf(user), before + 2 * POINTS);
+  assert.equal((await act('reset-period', { reason: '再点一次' })).body.added, 0);
+  const audit = await db.query('SELECT action FROM admin_audit WHERE target_id = $1 ORDER BY created_at', [user.id]);
+  assert.deepEqual(
+    audit.rows.map((row) => row.action),
+    ['重置今日用量', '刷新本周期额度', '重置本周期额度', '重置本周期额度'],
+  );
+});
+
+test('translation has its own allowance and leaves the conversation limits alone', options, async () => {
+  const user = await signUp('13700000022');
+  const token = await modelToken(user);
+  await db.query('INSERT INTO user_limits(user_id, rpm) VALUES ($1, 1)', [user.id]);
+  assert.equal((await ask(token)).status, 200);
+  assert.equal((await ask(token)).body.code, 'rate_limited');
+  const before = await balanceOf(user);
+  const translations = await Promise.all(
+    Array.from({ length: 4 }, () => ask(token, 'fast', '/v1/translate/chat/completions')),
+  );
+  assert.ok(translations.every((answer) => answer.status === 200));
+  assert.ok(upstreamRequests.at(-1).path.endsWith('/chat/completions'));
+  assert.equal(await balanceOf(user), before - 4 * POINTS);
+});
+
 test('requests that end together are each charged exactly once', options, async () => {
   const user = await signUp('13700000004');
   const token = await modelToken(user);

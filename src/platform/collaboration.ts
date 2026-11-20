@@ -27,6 +27,8 @@ export type SignInMode = 'code' | 'password' | 'register' | 'reset';
 export type CollaborationMember = {
   id: string;
   phone: string;
+  /** The name the member chose; empty until they set one. */
+  name?: string;
   role: CollaborationRole | string;
   createdAt?: string;
   pending?: boolean;
@@ -228,8 +230,11 @@ export const collaboration = {
       password: secrets.password ?? null,
     });
   },
-  account(): Promise<{ id: string; phone: string; hasPassword?: boolean }> {
+  account(): Promise<{ id: string; phone: string; name?: string; hasPassword?: boolean }> {
     return desktop(settingsOnly, 'collaboration_account');
+  },
+  setName(name: string): Promise<{ id: string; phone: string; name: string }> {
+    return desktop(settingsOnly, 'collaboration_set_name', { name });
   },
   logout(): Promise<CollaborationState> {
     return desktop(settingsOnly, 'collaboration_logout');

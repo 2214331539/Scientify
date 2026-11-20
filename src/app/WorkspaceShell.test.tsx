@@ -200,7 +200,7 @@ it('provides the project modules, title bar tools and starts with AI closed', as
   await user.click(screen.getByRole('button', { name: '回到项目中心' }));
   expect(screen.queryByRole('complementary', { name: '工作区导航' })).toBeNull();
   const center = within(screen.getByRole('complementary', { name: '项目中心导航' }));
-  expect(center.getByRole('button', { name: '设置' })).toBeTruthy();
+  expect(center.getByRole('button', { name: '账号与设置' })).toBeTruthy();
   expect(center.queryByRole('button', { name: /收集箱/ })).toBeNull();
   expect(titlebar.queryByRole('button', { name: 'AI 助手' })).toBeNull();
   await user.click(screen.getByRole('button', { name: '后退' }));

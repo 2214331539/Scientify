@@ -22,7 +22,6 @@ import {
   ensureCollaborationTeam,
   isTeamProject,
   markOpened,
-  personalProjects,
   type CenterPage,
 } from '../features/projects/model';
 import {
@@ -1012,10 +1011,6 @@ export function App({
   }
   const signedIn = !!cloud.state?.authenticated;
   const centerTeam = data && signedIn ? classifyCloud(cloud, data.projects).team : [];
-  const centerCounts = {
-    mine: data ? personalProjects(data).filter((p) => !p.archived).length : 0,
-    team: centerTeam.length,
-  };
   const teamAlert = centerTeam.some(
     (entry) =>
       (!entry.local && entry.remote.role !== 'owner' && isNewCloudProject(entry.remote.id)) ||
@@ -1325,7 +1320,6 @@ export function App({
           <CenterNavigation
             page={ui.page}
             ready={!!ready}
-            counts={centerCounts}
             teamAlert={teamAlert}
             onPage={showPage}
             footer={footer}
