@@ -948,7 +948,18 @@ export function ExperimentWorkspace({
                 >
                   <Plus size={14} />
                 </Button>
-              ) : null}
+              ) : (
+                // Results, artifacts and rerun live in the records tab; this is its everyday way in.
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  tooltip={t('打开运行记录')}
+                  aria-label={t('打开运行记录')}
+                  onClick={() => openPath(RUNS_TAB)}
+                >
+                  <Table2 size={13} />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 iconOnly

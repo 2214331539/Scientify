@@ -33,7 +33,7 @@ export const roleLabels: Record<string, string> = {
 export const roleDescriptions: Record<string, string> = {
   owner: '修改全部内容，管理成员',
   editor: '可以修改全部内容',
-  reviewer: '只能修改项目笔记',
+  reviewer: '可以查看，不能修改',
   viewer: '只接收，不能修改',
 };
 export const roleName = (role: string) => t(roleLabels[role] ?? role);
