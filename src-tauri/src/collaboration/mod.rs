@@ -239,6 +239,10 @@ fn refresh_gate() -> &'static tokio::sync::Mutex<()> {
     GATE.get_or_init(|| tokio::sync::Mutex::new(()))
 }
 
+/// What a request says once the server has ended this device's session: a new
+/// password, a forced sign-out or a disabled account deletes its refresh tokens.
+pub(crate) const SESSION_ENDED: &str = "登录已失效，请重新登录。";
+
 /// A valid access token, refreshing `stale` unless another request already did.
 async fn fresh_token(state: &AppState, endpoint: &str, stale: &str) -> Result<String, String> {
     let _turn = refresh_gate().lock().await;
@@ -246,7 +250,16 @@ async fn fresh_token(state: &AppState, endpoint: &str, stale: &str) -> Result<St
     if current.access_token != stale {
         return Ok(current.access_token);
     }
-    Ok(refresh_auth(state, endpoint, &current).await?.access_token)
+    match refresh_auth(state, endpoint, &current).await {
+        Ok(next) => Ok(next.access_token),
+        // Signed out here too, so the app asks to sign in instead of looking offline.
+        // Projects and their files stay; only the stale tokens go.
+        Err(error) if error.contains("HTTP 401") => {
+            clear_auth(state)?;
+            Err(SESSION_ENDED.into())
+        }
+        Err(error) => Err(error),
+    }
 }
 
 async fn auth_request(
@@ -1125,6 +1138,86 @@ mod tests {
             content_type_for_path("data.bin"),
             "application/octet-stream"
         );
+    }
+
+    fn app_state(dir: &std::path::Path) -> crate::AppState {
+        std::fs::create_dir_all(dir.join("data")).unwrap();
+        let storage =
+            std::sync::Arc::new(scientify_core::storage::Storage::open(dir.join("data")).unwrap());
+        crate::AppState {
+            files: std::sync::Arc::new(scientify_core::research::ResearchFiles::new(
+                storage.directory().into(),
+            )),
+            storage,
+            legacy: dir.join("legacy"),
+        }
+    }
+
+    fn signed_in(state: &crate::AppState) {
+        super::write_auth(
+            state,
+            &super::AuthTokens {
+                access_token: "old-access".into(),
+                refresh_token: "old-refresh".into(),
+                user_id: "u".into(),
+                phone: "18200000000".into(),
+            },
+        )
+        .unwrap();
+    }
+
+    /// A server that answers one request with `status` and a JSON error.
+    fn answering(status: &'static str, error: &'static str) -> String {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buffer = [0u8; 8192];
+            let _ = stream.read(&mut buffer);
+            let body = format!("{{\"error\":\"{error}\"}}");
+            let _ = write!(
+                stream,
+                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+        });
+        endpoint
+    }
+
+    #[test]
+    fn a_refused_refresh_token_signs_this_device_out() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = app_state(dir.path());
+        signed_in(&state);
+        let endpoint = answering("401 Unauthorized", "刷新令牌已失效。");
+        let result =
+            tauri::async_runtime::block_on(super::fresh_token(&state, &endpoint, "old-access"));
+        assert_eq!(result.unwrap_err(), super::SESSION_ENDED);
+        assert!(super::read_auth(&state).unwrap().is_none());
+    }
+
+    #[test]
+    fn an_unreachable_server_keeps_the_sign_in() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = app_state(dir.path());
+        signed_in(&state);
+        let closed = {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}", listener.local_addr().unwrap())
+        };
+        let result =
+            tauri::async_runtime::block_on(super::fresh_token(&state, &closed, "old-access"));
+        assert!(result.unwrap_err().contains("连接失败"));
+        assert!(super::read_auth(&state).unwrap().is_some());
+        let endpoint = answering("502 Bad Gateway", "upstream");
+        assert!(tauri::async_runtime::block_on(super::fresh_token(
+            &state,
+            &endpoint,
+            "old-access"
+        ))
+        .is_err());
+        assert!(super::read_auth(&state).unwrap().is_some());
     }
 
     #[test]

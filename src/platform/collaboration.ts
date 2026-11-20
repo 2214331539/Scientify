@@ -179,9 +179,20 @@ export function isSyncedProject(project: object | undefined): boolean {
   return typeof role === 'string' && role.length > 0;
 }
 
+/**
+ * The server ended this device's session (a new password, a forced sign-out, a disabled
+ * account). The app has signed out locally and asks to sign in again.
+ */
+export const sessionEnded = '登录已失效，请重新登录。';
+
 function desktop<T>(message: string, command: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) return Promise.reject(new Error(message));
-  return invoke<T>(command, args);
+  return invoke<T>(command, args).catch((reason: unknown) => {
+    // Every page that shows the account picks up the sign-out at once.
+    if (String(reason).includes(sessionEnded) && typeof window !== 'undefined')
+      window.dispatchEvent(new Event(collaborationStateEvent));
+    throw reason;
+  });
 }
 
 const settingsOnly = '协作设置只能在 Scientify 桌面应用中使用。';

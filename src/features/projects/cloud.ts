@@ -6,6 +6,7 @@ import { translateError } from '../../i18n';
 import {
   collaboration,
   isSyncedProject,
+  sessionEnded,
   type CollaborationMember,
   type CollaborationProject,
   type CollaborationState,
@@ -126,6 +127,20 @@ export function refreshCloud(local: Project[]): Promise<void> {
         /* The cache only helps offline. */
       }
     } catch (reason) {
+      // A session ended on the server is a sign-out here, not being offline.
+      if (String(reason).includes(sessionEnded)) {
+        const signedOut = await collaboration.status().catch(() => null);
+        cloudStore.setState({
+          state: signedOut,
+          loading: false,
+          reachable: true,
+          error: '',
+          projects: [],
+          members: {},
+          sync: {},
+        });
+        return;
+      }
       cloudStore.setState({
         reachable: false,
         loading: false,

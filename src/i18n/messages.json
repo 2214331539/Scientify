@@ -4457,5 +4457,9 @@
   "ChatGPT 账号（Plus / Pro）": ["ChatGPT 账号（Plus / Pro）", "ChatGPT account (Plus / Pro)"],
   "豆包 · 火山方舟": ["豆包 · 火山方舟", "Doubao · Volcano Ark"],
   "智谱 GLM": ["智谱 GLM", "Zhipu GLM"],
-  "正在翻译…": ["正在翻译…", "Translating…"]
+  "正在翻译…": ["正在翻译…", "Translating…"],
+  "登录已失效，请重新登录。": [
+    "登录已失效，请重新登录。",
+    "Your sign-in has expired. Please sign in again."
+  ]
 }
