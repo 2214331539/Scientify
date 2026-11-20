@@ -11,6 +11,7 @@ import { withTransaction } from '../db.mjs';
 import { normalizePhone } from '../sms.mjs';
 import { sendCode } from '../signin.mjs';
 import { forgetStatus } from '../auth.mjs';
+import { withAutoPrices } from '../billing/pricing.mjs';
 import { addGrant, debit, ensureGrants } from '../billing/ledger.mjs';
 import { addDays, plans as allPlans } from '../billing/plans.mjs';
 import { addOrder, codeHash, extendPlan, newCode } from '../billing/account.mjs';
@@ -173,7 +174,8 @@ function nonNegative(value, name) {
 
 function readModel(input, existing = {}) {
   const read = (key, fallback) => (input[key] === undefined ? fallback : input[key]);
-  return {
+  // Prices follow the cost (plus 10%): all of them when the form asks, otherwise the ones left at 0.
+  return withAutoPrices({
     name: required(read('name', existing.name), 80, '对外名称'),
     tier: text(read('tier', existing.tier ?? '标准'), 20, '档位') || '标准',
     upstream: required(read('upstream', existing.upstream), 120, '上游模型'),
@@ -191,7 +193,7 @@ function readModel(input, existing = {}) {
     active: !!read('active', existing.active ?? false),
     isDefault: !!read('isDefault', existing.isDefault ?? false),
     sort: integer(read('sort', existing.sort ?? 0), 0, -1000, 1000),
-  };
+  }, input.autoPrice === true);
 }
 
 export async function handleAdmin(request, response, context, path, url) {
@@ -461,7 +463,7 @@ async function route(request, response, { config, db }, path, url) {
     const next = readModel(input, existing ?? {});
     if (!channels.has(next.channelId)) throw fail(400, '渠道不存在。');
     if (next.backupChannelId && !channels.has(next.backupChannelId)) throw fail(400, '备用渠道不存在。');
-    if (next.active && !(next.priceInput || next.priceOutput)) throw fail(400, '上架前请先设置售价。');
+    if (next.active && !(next.priceInput || next.priceOutput)) throw fail(400, '上架前请先填写成本价，售价会按成本加 10% 算出。');
     await withTransaction(db, async (client) => {
       if (next.isDefault) await client.query('UPDATE models SET is_default = FALSE WHERE id <> $1', [id]);
       await client.query(

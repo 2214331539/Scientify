@@ -147,6 +147,14 @@ export const codesPage = {
 
 // ---------- Models and channels ----------
 const MIX = { input: 0.4, cached: 0.52, output: 0.08 };
+// Early pricing: the cost plus 10%, as the server's billing/pricing.mjs; 1 point = ¥0.01.
+const MARKUP = 1.1;
+const MIN_MARGIN = Math.floor((1 - 1 / MARKUP) * 100);
+const autoPrice = (cost) => {
+  const value = Number(cost);
+  return Number.isFinite(value) && value > 0 ? Math.ceil(Number((value * 100 * MARKUP).toFixed(6))) : 0;
+};
+const PRICE_KEYS = ['Input', 'Cached', 'Output'];
 const typical = (m) => {
   const sale = (MIX.input * m.priceInput + MIX.cached * m.priceCached + MIX.output * m.priceOutput) / 100;
   const cost = MIX.input * m.costInput + MIX.cached * m.costCached + MIX.output * m.costOutput;
@@ -172,7 +180,7 @@ export const modelsPage = {
           .join('')}</tbody></table>` : empty('还没有渠道。先新增一个渠道，再添加模型。'), { flush: true })}`;
     return `${tabs}<div class="toolbar"><span class="muted">用户看到对外名称和倍率；成本价是上游价格（元），售价是扣的点数，单位都是每百万 token。</span><span class="grow"></span>${data.channels.length ? `<button class="btn" data-act="pick" data-id="${esc(data.channels[0].id)}">${icon('search')}从渠道选择</button>` : ''}<button class="btn primary" data-act="model" ${data.channels.length ? '' : 'disabled'}>${icon('plus')}新增模型</button></div>
       ${card('模型', data.models.length ? `<table><thead><tr><th>对外名称</th><th>上游模型 · 渠道</th><th class="n">成本价 ¥<br><span class="muted">输入 / 缓存 / 输出</span></th><th class="n">售价 点<br><span class="muted">输入 / 缓存 / 输出</span></th><th class="n">综合毛利率</th><th>开放给</th><th class="n">近 30 天</th><th>状态</th><th></th></tr></thead><tbody>${data.models
-        .map((m) => `<tr><td><b>${esc(m.name)}</b> ${chip(esc(m.tier))} ${m.isDefault ? `<span class="muted" title="默认模型">${icon('star')}</span>` : ''}<div class="muted num">${esc(m.id)}</div></td><td><span class="num">${esc(m.upstream)}</span><div class="muted">${esc(channelName.get(m.channelId) ?? '')}${m.backupChannelId ? ` · 备用 ${esc(channelName.get(m.backupChannelId) ?? '')}` : ''}</div></td><td class="n">${m.costInput} / ${m.costCached} / ${m.costOutput}</td><td class="n">${fmt(m.priceInput)} / ${fmt(m.priceCached)} / ${fmt(m.priceOutput)}</td><td class="n">${m.margin === null ? chip(`${icon('alert')}未定价`, 'bad') : m.margin < 30 ? chip(`${icon('alert')}${m.margin}%`, 'bad') : `${m.margin}%`}</td><td>${m.plans.map((p) => PLAN_SHORT[p] ?? esc(p)).join('、') || '<span class="muted">暂不开放</span>'}</td><td class="n">${short(m.points30)} 点</td><td>${m.active ? chip('上架', 'ok') : chip('未上架')}</td><td class="n"><button class="btn sm" data-act="model" data-id="${esc(m.id)}">编辑</button></td></tr>`)
+        .map((m) => `<tr><td><b>${esc(m.name)}</b> ${chip(esc(m.tier))} ${m.isDefault ? `<span class="muted" title="默认模型">${icon('star')}</span>` : ''}<div class="muted num">${esc(m.id)}</div></td><td><span class="num">${esc(m.upstream)}</span><div class="muted">${esc(channelName.get(m.channelId) ?? '')}${m.backupChannelId ? ` · 备用 ${esc(channelName.get(m.backupChannelId) ?? '')}` : ''}</div></td><td class="n">${m.costInput} / ${m.costCached} / ${m.costOutput}</td><td class="n">${fmt(m.priceInput)} / ${fmt(m.priceCached)} / ${fmt(m.priceOutput)}</td><td class="n">${m.margin === null ? chip(`${icon('alert')}未定价`, 'bad') : m.margin < MIN_MARGIN ? chip(`${icon('alert')}${m.margin}%`, 'bad') : `${m.margin}%`}</td><td>${m.plans.map((p) => PLAN_SHORT[p] ?? esc(p)).join('、') || '<span class="muted">暂不开放</span>'}</td><td class="n">${short(m.points30)} 点</td><td>${m.active ? chip('上架', 'ok') : chip('未上架')}</td><td class="n"><button class="btn sm" data-act="model" data-id="${esc(m.id)}">编辑</button></td></tr>`)
         .join('')}</tbody></table>` : empty('还没有模型。'), { flush: true, sub: '综合毛利率按典型用量结构算：未命中输入 40%、缓存命中 52%、输出 8%' })}`;
   },
   afterRender(ctx) {
@@ -187,6 +195,7 @@ export const modelsPage = {
       };
       const channelOptions = (selected, none) =>
         (none ? `<option value="">无</option>` : '') + ctx.data.channels.map((c) => `<option value="${esc(c.id)}" ${c.id === selected ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+      const automatic = PRICE_KEYS.every((k) => !m[`price${k}`] || m[`price${k}`] === autoPrice(m[`cost${k}`]));
       const triple = (label, prefix, values) =>
         `<div class="form-row"><label>${label}</label><div class="form-3">${['Input', 'Cached', 'Output'].map((k, i) => `<input class="text num" name="${prefix}${k}" value="${values[i]}" data-live>`).join('')}</div></div>`;
       ctx.dialog(
@@ -196,11 +205,12 @@ export const modelsPage = {
            <div class="form-3"><div class="form-row"><label>渠道</label><select class="text" name="channelId" data-live>${channelOptions(m.channelId)}</select></div><div class="form-row"><label>上游模型</label><input class="text num" name="upstream" value="${esc(m.upstream)}" list="upstream-models" autocomplete="off" placeholder="从列表选或直接输入" data-live><datalist id="upstream-models"></datalist><div class="hint" data-upstream-hint></div></div><div class="form-row"><label>备用渠道</label><select class="text" name="backupChannelId">${channelOptions(m.backupChannelId, true)}</select></div></div>
            <div class="muted" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px"><span>输入</span><span>缓存命中的输入</span><span>输出（含思考）</span></div>
            ${triple('成本价（元 / 百万 token）', 'cost', [m.costInput, m.costCached, m.costOutput])}
+           <label class="check"><input type="checkbox" name="autoPrice" data-live ${automatic ? 'checked' : ''}> 按成本加 10% 自动定价</label>
            ${triple('售价（点 / 百万 token，1 点 = ¥0.01）', 'price', [m.priceInput, m.priceCached, m.priceOutput])}
            <div class="preview" data-preview></div>
            <div class="form-row"><label>开放给</label><div class="chips-select">${['free', 'pro', 'team'].map((p) => `<label class="check"><input type="checkbox" name="plan_${p}" ${m.plans.includes(p) ? 'checked' : ''}> ${PLAN_SHORT[p]}</label>`).join('')}</div></div>
            <div class="form-3"><label class="check"><input type="checkbox" name="active" ${m.active ? 'checked' : ''}> 上架</label><label class="check"><input type="checkbox" name="isDefault" ${m.isDefault ? 'checked' : ''}> 默认模型（倍率以它为 1×）</label><div class="form-row"><label>排序</label><input class="text num" name="sort" value="${m.sort}"></div></div>
-           <div class="hint muted">改价从下一次请求开始生效，已经发出的额度不变。没有售价的模型不能上架。</div>`,
+           <div class="hint muted">改价从下一次请求开始生效，已经发出的额度不变。填好成本价就能上架，售价按成本加 10% 算出。</div>`,
           '<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="save-model">保存</button>',
           true,
         ),
@@ -219,7 +229,7 @@ export const modelsPage = {
            <div class="form-row"><label>搜索</label><input class="text" name="pickFilter" placeholder="模型名" autocomplete="off" data-live></div></div>
            <label class="check"><input type="checkbox" name="pickAll" data-live> 也显示向量、语音、图像等非对话模型</label>
            <div class="pick-list" data-pick-list><div class="empty">正在读取渠道的模型列表…</div></div>
-           <div class="note">${icon('info')}<span>选中的模型加进来后是“未上架”、开放给专业版，名称就是上游的模型名。在模型列表里填好成本价和售价、改好名称后再上架。</span></div>`,
+           <div class="note">${icon('info')}<span>选中的模型加进来后是“未上架”、开放给专业版，名称就是上游的模型名。在模型列表里填好成本价（售价自动算出）、改好名称后再上架。</span></div>`,
           '<button class="btn" data-act="close">取消</button><button class="btn primary" data-act="import" data-pick-count disabled>添加所选</button>',
           true,
         ),
@@ -233,7 +243,7 @@ export const modelsPage = {
       const result = await post('/models/import', { channelId: pick.channelId, models: chosen.map((m) => ({ upstream: m.id, name: m.name })) });
       upstreamCache.delete(pick.channelId);
       ctx.close();
-      toast(`已添加 ${result.models.length} 个模型（未上架），填好价格后上架`);
+      toast(`已添加 ${result.models.length} 个模型（未上架），填好成本价后上架`);
       if (ctx.route.query.tab === 'channels') location.hash = '#/models';
       else await ctx.reload();
     },
@@ -242,6 +252,7 @@ export const modelsPage = {
     if (target?.name?.startsWith('pick') || target?.dataset?.pick !== undefined) return pickLive(target, type, ctx);
     if (target?.name === 'channelId' && type === 'change') void fillUpstream(target.value);
     if (target?.name === 'upstream' && type === 'change') autofillModel(target.value);
+    syncPrices();
     showMargins();
   },
 };
@@ -373,6 +384,7 @@ Object.assign(modelsPage.act, {
         priceInput: number(f.priceInput),
         priceCached: number(f.priceCached),
         priceOutput: number(f.priceOutput),
+        autoPrice: !!f.autoPrice,
         plans: ['free', 'pro', 'team'].filter((p) => f[`plan_${p}`]),
         active: f.active,
         isDefault: f.isDefault,
@@ -417,6 +429,19 @@ Object.assign(modelsPage.act, {
     },
 });
 
+/** With automatic pricing, the prices follow the costs as they are typed. */
+function syncPrices() {
+  const automatic = document.querySelector('#layer [name=autoPrice]');
+  if (!automatic) return;
+  for (const key of PRICE_KEYS) {
+    const price = document.querySelector(`#layer [name=price${key}]`);
+    const cost = document.querySelector(`#layer [name=cost${key}]`);
+    if (!price || !cost) continue;
+    price.readOnly = automatic.checked;
+    if (automatic.checked) price.value = String(autoPrice(cost.value));
+  }
+}
+
 /** Margins and a typical turn's points for the prices in the model dialog. */
 function showMargins() {
   const preview = document.querySelector('#layer [data-preview]');
@@ -428,7 +453,7 @@ function showMargins() {
   };
   const part = (cost, price) => (price ? `${Math.round((1 - cost / (price / 100)) * 100)}%` : '—');
   const { margin } = typical(m);
-  preview.innerHTML = `分项毛利率：输入 <b>${part(m.costInput, m.priceInput)}</b> · 缓存 <b>${part(m.costCached, m.priceCached)}</b> · 输出 <b>${part(m.costOutput, m.priceOutput)}</b><br>按典型用量结构，综合毛利率约 <b style="color:${margin !== null && margin < 30 ? 'var(--bad)' : 'inherit'}">${margin === null ? '—' : `${margin}%`}</b>${margin !== null && margin < 30 ? '，低于 30%' : ''}；一轮读论文的对话约 ${fmt(Math.ceil((60000 * m.priceInput + 40000 * m.priceCached + 3000 * m.priceOutput) / 1e6))} 点`;
+  preview.innerHTML = `分项毛利率：输入 <b>${part(m.costInput, m.priceInput)}</b> · 缓存 <b>${part(m.costCached, m.priceCached)}</b> · 输出 <b>${part(m.costOutput, m.priceOutput)}</b><br>按典型用量结构，综合毛利率约 <b style="color:${margin !== null && margin < MIN_MARGIN ? 'var(--bad)' : 'inherit'}">${margin === null ? '—' : `${margin}%`}</b>${margin !== null && margin < MIN_MARGIN ? `，低于 ${MIN_MARGIN}%` : ''}；一轮读论文的对话约 ${fmt(Math.ceil((60000 * m.priceInput + 40000 * m.priceCached + 3000 * m.priceOutput) / 1e6))} 点`;
 }
 
 // ---------- Usage ----------

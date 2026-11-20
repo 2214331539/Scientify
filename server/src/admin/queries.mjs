@@ -9,10 +9,10 @@ import { typical } from '../billing/meter.mjs';
 import { effectiveLimits } from '../billing/limits.mjs';
 import { grantView, summary, usageByDay, usedToday } from '../billing/account.mjs';
 import { currentPlan } from '../billing/plans.mjs';
+import { MIN_MARGIN } from '../billing/pricing.mjs';
 
 export const maskPhone = (phone) => (phone ? `${phone.slice(0, 3)}****${phone.slice(-4)}` : '');
 const n = (value) => Number(value ?? 0);
-const MIN_MARGIN = 30;
 // Standard OSS storage, for an order-of-magnitude cost; traffic is not included.
 const OSS_YUAN_PER_GB_MONTH = 0.12;
 
