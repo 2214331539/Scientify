@@ -250,6 +250,20 @@ test('admins refill the period\'s points and reset the daily limit, each with a 
   );
 });
 
+test('the WeChat QR code an admin uploads reaches the app, and only images are taken', options, async () => {
+  const user = await signUp('13700000023');
+  const admin = await adminSession('13700000024');
+  const set = (wechatQr) => call('POST', '/admin/api/settings/contact', { headers: admin.headers, body: { wechatQr } });
+  assert.equal((await call('GET', '/v1/support/contact', { token: user.token })).body.wechatQr, null);
+  assert.equal((await set('javascript:alert(1)')).status, 400);
+  const image = 'data:image/png;base64,iVBORw0KGgo=';
+  assert.equal((await set(image)).status, 200);
+  assert.equal((await call('GET', '/v1/support/contact', { token: user.token })).body.wechatQr, image);
+  assert.equal((await set('')).status, 200);
+  assert.equal((await call('GET', '/v1/support/contact', { token: user.token })).body.wechatQr, null);
+  assert.equal((await call('GET', '/v1/support/contact')).status, 401);
+});
+
 test('translation has its own allowance and leaves the conversation limits alone', options, async () => {
   const user = await signUp('13700000022');
   const token = await modelToken(user);

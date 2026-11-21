@@ -490,6 +490,17 @@ pub async fn collaboration_account<R: tauri::Runtime>(
     auth_request(&state, &endpoint, "/me", reqwest::Method::GET, None).await
 }
 
+/// How to reach the team to upgrade: the WeChat group QR code set in the admin pages.
+#[tauri::command]
+pub async fn collaboration_contact<R: tauri::Runtime>(
+    view: Webview<R>,
+    state: State<'_, AppState>,
+) -> Result<Value, String> {
+    trusted(&view)?;
+    let endpoint = read(&state)?.endpoint;
+    auth_request(&state, &endpoint, "/support/contact", reqwest::Method::GET, None).await
+}
+
 /// Changes the account's name: what the sidebar shows and other members see.
 #[tauri::command]
 pub async fn collaboration_set_name<R: tauri::Runtime>(

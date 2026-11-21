@@ -81,6 +81,7 @@ import {
   type CollaborationProject,
 } from '../platform/collaboration';
 import { SignInPage } from '../features/account/SignInPage';
+import { UpgradeHost } from '../features/account/Upgrade';
 import { AppFrame } from '../shell/AppFrame';
 import { TitleBar, type Crumb } from '../shell/TitleBar';
 import { Notifications } from '../shell/Notifications';
@@ -1328,6 +1329,7 @@ export function App({
       }
       dialogs={
         <>
+          <UpgradeHost />
           {dialog?.kind === 'project' && dialog.project ? (
             <ProjectForm store={store} project={dialog.project} onClose={() => setDialog(null)} />
           ) : null}

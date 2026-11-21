@@ -1,7 +1,7 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { NativeTranslationPanel } from '../translation/NativeTranslationPanel';
 import { t, translateError } from '../../i18n';
-import { Button, Dropdown, Input } from '../../components/primitives';
+import { Button, Dropdown } from '../../components/primitives';
 import { SEARCH_ENGINES } from '../../platform/browser-pane';
 import { PreferenceFields } from './Appearance';
 import { useEffect, useState } from 'react';
@@ -31,6 +31,8 @@ import { UpdatePanel } from '../update/UpdatePanel';
 import { AssistantInstructions } from './AssistantInstructions';
 import { McpServers } from './McpServers';
 import { errorReportsOn, setErrorReports } from '../../platform/error-reports';
+import { useProfile } from '../account/profile';
+import { serviceFor } from '../assistant/providers';
 import './settings.css';
 
 function TranslationPreferences() {
@@ -170,11 +172,7 @@ export function SettingsDialog({
 }) {
   const data = useStore(store, (s) => s.data);
   const [section, setSection] = useState(initialSection);
-  const [profile, setProfile] = useState({
-    name: data?.settings.name ?? '',
-    saved: data?.settings.name ?? '',
-  });
-  const [profileError, setProfileError] = useState('');
+  const account = useProfile();
   const [version, setVersion] = useState('');
   useEffect(() => {
     if (!isTauri()) return;
@@ -183,24 +181,14 @@ export function SettingsDialog({
       .then((value) => setVersion(t('版本 {version}', { version: value })))
       .catch(() => {});
   }, []);
-  const [saved, setSaved] = useState(false);
   const busy = useStore(store, (s) => s.busy);
-  const dirty = profile.name !== profile.saved;
-  useEffect(() => {
-    store.getState().setDirtySource('settings-profile', dirty);
-    return () => store.getState().setDirtySource('settings-profile', false);
-  }, [dirty, store]);
+  const profiles = data?.settings.modelProfiles ?? [];
+  const model = profiles.find((item) => item.id === data?.settings.defaultModelProfileId) ?? profiles[0];
   const [shortcutsDirty, setShortcutsDirty] = useState(false);
   useEffect(() => {
     store.getState().setDirtySource('settings-shortcuts', shortcutsDirty);
     return () => store.getState().setDirtySource('settings-shortcuts', false);
   }, [shortcutsDirty, store]);
-  useEffect(() => {
-    const next = data?.settings.name ?? '';
-    setProfile((current) =>
-      current.name === current.saved ? { name: next, saved: next } : current,
-    );
-  }, [data?.settings.name]);
   const sections = [
     { id: 'general', label: t('通用'), icon: Settings },
     { id: 'appearance', label: t('外观'), icon: Palette },
@@ -218,7 +206,6 @@ export function SettingsDialog({
       heading={sections.find((item) => item.id === section)?.label}
       className="settings-dialog"
       busy={busy}
-      dirty={dirty}
       onClose={onClose}
       sidebar={
         <nav className="settings-navigation" aria-label={t('设置分类')}>
@@ -270,51 +257,29 @@ export function SettingsDialog({
               </div>
               <span className="settings-item-action" aria-hidden="true" />
             </div>
-            <form
-              className="settings-item settings-profile"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (busy || !data || !dirty) return;
-                setProfileError('');
-                const name = profile.name;
-                const success = await store.getState().update((d) => {
-                  d.settings.name = name;
-                });
-                if (success) {
-                  setProfile({ name, saved: name });
-                  setSaved(true);
-                } else setProfileError(store.getState().error ?? t('保存失败，请重试。'));
-              }}
-            >
-              <label className="settings-input-row">
-                {t('显示名称')}
-                <Input
-                  disabled={busy || !data}
-                  value={profile.name}
-                  maxLength={100}
-                  onChange={(e) => {
-                    setProfile({ ...profile, name: e.target.value });
-                    setSaved(false);
-                    setProfileError('');
-                  }}
-                />
-              </label>
-              <span className="settings-item-action" role="status">
-                {dirty ? (
-                  <Button type="submit" variant="primary" size="sm" disabled={busy || !data}>
-                    {busy ? t('正在保存…') : t('保存')}
-                  </Button>
-                ) : saved ? (
-                  t('已保存')
-                ) : null}
-              </span>
-            </form>
+            <div className="settings-item settings-link-row">
+              <div>
+                <strong>{t('名字')}</strong>
+                <small>{account.name || t('未设置')}</small>
+              </div>
+              <Button size="sm" onClick={() => setSection('account')}>
+                {t('修改')}
+              </Button>
+            </div>
+            <div className="settings-item settings-link-row">
+              <div>
+                <strong>{t('AI 模型')}</strong>
+                <small>
+                  {model
+                    ? `${t(serviceFor(model).name)} · ${model.model || model.name}`
+                    : t('还没有连接模型')}
+                </small>
+              </div>
+              <Button size="sm" onClick={() => setSection('models')}>
+                {t('管理模型')}
+              </Button>
+            </div>
           </div>
-          {profileError ? (
-            <p role="alert" className="error-text settings-error">
-              {translateError(profileError)}
-            </p>
-          ) : null}
         </section>
         <section hidden={section !== 'appearance'} aria-label={t('外观')}>
           <h3 className="settings-section-heading">{t('配色')}</h3>

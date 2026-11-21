@@ -500,6 +500,7 @@ pub fn run() {
             collaboration::collaboration_sign_in,
             collaboration::collaboration_account,
             collaboration::collaboration_set_name,
+            collaboration::collaboration_contact,
             collaboration::collaboration_logout,
             collaboration::collaboration_access_token,
             collaboration::collaboration_model_token,

@@ -267,3 +267,44 @@ dialog.prompt-dialog {
     scroll-behavior: auto !important;
   }
 }
+
+/* Alerts: a soft tinted bar with a dot and one sentence. Blue explains, amber asks for
+   attention, red is only for something that failed. */
+.inline-error {
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sf-status-danger) 8%, var(--sf-surface-canvas));
+  color: color-mix(in srgb, var(--sf-status-danger) 80%, var(--sf-text-primary));
+  font-size: 12.5px;
+}
+.inline-error::before,
+.sf-md-notice::before,
+.center-notice::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sf-md-notice,
+.center-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sf-status-info) 7%, var(--sf-surface-canvas));
+  color: color-mix(in srgb, var(--sf-status-info) 70%, var(--sf-text-primary));
+  font-size: 12.5px;
+}
+.sf-md-notice {
+  margin: 6px 12px 0;
+}
+.research-shell .sf-agent-sandbox-notice {
+  border: 0;
+  background: color-mix(in srgb, var(--sf-status-info) 7%, var(--sf-surface-canvas));
+  color: color-mix(in srgb, var(--sf-status-info) 60%, var(--sf-text-primary));
+}

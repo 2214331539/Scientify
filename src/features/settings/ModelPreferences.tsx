@@ -20,10 +20,55 @@ import {
   removeConnection,
   storeConnectionKey,
 } from '../assistant/connections';
-import { serviceFor } from '../assistant/providers';
+import { modelServices, serviceFor } from '../assistant/providers';
+import { openUpgrade } from '../account/Upgrade';
 import '../assistant/model-settings.css';
 
-type Editing = { id: string; name: string; value: AISettings; key: string; stored: boolean };
+type Editing = {
+  id: string;
+  name: string;
+  value: AISettings;
+  key: string;
+  stored: boolean;
+  services: readonly string[];
+};
+
+/** The first split is who serves the model; other models are grouped by how they connect. */
+const OFFICIAL = ['scientify'] as const;
+const otherGroups = [
+  {
+    title: 'ChatGPT 账号',
+    note: '用 ChatGPT 订阅登录，不需要密钥。',
+    services: ['chatgpt'],
+  },
+  {
+    title: 'API 服务商',
+    note: '填自己申请的 API 密钥，用量由服务商计费。',
+    services: [
+      'openai',
+      'anthropic',
+      'gemini',
+      'deepseek',
+      'qwen',
+      'moonshot',
+      'doubao',
+      'zhipu',
+      'siliconflow',
+      'openrouter',
+    ],
+  },
+  { title: '本地模型', note: '在这台电脑上运行的 Ollama。', services: ['ollama'] },
+  {
+    title: '自定义服务',
+    note: '其他兼容 OpenAI、Anthropic 或 Gemini 接口的服务。',
+    services: ['custom'],
+  },
+] as const;
+
+const isOfficial = (profile: ModelProfile) => serviceFor(profile).id === 'scientify';
+const groupOf = (profile: ModelProfile) =>
+  otherGroups.find((group) => (group.services as readonly string[]).includes(serviceFor(profile).id)) ??
+  otherGroups[otherGroups.length - 1];
 
 /** Settings → AI 模型: the same connections the assistant's model menu uses. */
 export function ModelPreferences({
@@ -59,6 +104,11 @@ export function ModelPreferences({
           },
         ];
   const defaultId = settings?.defaultModelProfileId ?? (saved.length ? undefined : 'legacy');
+  const defaultProfile = profiles.find((profile) => profile.id === defaultId);
+  // Open on the side the default connection is on; a new user starts with the official models.
+  const [kind, setKind] = useState<'official' | 'other'>(() =>
+    defaultProfile && !isOfficial(defaultProfile) ? 'other' : 'official',
+  );
 
   useEffect(() => {
     void collaboration
@@ -71,23 +121,28 @@ export function ModelPreferences({
     return () => store.getState().setDirtySource('settings-model', false);
   }, [editing, store]);
 
-  async function edit(profile: ModelProfile | null) {
+  async function edit(profile: ModelProfile | null, services: readonly string[]) {
     const current = ++ticket.current;
+    const first = modelServices.find((item) => item.id === services[0]) ?? modelServices[0];
     const value: AISettings = profile
       ? connectionSettings(profile)
       : {
-          provider: 'openai',
-          serviceId: 'openai',
-          endpoint: 'https://api.openai.com/v1',
+          provider: first.provider,
+          serviceId: first.id,
+          endpoint:
+            first.id === 'scientify'
+              ? officialEndpoint || first.endpoints[0]?.url || ''
+              : (first.endpoints[0]?.url ?? ''),
           model: '',
         };
     setError('');
     setEditing({
       id: profile?.id ?? crypto.randomUUID(),
-      name: profile?.name ?? t('新连接'),
+      name: profile?.name ?? (first.id === 'custom' ? t('新连接') : t(first.name)),
       value,
       key: '',
       stored: false,
+      services,
     });
     try {
       const key = await loadConnectionKey(value, credentials);
@@ -151,7 +206,7 @@ export function ModelPreferences({
           }}
         >
           <ArrowLeft size={14} />
-          {t('全部连接')}
+          {kind === 'official' ? t('官方模型') : t('其他模型')}
         </Button>
         <ModelConnectionForm
           embedded
@@ -165,6 +220,7 @@ export function ModelPreferences({
           saving={saving}
           requestBusy={busy}
           backend={backend}
+          services={editing.services}
           loadKey={(value) => loadConnectionKey(value, credentials)}
           onChange={(value) => {
             setError('');
@@ -184,80 +240,127 @@ export function ModelPreferences({
       </div>
     );
 
+  const row = (profile: ModelProfile, services: readonly string[]) => {
+    const verified =
+      profile.verification?.model === profile.model ? profile.verification : undefined;
+    return (
+      <li key={profile.id} className="settings-models-row">
+        <div className="settings-models-name">
+          <strong>{profile.name}</strong>
+          <small>
+            {t(serviceFor(profile).name)} · {profile.model || t('未选择模型')}
+          </small>
+        </div>
+        <div className="settings-models-tags">
+          {profile.id === defaultId ? <span data-tone="default">{t('默认')}</span> : null}
+          <span data-tone={verified ? (verified.chat ? 'ok' : 'bad') : 'none'}>{t('聊天')}</span>
+          <span data-tone={verified ? (verified.agent ? 'ok' : 'bad') : 'none'}>Agent</span>
+        </div>
+        <div className="settings-models-actions">
+          {profile.id !== defaultId ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void makeDefault(profile)}
+            >
+              {t('设为默认')}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void edit(profile, services)}
+          >
+            {t('编辑')}
+          </Button>
+          {profile.id !== 'legacy' ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void remove(profile)}
+            >
+              {t('删除')}
+            </Button>
+          ) : null}
+        </div>
+      </li>
+    );
+  };
+  const official = profiles.filter(isOfficial);
+  const others = profiles.filter((profile) => !isOfficial(profile));
+
   return (
     <div className="settings-models">
-      <div className="settings-models-heading">
-        <h3 className="settings-section-heading">{t('连接')}</h3>
-        <Button type="button" disabled={busy} onClick={() => void edit(null)}>
-          <Plus size={14} />
-          {t('新建连接')}
+      <div className="sf-segmented settings-models-kinds" role="group" aria-label={t('模型来源')}>
+        <Button
+          variant="ghost"
+          aria-pressed={kind === 'official'}
+          onClick={() => setKind('official')}
+        >
+          {t('Scientify 官方模型')}
+        </Button>
+        <Button variant="ghost" aria-pressed={kind === 'other'} onClick={() => setKind('other')}>
+          {t('其他模型')}
         </Button>
       </div>
-      {profiles.length ? (
-        <ul className="settings-models-list">
-          {profiles.map((profile) => {
-            const verified =
-              profile.verification?.model === profile.model ? profile.verification : undefined;
-            return (
-              <li key={profile.id} className="settings-models-row">
-                <div className="settings-models-name">
-                  <strong>{profile.name}</strong>
-                  <small>
-                    {t(serviceFor(profile).name)} · {profile.model || t('未选择模型')}
-                  </small>
-                </div>
-                <div className="settings-models-tags">
-                  {profile.id === defaultId ? <span data-tone="default">{t('默认')}</span> : null}
-                  <span data-tone={verified ? (verified.chat ? 'ok' : 'bad') : 'none'}>
-                    {t('聊天')}
-                  </span>
-                  <span data-tone={verified ? (verified.agent ? 'ok' : 'bad') : 'none'}>Agent</span>
-                </div>
-                <div className="settings-models-actions">
-                  {profile.id !== defaultId ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => void makeDefault(profile)}
-                    >
-                      {t('设为默认')}
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => void edit(profile)}
-                  >
-                    {t('编辑')}
-                  </Button>
-                  {profile.id !== 'legacy' ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => void remove(profile)}
-                    >
-                      {t('删除')}
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+      {kind === 'official' ? (
+        <section className="settings-models-group" aria-label={t('Scientify 官方模型')}>
+          <div className="settings-models-heading">
+            <div>
+              <h3 className="settings-section-heading">{t('Scientify 官方模型')}</h3>
+              <p className="settings-note">
+                {t('用 Scientify 账号直接使用，不需要密钥，按点数计费。免费版开放部分模型，个人专业版开放全部模型。')}
+              </p>
+            </div>
+            <Button type="button" disabled={busy} onClick={() => void edit(null, OFFICIAL)}>
+              <Plus size={14} />
+              {t('添加')}
+            </Button>
+          </div>
+          {official.length ? (
+            <ul className="settings-models-list">{official.map((profile) => row(profile, OFFICIAL))}</ul>
+          ) : (
+            <p className="settings-note">{t('还没有添加官方模型。')}</p>
+          )}
+          <Button type="button" variant="ghost" className="settings-models-upgrade" onClick={() => openUpgrade()}>
+            {t('升级到专业版')}
+          </Button>
+        </section>
       ) : (
-        <p className="settings-note">{t('还没有连接模型。')}</p>
+        otherGroups.map((group) => {
+          const items = others.filter((profile) => groupOf(profile) === group);
+          return (
+            <section key={group.title} className="settings-models-group" aria-label={t(group.title)}>
+              <div className="settings-models-heading">
+                <div>
+                  <h3 className="settings-section-heading">{t(group.title)}</h3>
+                  <p className="settings-note">{t(group.note)}</p>
+                </div>
+                <Button type="button" disabled={busy} onClick={() => void edit(null, group.services)}>
+                  <Plus size={14} />
+                  {t('添加')}
+                </Button>
+              </div>
+              {items.length ? (
+                <ul className="settings-models-list">{items.map((profile) => row(profile, group.services))}</ul>
+              ) : null}
+            </section>
+          );
+        })
       )}
       {error ? (
         <p role="alert" className="error-text">
           {translateError(error)}
         </p>
       ) : null}
-      <p className="settings-note">
-        {t('只有你发出的消息和附件会发给模型服务；密钥只保存在这台电脑上。')}
-      </p>
+      {kind === 'other' ? (
+        <p className="settings-note">
+          {t('只有你发出的消息和附件会发给模型服务；密钥只保存在这台电脑上。')}
+        </p>
+      ) : null}
     </div>
   );
 }

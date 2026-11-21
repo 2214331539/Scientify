@@ -33,6 +33,8 @@ export type AIContent = string | AIContentPart[];
 export interface AIModel {
   id: string;
   name: string;
+  /** False for an official model the plan does not include; listed so the user can upgrade. */
+  available?: boolean;
 }
 export interface AIRequest extends AIConnection {
   model: string;

@@ -57,6 +57,8 @@ pub struct ModelTest {
 pub struct Model {
     id: String,
     name: String,
+    /// False for an official model the account's plan does not include; it is still listed.
+    available: bool,
 }
 
 fn local(url: &Url) -> bool {
@@ -384,7 +386,11 @@ pub async fn research_list_models(request: Connection) -> Result<Vec<Model>, Str
                     .or_else(|| entry["display_name"].as_str())
                     .or_else(|| entry["name"].as_str())
                     .unwrap_or(id);
-                models.insert(id.to_string(), name.chars().take(200).collect::<String>());
+                let available = entry["available"].as_bool().unwrap_or(true);
+                models.insert(
+                    id.to_string(),
+                    (name.chars().take(200).collect::<String>(), available),
+                );
             }
         }
         if models.len() > 5000 {
@@ -417,7 +423,11 @@ pub async fn research_list_models(request: Connection) -> Result<Vec<Model>, Str
             }
             return Ok(models
                 .into_iter()
-                .map(|(id, name)| Model { id, name })
+                .map(|(id, (name, available))| Model {
+                    id,
+                    name,
+                    available,
+                })
                 .collect());
         }
         if next == cursor || next.len() > 4096 {

@@ -433,19 +433,59 @@ section > .settings-section-heading:first-child {
   accent-color: var(--sf-accent);
 }
 
-/* AI 模型 */
+/* AI 模型: official models or other models first, then other models by kind. */
 .settings-models {
   display: grid;
   gap: 12px;
 }
+.settings-models-kinds.sf-segmented {
+  justify-self: start;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--sf-surface-hover);
+}
+.settings-models-kinds > .sf-button {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sf-text-secondary);
+  font-size: 12.5px;
+}
+.settings-models-kinds > .sf-button[aria-pressed='true'] {
+  background: var(--sf-surface-canvas);
+  color: var(--sf-text-primary);
+  box-shadow:
+    0 0 0 1px var(--sf-border-subtle),
+    0 1px 2px rgb(0 0 0 / 5%);
+}
+.settings-models-group {
+  display: grid;
+  gap: 8px;
+}
+.settings-models-group + .settings-models-group {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--sf-border-subtle);
+}
 .settings-models-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 .settings-models-heading .settings-section-heading {
   margin: 0;
+}
+.settings-models-heading .settings-note {
+  margin: 2px 0 0;
+}
+.settings-models-upgrade {
+  justify-self: start;
 }
 .settings-models-back {
   justify-self: start;
@@ -676,4 +716,23 @@ section > .settings-section-heading:first-child {
   padding: 10px;
   border: 1px solid var(--sf-border-subtle);
   border-radius: var(--sf-radius);
+}
+
+/* 通用: links to the account name and the model connections. */
+.settings-link-row > div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.settings-link-row strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.settings-link-row small {
+  overflow: hidden;
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

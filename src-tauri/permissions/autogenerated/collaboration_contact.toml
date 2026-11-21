@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-collaboration-contact"
+description = "Enables the collaboration_contact command without any pre-configured scope."
+commands.allow = ["collaboration_contact"]
+
+[[permission]]
+identifier = "deny-collaboration-contact"
+description = "Denies the collaboration_contact command without any pre-configured scope."
+commands.deny = ["collaboration_contact"]

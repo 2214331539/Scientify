@@ -204,6 +204,7 @@ export function ProjectLibrary({
           <CenterEmpty
             icon={<FolderClosed />}
             title={t('还没有项目')}
+            children={t('一个课题建一个项目，文献、代码和稿件都放在里面。')}
             actions={
               <Button variant="primary" disabled={busy} onClick={onNew}>
                 <Plus />

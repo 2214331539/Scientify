@@ -61,3 +61,48 @@
 .document-tab .sf-button:focus-visible {
   outline-offset: -2px;
 }
+
+/* Browser-style tabs: the strip sits on the chrome colour; the open tab is a white card with
+   rounded top corners that joins the page below it. Used for every "open thing" tab bar. */
+.document-tabs {
+  height: 38px;
+  align-items: flex-end;
+  padding: 6px 6px 0;
+  background: var(--sf-surface-chrome);
+}
+.document-tab-list {
+  align-items: flex-end;
+  gap: 2px;
+  height: 100%;
+}
+.document-tab {
+  position: relative;
+  height: 100%;
+  min-width: 108px;
+  max-width: 220px;
+  border-right: 0;
+  border-radius: 8px 8px 0 0;
+  color: var(--sf-text-muted);
+}
+.document-tab.is-active {
+  z-index: 1;
+  background: var(--sf-surface-canvas);
+  color: var(--sf-text-primary);
+  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+  clip-path: inset(-1px -1px 0 -1px);
+}
+.document-tab .sf-button {
+  border-radius: 8px 8px 0 0;
+}
+.document-tabs > .document-tab-add {
+  align-self: center;
+  width: 28px;
+  min-height: 28px;
+  height: 28px;
+  margin: 0 0 3px 2px;
+  border-radius: 6px;
+}
+.research-shell:not(.launcher-shell) .sf-frame-main .document-tabs::after {
+  left: 0;
+  right: 0;
+}

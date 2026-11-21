@@ -154,3 +154,6 @@
   display: flex;
   gap: 8px;
 }
+.library-table-empty.sf-empty {
+  gap: 0;
+}

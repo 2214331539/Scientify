@@ -7,6 +7,7 @@ import type { AIModel, ResearchBackend } from '../../platform/research';
 import type { AISettings } from './model';
 import type { AIProtocol, ModelProfile } from '../../domain/workspace';
 import { modelServices, serviceFor } from './providers';
+import { openUpgrade } from '../account/Upgrade';
 import { ChatGPTAccount } from './ChatGPTAccount';
 import { chatgpt as nativeChatGPT, type ChatGPTBackend } from '../../platform/chatgpt';
 import { errorMessage } from '../../domain/errors';
@@ -106,6 +107,8 @@ interface FormProps {
   embedded?: boolean;
   note?: string;
   chatgpt?: ChatGPTBackend;
+  /** The providers to offer; Settings narrows the list to one kind of connection. */
+  services?: readonly string[];
 }
 
 /** Provider, endpoint, key and model of one connection; saving verifies chat and Agent. */
@@ -129,8 +132,12 @@ export function ModelConnectionForm({
   embedded,
   note,
   chatgpt = nativeChatGPT,
+  services,
 }: FormProps) {
   const service = serviceFor(value);
+  const offered = services ? modelServices.filter((item) => services.includes(item.id)) : modelServices;
+  // The official models use the signed-in account; there is no address or key to fill in.
+  const official = service.id === 'scientify';
   // A ChatGPT plan signs in through the browser; it has no address or key.
   const account = service.id === 'chatgpt';
   const [signedIn, setSignedIn] = useState(false);
@@ -210,6 +217,10 @@ export function ModelConnectionForm({
       setFailure(t('请先登录 ChatGPT 账号。'));
       return;
     }
+    if (official && !apiKey.trim()) {
+      setFailure(t('请先登录 Scientify 账号。'));
+      return;
+    }
     if (!account && (!value.endpoint.trim() || (value.provider !== 'ollama' && !apiKey.trim()))) {
       setFailure(t('请填写服务地址和 API 密钥。'));
       return;
@@ -231,9 +242,11 @@ export function ModelConnectionForm({
       if (ticket !== generation.current) return;
       if (!found.length) throw new Error(t('服务未返回可选的聊天模型。'));
       setModels(found);
+      // Models outside the plan stay listed for the upgrade card but are never picked for the user.
+      const usable = found.filter((m) => m.available !== false);
       onChange({
         ...value,
-        model: found.some((m) => m.id === value.model) ? value.model : found[0].id,
+        model: usable.some((m) => m.id === value.model) ? value.model : (usable[0] ?? found[0]).id,
       });
       setPhase('ready');
     } catch (reason) {
@@ -245,6 +258,11 @@ export function ModelConnectionForm({
     }
   }
   async function save() {
+    const chosen = models.find((m) => m.id === value.model);
+    if (chosen?.available === false) {
+      openUpgrade(chosen.name.split(' · ')[0]);
+      return;
+    }
     if (
       disabled ||
       pending.current ||
@@ -355,7 +373,7 @@ export function ModelConnectionForm({
                   void recallKey(next);
                 }}
               >
-                {modelServices.map((item) => (
+                {offered.map((item) => (
                   <option key={item.id} value={item.id}>
                     {t(item.name)}
                   </option>
@@ -388,7 +406,12 @@ export function ModelConnectionForm({
                 onAccount={(current) => setSignedIn(current.signedIn)}
               />
             ) : null}
-            {!account && service.endpoints.length > 1 && (
+            {official ? (
+              <p className="settings-note">
+                {t('使用登录的 Scientify 账号，不需要密钥，按点数计费。')}
+              </p>
+            ) : null}
+            {!account && !official && service.endpoints.length > 1 && (
               <label className="sf-model-settings-row">
                 <span>{t('服务区域')}</span>
                 <Dropdown
@@ -415,7 +438,7 @@ export function ModelConnectionForm({
                 </Dropdown>
               </label>
             )}
-            {account ? null : (
+            {account || official ? null : (
               <>
                 <label className="sf-model-settings-row">
                   <span>{t('服务地址')}</span>
@@ -470,7 +493,11 @@ export function ModelConnectionForm({
               ) : (
                 <RefreshCw size={14} />
               )}
-              {phase === 'loading' ? t('正在获取模型…') : account ? t('获取模型') : t('测试连接')}
+              {phase === 'loading'
+                ? t('正在获取模型…')
+                : account || official
+                  ? t('获取模型')
+                  : t('测试连接')}
             </Button>
             <span role="status" className="sf-model-status">
               {phase === 'ready' ? (
@@ -495,7 +522,9 @@ export function ModelConnectionForm({
           <p className="settings-note">
             {account
               ? t('请求从这台电脑发出，用你的订阅额度。划词翻译和全文翻译仍用其他模型。')
-              : t('密钥只存在这台电脑上，不随项目同步。')}
+              : official
+                ? t('标有“专业版可用”的模型需要个人专业版，选择时会显示开通方式。')
+                : t('密钥只存在这台电脑上，不随项目同步。')}
           </p>
         </section>
         <section aria-label={t('聊天模型')}>
@@ -545,6 +574,11 @@ export function ModelConnectionForm({
                   value={models.length ? value.model : ''}
                   disabled={disabled || !models.length}
                   onChange={(event) => {
+                    const picked = models.find((m) => m.id === event.target.value);
+                    if (picked?.available === false) {
+                      openUpgrade(picked.name.split(' · ')[0]);
+                      return;
+                    }
                     onChange({ ...value, model: event.target.value });
                     setFailure('');
                   }}

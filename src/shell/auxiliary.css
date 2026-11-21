@@ -758,3 +758,33 @@
   color: var(--sf-text-muted);
   font-size: 11px;
 }
+
+/* The side panel switches between two tools: a segmented control, so it does not look like
+   the tabs of open files. */
+.research-shell .sf-frame-main .sf-dock-layout .sf-dock-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 2px;
+  height: auto;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--sf-surface-hover);
+}
+.research-shell .sf-frame-main .sf-dock-layout .sf-dock-tab-indicator {
+  display: none;
+}
+.research-shell .sf-frame-main .sf-dock-layout .sf-dock-tabs button {
+  height: 26px;
+  min-height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--sf-text-secondary);
+}
+.research-shell .sf-frame-main .sf-dock-layout .sf-dock-tabs button[aria-pressed='true'] {
+  background: var(--sf-surface-canvas);
+  color: var(--sf-text-primary);
+  box-shadow:
+    0 0 0 1px var(--sf-border-subtle),
+    0 1px 2px rgb(0 0 0 / 5%);
+}

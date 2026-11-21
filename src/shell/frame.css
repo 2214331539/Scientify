@@ -1,4 +1,6 @@
-/* The window: chrome around one raised content surface. */
+/* The window: chrome around raised panels. The work surface and the side panel are two
+   white panels on the chrome with a small gap between them, so the eye lands on the content
+   first and each area keeps its own edge. */
 .sf-frame.app-shell.research-shell {
   grid-template-rows: var(--sf-topbar-height) minmax(0, 1fr);
   background: var(--sf-surface-chrome);
@@ -18,17 +20,59 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--sf-surface-canvas);
-  border-top-left-radius: 10px;
-  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+  padding: 0 6px 6px 0;
 }
 .sf-frame-body[data-sidebar='closed'] .sf-frame-main {
-  border-top-left-radius: 0;
+  padding-left: 6px;
 }
-/* The right panel sits on the same surface, divided by a line. */
 .sf-frame-main > .sf-dock-layout,
 .sf-frame-main > .central-area {
   flex: 1;
   min-width: 0;
   min-height: 0;
+}
+.research-shell .sf-frame-main > .sf-dock-layout,
+.research-shell .sf-frame-main > .sf-dock-layout.sf-workspace-layout {
+  background: transparent;
+}
+.research-shell .sf-frame-main > .sf-workspace-layout[data-side-open='true'] {
+  column-gap: 6px;
+}
+
+/* The work surface: project center pages, a module, or the documents workspace. */
+.sf-frame-main > .central-area,
+.sf-workspace-layout > .sf-dock-main,
+.sf-workspace-layout.has-notes-workspace > .sf-dock-notes {
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--sf-surface-canvas);
+  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+}
+
+/* The side panel: its header and tool layers read as one panel. */
+.sf-workspace-layout > .sf-dock-shared-header {
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+}
+.sf-workspace-layout > .sf-dock-assistant,
+.sf-workspace-layout:not(.has-notes-workspace) > .sf-dock-notes {
+  overflow: hidden;
+  border-radius: 0 0 10px 10px;
+  background: var(--sf-surface-canvas);
+  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+}
+
+/* The resize handle sits in the gap; the line only appears while dragging. */
+.research-shell .sf-workspace-layout > .sf-dock-resize {
+  right: calc(var(--dock-width) - 2px);
+}
+.research-shell .sf-workspace-layout > .sf-dock-resize > .resize-handle::after {
+  left: 5px;
+  background: transparent;
+}
+.research-shell
+  .sf-workspace-layout
+  > .sf-dock-resize
+  > .resize-handle:is(:hover, :focus-visible, [data-resizing='true'])::after {
+  background: var(--sf-accent);
 }

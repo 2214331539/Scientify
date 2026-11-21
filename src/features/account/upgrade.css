@@ -1,0 +1,91 @@
+dialog.sf-upgrade-dialog {
+  width: min(460px, calc(100vw - 32px));
+}
+.sf-upgrade {
+  display: grid;
+  gap: 14px;
+  padding: 18px 24px 20px;
+}
+.sf-upgrade-lead {
+  margin: 0;
+  color: var(--sf-text-secondary);
+}
+.sf-upgrade-plan {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--sf-border-control);
+  border-radius: var(--sf-radius-overlay);
+}
+.sf-upgrade-price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.sf-upgrade-price strong {
+  font-size: 14px;
+}
+.sf-upgrade-price span {
+  margin-left: auto;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.sf-upgrade-price small {
+  color: var(--sf-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.sf-upgrade-plan ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sf-upgrade-plan li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sf-text-secondary);
+}
+.sf-upgrade-plan li svg {
+  color: var(--sf-status-success);
+}
+.sf-upgrade-note {
+  margin: 0;
+  color: var(--sf-text-muted);
+  font-size: 12.5px;
+}
+.sf-upgrade-error {
+  margin: 0;
+  color: var(--sf-status-danger);
+  font-size: 12.5px;
+}
+.sf-upgrade footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.sf-upgrade-contact {
+  justify-items: center;
+  text-align: center;
+}
+.sf-upgrade-contact footer {
+  justify-self: stretch;
+}
+.sf-upgrade-qr {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius-overlay);
+  background: #fff;
+}
+.sf-upgrade-qr.is-loading,
+.sf-upgrade-qr.is-empty {
+  display: grid;
+  place-items: center;
+  color: var(--sf-text-muted);
+  font-size: 13px;
+}

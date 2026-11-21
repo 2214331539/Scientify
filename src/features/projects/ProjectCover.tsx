@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { EmptyState } from '../../components/EmptyState';
 import { t } from '../../i18n';
 import { toneOf } from './model';
 import './project-library.css';
@@ -61,11 +62,8 @@ export function CenterEmpty({
   actions?: ReactNode;
 }) {
   return (
-    <div className="center-empty">
-      {icon}
-      <strong>{title}</strong>
-      {children ? <p>{children}</p> : null}
-      {actions ? <div className="center-empty-actions">{actions}</div> : null}
-    </div>
+    <EmptyState className="center-empty" icon={icon} title={title} actions={actions}>
+      {children}
+    </EmptyState>
   );
 }

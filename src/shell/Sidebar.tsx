@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Bot,
   ChevronsUpDown,
   CircleHelp,
   Compass,
@@ -40,7 +41,13 @@ import type { Project } from '../domain/workspace';
 import type { WorkspaceId } from '../domain/context';
 import './sidebar.css';
 
-export type SettingsSection = 'general' | 'shortcuts' | 'collaboration' | 'account' | 'about';
+export type SettingsSection =
+  | 'general'
+  | 'models'
+  | 'shortcuts'
+  | 'collaboration'
+  | 'account'
+  | 'about';
 
 const guideUrl = `https://github.com/2214331539/Scientify/blob/main/docs/${encodeURIComponent('使用说明')}/${encodeURIComponent('桌面使用说明')}.md`;
 const issuesUrl = 'https://github.com/2214331539/Scientify/issues';
@@ -189,6 +196,10 @@ export function SidebarFooter({ onSettings }: { onSettings(section: SettingsSect
         <Button role="menuitem" variant="ghost" onClick={() => go('general')}>
           <Settings />
           {t('设置')}
+        </Button>
+        <Button role="menuitem" variant="ghost" onClick={() => go('models')}>
+          <Bot />
+          {t('模型设置')}
         </Button>
         {signedIn ? (
           <Button role="menuitem" variant="ghost" onClick={() => go('account')}>

@@ -1,4 +1,5 @@
 import { canEditProject } from '../../platform/collaboration';
+import { EmptySteps } from '../../components/EmptyState';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from 'zustand';
@@ -1002,27 +1003,42 @@ export function ExperimentWorkspace({
           </div>
         </div>
       ) : (
-        <div className="sf-ide-welcome">
-          <h2>{t('还没有代码文件夹')}</h2>
-          <div className="sf-ide-welcome-actions">
-            <Button
-              variant="ghost"
-              disabled={readOnly || !experimentCatalog.available()}
-              onClick={() => void openFolder()}
-            >
-              <FolderOpen size={15} />
-              {t('打开文件夹…')}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={readOnly || !experimentCatalog.available()}
-              onClick={() => setDialog('clone')}
-            >
-              <GitFork size={15} />
-              {t('克隆 Git 仓库…')}
-            </Button>
-          </div>
-        </div>
+        <EmptySteps
+          title={t('开始一个实验')}
+          steps={[
+            {
+              title: t('打开或克隆代码文件夹'),
+              detail: t('已有的代码直接打开；复现论文就克隆它的仓库。'),
+              actions: (
+                <>
+                  <Button
+                    variant="primary"
+                    disabled={readOnly || !experimentCatalog.available()}
+                    onClick={() => void openFolder()}
+                  >
+                    <FolderOpen size={15} />
+                    {t('打开文件夹…')}
+                  </Button>
+                  <Button
+                    disabled={readOnly || !experimentCatalog.available()}
+                    onClick={() => setDialog('clone')}
+                  >
+                    <GitFork size={15} />
+                    {t('克隆 Git 仓库…')}
+                  </Button>
+                </>
+              ),
+            },
+            {
+              title: t('选择 Python 环境'),
+              detail: t('在底部状态栏选择解释器，或新建一个虚拟环境。'),
+            },
+            {
+              title: t('让 AI 跑起来'),
+              detail: t('按 Ctrl J 打开 AI 助手，说明要复现的实验。'),
+            },
+          ]}
+        />
       )}
       {dialog === 'config' && (
         <ConfigurationForm

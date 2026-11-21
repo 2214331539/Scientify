@@ -255,6 +255,28 @@ async function route(request, response, { config, db }, path, url) {
   if (method === 'GET' && path === '/usage') return send(response, 200, await usageReport(db, Object.fromEntries(url.searchParams)));
   if (method === 'GET' && path === '/plans') return send(response, 200, { plans: await allPlans(db) });
 
+  // The WeChat group QR code the app's upgrade card shows. WeChat renews it weekly.
+  if (method === 'GET' && path === '/settings/contact') {
+    const result = await db.query("SELECT value, updated_at FROM app_settings WHERE key = 'wechat_qr'");
+    return send(response, 200, { wechatQr: result.rows[0]?.value ?? null, updatedAt: result.rows[0]?.updated_at ?? null });
+  }
+  if (method === 'POST' && path === '/settings/contact') {
+    const input = await body(request, 3 * 1024 * 1024);
+    const image = String(input.wechatQr ?? '');
+    if (image && !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(image))
+      throw fail(400, '请上传 PNG、JPG 或 WebP 图片。');
+    if (image.length > 2_800_000) throw fail(400, '图片不能超过 2 MB。');
+    if (image)
+      await db.query(
+        `INSERT INTO app_settings(key, value, updated_by, updated_at) VALUES ('wechat_qr', $1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+        [image, admin.id],
+      );
+    else await db.query("DELETE FROM app_settings WHERE key = 'wechat_qr'");
+    await record({ targetType: 'settings', targetId: 'wechat_qr', target: '微信群二维码', action: image ? '更换微信群二维码' : '删除微信群二维码' });
+    return send(response, 200, { ok: true });
+  }
+
   const teamMatch = path.match(/^\/teams\/([^/]+)$/);
   if (method === 'GET' && teamMatch) {
     const detail = await teamDetail(db, decodeURIComponent(teamMatch[1]));

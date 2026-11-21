@@ -1,4 +1,5 @@
 import { useRef, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { EmptyState } from '../../components/EmptyState';
 import { FileText, FolderOpen, Library, NotebookPen, Upload } from 'lucide-react';
 import { Button } from '../../components/primitives';
 import { t } from '../../i18n';
@@ -165,30 +166,42 @@ export function LibraryTable({
         />
       </header>
       {!root ? (
-        <div className="library-table-empty">
-          <FolderOpen />
-          <strong>{t('还没有打开文献文件夹')}</strong>
-          <Button variant="primary" onClick={onChoose}>
-            {t('打开文献文件夹')}
-          </Button>
-        </div>
+        <EmptyState
+          className="library-table-empty"
+          icon={<FolderOpen />}
+          title={t('还没有关联文献文件夹')}
+          actions={
+            <Button variant="primary" onClick={onChoose}>
+              {t('打开文献文件夹')}
+            </Button>
+          }
+        >
+          {t('选一个放论文的文件夹，PDF 会显示在这里。')}
+        </EmptyState>
       ) : !rows.length ? (
-        <div className="library-table-empty" data-tree-id={folder} {...fileEvents}>
-          <FileText />
-          <strong>{term ? t('没有符合条件的文献') : t('这里还没有文献')}</strong>
-          {!term && !readOnly && onImportLibrary ? (
-            <div className="library-table-empty-actions">
-              <Button variant="primary" disabled={busy} onClick={onImportLibrary}>
-                <Library />
-                {t('从 Zotero 导入')}
-              </Button>
-              <Button disabled={busy} onClick={() => picker.current?.click()}>
-                <Upload />
-                {t('导入文件')}
-              </Button>
-            </div>
-          ) : null}
-        </div>
+        <EmptyState
+          className="library-table-empty"
+          data-tree-id={folder}
+          {...fileEvents}
+          icon={<FileText />}
+          title={term ? t('没有符合条件的文献') : t('这里还没有文献')}
+          actions={
+            !term && !readOnly && onImportLibrary ? (
+              <>
+                <Button variant="primary" disabled={busy} onClick={onImportLibrary}>
+                  <Library />
+                  {t('从 Zotero 导入')}
+                </Button>
+                <Button disabled={busy} onClick={() => picker.current?.click()}>
+                  <Upload />
+                  {t('导入文件')}
+                </Button>
+              </>
+            ) : null
+          }
+        >
+          {term ? null : t('把 PDF 拖到这里，或从 Zotero 导入。')}
+        </EmptyState>
       ) : (
         <div
           className="library-table"

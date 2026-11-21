@@ -1259,3 +1259,6 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+.center-empty.sf-empty > p {
+  margin: 4px 0 0;
+}

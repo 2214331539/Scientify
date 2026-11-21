@@ -279,6 +279,14 @@ async function handle(request, response, context) {
       await db.query('UPDATE users SET nickname = $2, updated_at = NOW() WHERE id = $1', [user.sub, name || null]);
       return send(response, 200, { id: user.sub, phone: user.phone, name });
     }
+    // How to reach us to upgrade: the WeChat group QR code from the admin pages.
+    if (request.method === 'GET' && path === '/v1/support/contact') {
+      const result = await db.query("SELECT value, updated_at FROM app_settings WHERE key = 'wechat_qr'");
+      return send(response, 200, {
+        wechatQr: result.rows[0]?.value ?? null,
+        updatedAt: result.rows[0]?.updated_at ?? null,
+      });
+    }
     if (request.method === 'POST' && path === '/v1/auth/logout') {
       const input = await body(request, 16_384);
       if (input.refreshToken) {

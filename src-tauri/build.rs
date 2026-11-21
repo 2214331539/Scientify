@@ -148,6 +148,7 @@ fn main() {
             "collaboration_sign_in",
             "collaboration_account",
             "collaboration_set_name",
+            "collaboration_contact",
             "collaboration_logout",
             "collaboration_access_token",
             "collaboration_model_token",

@@ -236,6 +236,10 @@ export const collaboration = {
   setName(name: string): Promise<{ id: string; phone: string; name: string }> {
     return desktop(settingsOnly, 'collaboration_set_name', { name });
   },
+  /** The WeChat group QR code (a data URL) for upgrading, or null before one is set. */
+  contact(): Promise<{ wechatQr: string | null; updatedAt: string | null }> {
+    return desktop(settingsOnly, 'collaboration_contact');
+  },
   logout(): Promise<CollaborationState> {
     return desktop(settingsOnly, 'collaboration_logout');
   },

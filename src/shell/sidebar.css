@@ -259,3 +259,15 @@
 .sf-menu .sf-button[aria-checked='true'] {
   font-weight: 500;
 }
+
+/* Resource groups stay quiet: a small grey label, and its tools only while the pointer is
+   over the group (or a tool has focus or an open menu). */
+.sf-side-label .sf-button {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.sf-side-group:hover .sf-side-label .sf-button,
+.sf-side-label .sf-button:focus-visible,
+.sf-side-label .sf-button[aria-expanded='true'] {
+  opacity: 1;
+}

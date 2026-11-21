@@ -233,3 +233,32 @@
   background: var(--sf-border-subtle);
   margin: 4px 5px;
 }
+
+/* One menu style everywhere: 28px rows, quiet grey icons, shortcuts on the right, and the
+   destructive item last in red. */
+.sf-menu {
+  min-width: 200px;
+}
+.sf-menu .sf-button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+}
+.sf-menu .sf-button svg {
+  width: 15px;
+  height: 15px;
+  color: var(--sf-text-muted);
+}
+.sf-menu .sf-menu-danger svg {
+  color: currentColor;
+}
+.sf-menu .sf-button:where(:hover, :focus-visible):not(:disabled) {
+  background: var(--sf-surface-hover);
+}
+.sf-menu :is(kbd, .sf-menu-shortcut) {
+  margin-left: auto;
+  padding-left: 16px;
+  color: var(--sf-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+}

@@ -1,6 +1,7 @@
 import { Button } from '../../components/primitives';
 import { t } from '../../i18n';
 import type { OfficialModelProblem } from '../../platform/collaboration';
+import { openUpgrade } from '../account/Upgrade';
 
 export const openAccountSettings = () =>
   window.dispatchEvent(new CustomEvent('scientify-open-settings', { detail: 'account' }));
@@ -16,7 +17,7 @@ const TEXT: Record<OfficialModelProblem, { title: string; detail: string }> = {
   },
   model_not_in_plan: {
     title: '当前套餐不包含这个模型',
-    detail: '换一个模型，或在“账号与订阅”里查看套餐。',
+    detail: '这个模型需要个人专业版。可以升级，或换一个模型。',
   },
   rate_limited: {
     title: '请求太频繁',
@@ -53,7 +54,12 @@ export function OfficialModelNotice({
             {t('重新连接')}
           </Button>
         ) : null}
-        {problem === 'quota_exhausted' || problem === 'model_not_in_plan' ? (
+        {problem === 'model_not_in_plan' ? (
+          <Button variant="ghost" size="sm" onClick={() => openUpgrade()}>
+            {t('升级到专业版')}
+          </Button>
+        ) : null}
+        {problem === 'quota_exhausted' ? (
           <Button variant="ghost" size="sm" onClick={openAccountSettings}>
             {t('账号与订阅')}
           </Button>

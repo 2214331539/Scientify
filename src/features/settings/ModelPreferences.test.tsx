@@ -83,7 +83,7 @@ it('leaves an edit without saving anything', async () => {
   const name = screen.getByRole('textbox', { name: '连接名称' });
   await user.clear(name);
   await user.type(name, '实验室服务器');
-  await user.click(screen.getByRole('button', { name: '全部连接' }));
+  await user.click(screen.getByRole('button', { name: '其他模型' }));
   expect(screen.getByText('本机 Ollama')).toBeTruthy();
   expect(credentials.save).not.toHaveBeenCalled();
   expect(store.getState().data?.settings.defaultModelProfileId).toBe('deepseek');

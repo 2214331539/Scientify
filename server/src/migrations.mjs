@@ -295,4 +295,18 @@ CREATE TABLE daily_resets (
 );
 `,
   },
+  {
+    id: 4,
+    name: 'app settings',
+    sql: `
+-- Small values the admin pages change and the app reads, such as the WeChat group QR
+-- code shown in the upgrade card (it expires weekly, so it cannot ship with the app).
+CREATE TABLE app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_by TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+`,
+  },
 ];

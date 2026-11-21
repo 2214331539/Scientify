@@ -596,3 +596,29 @@
   border: 0;
   background: #fff;
 }
+
+/* Open files use the same browser-style tabs as the reader (see document-tabs.css). */
+.sf-file-tabs {
+  height: 38px;
+  min-height: 38px;
+  align-items: flex-end;
+  padding: 6px 6px 0;
+  background: var(--sf-surface-chrome);
+}
+.sf-file-tab {
+  position: relative;
+  height: 100%;
+  border-radius: 8px 8px 0 0;
+  color: var(--sf-text-muted);
+}
+.sf-file-tab.is-active {
+  z-index: 1;
+  background: var(--sf-surface-canvas);
+  color: var(--sf-text-primary);
+  box-shadow: 0 0 0 1px var(--sf-border-subtle);
+  clip-path: inset(-1px -1px 0 -1px);
+}
+.research-shell:not(.launcher-shell) .sf-frame-main .sf-file-tabs::after {
+  left: 0;
+  right: 0;
+}

@@ -12,9 +12,11 @@ const yuan = (fen) => (fen ? `¥${(fen / 100).toLocaleString('en-US')}` : '0');
 // ---------- Plans ----------
 export const plansPage = {
   title: () => '套餐与额度',
-  load: () => get('/plans'),
+  load: async () => ({ ...(await get('/plans')), contact: await get('/settings/contact') }),
   view(data) {
+    const qr = data.contact?.wechatQr;
     return `
+      ${card('开通方式 · 微信群二维码', `<div style="display:flex;gap:20px;align-items:center">${qr ? `<img src="${esc(qr)}" alt="微信群二维码" style="width:132px;height:132px;object-fit:contain;border:1px solid var(--line, #e4e4e7);border-radius:8px">` : `<div class="muted" style="width:132px;height:132px;display:grid;place-items:center;border:1px dashed #d4d4d8;border-radius:8px">未上传</div>`}<div><div>免费用户选专业版模型时，应用里弹出订阅卡片，点“加入微信群开通”显示这张二维码。</div><div class="muted" style="margin-top:6px">微信群二维码 7 天后失效，到期前换一张。${data.contact?.updatedAt ? `上次更换：${time(data.contact.updatedAt)}` : ''}</div></div></div>`, { actions: `<button class="btn sm" data-act="upload-qr">${qr ? '更换' : '上传'}</button>${qr ? '<button class="btn sm" data-act="clear-qr">删除</button>' : ''}` })}
       ${card('套餐', `<table><thead><tr><th>套餐</th><th class="n">月付</th><th class="n">年付</th><th class="n">每月点数</th><th class="n">单日上限</th><th>同步空间</th><th>项目成员上限</th><th>历史版本</th><th>限制</th><th>状态</th><th></th></tr></thead><tbody>${data.plans
         .map((p) => `<tr><td><b>${esc(p.name)}</b></td><td class="n">${yuan(p.priceMonth)}</td><td class="n">${yuan(p.priceYear)}</td><td class="n">${fmt(p.monthlyPoints)}</td><td class="n">${fmt(p.dailyPoints)}</td><td>${bytes(p.storageBytes)}</td><td>${p.maxMembers ? `${p.maxMembers} 人` : '不限'}</td><td>${p.historyDays} 天</td><td class="muted">每分钟 ${p.rpm} · 同时 ${p.concurrency}</td><td>${p.active ? chip('上架', 'ok') : chip('未上架')}</td><td class="n"><button class="btn sm" data-act="edit" data-id="${esc(p.id)}">编辑</button></td></tr>`)
         .join('')}</tbody></table>`, { flush: true, sub: '可用的模型在“模型与渠道”里按模型设置' })}
@@ -29,6 +31,31 @@ export const plansPage = {
       ${card('加油包', empty('第二期接入在线支付后上架：500 点 ¥5、2,000 点 ¥19、5,000 点 ¥45，12 个月有效。现在用兑换码或“调整额度”代替。'))}`;
   },
   act: {
+    'upload-qr'(_el, ctx) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/png,image/jpeg,image/webp';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) return toast('图片不能超过 2 MB');
+        const image = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('读取图片失败。'));
+          reader.readAsDataURL(file);
+        });
+        await post('/settings/contact', { wechatQr: image });
+        toast('已更换微信群二维码，应用里下次打开订阅卡片就能看到');
+        await ctx.reload();
+      };
+      input.click();
+    },
+    async 'clear-qr'(_el, ctx) {
+      await post('/settings/contact', { wechatQr: '' });
+      toast('已删除微信群二维码');
+      await ctx.reload();
+    },
     edit(el, ctx) {
       const p = ctx.data.plans.find((plan) => plan.id === el.dataset.id);
       ctx.dialog(
