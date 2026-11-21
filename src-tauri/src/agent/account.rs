@@ -249,27 +249,58 @@ pub async fn chatgpt_usage(app: tauri::AppHandle, view: tauri::Webview) -> Resul
     .await
 }
 
-/// The models this ChatGPT plan offers in the engine.
+/// The models this ChatGPT plan offers in the engine: every page, including the ones the
+/// engine keeps out of its own short picker (they work; the account catalog hides many of
+/// them), with the picker's models first. Special-purpose models such as code review are left out.
 #[tauri::command]
 pub async fn chatgpt_models(app: tauri::AppHandle, view: tauri::Webview) -> Result<Value, String> {
     crate::library::trusted(&view)?;
     blocking(move || {
-        let response = call(&app, "model/list", json!({}), false)?;
-        let models = response["data"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter(|model| model["hidden"] != true)
-            .filter_map(|model| {
-                let id = model["model"]
-                    .as_str()
-                    .filter(|id| crate::ai::valid_model(id))?;
-                Some(json!({"id": id, "name": model["displayName"].as_str().unwrap_or(id)}))
-            })
-            .collect::<Vec<_>>();
-        Ok(Value::Array(models))
+        let mut listed = Vec::new();
+        let mut cursor: Option<String> = None;
+        for _ in 0..20 {
+            let response = call(
+                &app,
+                "model/list",
+                json!({"includeHidden": true, "limit": 100, "cursor": cursor}),
+                false,
+            )?;
+            listed.extend(response["data"].as_array().cloned().unwrap_or_default());
+            cursor = response["nextCursor"].as_str().map(str::to_string);
+            if cursor.is_none() {
+                break;
+            }
+        }
+        Ok(Value::Array(picker_order(&listed)))
     })
     .await
+}
+
+/// The engine's models as the model list shows them: picker models first, hidden ones after.
+fn picker_order(listed: &[Value]) -> Vec<Value> {
+    let mut seen = std::collections::HashSet::new();
+    let mut models: Vec<(bool, Value)> = listed
+        .iter()
+        .filter(|model| model["modelSpecialty"].as_str().is_none_or(str::is_empty))
+        .filter_map(|model| {
+            let id = model["model"]
+                .as_str()
+                .filter(|id| crate::ai::valid_model(id))?;
+            if !seen.insert(id.to_string()) {
+                return None;
+            }
+            let hidden = model["hidden"] == true;
+            let name = model["displayName"].as_str().unwrap_or(id);
+            let name = if hidden {
+                format!("{name} · 更多")
+            } else {
+                name.to_string()
+            };
+            Some((hidden, json!({"id": id, "name": name})))
+        })
+        .collect();
+    models.sort_by_key(|(hidden, _)| *hidden);
+    models.into_iter().map(|(_, model)| model).collect()
 }
 
 #[cfg(test)]
@@ -288,6 +319,20 @@ mod tests {
         let value: Value =
             serde_json::from_str(&std::fs::read_to_string(dir.join(AUTH)).unwrap()).unwrap();
         value["tokens"]["refresh_token"].as_str().unwrap().into()
+    }
+
+    #[test]
+    fn hidden_models_follow_the_picker_and_specialised_ones_are_left_out() {
+        let listed = vec![
+            json!({"model": "gpt-6-sol", "displayName": "GPT-6-Sol", "hidden": true}),
+            json!({"model": "codex-auto-review", "displayName": "Review", "hidden": true, "modelSpecialty": "review"}),
+            json!({"model": "gpt-6-luna", "displayName": "GPT-6-Luna", "hidden": false}),
+            json!({"model": "gpt-6-luna", "displayName": "GPT-6-Luna", "hidden": false}),
+        ];
+        let models = picker_order(&listed);
+        assert_eq!(models.len(), 2);
+        assert_eq!(models[0]["id"], "gpt-6-luna");
+        assert_eq!(models[1]["name"], "GPT-6-Sol · 更多");
     }
 
     #[test]
