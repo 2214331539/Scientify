@@ -6,11 +6,11 @@ Scientify's Apache-2.0 license applies to original project content. It does not 
 
 - Project: [OpenAI Codex](https://github.com/openai/codex).
 - Pinned upstream release: [`rust-v0.158.0`](https://github.com/openai/codex/tree/rust-v0.158.0).
-- Integration: an unmodified upstream executable, downloaded by [prepare-agent.mjs](scripts/prepare-agent.mjs) and run as a separate process.
+- Integration: the unmodified upstream package (`codex-package-<target>`, without its voice components), downloaded by [prepare-agent.mjs](scripts/prepare-agent.mjs) and run as a separate process. Besides `codex` it contains the `codex-code-mode-host` and, on Windows, the sandbox helpers, all from the same release, and [ripgrep](https://github.com/BurntSushi/ripgrep) (MIT or Unlicense).
 - License: [upstream Apache-2.0 text](docs/licenses/codex-LICENSE).
 - Notice: [upstream NOTICE](docs/licenses/codex-NOTICE), including its Ratatui attribution.
 
-The executable is not committed to this repository. A binary distribution containing it must include the upstream license and notice. Changing `SCIENTIFY_CODEX_VERSION` requires reviewing the new release's notices; the files here cover only the pinned version above.
+The package is not committed to this repository. A binary distribution containing it must include the upstream license and notice. Changing `SCIENTIFY_CODEX_VERSION` requires reviewing the new release's notices; the files here cover only the pinned version above.
 
 ## Bundled LaTeX engine
 
@@ -20,7 +20,7 @@ The executable is not committed to this repository. A binary distribution contai
 - License: [upstream MIT text](docs/licenses/tectonic-LICENSE).
 - TeX packages and fonts: release builds include `tectonic-cache/`, the files Tectonic fetched from its upstream TeX Live–based bundle while compiling the [warm-up documents](scripts/tectonic-warmup/). They are unmodified and each keeps its own free license, as recorded by TeX Live (mostly LPPL, GPL and, for fonts, OFL or GUST). Other packages are downloaded on first use under the same terms.
 
-The executable is not committed to this repository. Changing the pinned version requires reviewing the new release's license.
+The package is not committed to this repository. Changing the pinned version requires reviewing the new release's license.
 
 ## Bundled full-text translation engine
 

@@ -79,7 +79,7 @@ const server = createServer(async (request, response) => {
 });
 await new Promise((done) => server.listen(0, '127.0.0.1', done));
 const endpoint = `http://127.0.0.1:${server.address().port}/v1`;
-const binary = resolve('src-tauri/binaries/codex-x86_64-pc-windows-msvc.exe');
+const binary = resolve('src-tauri/release-resources/codex/bin/codex.exe');
 function start(model) {
   const overrides = [
     'features.memories=false',

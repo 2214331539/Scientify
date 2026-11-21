@@ -1,12 +1,4 @@
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -34,18 +26,25 @@ const { triple: TRIPLE, suffix } = engineTarget(
   process.env.SCIENTIFY_CODEX_TRIPLE,
 );
 
+// The engine ships as upstream's whole package, not the bare executable: codex finds the
+// code-mode host next to itself in bin/, the Windows sandbox helpers in codex-resources/
+// and ripgrep in codex-path/ through codex-package.json. Models that only use tools through
+// code mode cannot run a single command without the host. The voice components are left out.
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const target = join(root, 'src-tauri', 'binaries');
-const binary = join(target, `codex-${TRIPLE}${suffix}`);
-const stamp = join(target, `codex-${TRIPLE}.version`);
-const legacyStamp = join(target, 'codex.version');
+const packageDir = join(root, 'src-tauri', 'release-resources', 'codex');
+const manifestFile = join(packageDir, 'codex-package.json');
+const engine = join(packageDir, 'bin', `codex${suffix}`);
 const protocolDir = join(root, 'src', 'generated', 'agent-protocol');
 const protocolStamp = join(protocolDir, 'VERSION');
-const tag = `rust-v${CODEX_VERSION}`;
-const asset = `codex-${TRIPLE}${suffix}`;
-const release = `https://github.com/openai/codex/releases/download/${tag}`;
+const release = `https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}`;
+const asset = `codex-package-${TRIPLE}`;
+// Windows' own bsdtar reads drive-letter paths and zstd; Git's GNU tar does neither.
+const tar =
+  process.platform === 'win32'
+    ? join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
+    : 'tar';
 
-function stampedVersion(file = stamp) {
+function stampedVersion(file) {
   try {
     return readFileSync(file, 'utf8').trim();
   } catch {
@@ -53,19 +52,11 @@ function stampedVersion(file = stamp) {
   }
 }
 
-/** Node has zstd from 22.15; bsdtar ships with zstd support on Windows 10+. */
-function extractZstd(archive) {
-  const bytes = readFileSync(archive);
+function manifest(dir = packageDir) {
   try {
-    return zstdDecompressSync(bytes);
+    return JSON.parse(readFileSync(join(dir, 'codex-package.json'), 'utf8'));
   } catch {
-    const result = spawnSync('tar', ['-xf', archive, '-C', target], { stdio: 'inherit' });
-    if (result.status !== 0) throw new Error('no zstd extractor available (node or bsdtar)');
-    const extracted = join(target, asset);
-    if (!existsSync(extracted)) throw new Error(`archive did not contain ${asset}`);
-    const output = readFileSync(extracted);
-    rmSync(extracted, { force: true });
-    return output;
+    return null;
   }
 }
 
@@ -81,8 +72,8 @@ function verify(path) {
  * cannot drift from the transport. The output is derived code and stays out of
  * version control, mirroring how the PDF.js assets are prepared.
  */
-function generateProtocol(engine) {
-  const result = spawnSync(engine, ['app-server', 'generate-ts', '--out', protocolDir], {
+function generateProtocol(path) {
+  const result = spawnSync(path, ['app-server', 'generate-ts', '--out', protocolDir], {
     stdio: 'inherit',
   });
   if (result.status !== 0) throw new Error('failed to generate agent protocol bindings');
@@ -90,57 +81,64 @@ function generateProtocol(engine) {
   console.log('Agent protocol bindings ready.');
 }
 
+function untar(archive, into, gzip) {
+  const result = spawnSync(
+    tar,
+    [gzip ? '-xzf' : '-xf', archive, '-C', into, '--exclude', 'codex-resources/voice'],
+    { stdio: 'inherit' },
+  );
+  if (result.status !== 0) throw new Error(`could not unpack ${archive}`);
+}
+
+/** Download and unpack the package into a staging folder; the live one is replaced at the end. */
+function fetchPackage(staging) {
+  const archive = join(dirname(packageDir), `${asset}.download`);
+  try {
+    try {
+      console.log(`Downloading codex ${CODEX_VERSION} package (compressed)...`);
+      download(`${release}/${asset}.tar.zst`, `${archive}.zst`);
+      // Node has zstd from 22.15; decompress first so any tar can read the result.
+      writeFileSync(`${archive}.tar`, zstdDecompressSync(readFileSync(`${archive}.zst`)));
+      untar(`${archive}.tar`, staging, false);
+    } catch (error) {
+      console.warn(`Zstandard package unusable (${error.message}); using the gzip archive.`);
+      rmSync(staging, { recursive: true, force: true });
+      mkdirSync(staging, { recursive: true });
+      download(`${release}/${asset}.tar.gz`, `${archive}.tar.gz`);
+      untar(`${archive}.tar.gz`, staging, true);
+    }
+  } finally {
+    for (const ext of ['.zst', '.tar', '.tar.gz']) rmSync(`${archive}${ext}`, { force: true });
+  }
+}
+
 async function main() {
-  if (
-    existsSync(binary) &&
-    (stampedVersion() === CODEX_VERSION || stampedVersion(legacyStamp) === CODEX_VERSION)
-  ) {
+  const current = manifest();
+  if (current?.version === CODEX_VERSION && current?.target === TRIPLE && existsSync(engine)) {
     console.log(
-      `Agent engine ready: codex ${CODEX_VERSION} (${(statSync(binary).size / 1024 / 1024).toFixed(1)} MB)`,
+      `Agent engine ready: codex ${CODEX_VERSION} (${(statSync(engine).size / 1024 / 1024).toFixed(1)} MB, with its helpers)`,
     );
     if (stampedVersion(protocolStamp) === CODEX_VERSION) return;
     mkdirSync(protocolDir, { recursive: true });
-    generateProtocol(binary);
+    generateProtocol(engine);
     return;
   }
-  mkdirSync(target, { recursive: true });
-  const archive = join(target, 'codex.download.zst');
-  let bytes;
-  try {
-    console.log(`Downloading codex ${CODEX_VERSION} (compressed)...`);
-    download(`${release}/${asset}.zst`, archive);
-    bytes = extractZstd(archive);
-  } catch (error) {
-    // The raw executable is larger but needs no extractor, so a missing zstd
-    // implementation must never block a build.
-    console.warn(`Zstandard asset unusable (${error.message}); using the fallback archive.`);
-    if (suffix) {
-      download(`${release}/${asset}`, binary);
-      bytes = readFileSync(binary);
-    } else {
-      const tarball = join(target, `codex-${TRIPLE}.download.tar.gz`);
-      try {
-        download(`${release}/${asset}.tar.gz`, tarball);
-        const extracted = spawnSync('tar', ['-xzf', tarball, '-C', target, asset], {
-          stdio: 'inherit',
-        });
-        if (extracted.status !== 0) throw new Error('Unable to extract the macOS Agent');
-        bytes = readFileSync(binary);
-      } finally {
-        rmSync(tarball, { force: true });
-      }
-    }
-  } finally {
-    rmSync(archive, { force: true });
-  }
-  if (bytes.length < 1024 * 1024) throw new Error('downloaded artifact is implausibly small');
-  writeFileSync(binary, bytes);
-  if (!suffix) chmodSync(binary, 0o755);
-  const version = verify(binary);
-  writeFileSync(stamp, `${CODEX_VERSION}\n`);
-  console.log(`Agent engine ready: ${version} (${(bytes.length / 1024 / 1024).toFixed(1)} MB)`);
+  const staging = `${packageDir}.staging`;
+  rmSync(staging, { recursive: true, force: true });
+  mkdirSync(staging, { recursive: true });
+  fetchPackage(staging);
+  const unpacked = manifest(staging);
+  if (unpacked?.version !== CODEX_VERSION || unpacked?.target !== TRIPLE)
+    throw new Error(`the downloaded package is not codex ${CODEX_VERSION} for ${TRIPLE}`);
+  const stagedEngine = join(staging, unpacked.entrypoint);
+  if (!existsSync(stagedEngine) || statSync(stagedEngine).size < 1024 * 1024)
+    throw new Error('the downloaded package has no usable engine');
+  const version = verify(stagedEngine);
+  rmSync(packageDir, { recursive: true, force: true });
+  renameSync(staging, packageDir);
+  console.log(`Agent engine ready: ${version} (package with code-mode host and helpers)`);
   mkdirSync(protocolDir, { recursive: true });
-  generateProtocol(binary);
+  generateProtocol(engine);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.platform, 'win32', 'This verifies the Windows release runner.');
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const executable = resolve(repository, process.argv[2] ?? 'target/release/scientify.exe');
-const engine = join(repository, 'src-tauri/binaries/codex-x86_64-pc-windows-msvc.exe');
+const engine = join(repository, 'src-tauri/release-resources/codex/bin/codex.exe');
 assert.ok(existsSync(executable), 'Build the release application first.');
 assert.ok(existsSync(engine), 'Prepare the bundled Codex engine first.');
 const fixtures = join(repository, '.test-artifacts');

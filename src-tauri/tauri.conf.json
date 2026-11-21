@@ -33,10 +33,11 @@
     "active": true,
     "targets": ["nsis"],
     "icon": ["icons/icon.ico"],
-    "externalBin": ["binaries/codex", "binaries/tectonic"],
+    "externalBin": ["binaries/tectonic"],
     "licenseFile": "../LICENSE",
     "resources": {
       "release-resources/babeldoc/": "babeldoc/",
+      "release-resources/codex/": "codex/",
       "release-resources/licenses/": "licenses/",
       "release-resources/tectonic-cache/": "tectonic-cache/",
       "release-resources/yita/": "yita/"

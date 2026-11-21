@@ -51,29 +51,41 @@ fn spawn_engine(command: &mut Command, home: &Path) -> Result<Child, String> {
 
 /// Locate the engine binary.
 ///
-/// Release bundles place `externalBin` next to the application executable with the
-/// target-triple suffix removed; development keeps the suffixed file produced by
-/// `scripts/prepare-agent.mjs`.
+/// The engine is upstream's whole package (scripts/prepare-agent.mjs): `codex/bin/codex`
+/// with the code-mode host beside it and its helpers found through `codex-package.json`.
+/// Release bundles put it in the resource folder (next to the executable on Windows,
+/// `Contents/Resources` on macOS); development reads `release-resources`. The bare
+/// executable older builds shipped is a last resort and cannot run code-mode models.
 pub fn engine_path() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| format!("无法定位应用目录：{e}"))?;
     let directory = exe.parent().ok_or("应用目录不可用。")?;
-    let bundled = [
-        format!("codex{}", std::env::consts::EXE_SUFFIX),
-        format!("codex-{TRIPLE}{}", std::env::consts::EXE_SUFFIX),
+    let name = format!("codex{}", std::env::consts::EXE_SUFFIX);
+    let packaged = [
+        directory.join("codex").join("bin").join(&name),
+        directory
+            .join("..")
+            .join("Resources")
+            .join("codex")
+            .join("bin")
+            .join(&name),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("release-resources")
+            .join("codex")
+            .join("bin")
+            .join(&name),
     ];
-    for name in bundled {
-        let candidate = directory.join(name);
-        if candidate.is_file() {
-            return Ok(candidate);
-        }
-    }
-    let development = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("binaries")
-        .join(format!("codex-{TRIPLE}{}", std::env::consts::EXE_SUFFIX));
-    if development.is_file() {
-        return Ok(development);
-    }
-    Err("未找到内置 Agent 引擎，请先运行 pnpm install 或 pnpm run prepare:agent。".into())
+    let legacy = [
+        directory.join(&name),
+        directory.join(format!("codex-{TRIPLE}{}", std::env::consts::EXE_SUFFIX)),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("binaries")
+            .join(format!("codex-{TRIPLE}{}", std::env::consts::EXE_SUFFIX)),
+    ];
+    packaged
+        .into_iter()
+        .chain(legacy)
+        .find(|candidate| candidate.is_file())
+        .ok_or_else(|| "未找到内置 Agent 引擎，请先运行 pnpm install 或 pnpm run prepare:agent。".into())
 }
 
 /// Report the engine version without starting a session.
